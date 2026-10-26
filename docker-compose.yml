@@ -40,9 +40,9 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-0}
     ports:
       - "${PORT:-3000}:3000"
-    # Alte JSON-Boards einmalig übernehmen: Ordner mit boards/ und thumbs/ einbinden
-    # volumes:
-    #   - ./data:/import:ro
+    # Boards der dateibasierten Version 1 (./data/boards) werden beim ersten Start einmalig übernommen
+    volumes:
+      - ./data:/import:ro
 
   mailpit:
     image: axllent/mailpit:latest

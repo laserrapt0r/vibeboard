@@ -20,8 +20,8 @@ Alternativ legt `ADMIN_USERNAME`/`ADMIN_PASSWORD` in der `.env` den Administrato
 - Test-Mailserver ohne echtes Postfach: `docker compose --profile mailtest up -d`. Danach in der Administration
   den SMTP-Server `mailpit`, Port `1025`, Verschlüsselung „keine“ eintragen. Die Mails erscheinen unter
   http://localhost:8025.
-- Alte Boards aus der dateibasierten Version 1 (`data/boards/*.json`) werden beim ersten Start einmalig übernommen,
-  wenn der Ordner eingebunden ist (siehe Kommentar `volumes` in `docker-compose.yml`).
+- Alte Boards aus der dateibasierten Version 1 (`data/boards/*.json`) werden beim ersten Start einmalig übernommen
+  und gehören dann dem ersten Administrator.
 
 Falls `permission denied … docker.sock` erscheint, ist der Benutzer nicht in der Gruppe `docker`
 (`sudo usermod -aG docker $USER`, danach neu anmelden). Alternativ die Befehle mit `sudo` ausführen.
