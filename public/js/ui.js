@@ -8,6 +8,7 @@ import { templateGallery } from './gallery.js';
 import { popover, closePop, menu } from './menu.js';
 import { openShareDialog } from './share.js';
 import { openProfileDialog, accountMenuItems } from './account.js';
+import { legalLinks } from './footer.js';
 
 export { popover, closePop, menu };
 import {
@@ -742,6 +743,9 @@ export function openProfile() {
   openProfileDialog(app.me, profileSaved);
 }
 
+let legal = {};
+legalLinks().then((l) => (legal = l));
+
 function openSettings(anchor) {
   const s = app.settings;
   const t = (key, label) => ({ label, checked: !!s[key], keep: true, onClick: () => {
@@ -762,6 +766,9 @@ function openSettings(anchor) {
     { label: 'Tastenkürzel', icon: 'keyboard', onClick: openShortcuts },
     '-',
     ...accountMenuItems(app.me, profileSaved),
+    ...(legal.imprint || legal.privacy ? ['-'] : []),
+    legal.imprint ? { label: 'Impressum', icon: 'link', onClick: () => window.open('/impressum', '_blank', 'noopener') } : null,
+    legal.privacy ? { label: 'Datenschutz', icon: 'link', onClick: () => window.open('/datenschutz', '_blank', 'noopener') } : null,
   ], { placement: 'bottom' });
 }
 

@@ -27,6 +27,7 @@ const router = new Router();
 require('./lib/routes/auth').register(router);
 require('./lib/routes/boards').register(router);
 require('./lib/routes/admin').register(router);
+require('./lib/routes/legal').register(router);
 
 // Netzwerkadressen für den Teilen-Dialog – nur für angemeldete Nutzer
 router.route('GET', '/api/info', async (req, res) => {
@@ -74,6 +75,8 @@ async function handlePage(req, res, url) {
   const toLogin = () => redirect(res, '/login?next=' + encodeURIComponent(p + url.search));
   const noStore = { 'Cache-Control': 'no-store' };
 
+  // Impressum und Datenschutzerklärung müssen ohne Anmeldung erreichbar sein
+  if (p === '/impressum' || p === '/datenschutz') return serveFile(res, page('legal.html'));
   if (AUTH_PAGES.includes(p)) {
     if (user && ['/login', '/register'].includes(p)) return redirect(res, '/');
     return serveFile(res, page('auth.html'), noStore);

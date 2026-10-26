@@ -2,6 +2,9 @@
 import { h, append, api, ICONS, toast, modal, confirmDialog, initials, relTime, fmtDate, loadPref } from './util.js';
 import { menu } from './menu.js';
 import { accountMenuItems, openSecurityDialog } from './account.js';
+import { renderMarkdown } from './markdown.js';
+import { IMPRINT_TEMPLATE, PRIVACY_TEMPLATE } from './legal-templates.js';
+import { legalFooter } from './footer.js';
 
 const main = document.getElementById('admin-main');
 const nav = document.getElementById('admin-nav');
@@ -16,6 +19,7 @@ const SECTIONS = [
   ['settings', 'Allgemein', 'settings'],
   ['security', 'Sicherheit', 'lock'],
   ['mail', 'Mailserver', 'comment'],
+  ['legal', 'Rechtliches', 'edit'],
   ['audit', 'Protokoll', 'layers'],
 ];
 
@@ -53,7 +57,7 @@ function route() {
   for (const [id, label, icon] of SECTIONS) {
     nav.append(h('a', { href: '#' + id, class: 'admin-nav-item' + (id === cur ? ' active' : '') }, h('span', { html: ICONS[icon] }), label));
   }
-  ({ overview, users, boards, settings, security, mail, audit }[cur] || overview)().catch((e) => {
+  ({ overview, users, boards, settings, security, mail, legal, audit }[cur] || overview)().catch((e) => {
     if (e.code === 'mfa_required') {
       section('Zwei-Faktor-Anmeldung erforderlich',
         h('p', {}, e.message),
@@ -481,6 +485,78 @@ async function mail() {
   section('Mailserver', form);
 }
 
+/* ---------------- Rechtliches: Impressum & Datenschutz ---------------- */
+
+async function legal() {
+  const l = (await api('/api/admin/settings')).legal;
+  const docs = {
+    imprint: { label: 'Impressum', path: '/impressum', template: IMPRINT_TEMPLATE },
+    privacy: { label: 'Datenschutzerklärung', path: '/datenschutz', template: PRIVACY_TEMPLATE },
+  };
+  let current = (location.hash.split('/')[1] === 'privacy') ? 'privacy' : 'imprint';
+  const texts = { imprint: l.imprint, privacy: l.privacy };
+  const err = errorBox();
+  const tabs = h('div', { class: 'seg' });
+  const editor = h('textarea', { class: 'legal-editor', rows: 24, spellcheck: true });
+  const preview = h('article', { class: 'legal-text legal-preview' });
+  const status = h('div', { class: 'muted small' });
+  const updated = (k) => l[k + 'UpdatedAt'] ? 'zuletzt geändert am ' + new Date(l[k + 'UpdatedAt']).toLocaleString('de-DE') : 'noch nicht veröffentlicht';
+
+  const renderPreview = () => {
+    preview.innerHTML = '';
+    preview.append(h('h1', {}, docs[current].label));
+    if (editor.value.trim()) preview.append(renderMarkdown(editor.value));
+    else preview.append(h('p', { class: 'muted' }, 'Kein Text – die Seite wird nicht verlinkt.'));
+  };
+  const select = (k) => {
+    texts[current] = editor.value;
+    current = k;
+    editor.value = texts[k];
+    tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.k === k));
+    status.innerHTML = '';
+    status.append(`Öffentlich unter `, h('a', { href: docs[k].path, target: '_blank', rel: 'noopener' }, location.origin + docs[k].path), ` · ${updated(k)}`);
+    renderPreview();
+  };
+  for (const [k, d] of Object.entries(docs)) tabs.append(h('button', { type: 'button', class: 'btn small', 'data-k': k, onclick: () => select(k) }, d.label));
+  let t;
+  editor.addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(renderPreview, 150);
+  });
+
+  const form = h('form', { class: 'form legal-form', onsubmit: async (e) => {
+    e.preventDefault();
+    err.hide();
+    texts[current] = editor.value;
+    try {
+      const r = await api('/api/admin/settings', { method: 'PUT', body: { legal: { imprint: texts.imprint, privacy: texts.privacy } } });
+      Object.assign(l, r.legal);
+      toast('Gespeichert und veröffentlicht');
+      select(current);
+    } catch (ex) {
+      err.show(ex.message);
+    }
+  } },
+  h('div', { class: 'notice' }, h('b', {}, 'Hinweis: '), 'Die Vorlagen sind Formulierungshilfen, die auf die tatsächliche Datenverarbeitung von vibeboard zugeschnitten sind. Sie ersetzen keine Rechtsberatung. Ersetze alle Angaben in [eckigen Klammern], entferne nicht zutreffende Abschnitte und lass die Texte im Zweifel prüfen.'),
+  h('div', { class: 'admin-toolbar' }, tabs, h('span', { class: 'spacer' }),
+    h('button', { type: 'button', class: 'btn small', onclick: async () => {
+      if (editor.value.trim() && !(await confirmDialog('Vorlage einfügen', 'Der aktuelle Text wird durch die Vorlage ersetzt.', 'Ersetzen', true))) return;
+      editor.value = docs[current].template;
+      renderPreview();
+    } }, 'Vorlage einfügen')),
+  status,
+  h('div', { class: 'legal-split' },
+    h('div', { class: 'legal-col' }, editor,
+      h('details', { class: 'md-help' }, h('summary', {}, 'Formatierung'),
+        h('pre', {}, '# Überschrift\n\nAbsatz – Zeilenumbrüche bleiben erhalten.\n\n- Aufzählung\n- noch ein Punkt\n\n**fett**  *kursiv*\n[Linktext](https://example.de)\nE-Mail-Adressen und https://…-Links werden automatisch verlinkt.\n\n---  (Trennlinie)'))),
+    h('div', { class: 'legal-col' }, h('div', { class: 'label' }, 'Vorschau'), preview)),
+  err.el,
+  h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, 'Speichern & veröffentlichen'),
+    h('span', { class: 'muted small' }, 'Leere Texte werden nicht veröffentlicht; die Links verschwinden dann automatisch.')));
+  section('Impressum & Datenschutz', form);
+  select(current);
+}
+
 /* ---------------- Sicherheitsprotokoll ---------------- */
 
 async function audit() {
@@ -544,4 +620,5 @@ async function audit() {
   btn.onclick = () => menu(btn, accountMenuItems(me, (u) => (me = u)), { placement: 'bottom' });
   window.addEventListener('hashchange', route);
   route();
+  legalFooter().then((f) => nav.append(f));
 })();

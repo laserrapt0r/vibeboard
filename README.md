@@ -240,10 +240,28 @@ Unter `/admin`, nur für Administratoren:
   erlaubte Domains, Zwei-Faktor-Pflicht für Admins
 - **Mailserver:** SMTP-Host, Port, Verschlüsselung (STARTTLS, SSL/TLS, keine), Anmeldung, Absender,
   Zertifikatsprüfung; Testmail auch vor dem Speichern
+- **Rechtliches:** Impressum und Datenschutzerklärung bearbeiten und veröffentlichen (siehe unten)
 - **Protokoll:** Sicherheitsprotokoll der letzten 12 Monate mit Suche und Filter. Es enthält
   - Anmeldungen und fehlgeschlagene Versuche,
   - Kennwort-, E-Mail- und Zwei-Faktor-Änderungen,
   - Admin-Aktionen mit IP-Adresse.
+
+### Impressum und Datenschutzerklärung
+
+- Unter **Administration → Rechtliches** werden beide Texte gepflegt und veröffentlicht. Der Editor unterstützt
+  einfache Formatierung (Überschriften, Absätze, Listen, fett, kursiv, Links) und zeigt eine Live-Vorschau.
+- **Vorlagen** zum Einfügen:
+  - ein Impressum nach § 5 DDG
+  - eine Datenschutzerklärung, die auf die tatsächliche Datenverarbeitung von vibeboard zugeschnitten ist (Konto,
+    Board-Inhalte, Sitzungs-Cookie, Sicherheitsprotokoll, E-Mails, optional Pwned Passwords, Betroffenenrechte)
+
+  Platzhalter stehen in [eckigen Klammern]. Die Vorlagen ersetzen keine Rechtsberatung.
+- Die Seiten `/impressum` und `/datenschutz` sind **ohne Anmeldung** erreichbar.
+- Verlinkt sind sie auf der Anmelde- und Registrierungsseite, in der Board-Übersicht, im Einstellungsmenü der Boards
+  und in der Administration.
+- Leere Texte werden nicht veröffentlicht; ihre Links verschwinden dann automatisch.
+- Die Texte werden ohne HTML dargestellt. Eingegebenes Markup erscheint als reiner Text, Links sind nur mit http(s),
+  mailto und tel erlaubt.
 
 ---
 
@@ -324,10 +342,11 @@ lib/
   settings.js          Einstellungen der Instanz
   mail.js              E-Mail-Versand
   setup.js             Admin aus Umgebungsvariablen, Import alter Boards, Aufräumen
-  routes/              REST-API: auth.js, boards.js, admin.js
+  routes/              REST-API: auth.js, boards.js, admin.js, legal.js
   data/                Liste der Wegwerf-Domains und häufigen Kennwörter
 public/
   auth.html            Anmelden, Registrieren, Bestätigen, Kennwort  → js/auth.js
+  legal.html           Impressum, Datenschutzerklärung (öffentlich)  → js/legal.js, js/markdown.js
   index.html           Board-Übersicht                               → js/dashboard.js
   board.html           Board-Editor                                  → js/main.js (core, ui, collab, render, sync, …)
   admin.html           Administration                                → js/admin.js

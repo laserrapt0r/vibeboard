@@ -1,6 +1,7 @@
 // Anmelden (inkl. Zwei-Faktor), Registrieren, E-Mail bestätigen, Kennwort vergessen / zurücksetzen
 import { h, append, api, loadPref } from './util.js';
 import { passwordMeter } from './pwmeter.js';
+import { legalFooter } from './footer.js';
 
 const box = document.getElementById('auth');
 const params = new URLSearchParams(location.search);
@@ -132,7 +133,10 @@ function renderRegister() {
   } },
   config.needsSetup ? h('div', { class: 'hint' }, h('b', {}, 'Ersteinrichtung'), 'Das erste Konto erhält automatisch Administratorrechte. Richte danach in der Administration den Mailserver ein, damit sich weitere Personen registrieren können.') : null,
   config.registration === 'approval' && !config.needsSetup ? h('div', { class: 'hint' }, 'Nach der Bestätigung deiner E-Mail-Adresse schaltet ein Administrator dein Konto frei.') : null,
-  user.el, display.el, email.el, pw.el, passwordMeter(pw.input, min), pw2.el, err.el,
+  user.el, display.el, email.el, pw.el, passwordMeter(pw.input, min), pw2.el,
+  config.legal && config.legal.privacy ? h('p', { class: 'muted small' }, 'Informationen zur Verarbeitung deiner Daten findest du in der ',
+    h('a', { href: '/datenschutz', target: '_blank', rel: 'noopener' }, 'Datenschutzerklärung'), '.') : null,
+  err.el,
   h('button', { type: 'submit', class: 'btn primary block' }, config.needsSetup ? 'Administrator-Konto anlegen' : 'Konto erstellen'));
   shell(config.needsSetup ? 'Willkommen!' : 'Konto erstellen', null, form,
     config.needsSetup ? null : h('div', { class: 'auth-links' }, h('span', {}, 'Schon registriert? ', h('a', { href: '/login' + location.search }, 'Anmelden'))));
@@ -204,4 +208,5 @@ function renderReset() {
     config = { ...config, ...(await api('/api/config')) };
   } catch {}
   ({ login: renderLogin, register: renderRegister, verify: renderVerify, forgot: renderForgot, reset: renderReset }[mode] || renderLogin)();
+  document.querySelector('.auth-wrap').append(await legalFooter());
 })();

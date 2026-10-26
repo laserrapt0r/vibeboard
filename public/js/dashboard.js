@@ -5,6 +5,7 @@ import { templateGallery, templatePreview } from './gallery.js';
 import { menu } from './menu.js';
 import { openShareDialog } from './share.js';
 import { accountMenuItems } from './account.js';
+import { legalFooter } from './footer.js';
 
 let data = { owned: [], shared: [] };
 let me = null;
@@ -201,5 +202,6 @@ importInput.addEventListener('change', async () => {
   renderUser();
   renderTemplates();
   load();
+  legalFooter().then((f) => document.getElementById('footer').append(f));
   setInterval(load, 30000);
 })();
