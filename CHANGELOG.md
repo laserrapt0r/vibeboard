@@ -4,6 +4,36 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.4.0] – 2026-10-26
+
+### Hinzugefügt
+- Ausrichten und Größe ändern (REQ-EDIT-002, REQ-EDIT-004, REQ-CANVAS-005):
+  - Einrasten an Tabellenlinien, an gleicher Breite/Höhe und an gleichen Abständen, mit Abstandsmarken.
+  - Größen- und Positionsanzeige beim Ziehen.
+  - Umschalt beschränkt das Verschieben auf eine Achse; Alt ändert die Größe von der Mitte aus.
+  - Exakte Werte (X, Y, Breite, Höhe) über die Kontextleiste, auch für mehrere Elemente.
+  - Gleiche Breite/Höhe/Größe, lückenlos oder mit festem Abstand aneinanderreihen, am Raster ausrichten.
+  - Größe kopieren/übernehmen.
+  - Wählbare Rastergröße.
+  - Strg+D wiederholt den Versatz der letzten Kopie.
+
+### Behoben
+- **Freihandlinien verloren seit 3.2.0 beim Speichern ihre Punkte.** Sie waren nach dem Neuladen bzw. bei anderen
+  Teilnehmenden unsichtbar. Ursache war die Prüfung der neuen Story Points auf Karten, die das Feld `points` aller
+  Elemente in Text umwandelte. Bereits betroffene Linien lassen sich nicht wiederherstellen.
+- Umschalt-/Strg-Ziehen an einem ausgewählten Element wählte es ab, statt es zu verschieben.
+- Text: Eckgriffe (Schriftgröße) fehlten bei kleiner Darstellung; wirkungslose Griffe oben/unten entfernt.
+- Exakte Werte und „Aneinanderreihen“ verschieben Frames samt Inhalt; „Größe übernehmen“ skaliert Freihandlinien.
+- Bei flachen oder schmalen Elementen (z. B. Gantt-Balken) fehlten die Seitengriffe; Breite und Höhe ließen sich nur
+  gemeinsam ändern.
+- Gantt-Vorlage: Balken liegen genau auf den Wochenlinien.
+- Gruppen:
+  - Ziehen an einer Verbindungslinie innerhalb einer Gruppe bog die Linie, statt die Gruppe zu verschieben.
+  - Beim Verschieben, Kopieren oder Bewegen per Pfeiltaste eines Frames, der nur einen Teil einer Gruppe enthält, fiel
+    die Gruppe auseinander.
+- Neu: Ein zweiter Klick in eine ausgewählte Gruppe wählt das einzelne Element zum Bearbeiten (z. B. Farbe ändern),
+  ohne die Gruppe aufzulösen.
+
 ## [3.3.0] – 2026-10-26
 
 ### Hinzugefügt

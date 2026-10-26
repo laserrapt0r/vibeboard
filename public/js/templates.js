@@ -368,7 +368,8 @@ export const TEMPLATES = [
       b.table(X + cw0, Y, cw * weeks, rh * (rows + 1), cells.map((r) => r.slice(1)), { fontSize: 13 });
       const spans = [[0, 2], [1, 3], [2, 4], [3, 7], [5, 7], [7, 8]];
       const cols = ['#4262ff', '#7048e8', '#e64980', '#f59f00', '#12b886', '#1098ad'];
-      spans.forEach(([s, e], i) => b.shape(X + cw0 + s * cw + 6, Y + rh * (i + 1) + 14, (e - s) * cw - 12, rh - 28, { shape: 'pill', fill: cols[i], stroke: 'none', strokeWidth: 0 }));
+      // Balken liegen genau auf den Wochenlinien – so rasten gezogene oder neue Balken passend ein
+      spans.forEach(([s, e], i) => b.shape(X + cw0 + s * cw, Y + rh * (i + 1) + 14, (e - s) * cw, rh - 28, { shape: 'roundrect', fill: cols[i], stroke: 'none', strokeWidth: 0 }));
       return b.els;
     },
   },

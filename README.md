@@ -88,10 +88,25 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pro Zeile.
 
 ### Bearbeiten
-- Mehrfachauswahl per Auswahlrahmen oder Umschalt-Klick, Größe ändern, Seitenverhältnis beibehalten
-- Ausrichten (links, mittig, rechts, oben, unten), gleichmäßig verteilen, als Raster anordnen
+- Mehrfachauswahl per Auswahlrahmen oder Umschalt-Klick
+- **Größe ändern:**
+  - Seitengriffe ändern nur Breite oder Höhe, auch bei flachen Elementen wie Gantt-Balken.
+  - Umschalt behält das Seitenverhältnis, Alt ändert von der Mitte aus.
+  - Die Größe wird beim Ziehen angezeigt.
+- **Einrasten:**
+  - an Kanten, Mitten und Tabellenlinien anderer Elemente
+  - an gleicher Breite/Höhe und an gleichen Abständen (mit Abstandsmarken)
+  - am Raster (10–50 px wählbar)
+  - Umschalt verschiebt nur waagerecht oder senkrecht.
+- **Exakte Werte:** X, Y, Breite und Höhe eingeben, auch für mehrere Elemente gleichzeitig.
+- **Mehrfachauswahl:**
+  - Ausrichten (links, mittig, rechts, oben, unten), gleichmäßig verteilen, lückenlos oder mit festem Abstand
+    aneinanderreihen, als Raster anordnen.
+  - Gleiche Breite, Höhe oder Größe; Größe kopieren und übernehmen; am Raster ausrichten.
+- **Intelligentes Duplizieren:** Strg+D wiederholt den zuletzt verwendeten Versatz.
 - Sticky Notes nach Farbe clustern
-- Gruppieren, Sperren, Ebenen (Vorder- und Hintergrund), Duplizieren (auch per Alt-Ziehen)
+- Gruppieren, Sperren, Ebenen (Vorder- und Hintergrund), Duplizieren (auch per Alt-Ziehen); ein zweiter Klick in eine
+  Gruppe wählt ein einzelnes Element zum Bearbeiten
 - Kopieren und Einfügen, auch zwischen Boards
 - Rückgängig und Wiederholen, Kontextmenü, Suche (Strg+F)
 - Umfangreiche Tastenkürzel (Übersicht mit `?`)

@@ -18,6 +18,7 @@ import {
   duplicateEls, collectForCopy, bringToFront, sendToBack, groupSel, ungroupSel, toggleLock, alignSel, distributeSel,
   arrangeGrid, clusterByColor, frames, makeElement, addElements, nextZ, insertImageFile, setSelection, pasteElements,
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
+  matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
 
@@ -310,9 +311,18 @@ export function buildCtx() {
         { label: 'Vertikal zentrieren', icon: 'alignMiddle', onClick: () => alignSel('middle') },
         { label: 'Unten ausrichten', icon: 'alignBottom', onClick: () => alignSel('bottom') },
         '-',
-        { label: 'Horizontal verteilen', icon: 'distH', onClick: () => distributeSel('h') },
-        { label: 'Vertikal verteilen', icon: 'distV', onClick: () => distributeSel('v') },
+        { label: 'Horizontal verteilen (gleiche Abstände)', icon: 'distH', onClick: () => distributeSel('h') },
+        { label: 'Vertikal verteilen (gleiche Abstände)', icon: 'distV', onClick: () => distributeSel('v') },
+        { label: 'Lückenlos nebeneinander', icon: 'distH', onClick: () => packSel('h', 0) },
+        { label: 'Lückenlos untereinander', icon: 'distV', onClick: () => packSel('v', 0) },
+        { label: 'Mit festem Abstand anordnen …', icon: 'distH', onClick: () => packWithGap() },
         { label: 'Als Raster anordnen', icon: 'grid', onClick: () => arrangeGrid() },
+        '-',
+        { header: 'Größe angleichen (an das zuerst ausgewählte Element)' },
+        { label: 'Gleiche Breite', icon: 'alignCenterH', onClick: () => matchSize('w') },
+        { label: 'Gleiche Höhe', icon: 'alignMiddle', onClick: () => matchSize('h') },
+        { label: 'Gleiche Größe', icon: 'fit', onClick: () => matchSize('both') },
+        { label: `Position & Größe am Raster (${gridSize()} px) ausrichten`, icon: 'grid', onClick: () => snapSelToGrid() },
       ], { placement: 'top' }));
       items.push(ab);
     }
@@ -326,6 +336,10 @@ export function buildCtx() {
       if (v.trim() && v.trim() !== 'https://' && !href) return toast('Bitte eine gültige http(s)-Adresse angeben');
       applySel({ link: href || undefined });
     }));
+  }
+  if (!locked && sel.some((e) => e.type !== 'connector' && e.type !== 'comment')) {
+    const gb = actBtn('<b style="font-size:11px">B×H</b>', 'Position & Größe (exakte Werte)', () => openGeometry(gb));
+    items.push(gb);
   }
   const grouped = sel.some((e) => e.groupId);
   if (sel.length > 1 && !locked) items.push(actBtn('group', grouped ? 'Gruppierung aufheben (Strg+Umschalt+G)' : 'Gruppieren (Strg+G)', grouped ? ungroupSel : groupSel));
@@ -343,6 +357,10 @@ export function buildCtx() {
       { label: 'In den Vordergrund', icon: 'front', hint: 'Strg+]', onClick: bringToFront },
       { label: 'In den Hintergrund', icon: 'back', hint: 'Strg+[', onClick: sendToBack },
       { label: 'Auswahl einpassen', icon: 'fit', hint: 'Umschalt+2', onClick: () => fitTo(selectionBounds(), { maxZ: 2 }) },
+      { label: 'Größe kopieren', icon: 'copy', onClick: copySize },
+      { label: 'Größe übernehmen', icon: 'fit', disabled: !hasCopiedSize(), onClick: () => pasteSize('both') },
+      { label: 'Nur Breite übernehmen', icon: 'alignCenterH', disabled: !hasCopiedSize(), onClick: () => pasteSize('w') },
+      { label: 'Nur Höhe übernehmen', icon: 'alignMiddle', disabled: !hasCopiedSize(), onClick: () => pasteSize('h') },
       { label: 'Als PNG exportieren', icon: 'download', onClick: () => exportPng(true) },
       '-',
       { label: 'Löschen', icon: 'trash', danger: true, hint: 'Entf', onClick: () => deleteEls([...app.sel]) },
@@ -353,6 +371,57 @@ export function buildCtx() {
   ctxbar.append(...items);
   ctxbar.classList.remove('hidden');
   positionCtx();
+}
+
+// Exakte Position und Größe eingeben (bei Mehrfachauswahl: X/Y der Auswahl, B/H für jedes Element)
+function openGeometry(anchor) {
+  const sel = selectedEls().filter((e) => e.type !== 'connector' && e.type !== 'comment');
+  const b = selectionBounds();
+  const multi = sel.length > 1;
+  const sameW = sel.every((e) => Math.round(e.w) === Math.round(sel[0].w)), sameH = sel.every((e) => Math.round(e.h) === Math.round(sel[0].h));
+  // Nur Felder, die tatsächlich geändert wurden, werden übernommen
+  const num = (v, ph) => {
+    const inp = h('input', { type: 'number', step: 'any', value: v === '' ? '' : Math.round(v * 100) / 100, placeholder: ph, class: 'geo-input' });
+    inp.addEventListener('input', () => (inp.dataset.dirty = '1'));
+    return inp;
+  };
+  const ix = num(b.x), iy = num(b.y);
+  const iw = num(multi ? (sameW ? sel[0].w : '') : sel[0].w, multi ? 'gemischt' : '');
+  const ih = num(multi ? (sameH ? sel[0].h : '') : sel[0].h, multi ? 'gemischt' : '');
+  const ratio = h('input', { type: 'checkbox' });
+  const MAX = 1e6;
+  const apply = () => {
+    const val = (inp) => (inp.dataset.dirty && inp.value !== '' ? Number(inp.value) : NaN);
+    const vals = { x: val(ix), y: val(iy), w: val(iw), h: val(ih) };
+    for (const [k, v] of Object.entries(vals)) {
+      if (Number.isNaN(v)) continue;
+      if (!Number.isFinite(v) || Math.abs(v) > MAX) return toast('Bitte Werte bis ' + MAX.toLocaleString('de-DE') + ' eingeben'), false;
+      if ((k === 'w' || k === 'h') && v < 1) return toast('Breite und Höhe müssen mindestens 1 sein'), false;
+    }
+    setGeometry({ ...vals, keepRatio: ratio.checked });
+    buildCtx();
+    return true;
+  };
+  const form = h('form', { class: 'geo-form', onsubmit: (e) => { e.preventDefault(); if (apply()) closePop(); } },
+    h('div', { class: 'pop-title' }, multi ? `Position & Größe (${sel.length} Elemente)` : 'Position & Größe'),
+    h('div', { class: 'geo-grid' }, h('label', {}, 'X', ix), h('label', {}, 'Y', iy), h('label', {}, 'Breite', iw), h('label', {}, 'Höhe', ih)),
+    h('label', { class: 'check' }, ratio, 'Seitenverhältnis beibehalten'),
+    multi ? h('p', { class: 'muted small' }, 'X/Y verschieben die ganze Auswahl; Breite/Höhe gelten für jedes Element.') : null,
+    h('div', { class: 'row' }, h('button', { type: 'submit', class: 'btn primary small' }, 'Übernehmen')));
+  form.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') closePop();
+  });
+  popover(anchor, form, { placement: 'top' });
+  setTimeout(() => iw.focus(), 0);
+}
+
+async function packWithGap() {
+  const v = await promptDialog('Mit festem Abstand anordnen', 'Abstand in Pixeln (Richtung wird aus der Anordnung erkannt)', '20');
+  if (v === null) return;
+  const gap = Number(String(v).replace(',', '.')) || 0; // negativ = überlappend
+  const b = selectionBounds();
+  packSel(b.w >= b.h ? 'h' : 'v', gap);
 }
 
 function alignBtn(cur) {
@@ -811,6 +880,13 @@ function openSettings(anchor) {
     t('hideCursors', 'Mauszeiger anderer ausblenden'),
     { header: 'Bearbeitung' },
     t('snap', 'Am Raster einrasten'),
+    { label: `Rastergröße: ${gridSize()} px`, icon: 'grid', keep: true, onClick: () => {
+      const sizes = [10, 20, 40, 50];
+      s.gridSize = sizes[(sizes.indexOf(gridSize()) + 1) % sizes.length];
+      saveSettings();
+      applyView(true);
+      openSettings(anchor);
+    } },
     t('smartGuides', 'Intelligente Hilfslinien'),
     t('wheelZoom', 'Mausrad zoomt (statt verschieben)'),
     { label: 'Tastenkürzel', icon: 'keyboard', onClick: openShortcuts },
@@ -825,10 +901,11 @@ function openSettings(anchor) {
 export function openShortcuts() {
   const groups = [
     ['Werkzeuge', [['V', 'Auswählen'], ['H / Leertaste', 'Verschieben'], ['N', 'Sticky Note'], ['T', 'Text'], ['S', 'Form'], ['R / O', 'Rechteck / Ellipse'], ['L', 'Verbindungslinie'], ['P', 'Stift'], ['E', 'Radierer'], ['F', 'Frame'], ['K', 'Karte'], ['M', 'Mindmap'], ['C', 'Kommentar'], ['X', 'Laserpointer']]],
-    ['Bearbeiten', [['Strg+Z / Strg+Y', 'Rückgängig / Wiederholen'], ['Strg+C / X / V', 'Kopieren / Ausschneiden / Einfügen'], ['Strg+D', 'Duplizieren'], ['Alt + Ziehen', 'Kopie ziehen'], ['Entf', 'Löschen'], ['Strg+A', 'Alles auswählen'], ['Strg+G', 'Gruppieren'], ['Strg+Umschalt+G', 'Gruppe auflösen'], ['Strg+L', 'Sperren'], ['Strg+] / [', 'Vorder-/Hintergrund'], ['Pfeiltasten', 'Verschieben (Umschalt: 10px)'], ['Enter / Doppelklick', 'Text bearbeiten'], ['Esc / Strg+Enter', 'Bearbeitung beenden']]],
+    ['Bearbeiten', [['Strg+Z / Strg+Y', 'Rückgängig / Wiederholen'], ['Strg+C / X / V', 'Kopieren / Ausschneiden / Einfügen'], ['Strg+D', 'Duplizieren'], ['Alt + Ziehen', 'Kopie ziehen'], ['Entf', 'Löschen'], ['Strg+A', 'Alles auswählen'], ['Strg+G', 'Gruppieren'], ['Strg+Umschalt+G', 'Gruppe auflösen'], ['Strg+L', 'Sperren'], ['Strg+] / [', 'Vorder-/Hintergrund'], ['Pfeiltasten', 'Verschieben (Umschalt: 10 px)'], ['Enter / Doppelklick', 'Text bearbeiten'], ['Esc / Strg+Enter', 'Bearbeitung beenden']]],
     ['Verbinder', [['Linie ziehen', 'Biegen (Knickpunkt)'], ['◦ auf der Linie ziehen', 'Knickpunkt einfügen'], ['Doppelklick auf ▪', 'Knickpunkt entfernen'], ['Beschriftung ziehen', 'Entlang der Linie verschieben'], ['Ende an Rand ziehen', 'Fester Andockpunkt'], ['Ende in Formmitte', 'Automatisch andocken']]],
     ['Mindmap', [['Tab', 'Unterknoten hinzufügen'], ['Enter (beim Tippen)', 'Geschwisterknoten'], ['Umschalt+Enter', 'Geschwisterknoten']]],
     ['Zusammenarbeit', [['/', 'Cursor-Chat: Nachricht am Mauszeiger'], ['Esc', 'Cursor-Chat schließen']]],
+    ['Verschieben & Größe', [['Umschalt + Ziehen', 'Nur waagerecht/senkrecht verschieben'], ['Strg + Ziehen', 'Ohne Einrasten'], ['Seitengriff', 'Nur Breite bzw. Höhe ändern'], ['Umschalt + Griff', 'Seitenverhältnis beibehalten'], ['Alt + Griff', 'Größe von der Mitte aus'], ['Strg+D (wiederholt)', 'Kopie mit zuletzt verwendetem Versatz'], ['Klick in ausgewählte Gruppe', 'Einzelnes Element der Gruppe wählen'], ['Pfeiltasten', 'Um 1 px (Umschalt: 10 px, mit Raster: eine Rasterweite) verschieben'], ['Umschalt-/Strg-Klick', 'Zur Auswahl hinzufügen bzw. entfernen (Ziehen verschiebt)']]],
     ['Ansicht', [['Strg + Mausrad', 'Zoomen'], ['Strg + / −', 'Zoomen'], ['Strg+0', 'Auf 100 %'], ['Umschalt+1', 'Alles anzeigen'], ['Umschalt+2', 'Auswahl anzeigen'], ['Strg+F', 'Suchen']]],
   ];
   modal('Tastenkürzel', h('div', { class: 'shortcuts' }, groups.map(([t, list]) => h('div', {}, h('h4', {}, t), h('table', {}, list.map(([k, d]) => h('tr', {}, h('td', {}, h('kbd', {}, k)), h('td', {}, d))))))), { wide: true });

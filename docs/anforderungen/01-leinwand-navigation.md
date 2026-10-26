@@ -37,6 +37,9 @@
 - **Akzeptanzkriterien:**
   - Raster, Einrasten (20-px-Raster) und intelligente Hilfslinien sind in den Einstellungen einzeln schaltbar.
   - Mit gedrückter Strg-Taste werden Hilfslinien beim Ziehen vorübergehend ignoriert.
+  - Geändert in 3.4.0:
+    - Die Rastergröße ist wählbar (10, 20, 40 oder 50 px) und gilt für Anzeige, Einrasten und Pfeiltasten.
+    - Hilfslinien berücksichtigen auch Tabellenlinien, gleiche Abstände und gleiche Größen (siehe [REQ-EDIT-002](03-bearbeiten.md)).
 
 ### REQ-CANVAS-006 Helles und dunkles Design
 - **Seit:** 1.0.0 · **Priorität:** Kann · **Status:** umgesetzt

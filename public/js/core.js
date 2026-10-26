@@ -84,7 +84,7 @@ export function applyView(fromRemote = false) {
   if (![app.view.x, app.view.y, app.view.z].every(Number.isFinite) || app.view.z <= 0) app.view = { x: 0, y: 0, z: 1 };
   const { x, y, z } = app.view;
   world.setAttribute('transform', `translate(${x},${y}) scale(${z})`);
-  let gs = 20;
+  let gs = Math.max(5, Number(app.settings.gridSize) || 20);
   while (gs * z < 12) gs *= 5;
   stage.style.backgroundSize = `${gs * z}px ${gs * z}px`;
   stage.style.backgroundPosition = `${x}px ${y}px`;
@@ -729,9 +729,21 @@ function renderOverlay() {
         nw: [b.x, b.y], n: [b.x + b.w / 2, b.y], ne: [b.x + b.w, b.y], e: [b.x + b.w, b.y + b.h / 2],
         se: [b.x + b.w, b.y + b.h], s: [b.x + b.w / 2, b.y + b.h], sw: [b.x, b.y + b.h], w: [b.x, b.y + b.h / 2],
       };
-      const small = b.w * z < 40 || b.h * z < 40;
+      // Seitengriffe ändern nur Breite bzw. Höhe. Bei flachen oder schmalen Elementen bleiben sie sichtbar,
+      // dafür entfallen die sich überlagernden Eckgriffe auf dieser Achse.
+      // Flach oder schmal: nur Seitengriffe (Ecken lägen darauf); winzig: nur Eckgriffe
+      const flat = b.h * z < 30, narrow = b.w * z < 30, tiny = flat && narrow;
+      // Text und Code-Blöcke: Höhe ergibt sich aus dem Inhalt (keine Griffe oben/unten); Ecken skalieren die Schrift
+      const autoH = sel.every((x) => x.type === 'text' || x.type === 'code');
+      const showHandle = (k) => {
+        if (autoH) return k.length === 2 || k === 'e' || k === 'w' ? !(k.length === 1 && narrow) : false;
+        return k.length === 2 ? tiny || !(flat || narrow) : !tiny;
+      };
+      // Größere Greiffläche – aber nie über die Mitte kleiner Elemente (dort soll Ziehen verschieben)
+      const hit = Math.max(hs, Math.min(18 / z, Math.min(b.w, b.h) * 0.45));
       for (const [k, [px, py]] of Object.entries(pts)) {
-        if (small && k.length === 1) continue;
+        if (!showHandle(k)) continue;
+        out += `<rect data-handle="${k}" class="h-${k} h-hit" x="${px - hit / 2}" y="${py - hit / 2}" width="${hit}" height="${hit}" fill="transparent"/>`;
         out += `<rect data-handle="${k}" class="h-${k}" x="${px - hs / 2}" y="${py - hs / 2}" width="${hs}" height="${hs}" rx="${2 / z}" fill="#fff" stroke="#4262ff" stroke-width="${sw}"/>`;
       }
       if (sel.length === 1 && ['sticky', 'shape', 'card', 'text', 'image'].includes(sel[0].type)) {
@@ -756,10 +768,23 @@ function renderOverlay() {
   }
   if (marquee) out += `<rect x="${marquee.x}" y="${marquee.y}" width="${marquee.w}" height="${marquee.h}" fill="#4262ff" fill-opacity="0.08" stroke="#4262ff" stroke-width="${1 / z}"/>`;
   if (draftRect) out += `<rect x="${draftRect.x}" y="${draftRect.y}" width="${draftRect.w}" height="${draftRect.h}" fill="#4262ff" fill-opacity="0.06" stroke="#4262ff" stroke-width="${1.5 / z}" stroke-dasharray="${6 / z} ${4 / z}"/>`;
+  const tag = (x, y, text, color = '#f03e3e') => {
+    const fs = 11 / z, w = (text.length * 6.5 + 10) / z, hh = 17 / z;
+    return `<rect x="${x - w / 2}" y="${y - hh / 2}" width="${w}" height="${hh}" rx="${3 / z}" fill="${color}"/><text x="${x}" y="${y + fs * 0.35}" font-size="${fs}" font-family="Helvetica, Arial, sans-serif" text-anchor="middle" fill="#fff">${escXml(text)}</text>`;
+  };
   for (const g of guides) {
-    out += g.axis === 'x'
-      ? `<line x1="${g.v}" y1="${g.a}" x2="${g.v}" y2="${g.b}" stroke="#f03e3e" stroke-width="${1 / z}"/>`
-      : `<line x1="${g.a}" y1="${g.v}" x2="${g.b}" y2="${g.v}" stroke="#f03e3e" stroke-width="${1 / z}"/>`;
+    if (g.axis === 'x') out += `<line x1="${g.v}" y1="${g.a}" x2="${g.v}" y2="${g.b}" stroke="#f03e3e" stroke-width="${1 / z}"/>`;
+    else if (g.axis === 'y') out += `<line x1="${g.a}" y1="${g.v}" x2="${g.b}" y2="${g.v}" stroke="#f03e3e" stroke-width="${1 / z}"/>`;
+    else if (g.axis === 'gapx' || g.axis === 'gapy') {
+      // Abstandsmarkierung (gleiche Abstände)
+      const [x1, y1, x2, y2] = g.axis === 'gapx' ? [g.a, g.v, g.b, g.v] : [g.v, g.a, g.v, g.b];
+      const t = 4 / z;
+      out += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#e64980" stroke-width="${1.5 / z}"/>`;
+      out += g.axis === 'gapx'
+        ? `<line x1="${x1}" y1="${y1 - t}" x2="${x1}" y2="${y1 + t}" stroke="#e64980" stroke-width="${1.5 / z}"/><line x1="${x2}" y1="${y2 - t}" x2="${x2}" y2="${y2 + t}" stroke="#e64980" stroke-width="${1.5 / z}"/>`
+        : `<line x1="${x1 - t}" y1="${y1}" x2="${x1 + t}" y2="${y1}" stroke="#e64980" stroke-width="${1.5 / z}"/><line x1="${x2 - t}" y1="${y2}" x2="${x2 + t}" y2="${y2}" stroke="#e64980" stroke-width="${1.5 / z}"/>`;
+      if (g.label) out += tag((x1 + x2) / 2, (y1 + y2) / 2, g.label, '#e64980');
+    } else if (g.axis === 'label') out += tag(g.x, g.y, g.text, g.color || '#4262ff');
   }
   layerOverlay.innerHTML = out;
   app.emit('overlay');
@@ -1081,8 +1106,10 @@ function hitInfo(target) {
   };
 }
 
+export const gridSize = () => Math.max(5, Number(app.settings.gridSize) || 20);
+
 function snapV(v) {
-  return app.settings.snap ? Math.round(v / 20) * 20 : v;
+  return app.settings.snap ? Math.round(v / gridSize()) * gridSize() : v;
 }
 
 stage.addEventListener('pointerdown', onDown);
@@ -1171,7 +1198,7 @@ function onDown(e) {
           drag = { mode: 'wp', start, id, index, tx: true };
         } else {
           const sel = selectedEls().filter((x) => !x.locked);
-          drag = { mode: 'resize', start, handle: k, ob: selectionBounds(), origs: sel.map(clone), tx: true };
+          drag = { mode: 'resize', start, handle: k, ob: selectionBounds(), origs: sel.map(clone), tx: true, cand: snapCandidates(new Set(sel.map((x) => x.id))) };
         }
         return;
       }
@@ -1182,6 +1209,7 @@ function onDown(e) {
       }
       if (hit) {
         const el = hit.el;
+        const preSelected = new Set(app.sel);
         if (el.type === 'frame' && !hit.frameTitle && !(app.sel.has(el.id) && app.sel.size === 1)) {
           startMarquee(e, start, el.id);
           return;
@@ -1202,7 +1230,9 @@ function onDown(e) {
         }
         // In einer Mehrfachauswahl verschiebt Ziehen an einer Linie die ganze Auswahl
         const inMulti = app.sel.size > 1 && app.sel.has(el.id);
-        if (el.type === 'connector' && !inMulti && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Verbinder in einer Gruppe: Ziehen verschiebt die Gruppe (zum Biegen erst in die Gruppe klicken)
+        const groupWhole = el.groupId && !(app.sel.size === 1 && app.sel.has(el.id));
+        if (el.type === 'connector' && !inMulti && !groupWhole && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
           // Beschriftung entlang der Linie verschieben
           if (e.target.closest && e.target.closest('.conn-label')) {
             setSelection([el.id]);
@@ -1223,21 +1253,28 @@ function onDown(e) {
             return;
           }
         }
+        let toggleOff = null;
         if (e.shiftKey || e.ctrlKey || e.metaKey) {
           const ids = withGroups([el.id]);
-          const s = new Set(app.sel);
-          if (s.has(el.id)) ids.forEach((i) => s.delete(i));
-          else ids.forEach((i) => s.add(i));
-          app.sel = s;
-          selectionChanged();
-          if (!app.sel.has(el.id)) return;
+          // Bereits ausgewählt: erst beim Loslassen ohne Ziehen abwählen – Umschalt-/Strg-Ziehen verschiebt
+          if (app.sel.has(el.id)) toggleOff = ids;
+          else {
+            app.sel = new Set([...app.sel, ...ids]);
+            selectionChanged();
+          }
         } else if (!app.sel.has(el.id)) {
           setSelection([el.id]);
         }
-        startMove(e, start);
-        // Klick ohne Ziehen auf ein Element einer Mehrfachauswahl wählt nur dieses aus
         const grp = withGroups([el.id]);
-        if (!e.shiftKey && !e.ctrlKey && !e.metaKey && app.sel.size > grp.size) drag.clickSelect = el.id;
+        const groupSelected = el.groupId && grp.size > 1 && app.sel.size === grp.size && [...grp].every((id) => app.sel.has(id));
+        startMove(e, start);
+        if (toggleOff) drag.toggleOff = [...toggleOff];
+        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+          // Klick ohne Ziehen auf ein Element einer Mehrfachauswahl wählt nur dieses aus
+          if (app.sel.size > grp.size) drag.clickSelect = el.id;
+          // Erneuter Klick in eine bereits ausgewählte Gruppe wählt nur das angeklickte Element (Bearbeiten in der Gruppe)
+          else if (groupSelected && preSelected.has(el.id)) drag.clickSelectSingle = el.id;
+        }
         return;
       }
       startMarquee(e, start, null);
@@ -1307,10 +1344,10 @@ function startMarquee(e, start, pendingSelect) {
 function startMove(e, start) {
   begin();
   let ids = new Set(app.sel);
-  // Frames nehmen ihren Inhalt mit
+  // Frames nehmen ihren Inhalt mit – Gruppen darin bleiben vollständig zusammen
   for (const id of app.sel) {
     const el = getEl(id);
-    if (el && el.type === 'frame') frameChildren(el).forEach((c) => ids.add(c.id));
+    if (el && el.type === 'frame') withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
   }
   ids = [...ids].filter((id) => getEl(id) && !getEl(id).locked);
   // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit
@@ -1330,18 +1367,7 @@ function startMove(e, start) {
   const moving = new Set(ids);
   const ob = unionRect(origs.map((o) => elBounds(o, getEl)));
   // Kandidaten für Hilfslinien
-  const vr = visibleRect();
-  const cand = { x: [], y: [] };
-  if (app.settings.smartGuides && !app.settings.snap) {
-    for (const el of app.els.values()) {
-      if (moving.has(el.id) || el.type === 'connector' || el.type === 'pen' || el.type === 'comment') continue;
-      const b = bounds(el);
-      if (!rectsIntersect(b, vr)) continue;
-      cand.x.push(b.x, b.x + b.w / 2, b.x + b.w);
-      cand.y.push(b.y, b.y + b.h / 2, b.y + b.h);
-      if (cand.x.length > 900) break;
-    }
-  }
+  const cand = app.settings.smartGuides ? snapCandidates(moving) : { x: [], y: [], w: [], h: [], boxes: [] };
   drag = { mode: 'move', start, origs, ob, cand, moved: false, tx: true };
 }
 
@@ -1401,25 +1427,39 @@ function onMove(e) {
       if (!drag.moved && !far) return;
       drag.moved = true;
       let dx = w.x - s.w.x, dy = w.y - s.w.y;
+      // Umschalt: nur waagerecht oder senkrecht verschieben
+      if (e.shiftKey) {
+        if (Math.abs(dx) > Math.abs(dy)) dy = 0;
+        else dx = 0;
+      }
       guides = [];
       if (drag.ob) {
         if (app.settings.snap) {
-          dx = snapV(drag.ob.x + dx) - drag.ob.x;
-          dy = snapV(drag.ob.y + dy) - drag.ob.y;
+          if (!e.shiftKey || dx) dx = snapV(drag.ob.x + dx) - drag.ob.x;
+          if (!e.shiftKey || dy) dy = snapV(drag.ob.y + dy) - drag.ob.y;
         } else if (app.settings.smartGuides && !e.ctrlKey && !e.metaKey) {
           const thr = 6 / app.view.z;
           const nb = { x: drag.ob.x + dx, y: drag.ob.y + dy, w: drag.ob.w, h: drag.ob.h };
-          const sx = bestSnap([nb.x, nb.x + nb.w / 2, nb.x + nb.w], drag.cand.x, thr);
-          const sy = bestSnap([nb.y, nb.y + nb.h / 2, nb.y + nb.h], drag.cand.y, thr);
-          if (sx) {
-            dx += sx.d;
-            guides.push({ axis: 'x', v: sx.v, a: nb.y - 2000, b: nb.y + nb.h + 2000 });
-          }
-          if (sy) {
-            dy += sy.d;
-            guides.push({ axis: 'y', v: sy.v, a: nb.x - 2000, b: nb.x + nb.w + 2000 });
-          }
+          const sx = !(e.shiftKey && !dx) && bestSnap([nb.x, nb.x + nb.w / 2, nb.x + nb.w], drag.cand.x, thr);
+          const sy = !(e.shiftKey && !dy) && bestSnap([nb.y, nb.y + nb.h / 2, nb.y + nb.h], drag.cand.y, thr);
+          // Gleiche Abstände haben Vorrang, wenn sie mindestens so nah liegen wie eine Kante
+          const gx = !(e.shiftKey && !dx) && spacingSnap(nb, drag.cand.boxes, 'x', thr);
+          const gy = !(e.shiftKey && !dy) && spacingSnap(nb, drag.cand.boxes, 'y', thr);
+          const useGx = gx && (!sx || Math.abs(gx.d) <= Math.abs(sx.d));
+          const useGy = gy && (!sy || Math.abs(gy.d) <= Math.abs(sy.d));
+          if (useGx) dx += gx.d;
+          else if (sx) dx += sx.d;
+          if (useGy) dy += gy.d;
+          else if (sy) dy += sy.d;
+          // Hilfslinien an der endgültigen Position
+          const fx = drag.ob.x + dx, fy = drag.ob.y + dy;
+          if (useGx) guides.push(...gx.guides.map((g) => ({ ...g, v: fy + nb.h / 2 })));
+          else if (sx) guides.push({ axis: 'x', v: sx.v, a: fy - 2000, b: fy + nb.h + 2000 });
+          if (useGy) guides.push(...gy.guides.map((g) => ({ ...g, v: fx + nb.w / 2 })));
+          else if (sy) guides.push({ axis: 'y', v: sy.v, a: fx - 2000, b: fx + nb.w + 2000 });
         }
+        const p = { x: drag.ob.x + dx, y: drag.ob.y + dy };
+        guides.push({ axis: 'label', x: p.x + drag.ob.w / 2, y: p.y + drag.ob.h + 18 / app.view.z, text: `X ${Math.round(p.x)}  Y ${Math.round(p.y)}`, color: '#495057' });
       }
       for (const o of drag.origs) applyGeom(o, translated(o, dx, dy));
       app.emit('dragging', true);
@@ -1429,34 +1469,101 @@ function onMove(e) {
       const ob = drag.ob;
       if (!ob) return;
       const dx = w.x - s.w.x, dy = w.y - s.w.y;
-      let { x, y, w: bw, h: bh } = ob;
       const k = drag.handle;
-      if (k.includes('e')) bw = ob.w + dx;
-      if (k.includes('w')) { x = ob.x + dx; bw = ob.w - dx; }
-      if (k.includes('s')) bh = ob.h + dy;
-      if (k.includes('n')) { y = ob.y + dy; bh = ob.h - dy; }
-      const keep = e.shiftKey || drag.origs.some((o) => ['image', 'emoji'].includes(o.type)) || drag.origs.length > 1;
-      if (keep && k.length === 2) {
-        const f = Math.max(bw / (ob.w || 1), bh / (ob.h || 1));
-        bw = ob.w * f;
-        bh = ob.h * f;
-        if (k.includes('w')) x = ob.x + ob.w - bw;
-        if (k.includes('n')) y = ob.y + ob.h - bh;
+      const z = app.view.z, thr = 6 / z;
+      const fromCenter = e.altKey;
+      let x = ob.x, y = ob.y, x2 = ob.x + ob.w, y2 = ob.y + ob.h;
+      if (k.includes('e')) x2 += dx;
+      if (k.includes('w')) x += dx;
+      if (k.includes('s')) y2 += dy;
+      if (k.includes('n')) y += dy;
+      guides = [];
+      const smart = app.settings.smartGuides && !app.settings.snap && !e.ctrlKey && !e.metaKey;
+      const eqTags = [];
+      // Je Achse: Kante an Raster bzw. Kanten/Mitten/Tabellenlinien anderer Elemente einrasten – oder an die gleiche
+      // Breite/Höhe eines anderen Elements; der nähere Treffer gewinnt
+      const snapAxis = (axis) => {
+        const [lo, hi] = axis === 'x' ? ['w', 'e'] : ['n', 's'];
+        const moveLo = k.includes(lo), moveHi = k.includes(hi);
+        if (!moveLo && !moveHi) return;
+        let a0 = axis === 'x' ? x : y, a1 = axis === 'x' ? x2 : y2;
+        const orig0 = axis === 'x' ? ob.x : ob.y, origLen = axis === 'x' ? ob.w : ob.h;
+        if (fromCenter) {
+          const d = axis === 'x' ? dx : dy;
+          let len = Math.max(10, origLen + (moveHi ? d : -d) * 2);
+          if (app.settings.snap) len = Math.max(gridSize(), Math.round(len / gridSize()) * gridSize());
+          a0 = orig0 + (origLen - len) / 2;
+          a1 = a0 + len;
+        }
+        if (app.settings.snap && !fromCenter) {
+          if (moveLo) a0 = snapV(a0);
+          if (moveHi) a1 = snapV(a1);
+        } else if (smart) {
+          const edge = !fromCenter && bestSnap([moveHi ? a1 : a0], axis === 'x' ? drag.cand.x : drag.cand.y, thr);
+          const size = drag.origs.length === 1 ? nearestSize(a1 - a0, axis === 'x' ? drag.cand.w : drag.cand.h, thr) : null;
+          const ds = size === null ? Infinity : Math.abs(size - (a1 - a0));
+          if (edge && Math.abs(edge.d) <= ds) {
+            if (moveHi) a1 = edge.v;
+            else a0 = edge.v;
+            guides.push(axis === 'x' ? { axis: 'x', v: edge.v, a: y - 2000, b: y2 + 2000 } : { axis: 'y', v: edge.v, a: x - 2000, b: x2 + 2000 });
+          } else if (size !== null) {
+            if (fromCenter) {
+              a0 = orig0 + (origLen - size) / 2;
+              a1 = a0 + size;
+            } else if (moveHi) a1 = a0 + size;
+            else a0 = a1 - size;
+            eqTags.push(axis === 'x' ? '= Breite' : '= Höhe');
+          }
+        }
+        if (axis === 'x') {
+          x = a0;
+          x2 = a1;
+        } else {
+          y = a0;
+          y2 = a1;
+        }
+      };
+      snapAxis('x');
+      snapAxis('y');
+      let bw = x2 - x, bh = y2 - y;
+      // Seitenverhältnis: Umschalt (bei Bildern und Mehrfachauswahl umgekehrt: Umschalt löst es)
+      const ratioDefault = drag.origs.some((o) => ['image', 'emoji'].includes(o.type)) || drag.origs.length > 1;
+      const keep = ratioDefault ? k.length === 2 && !e.shiftKey : e.shiftKey;
+      if (keep && ob.w && ob.h) {
+        // Mindestgröße einhalten, ohne das Seitenverhältnis zu verlieren
+        const f = Math.max(10 / Math.min(ob.w, ob.h), k.length === 2 ? Math.max(bw / ob.w, bh / ob.h) : k === 'e' || k === 'w' ? bw / ob.w : bh / ob.h);
+        eqTags.length = 0;
+        guides = guides.filter((g) => g.axis === 'label');
+        const nw = ob.w * f, nh = ob.h * f;
+        if (k.length === 1) {
+          // Seitengriff mit Umschalt: andere Achse mittig mitskalieren
+          if (k === 'e' || k === 'w') y = ob.y + (ob.h - nh) / 2;
+          else x = ob.x + (ob.w - nw) / 2;
+        } else {
+          if (k.includes('w')) x = fromCenter ? ob.x + (ob.w - nw) / 2 : ob.x + ob.w - nw;
+          if (k.includes('n')) y = fromCenter ? ob.y + (ob.h - nh) / 2 : ob.y + ob.h - nh;
+          if (fromCenter) {
+            x = ob.x + (ob.w - nw) / 2;
+            y = ob.y + (ob.h - nh) / 2;
+          }
+        }
+        bw = nw;
+        bh = nh;
       }
-      if (app.settings.snap) {
-        const x2 = snapV(x + bw), y2 = snapV(y + bh);
-        if (k.includes('w')) x = snapV(x);
-        if (k.includes('n')) y = snapV(y);
-        if (k.includes('e')) bw = x2 - x;
-        if (k.includes('s')) bh = y2 - y;
-        if (k.includes('w')) bw = ob.x + ob.w - x;
-        if (k.includes('n')) bh = ob.y + ob.h - y;
+      if (bw < 10) {
+        if (k.includes('w')) x -= 10 - bw;
+        bw = 10;
       }
-      bw = Math.max(10, bw);
-      bh = Math.max(10, bh);
+      if (bh < 10) {
+        if (k.includes('n')) y -= 10 - bh;
+        bh = 10;
+      }
       const nb = { x, y, w: bw, h: bh };
       const single = drag.origs.length === 1 && k.length === 2;
       for (const o of drag.origs) applyGeom(o, scaleEl(o, ob, nb, single));
+      // Größenanzeige
+      const cur = drag.origs.length === 1 ? bounds(getEl(drag.origs[0].id) || nb) : nb;
+      guides.push({ axis: 'label', x: cur.x + cur.w / 2, y: cur.y + cur.h + 18 / z, text: `${Math.round(cur.w)} × ${Math.round(cur.h)}${eqTags.length ? '  ' + eqTags.join(' ') : ''}`, color: eqTags.length ? '#e64980' : '#4262ff' });
       app.emit('dragging', true);
       return;
     }
@@ -1589,6 +1696,74 @@ function applyGeom(orig, moved) {
   setEl(n);
 }
 
+/* ---------------- Einrasten: Kandidaten, gleiche Abstände, gleiche Größen ---------------- */
+
+// Kanten, Mitten und Tabellenlinien sichtbarer Elemente sowie deren Größen
+function snapCandidates(exclude) {
+  const vr = visibleRect();
+  const area = { x: vr.x - vr.w, y: vr.y - vr.h, w: vr.w * 3, h: vr.h * 3 };
+  const cand = { x: [], y: [], w: [], h: [], boxes: [] };
+  for (const el of app.els.values()) {
+    if (exclude.has(el.id) || el.hidden || el.type === 'connector' || el.type === 'pen' || el.type === 'comment') continue;
+    const b = bounds(el);
+    if (!rectsIntersect(b, area)) continue;
+    cand.x.push(b.x, b.x + b.w / 2, b.x + b.w);
+    cand.y.push(b.y, b.y + b.h / 2, b.y + b.h);
+    // Zeilen- und Spaltenlinien von Tabellen (z. B. Wochen im Gantt-Diagramm)
+    if (el.type === 'table') {
+      for (let c = 1; c < el.cols; c++) cand.x.push(b.x + (b.w / el.cols) * c);
+      for (let r = 1; r < el.rows; r++) cand.y.push(b.y + (b.h / el.rows) * r);
+    }
+    if (el.type !== 'frame') {
+      cand.w.push(b.w);
+      cand.h.push(b.h);
+      cand.boxes.push(b);
+    }
+    if (cand.boxes.length > 1500) break;
+  }
+  return cand;
+}
+
+// Gleiche Abstände: Position entlang einer Achse, an der der Abstand zum Nachbarn einem vorhandenen Abstand
+// in derselben Reihe entspricht oder das Element mittig zwischen zwei Nachbarn liegt
+function spacingSnap(nb, boxes, axis, thr) {
+  const [p, s, q, t] = axis === 'x' ? ['x', 'w', 'y', 'h'] : ['y', 'h', 'x', 'w'];
+  const row = boxes.filter((b) => b[q] < nb[q] + nb[t] && b[q] + b[t] > nb[q]).sort((a, b) => a[p] - b[p]);
+  if (!row.length) return null;
+  const mid = nb[p] + nb[s] / 2;
+  const before = row.filter((b) => b[p] + b[s] <= mid).sort((a, b) => b[p] + b[s] - (a[p] + a[s]))[0];
+  const after = row.filter((b) => b[p] >= mid).sort((a, b) => a[p] - b[p])[0];
+  const gaps = [];
+  for (let i = 1; i < row.length; i++) {
+    const g = row[i][p] - (row[i - 1][p] + row[i - 1][s]);
+    if (g > 0.5) gaps.push({ g, a: row[i - 1], b: row[i] });
+  }
+  const opts = [];
+  if (before && after) {
+    const v = (before[p] + before[s] + after[p] - nb[s]) / 2;
+    if (v > before[p] + before[s]) opts.push({ v, g: v - (before[p] + before[s]), marks: [[before[p] + before[s], v], [v + nb[s], after[p]]] });
+  }
+  for (const { g, a, b } of gaps) {
+    if (before) opts.push({ v: before[p] + before[s] + g, g, marks: [[before[p] + before[s], before[p] + before[s] + g], [a[p] + a[s], b[p]]] });
+    if (after) opts.push({ v: after[p] - g - nb[s], g, marks: [[after[p] - g, after[p]], [a[p] + a[s], b[p]]] });
+  }
+  let best = null;
+  for (const o of opts) {
+    const d = o.v - nb[p];
+    if (Math.abs(d) <= thr && (!best || Math.abs(d) < Math.abs(best.d))) best = { ...o, d };
+  }
+  if (!best) return null;
+  const level = nb[q] + nb[t] / 2;
+  best.guides = best.marks.map(([a, b]) => ({ axis: axis === 'x' ? 'gapx' : 'gapy', v: level, a, b, label: String(Math.round(best.g)) }));
+  return best;
+}
+
+function nearestSize(v, list, thr) {
+  let best = null;
+  for (const c of list) if (Math.abs(c - v) <= thr && (best === null || Math.abs(c - v) < Math.abs(best - v))) best = c;
+  return best;
+}
+
 function bestSnap(vals, cands, thr) {
   let best = null;
   for (const v of vals) {
@@ -1621,6 +1796,18 @@ function onUp(e) {
       commit();
       if (d.clickComment && !d.moved) app.emit('openComment', d.clickComment);
       if (d.clickSelect && !d.moved) setSelection([d.clickSelect]);
+      if (d.toggleOff && !d.moved) {
+        const s2 = new Set(app.sel);
+        d.toggleOff.forEach((i) => s2.delete(i));
+        app.sel = s2;
+        selectionChanged();
+      }
+      if (d.clickSelectSingle && !d.moved) {
+        // ohne Gruppenerweiterung: nur dieses Element
+        app.sel = new Set([d.clickSelectSingle]);
+        selectionChanged();
+        toast('Einzelnes Element der Gruppe ausgewählt – Klick daneben wählt wieder die ganze Gruppe', 2500);
+      }
       app.emit('dragging', false);
       break;
     case 'resize':
@@ -1838,7 +2025,7 @@ export function collectForCopy(ids) {
   const set = new Set(ids);
   for (const id of ids) {
     const el = getEl(id);
-    if (el && el.type === 'frame') frameChildren(el).forEach((c) => set.add(c.id));
+    if (el && el.type === 'frame') withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => set.add(c));
   }
   for (const el of app.els.values()) {
     if (el.type === 'connector' && el.from.id && el.to.id && set.has(el.from.id) && set.has(el.to.id)) set.add(el.id);
@@ -1939,6 +2126,133 @@ export function arrangeGrid(list = selectedEls().filter((e) => e.type !== 'conne
   act(() => list.forEach((el, i) => setEl({ ...el, x: b.x + (i % cols) * (cw + gap), y: b.y + Math.floor(i / cols) * (ch + gap) })));
 }
 
+// Neue Größe für ein Element (Freihandlinien skalieren ihre Punkte mit)
+function resized(el, w, h) {
+  const n = { ...el, w: Math.max(4, w), h: Math.max(4, h) };
+  if (el.type === 'pen') n.points = (el.points || []).map(([px, py]) => [px * (n.w / (el.w || 1)), py * (n.h / (el.h || 1))]);
+  return autoHeight(n);
+}
+
+// Ein Element samt Frame-Inhalt (Gruppen vollständig) verschieben
+function moveWithContent(el, dx, dy, done) {
+  if (!dx && !dy) return;
+  const ids = [el.id];
+  if (el.type === 'frame') ids.push(...withGroups(frameChildren(el).map((c) => c.id)));
+  for (const id of ids) {
+    if (done.has(id)) continue;
+    done.add(id);
+    const cur = getEl(id);
+    if (cur && !cur.locked) setEl(translated(cur, dx, dy));
+  }
+}
+
+// Größe anpassen: Breite und/oder Höhe aller ausgewählten Elemente an die des Referenzelements
+// (das zuerst ausgewählte) angleichen
+const sizable = () => selectedEls().filter((e) => e.type !== 'connector' && e.type !== 'comment' && !e.locked && !e.hidden);
+
+export function matchSize(kind) {
+  // Auch ein gesperrtes Element darf Referenz sein; angepasst werden nur nicht gesperrte
+  const all = selectedEls().filter((e) => e.type !== 'connector' && e.type !== 'comment' && !e.hidden);
+  if (all.length < 2) return toast('Bitte mindestens zwei Elemente auswählen');
+  const ref = all[0];
+  const sel = [ref, ...all.slice(1).filter((e) => !e.locked)];
+  act(() => {
+    for (const el of sel.slice(1)) setEl(resized(el, kind !== 'h' ? ref.w : el.w, kind !== 'w' ? ref.h : el.h));
+  });
+  toast(`${kind === 'w' ? 'Breite' : kind === 'h' ? 'Höhe' : 'Größe'} von „${String(ref.text || ref.title || 'erstem Element').slice(0, 30)}“ übernommen`);
+}
+
+// Lückenlos bzw. mit festem Abstand aneinanderreihen (Reihenfolge nach Lage)
+export function packSel(axis, gap = 0) {
+  const sel = sizable();
+  if (sel.length < 2) return toast('Bitte mindestens zwei Elemente auswählen');
+  const [p, s] = axis === 'h' ? ['x', 'w'] : ['y', 'h'];
+  sel.sort((a, b) => a[p] - b[p]);
+  let pos = sel[0][p] + sel[0][s] + gap;
+  const done = new Set(sel.map((e) => e.id));
+  act(() => {
+    for (const el of sel.slice(1)) {
+      const d = pos - el[p];
+      done.delete(el.id);
+      moveWithContent(el, p === 'x' ? d : 0, p === 'y' ? d : 0, done);
+      pos += el[s] + gap;
+    }
+  });
+}
+
+// Position und Größe auf das Raster runden
+export function snapSelToGrid() {
+  const g = gridSize();
+  const r = (v) => Math.round(v / g) * g;
+  act(() => {
+    for (const el of sizable()) {
+      const n = { ...el, x: r(el.x), y: r(el.y) };
+      if (el.type !== 'text' && el.type !== 'code' && el.type !== 'pen') Object.assign(n, { w: Math.max(g, r(el.w)), h: Math.max(g, r(el.h)) });
+      setEl(autoHeight(n));
+    }
+  });
+}
+
+// Größe kopieren / übernehmen (wie „Copy Size“ / „Paste Size“)
+let copiedSize = null;
+export function copySize() {
+  const el = sizable()[0];
+  if (!el) return;
+  copiedSize = { w: el.w, h: el.h };
+  toast(`Größe ${Math.round(el.w)} × ${Math.round(el.h)} kopiert`);
+}
+export function pasteSize(kind = 'both') {
+  if (!copiedSize) return toast('Zuerst eine Größe kopieren');
+  act(() => sizable().forEach((el) => setEl(resized(el, kind !== 'h' ? copiedSize.w : el.w, kind !== 'w' ? copiedSize.h : el.h))));
+}
+export const hasCopiedSize = () => !!copiedSize;
+
+// Exakte Werte setzen. Bei mehreren Elementen verschieben X/Y die ganze Auswahl, B/H gelten für jedes Element.
+export function setGeometry({ x, y, w, h, keepRatio }) {
+  const sel = sizable();
+  if (!sel.length) return;
+  const b = selectionBounds();
+  const dx = Number.isFinite(x) ? x - b.x : 0, dy = Number.isFinite(y) ? y - b.y : 0;
+  const done = new Set();
+  act(() => {
+    // zuerst verschieben (Frames samt Inhalt, ausgewählte freie Verbinder mit), dann Größe setzen
+    for (const el of sel) moveWithContent(el, dx, dy, done);
+    for (const c of selectedEls()) if (c.type === 'connector' && !c.from.id && !c.to.id) moveWithContent(c, dx, dy, done);
+    if (!Number.isFinite(w) && !Number.isFinite(h)) return;
+    for (const el0 of sel) {
+      const el = getEl(el0.id);
+      let nw = Number.isFinite(w) ? w : el.w, nh = Number.isFinite(h) ? h : el.h;
+      if (keepRatio && el.w && el.h) {
+        if (Number.isFinite(w) && !Number.isFinite(h)) nh = el.h * (nw / el.w);
+        if (Number.isFinite(h) && !Number.isFinite(w)) nw = el.w * (nh / el.h);
+      }
+      setEl(resized(el, nw, nh));
+    }
+  });
+}
+
+// Strg+D: Wurde die letzte Kopie verschoben, wird dieser Versatz wiederholt (Reihen gleicher Elemente)
+let lastDup = null;
+function smartDuplicate() {
+  const ids = [...app.sel];
+  let dx = 20, dy = 20;
+  if (lastDup && lastDup.copies.length === ids.length && lastDup.copies.every((id, i) => id === ids[i])) {
+    const src = getEl(lastDup.src[0]), cur = getEl(lastDup.copies[0]);
+    if (src && cur && Number.isFinite(src.x) && Number.isFinite(cur.x)) {
+      dx = cur.x - src.x;
+      dy = cur.y - src.y;
+    }
+  }
+  const list = collectForCopy(ids);
+  const copies = duplicateEls(list, dx, dy, false);
+  // Reihenfolge der Auswahl beibehalten: Quelle → Kopie
+  const map = new Map(copies.map((c) => [c._src, c.id]));
+  const srcIds = ids.filter((id) => map.has(id));
+  lastDup = { src: srcIds, copies: srcIds.map((id) => map.get(id)) };
+  copies.forEach((c) => delete c._src);
+  setSelection(lastDup.copies.length ? lastDup.copies : copies.map((c) => c.id));
+}
+
 export function clusterByColor() {
   const stickies = selectedEls().filter((e) => e.type === 'sticky' && !e.locked);
   if (stickies.length < 2) return toast('Bitte mehrere Sticky Notes auswählen');
@@ -1996,7 +2310,7 @@ export function toggleLock() {
 
 export function nudge(dx, dy) {
   const ids = new Set(app.sel);
-  for (const el of selectedEls()) if (el.type === 'frame') frameChildren(el).forEach((c) => ids.add(c.id));
+  for (const el of selectedEls()) if (el.type === 'frame') withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
   // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit (wie beim Ziehen)
   for (const c of app.els.values()) {
     if (c.type === 'connector' && !ids.has(c.id) && waypointsOf(c).length && c.from.id && c.to.id && ids.has(c.from.id) && ids.has(c.to.id)) ids.add(c.id);
@@ -2047,7 +2361,7 @@ window.addEventListener('keydown', (e) => {
   }
   if (mod && key === 'd') {
     e.preventDefault();
-    if (app.sel.size) duplicateEls(collectForCopy([...app.sel]));
+    if (app.sel.size) smartDuplicate();
     return;
   }
   if (mod && key === 'g') {
@@ -2117,7 +2431,8 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.key.startsWith('Arrow') && app.sel.size) {
     e.preventDefault();
-    const s = e.shiftKey ? 10 : 1;
+    // Mit eingeschaltetem Raster um eine Rasterweite, sonst 1 px bzw. 10 px (Umschalt)
+    const s = app.settings.snap ? gridSize() : e.shiftKey ? 10 : 1;
     nudge(e.key === 'ArrowLeft' ? -s : e.key === 'ArrowRight' ? s : 0, e.key === 'ArrowUp' ? -s : e.key === 'ArrowDown' ? s : 0);
     return;
   }
