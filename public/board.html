@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>dlzboard</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="board-page">
+  <div id="stage">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg">
+      <defs id="defs"></defs>
+      <g id="world">
+        <g id="layer-frames"></g>
+        <g id="layer-els"></g>
+        <g id="layer-votes"></g>
+        <g id="layer-overlay"></g>
+        <g id="layer-draft"></g>
+      </g>
+    </svg>
+    <canvas id="laser"></canvas>
+    <div id="cursors"></div>
+    <textarea id="editor" spellcheck="false" autocomplete="off"></textarea>
+  </div>
+
+  <header id="topbar" class="panel chrome"></header>
+  <div id="topright" class="panel chrome"></div>
+  <nav id="tools" class="panel chrome" aria-label="Werkzeuge"></nav>
+  <div id="ctxbar" class="panel hidden"></div>
+  <div id="bottom-left" class="panel chrome"></div>
+  <div id="bottom-right" class="chrome">
+    <div id="minimap" class="panel"><canvas></canvas></div>
+    <div id="zoomctl" class="panel"></div>
+  </div>
+  <aside id="sidepanel" class="panel chrome hidden"></aside>
+  <div id="timer-widget" class="panel hidden"></div>
+  <div id="voting-banner" class="panel chrome hidden"></div>
+  <div id="follow-banner" class="hidden"></div>
+  <div id="search-box" class="panel hidden"></div>
+  <div id="present-bar" class="panel hidden"></div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

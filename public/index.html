@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>dlzboard – Boards</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="dash-page">
+  <header class="dash-top">
+    <a class="dash-brand" href="/">
+      <svg viewBox="0 0 32 32" width="32" height="32"><rect x="2" y="2" width="28" height="28" rx="7" fill="#4262ff"/><rect x="8" y="8" width="9" height="9" rx="1.5" fill="#fff9b1"/><rect x="15" y="15" width="9" height="9" rx="1.5" fill="#ffcee0"/></svg>
+      <span>dlzboard</span>
+    </a>
+    <div class="spacer"></div>
+    <input id="dash-search" type="search" placeholder="Boards durchsuchen …">
+    <button id="dash-dark" class="icon-btn" title="Dunkles Design"></button>
+    <button id="dash-user" class="avatar" title="Profil"></button>
+  </header>
+  <main class="dash-main">
+    <section>
+      <div class="dash-section-head">
+        <h2>Neues Board erstellen</h2>
+        <button id="dash-all-templates" class="btn small">Alle Vorlagen anzeigen</button>
+      </div>
+      <div id="dash-templates" class="dash-templates"></div>
+    </section>
+    <section>
+      <div class="dash-section-head">
+        <h2>Meine Boards</h2>
+        <div class="spacer"></div>
+        <select id="dash-sort" class="btn small">
+          <option value="updated">Zuletzt bearbeitet</option>
+          <option value="created">Zuletzt erstellt</option>
+          <option value="name">Name</option>
+        </select>
+        <button id="dash-import" class="btn small">JSON importieren</button>
+      </div>
+      <div id="dash-boards" class="dash-boards"></div>
+    </section>
+  </main>
+  <script type="module" src="/js/dashboard.js"></script>
+</body>
+</html>

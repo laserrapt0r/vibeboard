@@ -1,0 +1,15 @@
+{
+  "name": "dlzboard",
+  "version": "1.0.0",
+  "description": "Kollaboratives Online-Whiteboard (wie Miro / Conceptboard) – ohne externe Abhängigkeiten",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "private": true
+}

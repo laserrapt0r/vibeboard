@@ -1,0 +1,13 @@
+services:
+  dlzboard:
+    build: .
+    image: dlzboard:latest
+    container_name: dlzboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - dlzboard-data:/data
+
+volumes:
+  dlzboard-data:
