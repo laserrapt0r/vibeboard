@@ -23,6 +23,7 @@
   - Verfügbar: Rechteck, abgerundet, Ellipse, Raute, Dreieck, Sechseck, Parallelogramm, Trapez, Stern, Pille, Zylinder, Blockpfeil, Sprechblase, Kreuz, Dokument, Wolke.
   - Füllung, Rahmenfarbe, Rahmenstärke, Strichart (durchgezogen, gestrichelt, gepunktet), Textfarbe, Schriftgröße, fett und Ausrichtung sind einstellbar.
   - Die Form kann nachträglich gewechselt werden.
+  - Geändert in 3.2.0: zusätzliche Formen für Flussdiagramme, UML und IT-Architektur – Unterprozess, Verzögerung, Notiz, Paket, Komponente, Akteur, Server, Warteschlange, Container, Browser/UI, Endgerät, Firewall. Die Formenauswahl ist in die Gruppen „Grundformen“, „Flussdiagramm & UML“ und „Software & IT“ gegliedert. Alle Formen sind eigene Zeichnungen (keine Symbole Dritter).
 
 ### REQ-ELEM-004 Verbindungen
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -62,6 +63,8 @@
 - **Akzeptanzkriterien:**
   - Titel, Beschreibung, Zuständigkeit (mit Vorschlägen aus bekannten Namen), Fälligkeitsdatum, Status und Farbe.
   - Überfällige Termine werden rot dargestellt.
+  - Geändert in 3.2.0: zusätzlich Schlüssel/Ticketnummer (z. B. „VB-42“), Priorität (Kritisch, Hoch, Mittel, Niedrig – auch über die Kontextleiste), Story Points und bis zu 8 Labels. Alle Angaben erscheinen auf der Karte, ohne sich zu überlappen.
+  - Karten bilden die Aufgaben des Boards (Aufgaben-Panel, „Meine Aufgaben“, siehe [16](16-projektarbeit.md)).
 
 ### REQ-ELEM-009 Tabellen
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -105,3 +108,23 @@
   - Kommentare lassen sich als erledigt markieren und ausblenden; ein Panel listet alle Kommentare.
   - Ein Kommentar ohne Text wird beim Schließen verworfen.
   - Kommentar-Symbole behalten in jeder Zoomstufe ihre Größe.
+
+### REQ-ELEM-015 Code-Blöcke
+- **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Quelltext, Konfigurationen und Befehle lesbar auf dem Board zeigen (z. B. für API-Entwürfe, Code-Reviews, Runbooks).
+- **Akzeptanzkriterien:**
+  - Eigenes Werkzeug „Code-Block“; Bearbeiten per Doppelklick oder Enter in Festbreitenschrift, Tab rückt ein, Esc beendet.
+  - Syntaxhervorhebung (Kommentare, Zeichenketten, Zahlen, Schlüsselwörter) für JavaScript/TypeScript, Python, Java/Kotlin, C#, Go, PHP, SQL, Shell, JSON, YAML, HTML/XML, CSS, Dockerfile sowie reinen Text.
+  - Dunkles oder helles Farbschema, Schriftgröße, Zeilennummern ein/aus, optionaler Titel; „Code kopieren“ legt den Text in die Zwischenablage.
+  - Die Höhe passt sich der Zeilenzahl an; zu lange Zeilen werden am Rand des Blocks abgeschnitten.
+  - Code-Blöcke werden mit exportiert und sind über die Suche auffindbar.
+
+### REQ-ELEM-016 Diagramm aus Text
+- **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Fluss- und Sequenzdiagramme aus einer Textbeschreibung in der verbreiteten Mermaid-Schreibweise erzeugen („Diagrams as Code“).
+- **Akzeptanzkriterien:**
+  - Dialog „Diagramm aus Text“ (Werkzeugleiste und Export-/Importmenü) mit Live-Vorschau, Beispielen und Kurzreferenz; Fehler werden verständlich auf Deutsch gemeldet.
+  - Flussdiagramme (`flowchart`/`graph` mit TD, LR, BT, RL): Knotenformen Rechteck, abgerundet, Raute, Kreis, Start/Ende, Datenbank, Unterprozess, Sechseck, Parallelogramm, Trapez; Kanten mit/ohne Pfeil, gestrichelt, dick, beidseitig, mit Beschriftung; `A & B --> C`; Gruppen (`subgraph … end`); Kommentare `%%`. Die Anordnung erfolgt automatisch in Ebenen, auch bei Zyklen.
+  - Sequenzdiagramme (`sequenceDiagram`): Teilnehmer und Akteure (mit `as`-Namen), synchrone/asynchrone Nachrichten, Antworten, Selbstnachrichten, Notizen, `autonumber`, Blöcke `alt/else`, `loop`, `opt`, `par`, `critical`, `break`.
+  - Ergebnis sind normale, frei bearbeitbare Formen, Verbindungen und Texte; sie werden ohne Überlappung mit bestehenden Inhalten eingefügt und ausgewählt.
+  - Eigene Umsetzung ohne fremde Bibliothek.

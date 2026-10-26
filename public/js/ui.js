@@ -3,7 +3,8 @@ import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
   initials, relTime, rectsIntersect, throttle, uid,
 } from './util.js';
-import { SHAPES, shapeGeom, renderSvgDocument, elBounds, safeLink } from './render.js';
+import { SHAPES, SHAPE_GROUPS, shapeGeom, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags } from './render.js';
+import { LANGUAGES } from './highlight.js';
 import { templateGallery } from './gallery.js';
 import { popover, closePop, menu } from './menu.js';
 import { openShareDialog } from './share.js';
@@ -38,9 +39,9 @@ const TOOLS = [
   ['select', 'Auswählen (V)'], ['hand', 'Verschieben (H / Leertaste)'], '|',
   ['sticky', 'Sticky Note (N)'], ['text', 'Text (T)'], ['shape', 'Formen (S, R, O)'], ['connector', 'Verbindungslinie (L)'],
   ['pen', 'Stift (P)'], ['highlighter', 'Textmarker'], ['eraser', 'Radierer (E)'], '|',
-  ['frame', 'Frame (F)'], ['card', 'Karte / Aufgabe (K)'], ['table', 'Tabelle'], ['mindmap', 'Mindmap (M)'],
+  ['frame', 'Frame (F)'], ['card', 'Karte / Aufgabe (K)'], ['table', 'Tabelle'], ['code', 'Code-Block'], ['mindmap', 'Mindmap (M)'],
   ['comment', 'Kommentar (C)'], ['emoji', 'Sticker & Emojis'], ['image', 'Bild hochladen'], ['laser', 'Laserpointer (X)'], '|',
-  ['template', 'Vorlagen'],
+  ['template', 'Vorlagen'], ['diagram', 'Diagramm aus Text (Mermaid-Syntax)'],
 ];
 
 const EMOJIS = ['👍', '👎', '❤️', '⭐', '✅', '❌', '❓', '❗', '💡', '🔥', '🎉', '🚀', '😀', '😂', '😍', '🤔', '😢', '😡', '👏', '🙌', '💪', '👀', '🎯', '📌', '⚠️', '🏆', '💰', '📅', '🔒', '🧩', '☕', '🍕'];
@@ -68,6 +69,7 @@ function buildTools() {
     const b = iconBtn(id === 'template' ? 'template' : id, title, () => {
       if (id === 'image') return fileInput.click();
       if (id === 'template') return openTemplates();
+      if (id === 'diagram') return app.emit('openDiagramText');
       if (app.tool === id && hasFlyout(id)) return showFlyout(id, b);
       setTool(id);
     });
@@ -77,7 +79,7 @@ function buildTools() {
 }
 
 function hasFlyout(id) {
-  return ['sticky', 'shape', 'connector', 'pen', 'highlighter', 'emoji'].includes(id);
+  return ['sticky', 'shape', 'connector', 'pen', 'highlighter', 'emoji', 'code'].includes(id);
 }
 
 function swatchGrid(colors, current, onPick, cls = '') {
@@ -102,11 +104,18 @@ function showFlyout(id, anchor) {
       content = h('div', {}, h('div', { class: 'pop-title' }, 'Farbe der Sticky Note'), swatchGrid(STICKY_COLORS, o.stickyColor, (c) => { o.stickyColor = c; done(); }));
       break;
     case 'shape':
-      content = h('div', {}, h('div', { class: 'pop-title' }, 'Form wählen'), h('div', { class: 'shape-grid' }, SHAPES.map(([k, label]) => h('button', {
-        class: 'shape-btn' + (o.shape === k ? ' active' : ''), title: label,
-        html: `<svg viewBox="0 0 40 30" width="40" height="30">${shapeGeom(k, 3, 3, 34, 24)} fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
-        onclick: () => { o.shape = k; done(); },
-      }))));
+      content = h('div', { class: 'shape-pop' }, SHAPE_GROUPS.flatMap(([group, keys]) => [
+        h('div', { class: 'pop-title' }, group),
+        h('div', { class: 'shape-grid' }, keys.map((k) => h('button', {
+          class: 'shape-btn' + (o.shape === k ? ' active' : ''), title: SHAPES.find((x) => x[0] === k)[1],
+          html: `<svg viewBox="0 0 40 30" width="40" height="30">${shapeGeom(k, 3, 3, 34, 24)} fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
+          onclick: () => { o.shape = k; done(); },
+        }))),
+      ]));
+      break;
+    case 'code':
+      content = h('div', {}, h('div', { class: 'pop-title' }, 'Sprache für neue Code-Blöcke'), h('div', { class: 'lang-list' }, LANGUAGES.map(([k, l]) =>
+        h('button', { class: 'btn small' + ((o.codeLang || 'js') === k ? ' primary' : ''), onclick: () => { o.codeLang = k; done(); } }, l))));
       break;
     case 'connector':
       content = h('div', {}, h('div', { class: 'pop-title' }, 'Linienart'), h('div', { class: 'row' }, [['curve', 'Kurve'], ['elbow', 'Gewinkelt'], ['straight', 'Gerade']].map(([k, l]) =>
@@ -254,7 +263,16 @@ export function buildCtx() {
       }
     } else if (only === 'card') {
       items.push(colorBtn(f.color || '#4262ff', 'Farbe', PALETTE.slice(2), (c) => applySel({ color: c })));
+      items.push(selectBtn(f.priority || '', [['', 'Ohne Priorität'], ...Object.entries(PRIORITIES).map(([k, p]) => [k, `${p.icon} ${p.label}`])], 'Priorität', (v) => applySel({ priority: v || undefined }), 90));
       if (one) items.push(actBtn('edit', 'Karte bearbeiten', () => app.emit('editCard', one.id)));
+      if (one) items.push(actBtn('poker', 'Schätzrunde starten', () => app.emit('startEstimation', one.id)));
+    } else if (only === 'code') {
+      items.push(selectBtn(f.lang || 'plain', LANGUAGES, 'Sprache', (v) => applySel({ lang: v }), 120));
+      items.push(toggleBtn('moon', f.theme !== 'light', 'Dunkles Farbschema', () => applySel({ theme: f.theme === 'light' ? 'dark' : 'light' })));
+      items.push(selectBtn(f.fontSize || 14, FONT_SIZES.slice(1, 8), 'Schriftgröße', (v) => applySel({ fontSize: v })));
+      items.push(toggleBtn('<b style="font-size:11px">1 2</b>', f.lineNumbers !== false, 'Zeilennummern', () => applySel({ lineNumbers: f.lineNumbers === false })));
+      if (one) items.push(actBtn('edit', 'Code bearbeiten (Enter)', () => startEdit(one.id, { selectAll: false })));
+      if (one) items.push(actBtn('copy', 'Code kopieren', () => navigator.clipboard.writeText(one.text || '').then(() => toast('Code kopiert'), () => toast('Kopieren nicht möglich'))));
     } else if (only === 'table' && one) {
       items.push(actBtn('<b style="font-size:12px">+Z</b>', 'Zeile hinzufügen', () => applySel((t) => ({ rows: t.rows + 1, h: t.h + t.h / t.rows, cells: [...t.cells.map((r) => [...r]), Array(t.cols).fill('')] }))));
       items.push(actBtn('<b style="font-size:12px">+S</b>', 'Spalte hinzufügen', () => applySel((t) => ({ cols: t.cols + 1, w: t.w + t.w / t.cols, cells: t.cells.map((r) => [...r, '']) }))));
@@ -288,7 +306,7 @@ export function buildCtx() {
     }
     if (items.length) items.push(sep());
   }
-  if (one && !locked && ['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame'].includes(one.type)) {
+  if (one && !locked && ['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame', 'code'].includes(one.type)) {
     items.push(toggleBtn('link', !!one.link, one.link ? 'Link: ' + one.link : 'Link hinzufügen', async () => {
       const v = await promptDialog('Link', 'Adresse (leer lassen zum Entfernen)', one.link || 'https://');
       if (v === null) return;
@@ -373,13 +391,17 @@ app.on('history', () => {
 
 app.on('editCard', (id) => {
   const el = getEl(id);
-  if (!el) return;
+  if (!el || el.hidden) return;
   let color = el.color || '#4262ff';
   const title = h('input', { type: 'text', value: el.title || '' });
   const desc = h('textarea', { rows: 4 }, el.description || '');
   const assignee = h('input', { type: 'text', value: el.assignee || '', placeholder: 'Name', list: 'assignee-list' });
   const due = h('input', { type: 'date', value: el.due || '' });
   const status = h('input', { type: 'text', value: el.status || '', placeholder: 'z. B. In Arbeit', list: 'status-list' });
+  const key = h('input', { type: 'text', value: el.key || '', placeholder: 'z. B. VB-42', maxlength: 40 });
+  const prio = h('select', {}, h('option', { value: '' }, 'Ohne'), Object.entries(PRIORITIES).map(([k, p]) => h('option', { value: k, selected: el.priority === k }, `${p.icon} ${p.label}`)));
+  const points = h('input', { type: 'text', value: el.points ?? '', placeholder: 'z. B. 5', maxlength: 5 });
+  const tags = h('input', { type: 'text', value: cardTags(el).join(', '), placeholder: 'z. B. Backend, Bug' });
   const names = [...new Set([app.user.name, ...[...app.peers.values()].map((p) => p.name), ...[...app.els.values()].filter((e) => e.assignee).map((e) => e.assignee)].filter(Boolean))];
   const sw = swatchGrid(PALETTE.slice(6), color, (c) => {
     color = c;
@@ -387,15 +409,22 @@ app.on('editCard', (id) => {
   });
   const form = h('form', { class: 'form', onsubmit: (e) => {
     e.preventDefault();
-    act(() => updateEl(id, { title: title.value, description: desc.value, assignee: assignee.value.trim(), due: due.value, status: status.value.trim(), color }));
+    act(() => updateEl(id, {
+      title: title.value, description: desc.value, assignee: assignee.value.trim(), due: due.value, status: status.value.trim(), color,
+      key: key.value.trim() || undefined, priority: prio.value || undefined, points: points.value.trim() || undefined,
+      tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 8),
+    }));
     m.close();
+    buildCtx();
   } },
   h('label', {}, 'Titel', title),
   h('label', {}, 'Beschreibung', desc),
   h('div', { class: 'form-row' }, h('label', {}, 'Zuständig', assignee), h('label', {}, 'Fällig am', due)),
-  h('label', {}, 'Status / Label', status),
+  h('div', { class: 'form-row' }, h('label', {}, 'Status', status), h('label', {}, 'Priorität', prio)),
+  h('div', { class: 'form-row' }, h('label', {}, 'Schlüssel / Ticket', key), h('label', {}, 'Story Points', points)),
+  h('label', {}, 'Labels (durch Komma getrennt)', tags),
   h('datalist', { id: 'assignee-list' }, names.map((n) => h('option', { value: n }))),
-  h('datalist', { id: 'status-list' }, ['Offen', 'In Arbeit', 'Review', 'Blockiert', 'Fertig', 'Hoch', 'Mittel', 'Niedrig'].map((n) => h('option', { value: n }))),
+  h('datalist', { id: 'status-list' }, ['Offen', 'In Arbeit', 'Review', 'Test', 'Blockiert', 'Fertig'].map((n) => h('option', { value: n }))),
   h('div', {}, h('div', { class: 'label' }, 'Farbe'), sw),
   h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, 'Abbrechen'), h('button', { type: 'submit', class: 'btn primary' }, 'Speichern')));
   const m = modal('Karte bearbeiten', form);
@@ -590,6 +619,8 @@ export function renderSidePanel() {
     }
   } else if (sidePanel === 'votes') {
     app.emit('renderVotesPanel', side, close);
+  } else {
+    app.emit('renderPanel', sidePanel, side, close);
   }
 }
 
@@ -614,8 +645,12 @@ export function openTemplates() {
 }
 
 function insertTemplate(t) {
-  const els = t.build();
-  if (!els.length) return;
+  if (placeElements(t.build())) toast(`Vorlage „${t.name}“ eingefügt`);
+}
+
+// Fügt fertige Elemente (Vorlage, Diagramm, Import) in der Ansichtsmitte ein, ohne Bestehendes zu überdecken
+export function placeElements(els, { select = false } = {}) {
+  if (!els.length) return false;
   const b = unionRect(els.map((e) => elBounds(e, (id) => els.find((x) => x.id === id))));
   const c = viewCenter();
   let tx = c.x - (b.x + b.w / 2), ty = c.y - (b.y + b.h / 2);
@@ -646,9 +681,9 @@ function insertTemplate(t) {
     return n;
   });
   addElements(moved, { select: false });
-  setSelection([]);
+  setSelection(select ? moved.filter((e) => e.type !== 'connector').map((e) => e.id) : []);
   fitTo({ x: b.x + tx, y: b.y + ty, w: b.w, h: b.h }, { maxZ: 1 });
-  toast(`Vorlage „${t.name}“ eingefügt`);
+  return true;
 }
 
 /* ================================================================== */
@@ -674,7 +709,7 @@ function exportSvg() {
 }
 
 function exportJson() {
-  const data = { format: 'vibeboard', version: 1, name: app.name, exportedAt: new Date().toISOString(), elements: [...app.els.values()] };
+  const data = { format: 'vibeboard', version: 1, name: app.name, exportedAt: new Date().toISOString(), elements: [...app.els.values()].filter((e) => !e.hidden) };
   download(safeName(app.name) + '.vibeboard.json', new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
 }
 
@@ -719,6 +754,8 @@ function openExportMenu(anchor) {
     '-',
     { header: 'Importieren' },
     { label: 'JSON-Datei importieren', icon: 'upload', disabled: app.viewOnly, onClick: () => importInput.click() },
+    { label: 'Karten aus CSV / Jira-Export …', icon: 'card', disabled: app.viewOnly, onClick: () => app.emit('openCsvImport') },
+    { label: 'Diagramm aus Text (Mermaid) …', icon: 'diagram', disabled: app.viewOnly, onClick: () => app.emit('openDiagramText') },
     { label: 'Bild hochladen', icon: 'image', disabled: app.viewOnly, onClick: () => fileInput.click() },
   ]);
 }
@@ -759,6 +796,7 @@ function openSettings(anchor) {
     t('dark', 'Dunkles Design'),
     t('showAuthor', 'Autor auf Sticky Notes'),
     t('hideResolved', 'Erledigte Kommentare ausblenden'),
+    t('hideCursors', 'Mauszeiger anderer ausblenden'),
     { header: 'Bearbeitung' },
     t('snap', 'Am Raster einrasten'),
     t('smartGuides', 'Intelligente Hilfslinien'),
@@ -777,6 +815,7 @@ export function openShortcuts() {
     ['Werkzeuge', [['V', 'Auswählen'], ['H / Leertaste', 'Verschieben'], ['N', 'Sticky Note'], ['T', 'Text'], ['S', 'Form'], ['R / O', 'Rechteck / Ellipse'], ['L', 'Verbindungslinie'], ['P', 'Stift'], ['E', 'Radierer'], ['F', 'Frame'], ['K', 'Karte'], ['M', 'Mindmap'], ['C', 'Kommentar'], ['X', 'Laserpointer']]],
     ['Bearbeiten', [['Strg+Z / Strg+Y', 'Rückgängig / Wiederholen'], ['Strg+C / X / V', 'Kopieren / Ausschneiden / Einfügen'], ['Strg+D', 'Duplizieren'], ['Alt + Ziehen', 'Kopie ziehen'], ['Entf', 'Löschen'], ['Strg+A', 'Alles auswählen'], ['Strg+G', 'Gruppieren'], ['Strg+Umschalt+G', 'Gruppe auflösen'], ['Strg+L', 'Sperren'], ['Strg+] / [', 'Vorder-/Hintergrund'], ['Pfeiltasten', 'Verschieben (Umschalt: 10px)'], ['Enter / Doppelklick', 'Text bearbeiten'], ['Esc / Strg+Enter', 'Bearbeitung beenden']]],
     ['Mindmap', [['Tab', 'Unterknoten hinzufügen'], ['Enter (beim Tippen)', 'Geschwisterknoten'], ['Umschalt+Enter', 'Geschwisterknoten']]],
+    ['Zusammenarbeit', [['/', 'Cursor-Chat: Nachricht am Mauszeiger'], ['Esc', 'Cursor-Chat schließen']]],
     ['Ansicht', [['Strg + Mausrad', 'Zoomen'], ['Strg + / −', 'Zoomen'], ['Strg+0', 'Auf 100 %'], ['Umschalt+1', 'Alles anzeigen'], ['Umschalt+2', 'Auswahl anzeigen'], ['Strg+F', 'Suchen']]],
   ];
   modal('Tastenkürzel', h('div', { class: 'shortcuts' }, groups.map(([t, list]) => h('div', {}, h('h4', {}, t), h('table', {}, list.map(([k, d]) => h('tr', {}, h('td', {}, h('kbd', {}, k)), h('td', {}, d))))))), { wide: true });
@@ -919,6 +958,13 @@ const drawMinimap = throttle(() => {
       mctx.strokeRect(b.x * s + ox, b.y * s + oy, b.w * s, b.h * s);
     }
   }
+  // Ansichten der anderen Teilnehmenden
+  mctx.lineWidth = 1.5 * devicePixelRatio;
+  for (const p of app.peers.values()) {
+    if (!p.view || p.away) continue;
+    mctx.strokeStyle = p.color;
+    mctx.strokeRect(p.view.x * s + ox, p.view.y * s + oy, p.view.w * s, p.view.h * s);
+  }
   mctx.strokeStyle = '#4262ff';
   mctx.lineWidth = 2 * devicePixelRatio;
   mctx.fillStyle = 'rgba(66,98,255,0.08)';
@@ -955,6 +1001,7 @@ mini.addEventListener('pointerdown', (e) => {
 
 app.on('render', drawMinimap);
 app.on('view', drawMinimap);
+app.on('peers', drawMinimap);
 
 function buildZoom() {
   const z = $('#zoomctl');
@@ -1010,6 +1057,8 @@ function buildTopbar() {
     app.viewOnly ? null : iconBtn('template', 'Vorlagen', openTemplates),
     iconBtn('frame', 'Frames & Präsentation', () => toggleSidePanel('frames'), { 'data-panel': 'frames' }),
     iconBtn('comment', 'Kommentare', () => toggleSidePanel('comments'), { 'data-panel': 'comments' }),
+    iconBtn('tasks', 'Aufgaben auf diesem Board', () => toggleSidePanel('tasks'), { 'data-panel': 'tasks' }),
+    app.viewOnly ? null : iconBtn('history', 'Versionsverlauf', () => toggleSidePanel('versions'), { 'data-panel': 'versions' }),
     iconBtn('search', 'Suchen (Strg+F)', openSearch),
     iconBtn('download', 'Exportieren & Importieren', (e) => openExportMenu(e.currentTarget)),
   );

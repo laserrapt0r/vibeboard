@@ -3,6 +3,10 @@
 ### REQ-TPL-001 Vorlagen-Bibliothek
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Beschreibung:** Mindestens 35 fertige Vorlagen in den Kategorien Brainstorming, Meetings & Retros, Agile & Projekte, Strategie, Design & UX und Diagramme.
+- **Geändert in 3.2.0:** Mindestens 65 Vorlagen; neue Kategorien:
+  - **Softwareentwicklung:** Sprint-Planung, Entwicklungs-Kanban mit WIP-Limits, Definition of Ready & Done, Architektur (C4-Kontext), Sequenzdiagramm, ER-Diagramm, Event Storming, Bug-Triage, Tech-Debt-Matrix, Release-Planung, API-Design, Architekturentscheidung (ADR).
+  - **Projektmanagement:** Projekt-Kick-off, Risikomatrix, RAID-Log, Projektstatus, Meilensteinplan, RACI-Matrix, Teamübergreifende Planung, Lessons Learned.
+  - **IT-Service-Management:** Incident-Postmortem, Major-Incident-Lagezentrum, Problem-Analyse (Ist / Ist nicht), Change-Request & CAB, Service Blueprint, SIPOC, Wertstromanalyse, Service-Katalog, On-Call-Übergabe, Runbook, SLA-/Service-Review.
 - **Akzeptanzkriterien:**
   - Jede Vorlage liegt in einem benannten Frame und besteht aus normalen, bearbeitbaren Elementen.
   - Hintergrundflächen von Vorlagen sind gesperrt, damit Inhalte darauf abgelegt werden können.

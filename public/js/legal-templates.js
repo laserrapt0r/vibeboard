@@ -60,6 +60,8 @@ Zweck ist die Bereitstellung des Kontos und der Funktionen der Anwendung. Rechts
 
 Inhalte, die du auf Boards erstellst (z. B. Notizen, Texte, Zeichnungen, Bilder, Kommentare), werden gespeichert und sind für alle Personen sichtbar, mit denen das jeweilige Board geteilt ist. Während der Zusammenarbeit sehen andere Teilnehmende deinen Anzeigenamen, deinen Mauszeiger und deine Auswahl in Echtzeit. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Die Inhalte bleiben gespeichert, bis sie oder das Board gelöscht werden.
 
+Zum Schutz vor Datenverlust speichern wir frühere Stände eines Boards als Versionen (automatisch höchstens alle 30 Minuten während der Bearbeitung sowie auf Wunsch). Versionen enthalten die Inhalte des Boards zum jeweiligen Zeitpunkt und den Namen der Person, die sie angelegt hat. Ältere Versionen werden automatisch gelöscht (es bleiben höchstens 20 automatische, 30 gesicherte und 5 vor einer Wiederherstellung angelegte Versionen je Board); alle Versionen werden mit dem Board gelöscht. Nachrichten im Cursor-Chat sowie deine Abwesenheit (Wechsel in einen anderen Tab) werden nur in Echtzeit an die Teilnehmenden übertragen und nicht gespeichert.
+
 # Anmeldesitzungen und Cookies
 
 Nach der Anmeldung setzen wir ein technisch notwendiges Cookie, das deine Sitzung kennzeichnet. Zu jeder Sitzung speichern wir die IP-Adresse, die Browser-Kennung und den Zeitpunkt der letzten Aktivität, damit du deine angemeldeten Geräte einsehen und abmelden kannst. Sitzungen enden nach 30 Tagen bzw. nach 14 Tagen ohne Aktivität. Rechtsgrundlage sind Art. 6 Abs. 1 lit. b und f DSGVO sowie § 25 Abs. 2 Nr. 2 TDDDG.

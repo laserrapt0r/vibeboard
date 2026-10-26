@@ -4,6 +4,30 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.2.0] – 2026-10-26
+
+### Hinzugefügt
+- Zusammenarbeit:
+  - Cursor-Chat (Taste `/`), Namen an der Auswahl anderer und Anzeige „… schreibt“.
+  - Randpfeile für Personen außerhalb der Ansicht, Abwesenheitsstatus, Ansichten der anderen in der Minimap.
+  - Mauszeiger anderer ausblendbar, „Alle folgen mir“ (REQ-COLLAB-004, -005, -008).
+- Privater Modus: verdeckt sammeln, gemeinsam aufdecken; die Inhalte werden auf dem Server geschützt (REQ-COLLAB-009).
+- Schätzrunde mit verdeckten Karten mit Fibonacci-, T-Shirt- und Stunden-Deck (REQ-MOD-004).
+- Code-Blöcke mit Syntaxhervorhebung (REQ-ELEM-015).
+- Diagramm aus Text (Mermaid-Schreibweise) für Fluss- und Sequenzdiagramme (REQ-ELEM-016).
+- 12 neue Formen für Flussdiagramme, UML und IT-Architektur (REQ-ELEM-003).
+- Karten: Priorität, Story Points, Ticketnummer und Labels (REQ-ELEM-008).
+- Aufgaben-Panel im Board, „Meine Aufgaben“ auf der Startseite, Direktlinks auf Elemente (REQ-PROJ-001, -002).
+- Versionsverlauf: Versionen sichern, automatisch alle 30 Minuten, wiederherstellen, als Kopie öffnen (REQ-PROJ-003).
+  Neue Datenbank-Migration 4.
+- Kartenimport aus CSV, Excel, Jira oder Azure DevOps (REQ-IO-005).
+- 31 neue Vorlagen in den Kategorien Softwareentwicklung, Projektmanagement und IT-Service-Management (REQ-TPL-001).
+
+### Geändert
+- Duplizieren übernimmt keine privaten Elemente anderer Personen.
+- Datenschutz-Vorlage um Versionen und Cursor-Chat ergänzt. Bereits veröffentlichte Datenschutzerklärungen bitte in
+  der Administration prüfen und anpassen.
+
 ## [3.1.0] – 2026-10-26
 
 ### Hinzugefügt

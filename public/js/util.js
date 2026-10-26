@@ -448,4 +448,10 @@ export const ICONS = {
   dash: I('<path d="M3 12h4M10 12h4M17 12h4"/>'),
   arrowEnd: I('<path d="M3 12h16M14 7l5 5-5 5"/>'),
   arrowStart: I('<path d="M21 12H5M10 7l-5 5 5 5"/>'),
+  code: I('<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>'),
+  tasks: I('<path d="M9 6h12M9 12h12M9 18h12"/><path d="M3 6l1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/>'),
+  history: I('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'),
+  poker: I('<rect x="3" y="5" width="11" height="15" rx="2"/><path d="M10 4.2L11 3.6a2 2 0 0 1 2.7.7l6.5 11.3a2 2 0 0 1-.7 2.7l-3.4 2"/><path d="M8.5 10.5v4M6.5 12.5h4"/>'),
+  eyeOff: I('<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c5 0 9 4.5 10 7-0.4 1-1.2 2.3-2.4 3.5M6.2 6.3C3.9 7.7 2.5 9.9 2 12c1 2.5 5 7 10 7 1.6 0 3.1-.4 4.4-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
+  diagram: I('<rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><path d="M10 5.5h4M6.5 8v10.5H14"/>'),
 };

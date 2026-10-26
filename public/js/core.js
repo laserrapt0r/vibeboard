@@ -3,7 +3,8 @@ import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
   debounce, throttle, toast, contrastText, STICKY_COLORS, api,
 } from './util.js';
-import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint } from './render.js';
+import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO } from './render.js';
+import { THEMES } from './highlight.js';
 import { Sync } from './sync.js';
 
 const boardId = location.pathname.split('/').filter(Boolean).pop();
@@ -136,6 +137,8 @@ export function animateView(target, ms = 280) {
 
 export function viewFor(rect, pad = 80, maxZ = 2) {
   const r = stage.getBoundingClientRect();
+  // Auf kleinen Bildschirmen darf der Rand nicht den ganzen Platz einnehmen
+  pad = Math.min(pad, r.width * 0.12, r.height * 0.12);
   const z = clamp(Math.min((r.width - pad * 2) / Math.max(rect.w, 1), (r.height - pad * 2) / Math.max(rect.h, 1)), 0.01, maxZ);
   return { z, x: r.width / 2 - (rect.x + rect.w / 2) * z, y: r.height / 2 - (rect.y + rect.h / 2) * z };
 }
@@ -245,7 +248,13 @@ function renderNode(id, env) {
   if (el.locked) cls += ' locked';
   if (app.editing && app.editing.id === id && !app.editing.cell) cls += ' editing';
   g.setAttribute('class', cls);
-  g.innerHTML = renderElement(el, env);
+  try {
+    g.innerHTML = renderElement(el, env);
+  } catch (e) {
+    // Ein fehlerhaftes Element darf die Darstellung des übrigen Boards nicht blockieren
+    console.error('Element konnte nicht dargestellt werden:', id, e);
+    g.innerHTML = '';
+  }
 }
 
 function reorder() {
@@ -309,7 +318,8 @@ function record(id) {
 }
 
 export function setEl(el, send = true) {
-  if (app.viewOnly) return;
+  // Verdeckte private Elemente anderer sind unveränderlich
+  if (app.viewOnly || el.hidden || app.els.get(el.id)?.hidden) return;
   record(el.id);
   const prev = app.els.get(el.id);
   app.els.set(el.id, el);
@@ -326,7 +336,7 @@ export function updateEl(id, patch) {
 }
 
 export function deleteEl(id) {
-  if (app.viewOnly || !app.els.has(id)) return;
+  if (app.viewOnly || !app.els.has(id) || app.els.get(id).hidden) return;
   record(id);
   app.els.delete(id);
   app.sel.delete(id);
@@ -348,8 +358,15 @@ export function deleteEls(ids) {
 function applySnapshot(map) {
   const removed = new Set();
   for (const [id, el] of map) {
-    if (el) setEl(clone(el));
-    else {
+    if (el) {
+      // Privat-Kennzeichen bestimmt der Server – den aktuellen Stand behalten statt den aus der Historie
+      const n = clone(el);
+      const cur = app.els.get(id);
+      delete n.priv;
+      delete n.privName;
+      if (cur && cur.priv) Object.assign(n, { priv: cur.priv, privName: cur.privName });
+      setEl(n);
+    } else {
       deleteEl(id);
       removed.add(id);
     }
@@ -390,6 +407,7 @@ export const canRedo = () => redoStack.length > 0;
 
 export function applyRemoteOp(op) {
   if (op.op === 'upsert') {
+    if (op.el.type === 'code') op = { ...op, el: autoHeight(op.el) };
     const prev = app.els.get(op.el.id);
     app.els.set(op.el.id, op.el);
     if (!prev || prev.z !== op.el.z) orderDirty = true;
@@ -416,7 +434,8 @@ export function loadElements(obj) {
   for (const id of nodes.keys()) markDirty(id);
   app.els.clear();
   maxZ = 0;
-  for (const el of Object.values(obj || {})) {
+  for (let el of Object.values(obj || {})) {
+    if (el.type === 'code') el = autoHeight(el);
     app.els.set(el.id, el);
     if (el.z > maxZ) maxZ = el.z;
     markDirty(el.id);
@@ -427,7 +446,7 @@ export function loadElements(obj) {
 
 /* Vorschaubild für die Board-Übersicht */
 const scheduleSaveThumb = debounce(async () => {
-  if (app.viewOnly) return;
+  if (app.viewOnly || app.session.privateMode?.active) return;
   try {
     const { thumbnail } = await import('./exporter.js');
     const url = await thumbnail([...app.els.values()]);
@@ -440,6 +459,11 @@ const scheduleSaveThumb = debounce(async () => {
 /* ================================================================== */
 
 export function autoHeight(el) {
+  if (el.type === 'code') {
+    const m = codeMetrics(el);
+    const h = m.head + m.pad * 2 + Math.max(1, m.lines) * m.lh;
+    return Math.abs(h - el.h) > 0.5 ? { ...el, h } : el;
+  }
   if (el.type !== 'text') return el;
   const size = Number(el.fontSize) || 16;
   const lines = wrap(el.text || '', el.w - 8, size, el.bold, el.italic).length;
@@ -462,6 +486,8 @@ export function makeElement(type, x, y, o = {}) {
     }
     case 'card':
       return { ...base, x: x - 150, y: y - 70, w: 300, h: 140, title: 'Neue Karte', description: '', color: '#4262ff', ...o };
+    case 'code':
+      return autoHeight({ ...base, x: x - 260, y: y - 80, w: 520, h: 160, text: '', lang: app.toolOpts.codeLang || 'js', theme: 'dark', fontSize: 14, ...o });
     case 'table': {
       const cells = [['Spalte 1', 'Spalte 2', 'Spalte 3'], ['', '', ''], ['', '', ''], ['', '', '']];
       return { ...base, x: x - 240, y: y - 100, w: 480, h: 200, rows: 4, cols: 3, cells, header: true, fontSize: 14, ...o };
@@ -505,6 +531,7 @@ function scaleEl(o, ob, nb, singleCorner) {
   if (o.type === 'comment') return { ...o, x: mx(o.x), y: my(o.y) };
   const n = { ...o, x: mx(o.x), y: my(o.y), w: Math.max(4, o.w * fx), h: Math.max(4, o.h * fy) };
   if (o.type === 'pen') n.points = o.points.map(([px, py]) => [px * fx, py * fy]);
+  if (o.type === 'code') return autoHeight(n);
   if (o.type === 'text') {
     if (singleCorner && typeof o.fontSize === 'number') n.fontSize = Math.max(6, Math.round(o.fontSize * fy * 10) / 10);
     return autoHeight(n);
@@ -535,7 +562,7 @@ export function frameChildren(frame) {
   const fb = { x: frame.x, y: frame.y, w: frame.w, h: frame.h };
   const out = [];
   for (const el of app.els.values()) {
-    if (el.id === frame.id) continue;
+    if (el.id === frame.id || el.hidden) continue;
     if (el.type === 'connector') {
       const ends = [el.from, el.to];
       if (ends.every((e) => !e.id && e.x >= fb.x && e.x <= fb.x + fb.w && e.y >= fb.y && e.y <= fb.y + fb.h)) out.push(el);
@@ -571,12 +598,16 @@ export function setSelection(ids) {
 }
 
 export function selectionChanged() {
+  // Verdeckte private Elemente anderer lassen sich nicht auswählen
+  for (const id of [...app.sel]) if (getEl(id)?.hidden) app.sel.delete(id);
   scheduleRender(true);
   app.emit('selection');
   if (app.sync) sendSel();
 }
 
 const sendSel = throttle(() => app.sync.signal('sel', [...app.sel].slice(0, 200)), 200);
+
+const escXml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 let marquee = null;
 let guides = [];
@@ -589,12 +620,23 @@ function renderOverlay() {
   let out = '';
   // Auswahl anderer Teilnehmer
   for (const p of app.peers.values()) {
-    if (!p.sel || !p.sel.length) continue;
-    for (const id of p.sel) {
+    if (p.away) continue;
+    let labelAt = null;
+    for (const id of p.sel || []) {
       const el = getEl(id);
       if (!el) continue;
       const b = bounds(el);
       out += `<rect x="${b.x - 3 / z}" y="${b.y - 3 / z}" width="${b.w + 6 / z}" height="${b.h + 6 / z}" fill="none" stroke="${p.color}" stroke-width="${2 / z}" rx="${3 / z}"/>`;
+      if (!labelAt || b.y < labelAt.y) labelAt = b;
+    }
+    // Namensschild an der Auswahl bzw. am gerade bearbeiteten Element
+    const ed = p.editing && getEl(p.editing);
+    if (ed) labelAt = bounds(ed);
+    if (labelAt) {
+      const label = (ed ? '✎ ' : '') + p.name + (ed ? ' schreibt …' : '');
+      const fs = 11 / z, lw = (label.length * 6.4 + 14) / z, lh = 18 / z;
+      out += `<g class="peer-tag"><rect x="${labelAt.x - 3 / z}" y="${labelAt.y - 3 / z - lh}" width="${lw}" height="${lh}" rx="${4 / z}" fill="${p.color}"/>` +
+        `<text x="${labelAt.x + 4 / z}" y="${labelAt.y - 3 / z - lh * 0.3}" font-size="${fs}" font-weight="bold" fill="#fff" font-family="Helvetica, Arial, sans-serif">${escXml(label)}</text></g>`;
     }
   }
   // Suchtreffer
@@ -668,7 +710,7 @@ function renderOverlay() {
 /* ================================================================== */
 
 export function canEdit(el) {
-  return el && !el.locked && ['sticky', 'shape', 'text', 'frame', 'connector', 'table'].includes(el.type);
+  return el && !el.locked && !el.hidden && ['sticky', 'shape', 'text', 'frame', 'connector', 'table', 'code'].includes(el.type);
 }
 
 export function startEdit(id, opts = {}) {
@@ -739,6 +781,15 @@ function editorGeometry(el) {
       color = el.stroke;
       break;
     }
+    case 'code': {
+      const m = codeMetrics(el);
+      box = { x: el.x + m.gutter + m.pad, y: el.y + m.head + m.pad, w: el.w - m.gutter - m.pad * 2, h: el.h - m.head - m.pad * 2 };
+      lay = { size: m.fs, lines: String(editor.value).split('\n') };
+      align = 'left';
+      valign = 'top';
+      color = THEMES[el.theme === 'light' ? 'light' : 'dark'].text;
+      break;
+    }
     case 'table': {
       const [r, c] = ed.cell;
       const cw = el.w / el.cols, rh = el.h / el.rows;
@@ -776,6 +827,9 @@ export function layoutEditor() {
     color,
     fontWeight: lay.bold ? 'bold' : 'normal',
     fontStyle: el.italic ? 'italic' : 'normal',
+    fontFamily: el.type === 'code' ? MONO : '',
+    whiteSpace: el.type === 'code' ? 'pre' : '',
+    tabSize: '2',
     background: el.type === 'connector' || el.type === 'frame' ? (app.settings.dark ? '#2a2b31' : '#ffffff') : 'transparent',
   });
 }
@@ -814,7 +868,10 @@ editor.addEventListener('keydown', (e) => {
   } else if (e.key === 'Tab') {
     e.preventDefault();
     const el = getEl(ed.id);
-    if (el && el.type === 'table') {
+    if (el && el.type === 'code') {
+      // Einrückung statt Fokuswechsel
+      document.execCommand('insertText', false, '  ');
+    } else if (el && el.type === 'table') {
       finishEdit();
       let [r, c] = ed.cell;
       c += e.shiftKey ? -1 : 1;
@@ -1058,6 +1115,10 @@ function onDown(e) {
           startMarquee(e, start, el.id);
           return;
         }
+        if (el.hidden) {
+          startMarquee(e, start, null);
+          return;
+        }
         if (el.type === 'comment') {
           setSelection([el.id]);
           drag = { mode: 'move', start, origs: [clone(el)], tx: true, clickComment: el.id };
@@ -1081,7 +1142,7 @@ function onDown(e) {
       startMarquee(e, start, null);
       return;
     }
-    case 'sticky': case 'shape': case 'frame': case 'text': case 'card': case 'table':
+    case 'sticky': case 'shape': case 'frame': case 'text': case 'card': case 'table': case 'code':
       drag = { mode: 'create', start, type: app.tool };
       return;
     case 'mindmap': {
@@ -1408,14 +1469,14 @@ function onUp(e) {
       if (r && far) {
         el = makeElement(d.type, 0, 0);
         Object.assign(el, { x: r.x, y: r.y, w: Math.max(r.w, 20), h: Math.max(r.h, 20) });
-        if (d.type === 'text') el = autoHeight(el);
+        if (d.type === 'text' || d.type === 'code') el = autoHeight(el);
       } else {
         el = makeElement(d.type, snapV(d.start.w.x), snapV(d.start.w.y));
       }
       act(() => setEl(el));
       setTool('select');
       setSelection([el.id]);
-      if (['sticky', 'shape', 'text'].includes(el.type)) startEdit(el.id, { isNew: true });
+      if (['sticky', 'shape', 'text', 'code'].includes(el.type)) startEdit(el.id, { isNew: true });
       else if (el.type === 'frame') startEdit(el.id);
       else if (el.type === 'card') app.emit('editCard', el.id);
       break;
@@ -1587,16 +1648,19 @@ export function collectForCopy(ids) {
   for (const el of app.els.values()) {
     if (el.type === 'connector' && el.from.id && el.to.id && set.has(el.from.id) && set.has(el.to.id)) set.add(el.id);
   }
-  return [...set].map(getEl).filter(Boolean).map(clone);
+  return [...set].map(getEl).filter((e) => e && !e.hidden).map(clone);
 }
 
 export function duplicateEls(list, dx = 20, dy = 20, select = true) {
+  list = list.filter((e) => !e.hidden);
   const idMap = new Map(list.map((e) => [e.id, uid()]));
   const groupMap = new Map();
   const sorted = [...list].sort((a, b) => (a.z || 0) - (b.z || 0));
   const out = sorted
     .map((o) => {
       const n = translated(clone(o), dx, dy);
+      delete n.priv;
+      delete n.privName;
       n._src = o.id;
       n.id = idMap.get(o.id);
       n.z = nextZ();
@@ -2024,6 +2088,7 @@ export function initCore() {
   stage.dataset.tool = app.tool;
   document.body.classList.toggle('dark', !!app.settings.dark);
   stage.classList.toggle('nogrid', !app.settings.grid);
+  $('#cursors').classList.toggle('off', !!app.settings.hideCursors);
   applyView(true);
   window.addEventListener('resize', () => applyView(true));
   window.addEventListener('pagehide', () => app.sync.flushNow());
@@ -2035,5 +2100,6 @@ export function saveSettings() {
   savePref('settings', app.settings);
   document.body.classList.toggle('dark', !!app.settings.dark);
   stage.classList.toggle('nogrid', !app.settings.grid);
+  $('#cursors').classList.toggle('off', !!app.settings.hideCursors);
   rerenderAll();
 }

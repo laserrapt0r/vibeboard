@@ -20,6 +20,53 @@ async function load() {
   renderBoards();
 }
 
+/* Meine Aufgaben: Karten aller zugänglichen Boards, die mir zugewiesen sind */
+const DONE_RE = /^(fertig|erledigt|done|geschlossen|closed|abgeschlossen|resolved|gelöst)$/i;
+const PRIO = { critical: ['⏫', 'Kritisch', '#e03131'], high: ['▲', 'Hoch', '#f08c00'], medium: ['■', 'Mittel', '#1971c2'], low: ['▼', 'Niedrig', '#868e96'] };
+let tasks = [];
+
+async function loadTasks() {
+  try {
+    tasks = (await api('/api/tasks')).tasks;
+  } catch {
+    tasks = [];
+  }
+  renderTasks();
+}
+
+function renderTasks() {
+  const showDone = document.getElementById('dash-tasks-done').checked;
+  const n = new Date();
+  const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  const open = tasks.filter((t) => !DONE_RE.test(t.status));
+  const list = (showDone ? tasks : open).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.title.localeCompare(b.title));
+  const section = document.getElementById('aufgaben');
+  const wasHidden = section.classList.contains('hidden');
+  section.classList.toggle('hidden', !tasks.length);
+  // Link „Meine Aufgaben“ (#aufgaben): erst nach dem Laden ist der Abschnitt da
+  if (wasHidden && tasks.length && location.hash === '#aufgaben') setTimeout(() => section.scrollIntoView({ block: 'start' }), 0);
+  document.getElementById('dash-tasks-count').textContent = `${open.length} offen${open.some((t) => t.due && t.due < today) ? ` · ${open.filter((t) => t.due && t.due < today).length} überfällig` : ''}`;
+  const box = document.getElementById('dash-tasks');
+  box.innerHTML = '';
+  if (!list.length) box.append(h('div', { class: 'dash-empty' }, 'Keine offenen Aufgaben – alles erledigt. 🎉'));
+  for (const t of list.slice(0, 60)) {
+    const overdue = t.due && t.due < today && !DONE_RE.test(t.status);
+    const p = PRIO[t.priority];
+    box.append(h('a', { class: 'my-task', href: `/board/${encodeURIComponent(t.boardId)}#el=${encodeURIComponent(t.id)}` },
+      h('span', { class: 'task-color', style: { background: t.color } }),
+      h('span', { class: 'task-main' },
+        h('span', { class: 'task-title' }, t.key ? h('span', { class: 'muted' }, t.key + ' ') : null, t.title || 'Ohne Titel'),
+        h('span', { class: 'task-meta' },
+          h('span', {}, '🗂 ' + t.boardName),
+          t.status ? h('span', {}, t.status) : null,
+          p ? h('span', { style: { color: p[2] } }, `${p[0]} ${p[1]}`) : null,
+          t.due ? h('span', { class: overdue ? 'overdue' : '' }, '📅 ' + new Date(t.due + 'T00:00').toLocaleDateString('de-DE')) : null,
+          t.points !== '' ? h('span', {}, `${t.points} SP`) : null))));
+  }
+}
+
+document.getElementById('dash-tasks-done').addEventListener('change', renderTasks);
+
 async function createFromTemplate(t) {
   const name = await promptDialog('Neues Board', 'Name des Boards', t.id === 'blank' ? 'Unbenanntes Board' : t.name);
   if (name === null) return;
@@ -207,6 +254,10 @@ importInput.addEventListener('change', async () => {
   renderUser();
   renderTemplates();
   load();
+  loadTasks();
   legalFooter().then((f) => document.getElementById('footer').append(f));
-  setInterval(load, 30000);
+  setInterval(() => {
+    load();
+    loadTasks();
+  }, 30000);
 })();

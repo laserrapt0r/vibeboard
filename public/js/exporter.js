@@ -21,8 +21,8 @@ export function svgString(elements, opts) {
   return renderSvgDocument(elements, opts).svg;
 }
 
-export async function pngDataUrl(elements, { scale = 2, maxSize = 8000, background = '#ffffff', bounds, padding } = {}) {
-  const { svg, viewBox } = renderSvgDocument(elements, { background, bounds, padding });
+export async function pngDataUrl(elements, { scale = 2, maxSize = 8000, background = '#ffffff', bounds, padding, redactPrivate } = {}) {
+  const { svg, viewBox } = renderSvgDocument(elements, { background, bounds, padding, redactPrivate });
   let s = scale;
   if (viewBox.w * s > maxSize || viewBox.h * s > maxSize) s = Math.min(maxSize / viewBox.w, maxSize / viewBox.h);
   const w = Math.max(1, Math.round(viewBox.w * s)), h = Math.max(1, Math.round(viewBox.h * s));
@@ -47,7 +47,8 @@ export async function pngDataUrl(elements, { scale = 2, maxSize = 8000, backgrou
 
 export async function thumbnail(elements) {
   if (!elements.length) return null;
-  return pngDataUrl(elements, { scale: 1, maxSize: 480, padding: 20 });
+  // Vorschaubilder sehen alle Mitglieder – private Inhalte bleiben verdeckt
+  return pngDataUrl(elements, { scale: 1, maxSize: 480, padding: 20, redactPrivate: true });
 }
 
 /* Jeder Frame wird zu einer Druckseite – über den Druckdialog als PDF speichern */

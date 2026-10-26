@@ -3,6 +3,9 @@ import { api, h } from './util.js';
 import { app } from './core.js';
 import { initUI } from './ui.js';
 import { initCollab } from './collab.js';
+import './teamwork.js';
+import './planning.js';
+import './diagram-text.js';
 
 function showError(title, text) {
   document.body.innerHTML = '';

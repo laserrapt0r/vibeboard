@@ -24,3 +24,12 @@
 - **Seit:** 1.0.0 · **Priorität:** Kann · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Einige Sekunden nach einer Änderung erzeugt der Browser ein Vorschaubild für die Board-Übersicht und lädt es hoch (Prüfung wie ein Upload).
+
+### REQ-IO-005 Karten aus CSV importieren
+- **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Aufgaben aus Tabellen oder Ticketsystemen (z. B. Excel, Jira, Azure DevOps) als Karten auf das Board holen.
+- **Akzeptanzkriterien:**
+  - Eingabe als CSV-Datei oder eingefügter Text; Trennzeichen Komma, Semikolon oder Tab werden erkannt; Felder in Anführungszeichen dürfen Trennzeichen und Zeilenumbrüche enthalten.
+  - Spalten werden über deutsche und englische Namen zugeordnet: Titel/Summary, Beschreibung, Zuständig/Assignee, Status, Fällig/Due Date, Story Points, Priorität, Schlüssel/Issue Key, Labels (auch mehrere Label-Spalten). Ohne erkennbare Kopfzeile wird jede Zeile zu einer Karte.
+  - Datumsangaben im Format JJJJ-MM-TT, TT.MM.JJJJ und im Jira-Format werden übernommen; Prioritätsnamen (z. B. Highest, Blocker, Hoch, Low) werden auf die vier Prioritäten abgebildet.
+  - Vorschau der erkannten Anzahl; optional Anordnung nach Status in Spalten (Kanban). Höchstens 500 Karten je Import.

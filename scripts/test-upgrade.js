@@ -39,6 +39,10 @@ const SEEDS = {
   3: async (c) => {
     await c.query(`INSERT INTO app_versions (version, previous, schema) VALUES ('3.1.0', '3.0.0', 3)`);
   },
+  4: async (c) => {
+    await c.query(`INSERT INTO board_versions (board_id, kind, name, element_count, created_by, data)
+                   SELECT 'b1', 'manual', 'Altes Board', 1, 1, jsonb_agg(data) FROM elements WHERE board_id = 'b1'`);
+  },
 };
 
 async function structure(c, schema) {

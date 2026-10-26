@@ -129,7 +129,8 @@ export class Sync {
   }
 
   op(o) {
-    if (this.viewOnly && o.op !== 'vote') return;
+    // Abstimmen und Schätzen dürfen auch Betrachter
+    if (this.viewOnly && o.op !== 'vote' && o.op !== 'estimate') return;
     if (o.op === 'vote') delete o.userId;
     this.extra.push(o);
     this.schedule();
@@ -170,6 +171,8 @@ export class Sync {
         if (r.status === 409 || r.status >= 500) throw new Error(res.error || 'retry');
         if (res.voting !== undefined) this.emit('voting', res.voting);
         if (res.rejected && res.rejected.length) this.emit('rejected', res.rejected);
+        if (res.marks && res.marks.length) this.emit('marks', res.marks);
+        if (res.revert && res.revert.length) this.emit('revert', res.revert);
         if (res.error) this.emit('error', res.error);
       })
       .catch(() => {

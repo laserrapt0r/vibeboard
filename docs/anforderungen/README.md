@@ -23,6 +23,7 @@ für Weiterentwicklung, Tests und Abnahme und wird **bei jeder neuen oder geänd
 | 13 | [Datenschutz und Rechtstexte](13-datenschutz-rechtliches.md) | `LEGAL` |
 | 14 | [Betrieb, Versionierung und Upgrades](14-betrieb-versionierung.md) | `OPS` |
 | 15 | [Nicht-funktionale Anforderungen](15-nichtfunktional.md) | `NFR` |
+| 16 | [Projektarbeit: Aufgaben und Versionen](16-projektarbeit.md) | `PROJ` |
 
 ## Aufbau einer Anforderung
 

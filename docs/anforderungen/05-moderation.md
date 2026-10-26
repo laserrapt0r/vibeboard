@@ -24,3 +24,14 @@
   - Frames werden in der im Frames-Panel festgelegten Reihenfolge als Folien gezeigt (Vollbild).
   - Weiter mit Pfeiltasten, Bild↓, Leertaste oder Enter; zurück mit Pfeiltasten, Bild↑ oder Rücktaste; Ende mit Esc.
   - Inhalte außerhalb der aktuellen Folie werden ausgeblendet; Bedienelemente sind verborgen.
+
+### REQ-MOD-004 Schätzrunde
+- **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Aufwand einer Karte gemeinsam schätzen, ohne dass frühe Werte die anderen beeinflussen.
+- **Akzeptanzkriterien:**
+  - Start über die Kontextleiste einer Karte („Schätzrunde starten“) mit Kartendeck Fibonacci (0–100, ?, ☕), T-Shirt-Größen (XS–XXL) oder Stunden.
+  - Alle Teilnehmenden – auch Betrachter – wählen verdeckt eine Karte und können sie ändern oder zurücknehmen. Angezeigt wird nur, wer schon geschätzt hat; die Werte der anderen gibt der Server vor dem Aufdecken nicht heraus. Nur Werte des gewählten Decks werden angenommen.
+  - Nach dem Aufdecken: Werte aller Personen, Durchschnitt, Median, Spanne und ein Hinweis bei Einigkeit.
+  - Bearbeitende können aufdecken, neu schätzen lassen, einen der häufigsten Werte als Story Points auf die Karte übernehmen und die Runde beenden.
+  - Eine laufende Runde übersteht Neuladen und Verbindungsabbrüche. Wird die Karte gelöscht, endet die Runde.
+  - „Einigkeit“ wird nur angezeigt, wenn alle denselben Zahlen- bzw. Größenwert gewählt haben (nicht bei „?“ oder „☕“).

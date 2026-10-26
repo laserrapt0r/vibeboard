@@ -1,9 +1,12 @@
 # vibeboard
 
 Ein selbst gehostetes, kollaboratives Online-Whiteboard. Mehrere Personen arbeiten gleichzeitig auf einer
-unendlichen Leinwand: mit Sticky Notes, Formen, Verbindungen, Mindmaps, Kommentaren, Abstimmungen und über 35
-Vorlagen für Workshops, Retrospektiven und Strategiearbeit. Dazu gibt es Benutzerkonten mit E-Mail-Bestätigung und
-optionaler Zwei-Faktor-Anmeldung, Rechte pro Board und eine Administrationsoberfläche. Die Daten liegen in PostgreSQL.
+unendlichen Leinwand: mit Sticky Notes, Formen, Verbindungen, Mindmaps, Kommentaren, Abstimmungen und über 65
+Vorlagen für Workshops, Retrospektiven, Strategiearbeit, Softwareentwicklung, Projektmanagement und
+IT-Service-Management. Für Entwicklungsteams gibt es Code-Blöcke, Diagramme aus Text (Mermaid-Schreibweise),
+Schätzrunden und einen Kartenimport aus Jira- oder Excel-Exporten. Dazu gibt es Benutzerkonten mit
+E-Mail-Bestätigung und optionaler Zwei-Faktor-Anmeldung, Rechte pro Board und eine Administrationsoberfläche. Die Daten
+liegen in PostgreSQL.
 
 - Läuft komplett auf dem eigenen Server: keine CDNs, kein Tracking, keine Pflicht-Abhängigkeit von externen Diensten.
 - Hochgeladene Dateien werden mit ClamAV auf Schadsoftware geprüft.
@@ -46,12 +49,14 @@ optionaler Zwei-Faktor-Anmeldung, Rechte pro Board und eine Administrationsoberf
 |---------|---------------|
 | **Sticky Notes** | 16 Farben, automatische Schriftgröße, optional mit Name der Autorin bzw. des Autors |
 | **Text** | Schriftgröße, Farbe, fett, kursiv, Ausrichtung, Hintergrund |
-| **Formen** | 16 Formen (Rechteck, Ellipse, Raute, Dreieck, Sechseck, Stern, Zylinder, Dokument, Wolke, Sprechblase, Blockpfeil u. a.) mit Füllung, Rahmen, Strichart und Text |
+| **Formen** | 28 Formen in drei Gruppen: Grundformen (Rechteck, Ellipse, Raute, Stern, Wolke, Sprechblase u. a.), Flussdiagramm & UML (Dokument, Unterprozess, Verzögerung, Datenbank, Notiz, Paket, Komponente, Akteur), Software & IT (Server, Warteschlange, Container, Browser, Endgerät, Firewall) – mit Füllung, Rahmen, Strichart und Text |
 | **Verbindungen** | gerade, gewinkelt oder als Kurve; Pfeilspitzen, Beschriftung, Strichart; haften an Elementen |
 | **Quick Connect** | Punkte an einem ausgewählten Element anklicken oder ziehen, um verbundene Elemente zu erzeugen |
 | **Freihand** | Stift, Textmarker, Radierer |
 | **Frames** | Bereiche bzw. Folien mit Formaten (16:9, 4:3, A4, Quadrat, Smartphone); der Inhalt wandert beim Verschieben mit |
-| **Karten** | Aufgaben mit Beschreibung, Zuständigkeit, Fälligkeitsdatum, Status und Farbe |
+| **Karten** | Aufgaben mit Beschreibung, Zuständigkeit, Fälligkeitsdatum, Status, Priorität, Story Points, Ticketnummer, Labels und Farbe |
+| **Code-Blöcke** | Quelltext mit Syntaxhervorhebung für 13 Sprachen, Zeilennummern, hellem oder dunklem Schema, Kopieren-Knopf |
+| **Diagramm aus Text** | Fluss- und Sequenzdiagramme in Mermaid-Schreibweise eingeben, mit Live-Vorschau; es entstehen normale, bearbeitbare Formen und Verbindungen |
 | **Tabellen** | Zeilen und Spalten hinzufügen oder entfernen, Kopfzeile; Tab springt zur nächsten Zelle |
 | **Mindmaps** | Knoten auswählen, dann **Tab** für einen Unterknoten und **Enter** für einen Geschwisterknoten |
 | **Bilder** | per Upload, Drag & Drop oder aus der Zwischenablage; große Bilder werden automatisch verkleinert |
@@ -72,8 +77,16 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 
 ### Zusammenarbeit in Echtzeit
 - Änderungen erscheinen sofort bei allen Teilnehmenden
-- Live-Cursor mit Namen; die Auswahl der anderen ist farbig markiert
-- Teilnehmerliste mit „Folgen“ (der Ansicht einer Person folgen) und „Alle zu mir holen“
+- **Live-Cursor mit Namen:**
+  - Die Auswahl der anderen ist farbig markiert und mit Namen beschriftet; wer gerade tippt, wird mit
+    „✎ Name schreibt …“ angezeigt.
+  - Personen außerhalb der eigenen Ansicht erscheinen als Pfeil am Bildschirmrand; ein Klick springt hin.
+  - Abwesende (anderer Tab) werden ausgegraut; die Ansichten aller stehen als Rahmen in der Minimap.
+  - Fremde Mauszeiger lassen sich in den Einstellungen ausblenden.
+- **Cursor-Chat:** Mit `/` eine kurze Nachricht direkt am eigenen Mauszeiger zeigen, ohne einen Kommentar anzulegen
+- Teilnehmerliste mit „Folgen“ (der Ansicht einer Person folgen), „Alle zu mir holen“ und „Alle folgen mir“
+- **Privater Modus:** Alle sammeln zunächst verdeckt – neue Inhalte sieht nur, wer sie erstellt hat, bis gemeinsam
+  aufgedeckt wird. Der Server gibt die Inhalte vorher an niemanden sonst heraus.
 - Fliegende Reaktionen (Emojis) und Laserpointer
 - Automatisches Wiederverbinden; ungesendete Änderungen gehen nicht verloren
 - **Funktioniert auch in restriktiven Netzen:** Es werden keine WebSockets benötigt. Die Echtzeit-Übertragung läuft über
@@ -83,17 +96,35 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 ### Moderation
 - **Timer** für alle Teilnehmenden, mit Pause, Verlängerung und Signalton
 - **Abstimmungen** mit einstellbarer Stimmenzahl pro Person; die Stimmen bleiben bis zum Ende verdeckt, danach gibt es eine Ergebnisliste
+- **Schätzrunde** mit verdeckten Karten für eine Karte: Fibonacci-, T-Shirt- oder Stunden-Deck; die Werte bleiben verdeckt,
+  bis aufgedeckt wird. Danach erscheinen Durchschnitt, Median und Spanne, und das Ergebnis lässt sich als Story Points
+  übernehmen.
 - **Präsentationsmodus**: Frames werden zu Folien (Vollbild, Pfeil- und Leertaste, Umgebung ausgeblendet)
+
+### Projektarbeit
+- **Aufgaben-Panel** je Board:
+  - Alle Karten als Liste, gruppiert nach Status, mit Story-Point-Summen.
+  - Filter „Offen“, „Mir zugewiesen“, „Überfällig“; ein Klick springt zur Karte.
+- **Meine Aufgaben** auf der Startseite: alle mir zugewiesenen Karten aus allen meinen Boards, nach Fälligkeit sortiert.
+- **Versionsverlauf:**
+  - Stände sichern, automatische Versionen alle 30 Minuten während der Bearbeitung.
+  - Frühere Stände wiederherstellen (der aktuelle wird vorher gesichert) oder als Kopie öffnen.
+- **Karten importieren** aus CSV, Excel, Jira oder Azure DevOps:
+  - Spalten wie Summary, Assignee, Status, Due Date, Story Points, Priority, Labels werden erkannt.
+  - Optional werden die Karten als Kanban-Spalten nach Status angeordnet.
+- **Direktlinks** auf einzelne Elemente: `/board/<id>#el=<elementId>`
 
 ### Export und Import
 - PNG (ganzes Board oder Auswahl) und SVG
 - PDF mit einem Frame pro Seite (über den Druckdialog des Browsers)
 - JSON als Backup; Import ins Board oder als neues Board
+- Karten aus CSV/Tabellen, Diagramme aus Text (siehe oben)
 
 ### Übersicht
 - Eigene und geteilte Boards mit Vorschaubildern
 - Suche, Sortierung, Teilen, Umbenennen, Duplizieren, Löschen, Board verlassen
 - Neues Board direkt aus einer Vorlage
+- „Meine Aufgaben“ über alle Boards
 
 ---
 
@@ -106,6 +137,9 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 | Agile & Projekte | Kanban, Eisenhower-Matrix, Impact/Aufwand-Matrix, Projekt-Canvas, Produkt-Roadmap, Zeitstrahl, Gantt-Diagramm, User Story Map, Wochenplaner |
 | Strategie | SWOT-Analyse, Stakeholder-Map, Business Model Canvas¹, Lean Canvas¹, Angebot & Kundenprofil, OKR-Planung, Entscheidungsmatrix |
 | Design & UX | Customer Journey Map, Empathy Map, User Persona, Moodboard, Wireframe |
+| Softwareentwicklung | Sprint-Planung, Entwicklungs-Kanban mit WIP-Limits, Definition of Ready & Done, Architektur (C4-Kontext), Sequenzdiagramm, ER-Diagramm, Event Storming, Bug-Triage, Tech-Debt-Matrix, Release-Planung, API-Design, Architekturentscheidung (ADR) |
+| Projektmanagement | Projekt-Kick-off, Risikomatrix, RAID-Log, Projektstatus, Meilensteinplan, RACI-Matrix, Teamübergreifende Planung, Lessons Learned |
+| IT-Service-Management | Incident-Postmortem, Major-Incident-Lagezentrum, Problem-Analyse (Ist / Ist nicht), Change-Request & CAB, Service Blueprint, SIPOC, Wertstromanalyse, Service-Katalog, On-Call-Übergabe, Runbook, SLA-/Service-Review |
 | Diagramme | Flussdiagramm, Organigramm, Ishikawa (Fischgräte), 5-Why-Methode |
 
 ¹ Adaption eines Werks unter CC BY-SA 3.0, siehe [Lizenz](#lizenz).
@@ -228,7 +262,8 @@ Alle weiteren Einstellungen nimmst du in der Administration vor.
   - Personen als *Bearbeiter* oder *Betrachter* einladen, optional mit Einladungs-Mail,
   - den Link für alle angemeldeten Nutzer zum *Ansehen* oder *Bearbeiten* freigeben,
   - Mitglieder verwalten, das Board umbenennen und löschen.
-- **Betrachter** sehen das Board live und können abstimmen, Reaktionen senden und den Laserpointer nutzen.
+- **Betrachter** sehen das Board live und können abstimmen, schätzen, Reaktionen senden, den Cursor-Chat und den
+  Laserpointer nutzen. Den Versionsverlauf sehen nur Bearbeitende.
 - Rechteänderungen wirken sofort.
 - **Administratoren** haben Zugriff auf alle Boards.
 
@@ -408,7 +443,8 @@ lib/
   version.js           Versionsverwaltung, automatisches Upgrade, Sicherung, Downgrade-Schutz
   virusscan.js         ClamAV-Anbindung (clamd), Dateityp-Prüfung
   uploads.js           Prüfrichtlinie für hochgeladene Dateien
-  boards.js            Zugriffsrechte, Board-Cache, verzögertes Speichern, Echtzeit-Räume, Long-Polling
+  boards.js            Zugriffsrechte, Board-Cache, verzögertes Speichern, Echtzeit-Räume, Long-Polling,
+                       privater Modus, Schätzrunden, Versionen
   sanitize.js          Prüfung von Board-Elementen
   settings.js          Einstellungen der Instanz
   mail.js              E-Mail-Versand
@@ -422,6 +458,9 @@ public/
   legal.html           Impressum, Datenschutzerklärung (öffentlich)  → js/legal.js, js/markdown.js
   index.html           Board-Übersicht                               → js/dashboard.js
   board.html           Board-Editor                                  → js/main.js (core, ui, collab, render, sync, …)
+                       teamwork.js (privater Modus, Schätzrunde), planning.js (Aufgaben, Versionen, CSV-Import),
+                       diagram-parse.js / diagram-text.js (Diagramm aus Text), highlight.js (Code-Blöcke),
+                       templates.js / templates-tech.js / template-kit.js (Vorlagen)
   admin.html           Administration                                → js/admin.js
 ```
 

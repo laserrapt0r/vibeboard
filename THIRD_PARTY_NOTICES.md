@@ -133,3 +133,15 @@ ersten fünf Zeichen eines SHA-1-Hashs (k-Anonymität).
 
 vibeboard liefert keine Schriftdateien aus. Texte und Emojis werden mit den Schriften des Betriebssystems bzw.
 Browsers dargestellt.
+
+## Diagramm aus Text, Methoden und Vorlagen
+
+- **Diagramm aus Text** versteht die Schreibweise der Diagrammsprache von [Mermaid](https://mermaid.js.org/)
+  (Open-Source-Projekt, MIT-Lizenz). vibeboard enthält keinen Code von Mermaid; Parser und Layout sind eine eigene
+  Umsetzung. Der Name wird nur genannt, um die unterstützte Schreibweise zu beschreiben.
+- Die Vorlagen bilden allgemein bekannte Methoden nach, die keinem Schutzrecht unterliegen (z. B. Schätzrunden mit
+  verdeckten Karten, RACI, SIPOC, Event Storming, C4-Kontextdiagramm, Service Blueprint, Ist/Ist-nicht-Analyse). Inhalte, Texte und
+  Gestaltung sind eigene Werke. Die Begriffe der Prozesse (z. B. Incident-, Problem- und Change-Management) folgen dem
+  allgemeinen Sprachgebrauch; es werden keine Inhalte aus lizenzpflichtigen Rahmenwerken übernommen.
+- Die Formen (Server, Container, Firewall usw.) und Programm-Symbole sind eigene Zeichnungen. Es werden keine
+  geschützten Hersteller-Symbole (z. B. von Cloud-Anbietern) verwendet.

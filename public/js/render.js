@@ -1,5 +1,8 @@
 // Darstellung der Board-Elemente als SVG-Markup (für Board, Vorschau & Export)
 import { esc, FONT, wrap, fitText, measure, contrastText, initials, unionRect } from './util.js';
+import { tokenize, THEMES, MAX_LINES } from './highlight.js';
+
+const own = (map, key) => (Object.hasOwn(map, key) ? map[key] : undefined);
 
 export const LH = 1.25;
 
@@ -8,7 +11,19 @@ export const SHAPES = [
   ['triangle', 'Dreieck'], ['hexagon', 'Sechseck'], ['parallelogram', 'Parallelogramm'], ['trapezoid', 'Trapez'],
   ['star', 'Stern'], ['pill', 'Pille'], ['cylinder', 'Zylinder'], ['arrow', 'Blockpfeil'],
   ['callout', 'Sprechblase'], ['cross', 'Kreuz'], ['document', 'Dokument'], ['cloud', 'Wolke'],
+  ['subprocess', 'Unterprozess'], ['delay', 'Verzögerung'], ['note', 'Notiz'], ['package', 'Paket'],
+  ['actor', 'Akteur'], ['server', 'Server'], ['queue', 'Warteschlange'], ['container', 'Container'],
+  ['component', 'Komponente'], ['browser', 'Browser / UI'], ['laptop', 'Endgerät'], ['firewall', 'Firewall'],
 ];
+
+// Gruppierung für die Formenauswahl
+export const SHAPE_GROUPS = [
+  ['Grundformen', ['rect', 'roundrect', 'ellipse', 'diamond', 'triangle', 'hexagon', 'parallelogram', 'trapezoid', 'star', 'pill', 'arrow', 'callout', 'cross', 'cloud']],
+  ['Flussdiagramm & UML', ['rect', 'pill', 'diamond', 'parallelogram', 'document', 'subprocess', 'delay', 'cylinder', 'note', 'package', 'component', 'actor']],
+  ['Software & IT', ['server', 'cylinder', 'queue', 'container', 'browser', 'laptop', 'firewall', 'cloud', 'actor', 'component']],
+];
+
+export const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace";
 
 export function defsMarkup() {
   return `<filter id="shadow" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.16"/></filter>
@@ -88,6 +103,38 @@ export function shapeGeom(kind, x, y, w, h) {
       const cx = (f) => x + w * f, cy = (f) => y + h * f;
       return `<path d="M${cx(0.25)},${cy(0.85)} C${cx(0.02)},${cy(0.85)} ${cx(0.0)},${cy(0.5)} ${cx(0.18)},${cy(0.45)} C${cx(0.15)},${cy(0.15)} ${cx(0.45)},${cy(0.05)} ${cx(0.55)},${cy(0.25)} C${cx(0.65)},${cy(0.05)} ${cx(0.92)},${cy(0.15)} ${cx(0.85)},${cy(0.42)} C${cx(1.02)},${cy(0.48)} ${cx(1.0)},${cy(0.85)} ${cx(0.78)},${cy(0.85)} Z"`;
     }
+    case 'subprocess': return `<path d="M${x},${y} H${x + w} V${y + h} H${x} Z M${x + w * 0.08},${y} V${y + h} M${x + w * 0.92},${y} V${y + h}"`;
+    case 'delay': return `<path d="M${x},${y} H${x + w * 0.6} A${w * 0.4},${h / 2} 0 0 1 ${x + w * 0.6},${y + h} H${x} Z"`;
+    case 'note': {
+      const f = Math.min(w, h) * 0.18;
+      return `<path d="M${x},${y} H${x + w - f} L${x + w},${y + f} V${y + h} H${x} Z M${x + w - f},${y} V${y + f} H${x + w}"`;
+    }
+    case 'package': return `<path d="M${x},${y} H${x + w * 0.4} V${y + h * 0.18} H${x + w} V${y + h} H${x} Z M${x},${y + h * 0.18} H${x + w * 0.4}"`;
+    case 'actor': {
+      const cx = x + w / 2, r = Math.min(w * 0.16, h * 0.1), hy = y + r + 1;
+      return `<path d="M${cx - r},${hy} A${r},${r} 0 1 0 ${cx + r},${hy} A${r},${r} 0 1 0 ${cx - r},${hy} Z M${cx},${hy + r} V${y + h * 0.5} M${x + w * 0.22},${y + h * 0.3} H${x + w * 0.78} M${cx},${y + h * 0.5} L${x + w * 0.26},${y + h * 0.72} M${cx},${y + h * 0.5} L${x + w * 0.74},${y + h * 0.72}"`;
+    }
+    case 'server': {
+      const r = Math.max(1.5, Math.min(w, h) * 0.035);
+      const led = (cy) => `M${x + w * 0.88 - r},${cy} A${r},${r} 0 1 0 ${x + w * 0.88 + r},${cy} A${r},${r} 0 1 0 ${x + w * 0.88 - r},${cy} Z`;
+      return `<path d="M${x},${y} H${x + w} V${y + h} H${x} Z M${x},${y + h / 3} H${x + w} M${x},${y + (h * 2) / 3} H${x + w} ${led(y + h / 6)} ${led(y + h / 2)} ${led(y + (h * 5) / 6)}"`;
+    }
+    case 'queue': {
+      const rx = Math.min(w * 0.12, 30);
+      return `<path d="M${x + rx},${y} H${x + w - rx} A${rx},${h / 2} 0 0 1 ${x + w - rx},${y + h} H${x + rx} A${rx},${h / 2} 0 0 1 ${x + rx},${y} Z M${x + w - rx},${y} A${rx},${h / 2} 0 0 0 ${x + w - rx},${y + h}"`;
+    }
+    case 'container': {
+      const d = Math.min(w, h) * 0.15;
+      return `<path d="M${x},${y + d} H${x + w - d} V${y + h} H${x} Z M${x},${y + d} L${x + d},${y} H${x + w} V${y + h - d} L${x + w - d},${y + h} M${x + w - d},${y + d} L${x + w},${y}"`;
+    }
+    case 'component': return `<path d="M${x + w * 0.1},${y} H${x + w} V${y + h} H${x + w * 0.1} Z M${x},${y + h * 0.22} H${x + w * 0.2} V${y + h * 0.38} H${x} Z M${x},${y + h * 0.62} H${x + w * 0.2} V${y + h * 0.78} H${x} Z"`;
+    case 'browser': {
+      const r = Math.max(1.5, Math.min(w, h) * 0.03), by = y + h * 0.075;
+      const dot = (cx) => `M${cx - r},${by} A${r},${r} 0 1 0 ${cx + r},${by} A${r},${r} 0 1 0 ${cx - r},${by} Z`;
+      return `<path d="M${x},${y} H${x + w} V${y + h} H${x} Z M${x},${y + h * 0.15} H${x + w} ${dot(x + w * 0.05)} ${dot(x + w * 0.1)} ${dot(x + w * 0.15)}"`;
+    }
+    case 'laptop': return `<path d="M${x + w * 0.1},${y} H${x + w * 0.9} V${y + h * 0.82} H${x + w * 0.1} Z M${x},${y + h * 0.86} H${x + w} L${x + w * 0.95},${y + h} H${x + w * 0.05} Z"`;
+    case 'firewall': return `<path d="M${x},${y} H${x + w} V${y + h} H${x} Z M${x},${y + h / 3} H${x + w} M${x},${y + (h * 2) / 3} H${x + w} M${x + w / 2},${y} V${y + h / 3} M${x + w / 4},${y + h / 3} V${y + (h * 2) / 3} M${x + (w * 3) / 4},${y + h / 3} V${y + (h * 2) / 3} M${x + w / 2},${y + (h * 2) / 3} V${y + h}"`;
     default: return `<rect x="${x}" y="${y}" width="${w}" height="${h}"`;
   }
 }
@@ -106,6 +153,18 @@ export function shapeTextBox(kind, x, y, w, h, pad = 10) {
     case 'cross': ix = 0.3; iy = 0.3; iw = 0.4; ih = 0.4; break;
     case 'cylinder': iy = 0.18; ih = 0.78; break;
     case 'document': ih = 0.85; break;
+    case 'subprocess': ix = 0.08; iw = 0.84; break;
+    case 'delay': iw = 0.85; break;
+    case 'note': iw = 0.85; break;
+    case 'package': iy = 0.18; ih = 0.82; break;
+    case 'actor': iy = 0.74; ih = 0.26; ix = -0.1; iw = 1.2; pad = 2; break;
+    case 'server': ix = 0.04; iw = 0.76; iy = 1 / 3; ih = 1 / 3; pad = 4; break;
+    case 'queue': ix = 0.1; iw = 0.66; break;
+    case 'container': iy = 0.15; ih = 0.85; iw = 0.85; break;
+    case 'component': ix = 0.2; iw = 0.8; break;
+    case 'browser': iy = 0.15; ih = 0.85; break;
+    case 'laptop': ix = 0.1; iw = 0.8; ih = 0.82; break;
+    case 'firewall': iy = 1 / 3; ih = 1 / 3; pad = 4; break;
   }
   return { x: x + w * ix + pad, y: y + h * iy + pad, w: Math.max(4, w * iw - pad * 2), h: Math.max(4, h * ih - pad * 2) };
 }
@@ -312,7 +371,7 @@ export function penPath(points) {
 
 const dashFor = (el) => (el.dash === 'dotted' ? `${el.strokeWidth || 2} ${(el.strokeWidth || 2) * 2}` : el.dash ? `${(el.strokeWidth || 2) * 4} ${(el.strokeWidth || 2) * 3}` : '');
 
-const LINKABLE = new Set(['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame']);
+const LINKABLE = new Set(['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame', 'code']);
 
 export function safeLink(url) {
   const u = String(url || '').trim();
@@ -334,7 +393,33 @@ function linkBadge(el) {
 
 export function renderElement(el, env = {}) {
   el = safeEl(el);
-  return renderBody(el, env) + (el.link ? linkBadge(el) : '');
+  // Privater Modus: fremde private Elemente kommen ohne Inhalt vom Server (hidden); eigene werden in
+  // Vorschaubildern und Exporten ebenfalls verdeckt
+  if (el.hidden || (el.priv && env.redactPrivate)) return hiddenMarkup(el);
+  const own = el.priv ? privateBadge(el) : '';
+  return renderBody(el, env) + (el.link ? linkBadge(el) : '') + own;
+}
+
+function hiddenMarkup(el) {
+  const { x = 0, y = 0, w = 0, h = 0 } = el;
+  const fill = el.fill && el.fill !== 'transparent' ? el.fill : el.color || '#dee2e6';
+  const fs = Math.max(10, Math.min(28, Math.min(w, h) * 0.1));
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}" fill-opacity="0.55" stroke="#868e96" stroke-width="1.5" stroke-dasharray="6 4"/>` +
+    `<text x="${x + w / 2}" y="${y + h / 2}" font-family="${esc(FONT)}" font-size="${fs * 1.4}" text-anchor="middle">🔒</text>` +
+    `<text x="${x + w / 2}" y="${y + h / 2 + fs * 1.4}" font-family="${esc(FONT)}" font-size="${fs * 0.75}" text-anchor="middle" fill="#495057">${esc(el.privName ? 'Privat · ' + el.privName : 'Privat')}</text>`;
+}
+
+function privateBadge(el) {
+  const s = Math.max(14, Math.min(24, Math.min(el.w, el.h) * 0.12));
+  return `<g><title>Privat – nur für dich sichtbar, bis der private Modus beendet wird</title><circle cx="${el.x + s * 0.2}" cy="${el.y + s * 0.2}" r="${s / 2 + 2}" fill="#212529"/><text x="${el.x + s * 0.2}" y="${el.y + s * 0.2 + s * 0.3}" font-size="${s * 0.75}" text-anchor="middle">🔒</text></g>`;
+}
+
+// Höhe eines Code-Blocks aus der Zeilenzahl
+export function codeMetrics(el) {
+  const fs = Number(el.fontSize) || 14;
+  const lines = Math.min(MAX_LINES, String(el.text || '').split('\n').length);
+  const gutter = el.lineNumbers === false ? 0 : String(lines).length * fs * 0.62 + 18;
+  return { fs, lh: fs * LH, head: 30, pad: 12, gutter, lines };
 }
 
 function renderBody(el, env) {
@@ -409,23 +494,88 @@ function renderBody(el, env) {
     case 'emoji': {
       return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent" class="hit"/><text x="${x + w / 2}" y="${y + h * 0.86}" font-size="${h * 0.9}" text-anchor="middle">${esc(el.char || '⭐')}</text>`;
     }
+    case 'code': {
+      const th = THEMES[el.theme === 'light' ? 'light' : 'dark'];
+      const m = codeMetrics(el);
+      const cid = 'cc-' + String(el.id).replace(/[^\w-]/g, '');
+      let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${th.bg}" filter="url(#shadow-sm)"/>`;
+      out += `<path d="M${x + 8},${y} H${x + w - 8} Q${x + w},${y} ${x + w},${y + 8} V${y + m.head} H${x} V${y + 8} Q${x},${y} ${x + 8},${y} Z" fill="${th.head}"/>`;
+      ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => (out += `<circle cx="${x + 16 + i * 16}" cy="${y + m.head / 2}" r="5" fill="${c}"/>`));
+      const label = String(el.title || own(LANG_LABEL, el.lang) || '');
+      if (label) out += `<text x="${x + w - 12}" y="${y + m.head / 2 + 4}" font-family="${esc(FONT)}" font-size="12" text-anchor="end" fill="${th.gutter}">${esc(label)}</text>`;
+      out += `<clipPath id="${cid}"><rect x="${x}" y="${y + m.head}" width="${Math.max(0, w - 10)}" height="${Math.max(0, h - m.head)}"/></clipPath><g clip-path="url(#${cid})">`;
+      const by = y + m.head + m.pad;
+      const base = m.fs * ((LH - 1) / 2 + 0.8);
+      const rows = tokenize(el.text, el.lang || 'plain');
+      let txt = '', nums = '';
+      rows.forEach((toks, i) => {
+        const ly = r1(by + i * m.lh + base);
+        if (m.gutter) nums += `<tspan x="${r1(x + m.gutter - 8)}" y="${ly}">${i + 1}</tspan>`;
+        if (!toks.length) return;
+        txt += `<tspan x="${r1(x + m.gutter + m.pad)}" y="${ly}">` + toks.map((t) => `<tspan fill="${th[t.k] || th.text}">${esc(t.t)}</tspan>`).join('') + '</tspan>';
+      });
+      if (m.gutter) out += `<text font-family="${esc(MONO)}" font-size="${m.fs}" fill="${th.gutter}" text-anchor="end">${nums}</text>`;
+      if (!el.text && env.placeholders) txt = `<tspan x="${x + m.gutter + m.pad}" y="${r1(by + base)}" fill="${th.gutter}">Code hier einfügen …</tspan>`;
+      out += `<text class="code-text" font-family="${esc(MONO)}" font-size="${m.fs}" fill="${th.text}" xml:space="preserve">${txt}</text></g>`;
+      return out;
+    }
     case 'card': {
       const color = el.color || '#4262ff';
       const pad = 14;
       let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#ffffff" stroke="#e3e3e3" filter="url(#shadow-sm)"/>`;
       out += `<path d="M${x + 8},${y} H${x + w - 8} Q${x + w},${y} ${x + w},${y + 8} V${y + 6} H${x} V${y + 8} Q${x},${y} ${x + 8},${y} Z" fill="${color}"/>`;
+      let top = y + 16;
+      if (el.key) {
+        out += `<text x="${x + pad}" y="${top + 10}" font-family="${esc(FONT)}" font-size="11" font-weight="bold" fill="#868e96">${esc(String(el.key).slice(0, 40))}</text>`;
+        top += 16;
+      }
+      const tags = cardTags(el);
+      const footer = 28 + (tags.length ? 24 : 0);
       const tlay = { size: 15, bold: true, italic: false, lines: wrap(el.title || 'Neue Karte', w - pad * 2, 15, true).slice(0, 3) };
-      out += textSvg({ x: x + pad, y: y + 16, w: w - pad * 2, h: 60 }, tlay, { align: 'left', valign: 'top', color: '#1a1a1a' });
-      const ty = y + 16 + tlay.lines.length * 15 * LH + 6;
+      out += textSvg({ x: x + pad, y: top, w: w - pad * 2, h: 60 }, tlay, { align: 'left', valign: 'top', color: '#1a1a1a' });
+      const ty = top + tlay.lines.length * 15 * LH + 6;
       if (el.description) {
-        const maxL = Math.max(0, Math.floor((y + h - 40 - ty) / (13 * LH)));
+        const maxL = Math.max(0, Math.floor((y + h - footer - 12 - ty) / (13 * LH)));
         const dl = wrap(el.description, w - pad * 2, 13).slice(0, maxL);
         out += textSvg({ x: x + pad, y: ty, w: w - pad * 2, h: 200 }, { size: 13, lines: dl }, { align: 'left', valign: 'top', color: '#666666' });
       }
       const fy = y + h - 28;
+      if (tags.length) {
+        let tx = x + pad;
+        for (const t of tags) {
+          const tw = measure(t, 10) + 12;
+          if (tx + tw > x + w - pad) break;
+          out += `<rect x="${tx}" y="${fy - 23}" width="${tw}" height="16" rx="4" fill="#f1f3f5" stroke="#dee2e6"/><text x="${tx + 6}" y="${fy - 11.5}" font-family="${esc(FONT)}" font-size="10" fill="#495057">${esc(t)}</text>`;
+          tx += tw + 5;
+        }
+      }
+      // Fußzeile: links Status, Priorität, Punkte – nur so viel, wie neben Datum und Avatar (rechts) passt
+      let fx = x + pad;
+      const dueW = el.due ? measure('📅 00.00.', 12) + 6 : 0;
+      const right = x + w - pad - (el.assignee ? 28 : 0) - dueW;
+      const chip = (label, bold, minW = 0) => Math.max(minW, measure(label, 11, bold) + 14);
+      const pt = el.points !== undefined && el.points !== null && el.points !== '' ? String(el.points).slice(0, 5) : '';
+      const prio = own(PRIORITIES, el.priority);
+      const ptW = pt ? chip(pt, true, 20) + 6 : 0;
+      const prW = prio ? chip(prio.icon + ' ' + prio.label, true) + 6 : 0;
       if (el.status) {
-        const sw = measure(el.status, 11, true) + 14;
-        out += `<rect x="${x + pad}" y="${fy}" width="${sw}" height="18" rx="9" fill="${color}" fill-opacity="0.15"/><text x="${x + pad + 7}" y="${fy + 13}" font-family="${esc(FONT)}" font-size="11" font-weight="bold" fill="${color}">${esc(el.status)}</text>`;
+        const maxW = Math.max(0, right - fx - ptW - prW - 6);
+        let label = String(el.status);
+        while (label.length > 1 && chip(label, true) > maxW) label = label.slice(0, -2) + '…';
+        if (chip(label, true) <= maxW) {
+          const sw = chip(label, true);
+          out += `<rect x="${fx}" y="${fy}" width="${sw}" height="18" rx="9" fill="${color}" fill-opacity="0.15"/><text x="${fx + 7}" y="${fy + 13}" font-family="${esc(FONT)}" font-size="11" font-weight="bold" fill="${color}">${esc(label)}</text><title>${esc(el.status)}</title>`;
+          fx += sw + 6;
+        }
+      }
+      if (prio && fx + prW <= right) {
+        const pw = prW - 6;
+        out += `<rect x="${fx}" y="${fy}" width="${pw}" height="18" rx="9" fill="${prio.color}" fill-opacity="0.14"/><text x="${fx + 7}" y="${fy + 13}" font-family="${esc(FONT)}" font-size="11" font-weight="bold" fill="${prio.color}">${prio.icon} ${esc(prio.label)}</text>`;
+        fx += prW;
+      }
+      if (pt && fx + ptW <= right + 6) {
+        const pw = ptW - 6;
+        out += `<rect x="${fx}" y="${fy}" width="${pw}" height="18" rx="9" fill="#495057"/><text x="${fx + pw / 2}" y="${fy + 13}" font-family="${esc(FONT)}" font-size="11" font-weight="bold" text-anchor="middle" fill="#ffffff">${esc(pt)}</text><title>Story Points / Schätzung</title>`;
       }
       if (el.due) {
         const ds = new Date(el.due + 'T00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
@@ -470,8 +620,25 @@ function renderBody(el, env) {
   return '';
 }
 
+export const PRIORITIES = {
+  critical: { label: 'Kritisch', color: '#e03131', icon: '⏫' },
+  high: { label: 'Hoch', color: '#f08c00', icon: '▲' },
+  medium: { label: 'Mittel', color: '#1971c2', icon: '■' },
+  low: { label: 'Niedrig', color: '#868e96', icon: '▼' },
+};
+
+export const LANG_LABEL = {
+  plain: '', js: 'JavaScript', python: 'Python', java: 'Java', csharp: 'C#', go: 'Go', php: 'PHP', sql: 'SQL', bash: 'Shell',
+  json: 'JSON', yaml: 'YAML', html: 'HTML', css: 'CSS', dockerfile: 'Dockerfile',
+};
+
+export function cardTags(el) {
+  const t = Array.isArray(el.tags) ? el.tags : String(el.tags || '').split(',');
+  return t.map((x) => String(x).trim()).filter(Boolean).slice(0, 8);
+}
+
 /* Vollständiges SVG für eine Menge von Elementen (Vorschau, Export) */
-export function renderSvgDocument(elements, { padding = 40, background = '#ffffff', width, height, bounds } = {}) {
+export function renderSvgDocument(elements, { padding = 40, background = '#ffffff', width, height, bounds, redactPrivate = false } = {}) {
   const map = new Map(elements.map((e) => [e.id, e]));
   const get = (id) => map.get(id);
   const list = sortForRender(elements.filter((e) => e.type !== 'comment' && !isOrphan(e, get)));
@@ -484,7 +651,7 @@ export function renderSvgDocument(elements, { padding = 40, background = '#fffff
     vb.y -= 40;
     vb.h += 40;
   }
-  const body = list.map((e) => `<g>${renderElement(e, { get })}</g>`).join('');
+  const body = list.map((e) => `<g>${renderElement(e, { get, redactPrivate })}</g>`).join('');
   return {
     svg: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" width="${width || vb.w}" height="${height || vb.h}"><defs>${defsMarkup()}</defs>` +
       (background ? `<rect x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="${esc(background)}"/>` : '') + body + '</svg>',

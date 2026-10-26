@@ -2,8 +2,9 @@
 import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util.js';
 import {
   app, $, stage, getEl, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
-  loadElements, applyRemoteOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore,
+  loadElements, applyRemoteOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
 } from './core.js';
+import { throttle } from './util.js';
 import { menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
 
 /* ================================================================== */
@@ -21,7 +22,7 @@ function renderAvatars() {
   box.append(me);
   const peers = [...app.peers.values()];
   for (const p of peers.slice(0, 6)) {
-    const b = h('button', { class: 'avatar' + (app.following === p.clientId ? ' following' : ''), style: { background: p.color }, title: p.name + (p.viewOnly ? ' (ansehen)' : '') }, initials(p.name));
+    const b = h('button', { class: 'avatar' + (app.following === p.clientId ? ' following' : '') + (p.away ? ' away' : ''), style: { background: p.color }, title: p.name + (p.viewOnly ? ' (ansehen)' : '') + (p.away ? ' – abwesend' : '') }, initials(p.name));
     b.onclick = () => menu(b, [
       { header: p.name },
       { label: app.following === p.clientId ? 'Nicht mehr folgen' : 'Folgen', icon: 'users', onClick: () => follow(app.following === p.clientId ? null : p.clientId) },
@@ -30,12 +31,20 @@ function renderAvatars() {
     box.append(b);
   }
   if (peers.length > 6) box.append(h('span', { class: 'avatar more' }, '+' + (peers.length - 6)));
-  if (peers.length) {
-    const all = h('button', { class: 'icon-btn', title: 'Alle zu mir holen', html: ICONS.users });
-    all.onclick = () => {
-      app.sync.signal('summon', { rect: visibleRect(), name: app.user.name });
-      toast('Alle Teilnehmenden wurden zu deiner Ansicht geholt');
-    };
+  if (peers.length && !app.viewOnly) {
+    const all = h('button', { class: 'icon-btn', title: 'Alle zu mir holen / Alle folgen mir', html: ICONS.users });
+    all.onclick = () => menu(all, [
+      { header: 'Aufmerksamkeit lenken' },
+      { label: 'Alle zu mir holen (einmalig)', icon: 'fit', onClick: () => {
+        app.sync.signal('summon', { rect: visibleRect(), name: app.user.name });
+        toast('Alle Teilnehmenden wurden zu deiner Ansicht geholt');
+      } },
+      { label: 'Alle folgen mir (Moderation)', icon: 'users', onClick: () => {
+        if (app.following) follow(null);
+        app.sync.signal('lead', { rect: visibleRect(), name: app.user.name });
+        toast('Alle folgen jetzt deiner Ansicht – bis sie selbst navigieren');
+      } },
+    ]);
     box.append(all);
   }
   const fb = $('#follow-banner');
@@ -65,20 +74,91 @@ function applyFollowView(rect) {
   app._applyingFollow = false;
 }
 
+const CHAT_MS = 6000;
+
 function updateCursor(p) {
   let c = cursorEls.get(p.clientId);
   if (!p.cursor) return;
   if (!c) {
     c = h('div', { class: 'peer-cursor' },
-      h('span', { html: `<svg width="18" height="18" viewBox="0 0 18 18"><path d="M1 1l6 15 2-6 6-2z" fill="${p.color}" stroke="#fff" stroke-width="1.2"/></svg>` }),
-      h('span', { class: 'peer-name', style: { background: p.color } }, p.name));
+      h('span', { class: 'peer-arrow', html: `<svg width="18" height="18" viewBox="0 0 18 18"><path d="M1 1l6 15 2-6 6-2z" fill="${p.color}" stroke="#fff" stroke-width="1.2"/></svg>` }),
+      h('span', { class: 'peer-name', style: { background: p.color } }, p.name),
+      h('span', { class: 'peer-chat hidden', style: { background: p.color } }));
+    // Liegt der Zeiger außerhalb der Ansicht, springt ein Klick auf den Randpfeil dorthin
+    c.addEventListener('click', () => p.cursor && fitTo({ x: p.cursor.x - 300, y: p.cursor.y - 200, w: 600, h: 400 }, { maxZ: app.view.z }));
     cursorsLayer.append(c);
     cursorEls.set(p.clientId, c);
   }
+  const chat = c.querySelector('.peer-chat');
+  const showChat = p.chat && p.chat.text && Date.now() - p.chat.t < CHAT_MS;
+  chat.classList.toggle('hidden', !showChat);
+  if (showChat) chat.textContent = p.chat.text;
   const s = toScreen(p.cursor.x, p.cursor.y);
-  c.style.transform = `translate(${s.x}px, ${s.y}px)`;
-  c.classList.toggle('idle', Date.now() - (p.lastMove || 0) > 8000);
+  const W = stage.clientWidth, H = stage.clientHeight, m = 14;
+  const off = s.x < 0 || s.y < 0 || s.x > W || s.y > H;
+  c.classList.toggle('offscreen', off);
+  if (off) {
+    // nicht unter Werkzeugleiste (links), Kopfzeilen (oben) sowie Minimap/Zoom (rechts unten) legen
+    const cx = Math.max(m + 64, Math.min(W - m - 110, s.x));
+    let cy = Math.max(m + 64, Math.min(H - m - 70, s.y));
+    if (cx > W - 260 && cy > H - 230) cy = H - 230;
+    // Die Pfeilspitze zeigt im Ausgangszustand nach links oben (−135°) – auf die Richtung zum Zeiger drehen
+    const ang = (Math.atan2(s.y - H / 2, s.x - W / 2) * 180) / Math.PI;
+    c.style.transform = `translate(${cx}px, ${cy}px)`;
+    c.querySelector('.peer-arrow').style.transform = `rotate(${ang + 135}deg)`;
+    c.title = `${p.name} – klicken, um hinzuspringen`;
+  } else {
+    c.style.transform = `translate(${s.x}px, ${s.y}px)`;
+    c.querySelector('.peer-arrow').style.transform = '';
+    c.title = '';
+  }
+  c.classList.toggle('idle', !showChat && Date.now() - (p.lastMove || 0) > 8000);
+  c.classList.toggle('away', !!p.away);
 }
+
+/* ---------------- Cursor-Chat: kurze Nachricht am eigenen Mauszeiger (Taste /) ---------------- */
+
+let chatBox = null;
+const sendChat = throttle((text) => app.sync.signal('chat', { text }), 120);
+
+function openCursorChat() {
+  if (chatBox) return;
+  const p = toScreen(lastPointer().x, lastPointer().y);
+  const sr = stage.getBoundingClientRect();
+  const input = h('input', { type: 'text', maxlength: 120, placeholder: 'Nachricht an alle …', 'aria-label': 'Cursor-Chat' });
+  chatBox = h('div', { class: 'cursor-chat-input', style: { left: Math.min(innerWidth - 260, sr.left + p.x + 18) + 'px', top: Math.min(innerHeight - 60, sr.top + p.y + 22) + 'px', background: app.user.color } }, input);
+  document.body.append(chatBox);
+  input.focus();
+  const close = (clear) => {
+    if (!chatBox) return;
+    chatBox.remove();
+    chatBox = null;
+    if (clear) app.sync.signal('chat', { text: '' });
+  };
+  input.addEventListener('input', () => sendChat(input.value.slice(0, 120)));
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') close(true);
+    else if (e.key === 'Enter') {
+      app.sync.signal('chat', { text: input.value.slice(0, 120) });
+      close(false);
+    }
+  });
+  input.addEventListener('blur', () => setTimeout(() => close(false), 100));
+}
+
+app.on('key', (e) => {
+  if (e.key === '/' && !e.ctrlKey && !e.metaKey && !app.editing) {
+    e.preventDefault();
+    openCursorChat();
+  }
+});
+
+// Abwesenheit (Tab im Hintergrund) für die anderen sichtbar machen
+document.addEventListener('visibilitychange', () => app.sync && app.sync.signal('presence', { away: document.hidden }));
+
+// Anzeige „… schreibt“ an Elementen, die gerade bearbeitet werden
+app.on('editing', (on) => app.sync && app.sync.signal('editing', on && app.editing ? app.editing.id : null));
 
 function removeCursor(id) {
   cursorEls.get(id)?.remove();
@@ -86,7 +166,7 @@ function removeCursor(id) {
 }
 
 app.on('view', () => app.peers.forEach(updateCursor));
-setInterval(() => app.peers.forEach(updateCursor), 3000);
+setInterval(() => app.peers.forEach(updateCursor), 1000);
 
 /* ================================================================== */
 /* Laserpointer                                                        */
@@ -550,7 +630,11 @@ export function initCollab() {
     }
     loadElements(msg.board.elements);
     // Eigene, noch nicht bestätigte Änderungen wieder anwenden – sie werden gleich (erneut) gesendet
-    for (const op of app.sync.pendingOps()) applyRemoteOp(op);
+    for (const op of app.sync.pendingOps()) {
+      const srv = op.op === 'upsert' && getEl(op.el.id);
+      if (srv && srv.hidden) continue;
+      applyRemoteOp(srv && srv.priv ? { ...op, el: { ...op.el, priv: srv.priv, privName: srv.privName } } : op);
+    }
     if (app.editing && !getEl(app.editing.id)) abortEdit();
     app.name = msg.board.name;
     app.session = msg.board.session || { timer: null, voting: null };
@@ -559,6 +643,7 @@ export function initCollab() {
     cursorEls.clear();
     for (const p of msg.peers) app.peers.set(p.clientId, { ...p });
     app.loaded = true;
+    app.emit('session', 'all');
     app.emit('name');
     app.emit('peers');
     renderTimer();
@@ -592,6 +677,9 @@ export function initCollab() {
           toast(`${op.voting.by || 'Jemand'} hat eine Abstimmung gestartet`);
         }
         renderVoting();
+      } else if (op.op === 'privateMode' || op.op === 'estimation') {
+        app.session[op.op] = op[op.op];
+        app.emit('session', op.op);
       }
     }
   });
@@ -602,6 +690,10 @@ export function initCollab() {
   s.on('join', (msg) => {
     app.peers.set(msg.user.clientId, { ...msg.user });
     app.emit('peers');
+    // Neu Hinzukommende kennen den eigenen Zustand noch nicht
+    if (document.hidden) s.signal('presence', { away: true });
+    if (app.editing) s.signal('editing', app.editing.id);
+    if (app.sel.size) s.signal('sel', [...app.sel].slice(0, 200));
     toast(`${msg.user.name} ist dem Board beigetreten`);
   });
   s.on('leave', (msg) => {
@@ -616,9 +708,15 @@ export function initCollab() {
   s.on('signal', (msg) => {
     const p = app.peers.get(msg.from);
     if (!p) return;
+    // Signale kommen ungeprüft von anderen Teilnehmenden – nur gültige Werte übernehmen
+    const d = msg.data;
+    const num = (v) => typeof v === 'number' && Number.isFinite(v);
+    const isPoint = (v) => v && num(v.x) && num(v.y);
+    const isRect = (v) => isPoint(v) && num(v.w) && num(v.h) && v.w > 0 && v.h > 0;
+    if ((msg.kind === 'cursor' && !isPoint(d)) || ((msg.kind === 'view' || msg.kind === 'summon' || msg.kind === 'lead') && !isRect(msg.kind === 'view' ? d : d && d.rect))) return;
     switch (msg.kind) {
       case 'cursor':
-        p.cursor = msg.data;
+        p.cursor = { x: d.x, y: d.y };
         p.lastMove = Date.now();
         updateCursor(p);
         break;
@@ -627,18 +725,38 @@ export function initCollab() {
         if (app.following === msg.from) applyFollowView(msg.data);
         break;
       case 'sel':
-        p.sel = msg.data;
+        p.sel = Array.isArray(d) ? d.filter((x) => typeof x === 'string').slice(0, 200) : [];
         scheduleRender(true);
         break;
       case 'laser':
-        for (const pt of msg.data || []) addLaser(msg.from, p.color, pt);
+        if (Array.isArray(d)) for (const pt of d.slice(0, 200)) if (isPoint(pt)) addLaser(msg.from, p.color, pt);
         break;
       case 'reaction':
-        showReaction(msg.data.emoji, msg.data.name);
+        if (d && typeof d.emoji === 'string') showReaction(d.emoji.slice(0, 8), p.name);
         break;
       case 'summon':
-        fitTo(msg.data.rect, { pad: 0, maxZ: 8 });
-        toast(`${msg.data.name || p.name} hat alle zu sich geholt`);
+        fitTo(d.rect, { pad: 0, maxZ: 8 });
+        toast(`${p.name} hat alle zu sich geholt`);
+        break;
+      case 'lead':
+        p.view = d.rect;
+        follow(msg.from);
+        toast(`${p.name} moderiert – du folgst der Ansicht. Eigenes Verschieben beendet das Folgen.`, 4000);
+        break;
+      case 'chat':
+        p.chat = { text: d && typeof d.text === 'string' ? d.text.slice(0, 120) : '', t: Date.now() };
+        p.lastMove = Date.now();
+        updateCursor(p);
+        break;
+      case 'presence':
+        p.away = !!(d && d.away === true);
+        updateCursor(p);
+        app.emit('peers');
+        scheduleRender(true);
+        break;
+      case 'editing':
+        p.editing = typeof d === 'string' ? d.slice(0, 64) : null;
+        scheduleRender(true);
         break;
     }
   });
@@ -657,6 +775,15 @@ export function initCollab() {
   s.on('rejected', (list) => {
     for (const r of list) applyRemoteOp({ op: 'delete', id: r.id });
     toast(list[0].reason, 7000);
+  });
+  // Privater Modus: Server hat neue eigene Elemente als privat markiert – nur das Kennzeichen übernehmen
+  // Vom Server abgelehnte Änderungen (z. B. an fremden privaten Elementen) rückgängig machen
+  s.on('revert', (list) => list.forEach((op) => applyRemoteOp(op)));
+  s.on('marks', (list) => {
+    for (const m of list) {
+      const el = getEl(m.id);
+      if (el) applyRemoteOp({ op: 'upsert', el: { ...el, priv: m.priv, privName: m.privName } });
+    }
   });
   s.on('status', async (ok) => {
     app.emit('status', ok);
