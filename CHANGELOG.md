@@ -4,6 +4,32 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.5.0] – 2026-10-26
+
+### Hinzugefügt
+- Tabellen (REQ-ELEM-009):
+  - Zellen und Bereiche auswählen.
+  - Formatierung je Zelle: fett, kursiv, unterstrichen, durchgestrichen, Ausrichtung, Schriftgröße, Text- und
+    Zellenfarbe.
+  - Zeilen und Spalten an der Auswahl einfügen und löschen.
+  - Spaltenbreiten und Zeilenhöhen ziehen oder angleichen.
+  - Farben für Kopfzeile und Linien.
+  - Tastaturbedienung (Pfeile, Enter, Tippen, Entf).
+- Unterstrichen und durchgestrichen für Notizen, Formen und Texte; senkrechte Ausrichtung für Notizen und Formen.
+- Neon-Design als drittes Design neben hell und dunkel (REQ-CANVAS-006).
+
+### Geändert
+- Tabellen werden beim gemeinsamen Bearbeiten zellgenau abgeglichen (neue Operationen `tpatch` und `tstruct`).
+  Bisher ersetzte jede Änderung die ganze Tabelle; dadurch konnten gleichzeitige Eingaben verloren gehen und die
+  Ansichten auseinanderlaufen. Fügt jemand eine Zeile oder Spalte ein, schreibt eine Person, die gerade eine Zelle
+  bearbeitet, in derselben Zelle weiter. Rückgängig nimmt nur die eigenen Zelländerungen zurück.
+
+### Behoben
+- Einrasten an Tabellen berücksichtigt individuelle Spaltenbreiten und Zeilenhöhen.
+- Spaltenbreiten können beim Ziehen nicht mehr negativ werden.
+- Veraltete Zellauswahl nach dem Löschen von Zeilen oder Spalten durch andere wird verworfen.
+- Der Zelleditor übernimmt eine geänderte Formatierung sofort und ist im Neon-Design gut lesbar.
+
 ## [3.4.0] – 2026-10-26
 
 ### Hinzugefügt

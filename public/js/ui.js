@@ -3,7 +3,7 @@ import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
   initials, relTime, rectsIntersect, throttle, uid,
 } from './util.js';
-import { SHAPES, SHAPE_GROUPS, shapeGeom, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf } from './render.js';
+import { SHAPES, SHAPE_GROUPS, shapeGeom, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery } from './gallery.js';
 import { popover, closePop, menu } from './menu.js';
@@ -19,6 +19,7 @@ import {
   arrangeGrid, clusterByColor, frames, makeElement, addElements, nextZ, insertImageFile, setSelection, pasteElements,
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
+  tableRange, formatCells, tableAction,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
 
@@ -185,6 +186,13 @@ function colorBtn(color, title, palette, onPick, { ring = false } = {}) {
   return b;
 }
 
+// Farbauswahl als Popover an einem beliebigen Anker (z. B. aus einem Menü heraus)
+function colorBtnMenu(anchor, color, title, onPick) {
+  const custom = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(color) ? color : '#000000', oninput: (e) => onPick(e.target.value) });
+  setTimeout(() => popover(anchor, h('div', {}, h('div', { class: 'pop-title' }, title), swatchGrid(PALETTE, color, (c) => { onPick(c); closePop(); }),
+    h('label', { class: 'custom-color' }, 'Eigene Farbe ', custom)), { placement: 'top' }), 0);
+}
+
 function selectBtn(value, options, title, onPick, width = 64) {
   const label = (options.find((o) => o[0] === value) || [value, String(value)])[1];
   const b = h('button', { class: 'ctx-btn select-btn', title, style: { minWidth: width + 'px' } }, h('span', {}, label), h('span', { class: 'caret', html: ICONS.chevDown }));
@@ -220,8 +228,9 @@ export function buildCtx() {
     if (only === 'sticky') {
       items.push(colorBtn(f.fill, 'Farbe', STICKY_COLORS, (c) => applySel({ fill: c })));
       items.push(selectBtn(f.fontSize, [['auto', 'Auto'], ...FONT_SIZES], 'Schriftgröße', (v) => applySel({ fontSize: v })));
-      items.push(toggleBtn('bold', f.bold, 'Fett', () => applySel({ bold: !f.bold })));
+      items.push(...textStyleBtns(f));
       items.push(alignBtn(f.align || 'center'));
+      items.push(valignBtn(f.valign || 'middle'));
     } else if (only === 'shape') {
       items.push(selectBtn(f.shape, SHAPES, 'Form', (v) => applySel({ shape: v }), 110));
       items.push(colorBtn(f.fill, 'Füllfarbe', PALETTE, (c) => applySel({ fill: c })));
@@ -231,13 +240,13 @@ export function buildCtx() {
       items.push(sep());
       items.push(colorBtn(f.textColor || '#1a1a1a', 'Textfarbe', PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
       items.push(selectBtn(f.fontSize ?? 18, [['auto', 'Auto'], ...FONT_SIZES], 'Schriftgröße', (v) => applySel({ fontSize: v })));
-      items.push(toggleBtn('bold', f.bold, 'Fett', () => applySel({ bold: !f.bold })));
+      items.push(...textStyleBtns(f));
       items.push(alignBtn(f.align || 'center'));
+      items.push(valignBtn(f.valign || 'middle'));
     } else if (only === 'text') {
       items.push(selectBtn(f.fontSize ?? 24, FONT_SIZES, 'Schriftgröße', (v) => applySel({ fontSize: v })));
       items.push(colorBtn(f.color || '#1a1a1a', 'Textfarbe', PALETTE.slice(1), (c) => applySel({ color: c })));
-      items.push(toggleBtn('bold', f.bold, 'Fett', () => applySel({ bold: !f.bold })));
-      items.push(toggleBtn('italic', f.italic, 'Kursiv', () => applySel({ italic: !f.italic })));
+      items.push(...textStyleBtns(f));
       items.push(alignBtn(f.align || 'left'));
       items.push(colorBtn(f.fill || 'transparent', 'Hintergrund', PALETTE, (c) => applySel({ fill: c })));
     } else if (only === 'connector') {
@@ -287,12 +296,40 @@ export function buildCtx() {
       if (one) items.push(actBtn('edit', 'Code bearbeiten (Enter)', () => startEdit(one.id, { selectAll: false })));
       if (one) items.push(actBtn('copy', 'Code kopieren', () => navigator.clipboard.writeText(one.text || '').then(() => toast('Code kopiert'), () => toast('Kopieren nicht möglich'))));
     } else if (only === 'table' && one) {
-      items.push(actBtn('<b style="font-size:12px">+Z</b>', 'Zeile hinzufügen', () => applySel((t) => ({ rows: t.rows + 1, h: t.h + t.h / t.rows, cells: [...t.cells.map((r) => [...r]), Array(t.cols).fill('')] }))));
-      items.push(actBtn('<b style="font-size:12px">+S</b>', 'Spalte hinzufügen', () => applySel((t) => ({ cols: t.cols + 1, w: t.w + t.w / t.cols, cells: t.cells.map((r) => [...r, '']) }))));
-      items.push(actBtn('<b style="font-size:12px">−Z</b>', 'Letzte Zeile entfernen', () => applySel((t) => (t.rows > 1 ? { rows: t.rows - 1, h: t.h - t.h / t.rows, cells: t.cells.slice(0, -1) } : null))));
-      items.push(actBtn('<b style="font-size:12px">−S</b>', 'Letzte Spalte entfernen', () => applySel((t) => (t.cols > 1 ? { cols: t.cols - 1, w: t.w - t.w / t.cols, cells: t.cells.map((r) => r.slice(0, -1)) } : null))));
-      items.push(toggleBtn('<b style="font-size:12px">K</b>', f.header !== false, 'Kopfzeile', () => applySel({ header: f.header === false })));
-      items.push(selectBtn(f.fontSize || 14, FONT_SIZES.slice(0, 8), 'Schriftgröße', (v) => applySel({ fontSize: v })));
+      // Formatierung gilt für die ausgewählten Zellen – ohne Zellauswahl für die ganze Tabelle
+      const rg = tableRange();
+      const st = cellStyle(one, rg.r0, rg.c0);
+      const colName = (c) => { let n = ''; c += 1; while (c > 0) { const m = (c - 1) % 26; n = String.fromCharCode(65 + m) + n; c = Math.floor((c - 1) / 26); } return n; };
+      const where = rg.whole ? 'Ganze Tabelle' : rg.r0 === rg.r1 && rg.c0 === rg.c1 ? `Zelle ${colName(rg.c0)}${rg.r0 + 1}` : `${colName(rg.c0)}${rg.r0 + 1}:${colName(rg.c1)}${rg.r1 + 1}`;
+      items.push(h('span', { class: 'ctx-label', title: 'Klick in die ausgewählte Tabelle wählt eine Zelle, Umschalt-Klick oder Umschalt+Pfeil einen Bereich' }, where));
+      items.push(toggleBtn('bold', st.bold, 'Fett', () => formatCells({ b: !st.bold })));
+      items.push(toggleBtn('italic', st.italic, 'Kursiv', () => formatCells({ i: !st.italic })));
+      items.push(toggleBtn('underline', st.underline, 'Unterstrichen', () => formatCells({ u: !st.underline })));
+      items.push(toggleBtn('strike', st.strike, 'Durchgestrichen', () => formatCells({ s: !st.strike })));
+      items.push(selectBtn(st.align, [['left', '⯇ Links'], ['center', '≡ Mitte'], ['right', '⯈ Rechts']], 'Ausrichtung waagerecht', (v) => formatCells({ al: v }), 74));
+      items.push(selectBtn(st.valign, [['top', '⯅ Oben'], ['middle', '≡ Mitte'], ['bottom', '⯆ Unten']], 'Ausrichtung senkrecht', (v) => formatCells({ va: v }), 74));
+      items.push(selectBtn(st.size, FONT_SIZES.slice(0, 10), 'Schriftgröße', (v) => formatCells({ fs: v })));
+      items.push(colorBtn(st.color, 'Textfarbe', PALETTE.slice(1), (c) => formatCells({ c })));
+      items.push(colorBtn(st.bg || 'transparent', 'Zellenfarbe', PALETTE, (c) => formatCells({ bg: c === 'transparent' ? undefined : c })));
+      const tb = actBtn('table', 'Zeilen & Spalten', () => menu(tb, [
+        { header: rg.whole ? 'Am Ende der Tabelle' : 'An der Auswahl' },
+        { label: 'Zeile oberhalb einfügen', icon: 'plus', disabled: rg.whole, onClick: () => tableAction('rowAbove') },
+        { label: rg.whole ? 'Zeile anhängen' : 'Zeile unterhalb einfügen', icon: 'plus', onClick: () => tableAction('rowBelow') },
+        { label: 'Spalte links einfügen', icon: 'plus', disabled: rg.whole, onClick: () => tableAction('colLeft') },
+        { label: rg.whole ? 'Spalte anhängen' : 'Spalte rechts einfügen', icon: 'plus', onClick: () => tableAction('colRight') },
+        '-',
+        { label: rg.r0 === rg.r1 ? 'Zeile löschen' : `${rg.r1 - rg.r0 + 1} Zeilen löschen`, icon: 'trash', danger: true, disabled: rg.whole, onClick: () => tableAction('deleteRows') },
+        { label: rg.c0 === rg.c1 ? 'Spalte löschen' : `${rg.c1 - rg.c0 + 1} Spalten löschen`, icon: 'trash', danger: true, disabled: rg.whole, onClick: () => tableAction('deleteCols') },
+        { label: 'Inhalt leeren', icon: 'close', onClick: () => tableAction('clear') },
+        { label: 'Formatierung entfernen', icon: 'undo', onClick: () => tableAction('clearFormat') },
+        '-',
+        { label: 'Spaltenbreiten angleichen', icon: 'distH', onClick: () => tableAction('equalCols') },
+        { label: 'Zeilenhöhen angleichen', icon: 'distV', onClick: () => tableAction('equalRows') },
+        { label: one.header !== false ? 'Kopfzeile ausschalten' : 'Kopfzeile einschalten', icon: 'table', onClick: () => applySel({ header: one.header === false }) },
+        { label: 'Farbe der Kopfzeile …', icon: 'table', onClick: () => colorBtnMenu(tb, one.headerFill || '#eef1ff', 'Kopfzeile', (c) => applySel({ headerFill: c === 'transparent' ? '#ffffff' : c })) },
+        { label: 'Farbe der Linien …', icon: 'table', onClick: () => colorBtnMenu(tb, one.stroke || '#b9b9b9', 'Linien', (c) => applySel({ stroke: c === 'transparent' ? '#ffffff' : c })) },
+      ], { placement: 'top' }));
+      items.push(tb);
     } else if (only === 'emoji') {
       items.push(actBtn('<span style="font-size:18px">' + esc(f.char) + '</span>', 'Sticker ändern', (e) => {
         const b = e.currentTarget;
@@ -424,6 +461,19 @@ async function packWithGap() {
   packSel(b.w >= b.h ? 'h' : 'v', gap);
 }
 
+function textStyleBtns(f) {
+  return [
+    toggleBtn('bold', f.bold, 'Fett', () => applySel({ bold: !f.bold })),
+    toggleBtn('italic', f.italic, 'Kursiv', () => applySel({ italic: !f.italic })),
+    toggleBtn('underline', f.underline, 'Unterstrichen', () => applySel({ underline: !f.underline })),
+    toggleBtn('strike', f.strike, 'Durchgestrichen', () => applySel({ strike: !f.strike })),
+  ];
+}
+
+function valignBtn(cur) {
+  return selectBtn(cur, [['top', '⯅ Oben'], ['middle', '≡ Mitte'], ['bottom', '⯆ Unten']], 'Ausrichtung senkrecht', (v) => applySel({ valign: v }), 70);
+}
+
 function alignBtn(cur) {
   const icons = { left: 'tAlignLeft', center: 'tAlignCenter', right: 'tAlignRight' };
   const next = { left: 'center', center: 'right', right: 'left' };
@@ -458,7 +508,9 @@ app.on('dragging', (d) => {
   positionCtx();
 });
 app.on('editing', (on) => {
-  ctxHidden = on;
+  // Beim Bearbeiten einer Tabellenzelle bleibt die Leiste sichtbar (Formatierung der Zelle)
+  ctxHidden = on && !(app.editing && app.editing.cell);
+  if (on && app.editing && app.editing.cell) buildCtx();
   positionCtx();
 });
 app.on('history', () => {
@@ -875,6 +927,7 @@ function openSettings(anchor) {
     { header: 'Ansicht' },
     t('grid', 'Raster anzeigen'),
     t('dark', 'Dunkles Design'),
+    t('neon', 'Neon-Design'),
     t('showAuthor', 'Autor auf Sticky Notes'),
     t('hideResolved', 'Erledigte Kommentare ausblenden'),
     t('hideCursors', 'Mauszeiger anderer ausblenden'),
@@ -902,6 +955,7 @@ export function openShortcuts() {
   const groups = [
     ['Werkzeuge', [['V', 'Auswählen'], ['H / Leertaste', 'Verschieben'], ['N', 'Sticky Note'], ['T', 'Text'], ['S', 'Form'], ['R / O', 'Rechteck / Ellipse'], ['L', 'Verbindungslinie'], ['P', 'Stift'], ['E', 'Radierer'], ['F', 'Frame'], ['K', 'Karte'], ['M', 'Mindmap'], ['C', 'Kommentar'], ['X', 'Laserpointer']]],
     ['Bearbeiten', [['Strg+Z / Strg+Y', 'Rückgängig / Wiederholen'], ['Strg+C / X / V', 'Kopieren / Ausschneiden / Einfügen'], ['Strg+D', 'Duplizieren'], ['Alt + Ziehen', 'Kopie ziehen'], ['Entf', 'Löschen'], ['Strg+A', 'Alles auswählen'], ['Strg+G', 'Gruppieren'], ['Strg+Umschalt+G', 'Gruppe auflösen'], ['Strg+L', 'Sperren'], ['Strg+] / [', 'Vorder-/Hintergrund'], ['Pfeiltasten', 'Verschieben (Umschalt: 10 px)'], ['Enter / Doppelklick', 'Text bearbeiten'], ['Esc / Strg+Enter', 'Bearbeitung beenden']]],
+    ['Tabellen', [['Klick in ausgewählte Tabelle', 'Zelle wählen'], ['Umschalt + Klick / Pfeil', 'Bereich wählen'], ['Pfeiltasten', 'Zellauswahl bewegen'], ['Enter / F2', 'Zelle bearbeiten'], ['Tippen', 'Zelle überschreiben'], ['Entf', 'Inhalt leeren'], ['Tab', 'Nächste Zelle (beim Bearbeiten)'], ['Linie ziehen', 'Spaltenbreite / Zeilenhöhe']]],
     ['Verbinder', [['Linie ziehen', 'Biegen (Knickpunkt)'], ['◦ auf der Linie ziehen', 'Knickpunkt einfügen'], ['Doppelklick auf ▪', 'Knickpunkt entfernen'], ['Beschriftung ziehen', 'Entlang der Linie verschieben'], ['Ende an Rand ziehen', 'Fester Andockpunkt'], ['Ende in Formmitte', 'Automatisch andocken']]],
     ['Mindmap', [['Tab', 'Unterknoten hinzufügen'], ['Enter (beim Tippen)', 'Geschwisterknoten'], ['Umschalt+Enter', 'Geschwisterknoten']]],
     ['Zusammenarbeit', [['/', 'Cursor-Chat: Nachricht am Mauszeiger'], ['Esc', 'Cursor-Chat schließen']]],

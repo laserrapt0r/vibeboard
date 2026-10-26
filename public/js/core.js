@@ -4,7 +4,7 @@ import {
   debounce, throttle, toast, contrastText, STICKY_COLORS, api,
 } from './util.js';
 import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
-  outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong } from './render.js';
+  outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions } from './render.js';
 import { THEMES } from './highlight.js';
 import { Sync } from './sync.js';
 
@@ -202,7 +202,8 @@ function renderEnv() {
     showAuthor: app.settings.showAuthor,
     placeholders: true,
     editingCell: app.editing && app.editing.cell,
-    labelBg: app.settings.dark ? '#2a2b31' : '#ffffff',
+    labelBg: app.settings.neon ? '#07070f' : app.settings.dark ? '#2a2b31' : '#ffffff',
+    neon: !!app.settings.neon,
   };
 }
 
@@ -249,6 +250,9 @@ function renderNode(id, env) {
   if (el.locked) cls += ' locked';
   if (app.editing && app.editing.id === id && !app.editing.cell) cls += ' editing';
   g.setAttribute('class', cls);
+  // Neon: Leuchten um Linien und Umrisse (große Flächen wie Frames und Tabellen ohne, wegen der Leistung)
+  if (env.neon && !['frame', 'table', 'image', 'emoji', 'comment', 'code'].includes(el.type)) g.setAttribute('filter', 'url(#neon-glow)');
+  else g.removeAttribute('filter');
   try {
     g.innerHTML = renderElement(el, env);
   } catch (e) {
@@ -356,9 +360,32 @@ export function deleteEls(ids) {
   selectionChanged();
 }
 
-function applySnapshot(map) {
+// Rückgängig bei Tabellen: nur die selbst geänderten Zellen, Formate und Eigenschaften zurücksetzen,
+// damit gleichzeitige Eingaben anderer erhalten bleiben (bei geänderter Zeilen-/Spaltenzahl die ganze Tabelle)
+function tableUndoPatch(target, other, cur) {
+  if (!other || !cur || cur.type !== 'table' || target.type !== 'table' || other.type !== 'table') return null;
+  if (target.rows !== other.rows || target.cols !== other.cols || cur.rows !== target.rows || cur.cols !== target.cols) return null;
+  const p = { cells: [], styles: [], props: {} };
+  for (let r = 0; r < target.rows; r++) {
+    for (let c = 0; c < target.cols; c++) {
+      const tv = target.cells?.[r]?.[c] ?? '', ov = other.cells?.[r]?.[c] ?? '';
+      if (tv !== ov) p.cells.push([r, c, tv]);
+      const ts = target.styles?.[r]?.[c] || null, os = other.styles?.[r]?.[c] || null;
+      if (JSON.stringify(ts) !== JSON.stringify(os)) p.styles.push([r, c, ts]);
+    }
+  }
+  for (const k of TableOps.PROPS) if (JSON.stringify(target[k]) !== JSON.stringify(other[k])) p.props[k] = target[k] === undefined ? null : target[k];
+  return p;
+}
+
+function applySnapshot(map, opposite = new Map()) {
   const removed = new Set();
   for (const [id, el] of map) {
+    const tp = el && tableUndoPatch(el, opposite.get(id), app.els.get(id));
+    if (tp) {
+      tablePatch(app.els.get(id), tp);
+      continue;
+    }
     if (el) {
       // Privat-Kennzeichen bestimmt der Server – den aktuellen Stand behalten statt den aus der Historie
       const n = clone(el);
@@ -388,7 +415,7 @@ export function undo() {
   if (drag || tx) return;
   const e = undoStack.pop();
   if (!e) return;
-  applySnapshot(e.before);
+  applySnapshot(e.before, e.after);
   redoStack.push(e);
   app.emit('history');
 }
@@ -398,7 +425,7 @@ export function redo() {
   if (drag || tx) return;
   const e = redoStack.pop();
   if (!e) return;
-  applySnapshot(e.after);
+  applySnapshot(e.after, e.before);
   undoStack.push(e);
   app.emit('history');
 }
@@ -429,6 +456,50 @@ export function applyRemoteOp(op) {
     markDirty(op.id);
     if (app.editing && app.editing.id === op.id) abortEdit();
   }
+}
+
+/* ---------------- Tabellen: zellgenaue Änderungen (siehe table-ops.js) ---------------- */
+
+const TableOps = globalThis.TableOps;
+
+// Lokal anwenden (mit Rückgängig) und als Zellen-Patch senden
+export function tablePatch(t, p) {
+  const n = TableOps.applyPatch(t, p);
+  setEl(n, false);
+  if (!app.viewOnly) app.sync.op({ op: 'tpatch', id: t.id, ...p });
+  return n;
+}
+
+export function tableStruct(t, st) {
+  const n = TableOps.applyStruct(t, st);
+  if (!n) return null;
+  setEl(n, false);
+  if (!app.viewOnly) app.sync.op({ op: 'tstruct', id: t.id, ...st });
+  return n;
+}
+
+// Änderung einer anderen Person (bzw. Bestätigung der eigenen) anwenden
+export function applyRemoteTableOp(op) {
+  const t = getEl(op.id);
+  if (!t || t.type !== 'table') return;
+  if (op.op === 'tstruct') {
+    const n = TableOps.applyStruct(t, op);
+    if (!n) return;
+    // bearbeitete Zelle und Zellauswahl wandern mit der Strukturänderung
+    const ed = app.editing;
+    if (ed && ed.id === op.id && ed.cell) {
+      const m = TableOps.mapCell(op, ed.cell[0], ed.cell[1]);
+      if (m) ed.cell = m;
+      else abortEdit();
+    }
+    const cs = app.cellSel;
+    if (cs && cs.id === op.id) {
+      const a = TableOps.mapCell(op, cs.r0, cs.c0), b = TableOps.mapCell(op, cs.r1, cs.c1);
+      app.cellSel = a && b ? { id: cs.id, r0: a[0], c0: a[1], r1: b[0], c1: b[1] } : null;
+      app.emit('selection');
+    }
+    applyRemoteOp({ op: 'upsert', el: n });
+  } else applyRemoteOp({ op: 'upsert', el: TableOps.applyPatch(t, op) });
 }
 
 export function loadElements(obj) {
@@ -603,6 +674,7 @@ export function setSelection(ids) {
 export function selectionChanged() {
   // Verdeckte private Elemente anderer lassen sich nicht auswählen
   for (const id of [...app.sel]) if (getEl(id)?.hidden) app.sel.delete(id);
+  if (app.cellSel && !(app.sel.size === 1 && app.sel.has(app.cellSel.id))) app.cellSel = null;
   scheduleRender(true);
   app.emit('selection');
   if (app.sync) sendSel();
@@ -746,6 +818,19 @@ function renderOverlay() {
         out += `<rect data-handle="${k}" class="h-${k} h-hit" x="${px - hit / 2}" y="${py - hit / 2}" width="${hit}" height="${hit}" fill="transparent"/>`;
         out += `<rect data-handle="${k}" class="h-${k}" x="${px - hs / 2}" y="${py - hs / 2}" width="${hs}" height="${hs}" rx="${2 / z}" fill="#fff" stroke="#4262ff" stroke-width="${sw}"/>`;
       }
+      if (sel.length === 1 && sel[0].type === 'table') {
+        const t = sel[0];
+        const { xs, ys, rows, cols } = tableLayout(t);
+        const cs = app.cellSel && app.cellSel.id === t.id ? app.cellSel : null;
+        if (cs) {
+          const r0 = Math.min(cs.r0, cs.r1), r1 = Math.max(cs.r0, cs.r1), c0 = Math.min(cs.c0, cs.c1), c1 = Math.max(cs.c0, cs.c1);
+          if (r1 < rows && c1 < cols) out += `<rect x="${xs[c0]}" y="${ys[r0]}" width="${xs[c1 + 1] - xs[c0]}" height="${ys[r1 + 1] - ys[r0]}" fill="#4262ff" fill-opacity="0.1" stroke="#4262ff" stroke-width="${2 / z}"/>`;
+        }
+        // Spaltenbreiten und Zeilenhöhen an den Linien ziehen
+        const hw = 8 / z;
+        for (let c = 1; c < cols; c++) out += `<rect data-handle="col-${c - 1}" class="tab-col" x="${xs[c] - hw / 2}" y="${t.y}" width="${hw}" height="${t.h}" fill="transparent"><title>Ziehen: Spaltenbreite ändern</title></rect>`;
+        for (let r = 1; r < rows; r++) out += `<rect data-handle="row-${r - 1}" class="tab-row" x="${t.x}" y="${ys[r] - hw / 2}" width="${t.w}" height="${hw}" fill="transparent"><title>Ziehen: Zeilenhöhe ändern</title></rect>`;
+      }
       if (sel.length === 1 && ['sticky', 'shape', 'card', 'text', 'image'].includes(sel[0].type)) {
         const off = 24 / z;
         const qc = { top: [b.x + b.w / 2, b.y - off], right: [b.x + b.w + off, b.y + b.h / 2], bottom: [b.x + b.w / 2, b.y + b.h + off], left: [b.x - off, b.y + b.h / 2] };
@@ -813,6 +898,7 @@ export function startEdit(id, opts = {}) {
   let cell = null;
   if (el.type === 'table') {
     cell = opts.cell || [0, 0];
+    app.cellSel = { id, r0: cell[0], c0: cell[1], r1: cell[0], c1: cell[1] };
   }
   begin();
   app.editing = { id, field, cell, isNew: !!opts.isNew };
@@ -882,12 +968,13 @@ function editorGeometry(el) {
     }
     case 'table': {
       const [r, c] = ed.cell;
-      const cw = el.w / el.cols, rh = el.h / el.rows;
-      const fs = el.fontSize || 14;
-      box = { x: el.x + c * cw + 8, y: el.y + r * rh + 6, w: cw - 16, h: rh - 12 };
-      const bold = el.header !== false && r === 0;
-      lay = { size: fs, lines: wrap(editor.value, box.w, fs, bold), bold };
-      align = 'left';
+      const { xs, ys } = tableLayout(el);
+      const st = cellStyle(el, r, c);
+      box = { x: xs[c] + 8, y: ys[r] + 6, w: Math.max(40, xs[c + 1] - xs[c] - 16), h: Math.max(st.size, ys[r + 1] - ys[r] - 12) };
+      lay = { size: st.size, lines: wrap(editor.value, box.w, st.size, st.bold, st.italic), bold: st.bold, italic: st.italic, underline: st.underline, strike: st.strike };
+      align = st.align;
+      valign = st.valign;
+      color = st.color;
       break;
     }
   }
@@ -914,13 +1001,15 @@ export function layoutEditor() {
     lineHeight: LH,
     paddingTop: padTop * z + 'px',
     textAlign: align,
-    color,
+    // Im Neon-Design liegt der Text auf dunkler Fläche – hell anzeigen
+    color: app.settings.neon ? '#e6fbff' : color,
     fontWeight: lay.bold ? 'bold' : 'normal',
-    fontStyle: el.italic ? 'italic' : 'normal',
+    fontStyle: (lay.italic ?? el.italic) ? 'italic' : 'normal',
+    textDecoration: [(lay.underline ?? el.underline) && 'underline', (lay.strike ?? el.strike) && 'line-through'].filter(Boolean).join(' ') || 'none',
     fontFamily: el.type === 'code' ? MONO : '',
     whiteSpace: el.type === 'code' ? 'pre' : '',
     tabSize: '2',
-    background: el.type === 'connector' || el.type === 'frame' ? (app.settings.dark ? '#2a2b31' : '#ffffff') : 'transparent',
+    background: el.type === 'connector' || el.type === 'frame' ? (app.settings.neon ? '#07070f' : app.settings.dark ? '#2a2b31' : '#ffffff') : 'transparent',
   });
 }
 
@@ -936,9 +1025,7 @@ editor.addEventListener('input', () => {
   if (!el || !cellValid(el, ed.cell)) return abortEdit();
   ed.dirty = true;
   if (ed.cell) {
-    const cells = el.cells.map((r) => [...r]);
-    cells[ed.cell[0]][ed.cell[1]] = editor.value;
-    setEl({ ...el, cells });
+    tablePatch(el, { cells: [[ed.cell[0], ed.cell[1], editor.value]] });
   } else {
     setEl(autoHeight({ ...el, [ed.field]: editor.value }));
   }
@@ -1186,6 +1273,8 @@ function onDown(e) {
         begin();
         if (k === 'from' || k === 'to') {
           drag = { mode: 'conn-end', start, end: k, id: [...app.sel][0], tx: true };
+        } else if (k.startsWith('col-') || k.startsWith('row-')) {
+          drag = { mode: 'tabsize', start, id: [...app.sel][0], axis: k.slice(0, 3), index: Number(k.slice(4)), tx: true };
         } else if (k.startsWith('wp-') || k.startsWith('add-')) {
           const id = [...app.sel][0];
           const c = getEl(id);
@@ -1257,7 +1346,7 @@ function onDown(e) {
         if (e.shiftKey || e.ctrlKey || e.metaKey) {
           const ids = withGroups([el.id]);
           // Bereits ausgewählt: erst beim Loslassen ohne Ziehen abwählen – Umschalt-/Strg-Ziehen verschiebt
-          if (app.sel.has(el.id)) toggleOff = ids;
+          if (app.sel.has(el.id)) toggleOff = el.type === 'table' && app.sel.size === 1 ? null : ids;
           else {
             app.sel = new Set([...app.sel, ...ids]);
             selectionChanged();
@@ -1269,6 +1358,8 @@ function onDown(e) {
         const groupSelected = el.groupId && grp.size > 1 && app.sel.size === grp.size && [...grp].every((id) => app.sel.has(id));
         startMove(e, start);
         if (toggleOff) drag.toggleOff = [...toggleOff];
+        // Klick in eine bereits ausgewählte Tabelle wählt eine Zelle (Umschalt: Bereich)
+        if (el.type === 'table' && preSelected.size === 1 && preSelected.has(el.id) && !el.locked) drag.cellClick = { id: el.id, cell: cellAt(el, w.x, w.y), extend: e.shiftKey };
         if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
           // Klick ohne Ziehen auf ein Element einer Mehrfachauswahl wählt nur dieses aus
           if (app.sel.size > grp.size) drag.clickSelect = el.id;
@@ -1665,6 +1756,26 @@ function onMove(e) {
       app.emit('dragging', true);
       return;
     }
+    case 'tabsize': {
+      // Grenze zwischen zwei Spalten/Zeilen verschieben; die übrigen bleiben gleich
+      const t = getEl(drag.id);
+      if (!t) return;
+      const { xs, ys } = tableLayout(t);
+      const lines = drag.axis === 'col' ? xs : ys, i = drag.index;
+      // Mindestbreite – bei sehr kleinen Tabellen höchstens die Hälfte des verfügbaren Platzes
+      const min = Math.min(16, (lines[i + 2] - lines[i]) * 0.45);
+      let v = drag.axis === 'col' ? w.x : w.y;
+      if (app.settings.snap) v = snapV(v);
+      v = clamp(v, lines[i] + min, lines[i + 2] - min);
+      const sizes = lines.slice(1).map((l, k) => l - lines[k]);
+      sizes[i] = v - lines[i];
+      sizes[i + 1] = lines[i + 2] - v;
+      const total = drag.axis === 'col' ? t.w : t.h;
+      tablePatch(t, { props: { [drag.axis === 'col' ? 'colW' : 'rowH']: sizes.map((sz) => sz / total) } });
+      guides = [{ axis: 'label', x: drag.axis === 'col' ? v : t.x + t.w / 2, y: drag.axis === 'col' ? t.y - 14 / app.view.z : v, text: `${Math.round(sizes[i])} | ${Math.round(sizes[i + 1])}`, color: '#4262ff' }];
+      app.emit('dragging', true);
+      return;
+    }
     case 'label': {
       const c = getEl(drag.id);
       const g = c && connectorGeom(c, getEl);
@@ -1691,6 +1802,13 @@ const GEOM_KEYS = ['x', 'y', 'w', 'h', 'points', 'from', 'to', 'fontSize', 'wayp
 function applyGeom(orig, moved) {
   const cur = getEl(orig.id);
   if (!cur) return;
+  // Tabellen: nur Lage und Größe senden, damit gleichzeitige Zelleingaben anderer erhalten bleiben
+  if (cur.type === 'table' && !cur.hidden) {
+    const props = {};
+    for (const k of ['x', 'y', 'w', 'h']) if (k in moved && moved[k] !== cur[k]) props[k] = moved[k];
+    if (Object.keys(props).length) tablePatch(cur, { props });
+    return;
+  }
   const n = { ...cur };
   for (const k of GEOM_KEYS) if (k in moved) n[k] = moved[k];
   setEl(n);
@@ -1711,8 +1829,9 @@ function snapCandidates(exclude) {
     cand.y.push(b.y, b.y + b.h / 2, b.y + b.h);
     // Zeilen- und Spaltenlinien von Tabellen (z. B. Wochen im Gantt-Diagramm)
     if (el.type === 'table') {
-      for (let c = 1; c < el.cols; c++) cand.x.push(b.x + (b.w / el.cols) * c);
-      for (let r = 1; r < el.rows; r++) cand.y.push(b.y + (b.h / el.rows) * r);
+      const { xs, ys } = tableLayout(el);
+      cand.x.push(...xs.slice(1, -1));
+      cand.y.push(...ys.slice(1, -1));
     }
     if (el.type !== 'frame') {
       cand.w.push(b.w);
@@ -1796,6 +1915,13 @@ function onUp(e) {
       commit();
       if (d.clickComment && !d.moved) app.emit('openComment', d.clickComment);
       if (d.clickSelect && !d.moved) setSelection([d.clickSelect]);
+      if (d.cellClick && !d.moved) {
+        const [r, c] = d.cellClick.cell;
+        const cs = app.cellSel;
+        app.cellSel = d.cellClick.extend && cs && cs.id === d.cellClick.id ? { ...cs, r1: r, c1: c } : { id: d.cellClick.id, r0: r, c0: c, r1: r, c1: c };
+        scheduleRender(true);
+        app.emit('selection');
+      }
       if (d.toggleOff && !d.moved) {
         const s2 = new Set(app.sel);
         d.toggleOff.forEach((i) => s2.delete(i));
@@ -1861,6 +1987,7 @@ function onUp(e) {
     case 'conn-end':
     case 'wp':
     case 'label':
+    case 'tabsize':
       commit();
       app.emit('dragging', false);
       break;
@@ -1980,8 +2107,7 @@ stage.addEventListener('dblclick', (e) => {
     if (el.type === 'frame' && !hit.frameTitle) {
       // Doppelklick in einen leeren Frame-Bereich legt eine Notiz an
     } else if (el.type === 'table') {
-      const c = clamp(Math.floor(((w.x - el.x) / el.w) * el.cols), 0, el.cols - 1);
-      const r = clamp(Math.floor(((w.y - el.y) / el.h) * el.rows), 0, el.rows - 1);
+      const [r, c] = cellAt(el, w.x, w.y);
       return startEdit(el.id, { cell: [r, c], selectAll: false });
     } else if (el.type === 'comment') {
       return;
@@ -2124,6 +2250,93 @@ export function arrangeGrid(list = selectedEls().filter((e) => e.type !== 'conne
   const cw = Math.max(...list.map((e) => e.w)), ch = Math.max(...list.map((e) => e.h));
   list.sort((a, c) => a.y - c.y || a.x - c.x);
   act(() => list.forEach((el, i) => setEl({ ...el, x: b.x + (i % cols) * (cw + gap), y: b.y + Math.floor(i / cols) * (ch + gap) })));
+}
+
+/* ---------------- Tabellen: Zellauswahl, Formatierung, Zeilen und Spalten ---------------- */
+
+// Auswahlbereich in der Tabelle; ohne Zellauswahl die ganze Tabelle
+export function tableRange() {
+  const t = selectedEls().length === 1 && selectedEls()[0].type === 'table' ? selectedEls()[0] : null;
+  if (!t) return null;
+  let cs = app.cellSel && app.cellSel.id === t.id ? app.cellSel : null;
+  // Zellauswahl außerhalb der Tabelle (z. B. nachdem jemand Zeilen gelöscht hat) verwerfen
+  if (cs && Math.min(cs.r0, cs.r1) >= t.rows || cs && Math.min(cs.c0, cs.c1) >= t.cols) cs = app.cellSel = null;
+  if (!cs) return { t, r0: 0, c0: 0, r1: t.rows - 1, c1: t.cols - 1, whole: true };
+  return { t, r0: Math.min(cs.r0, cs.r1), r1: Math.min(t.rows - 1, Math.max(cs.r0, cs.r1)), c0: Math.min(cs.c0, cs.c1), c1: Math.min(t.cols - 1, Math.max(cs.c0, cs.c1)), whole: false };
+}
+
+// Formatierung auf den Bereich anwenden: patch ist ein Objekt oder eine Funktion (bisheriges Format → neues)
+export function formatCells(patch) {
+  const rg = tableRange();
+  if (!rg) return;
+  const styles = [];
+  for (let r = rg.r0; r <= rg.r1; r++) {
+    for (let c = rg.c0; c <= rg.c1; c++) {
+      const cur = rg.t.styles?.[r]?.[c] || {};
+      const next = { ...cur, ...(typeof patch === 'function' ? patch(cur, r, c) : patch) };
+      for (const k of Object.keys(next)) if (next[k] === undefined || next[k] === null) delete next[k];
+      styles.push([r, c, Object.keys(next).length ? next : null]);
+    }
+  }
+  act(() => tablePatch(rg.t, { styles }));
+  // Während der Bearbeitung einer Zelle zeigt der Editor das neue Format sofort
+  if (app.editing && app.editing.cell) layoutEditor();
+}
+
+export function tableAction(action) {
+  const rg = tableRange();
+  if (!rg) return;
+  const t = rg.t;
+  const px = (list, n, total) => TableOps.fractions(list, n).map((f) => f * total);
+  const avg = (list) => list.reduce((x, y) => x + y, 0) / list.length;
+  let sel = null;
+  act(() => {
+    switch (action) {
+      case 'rowAbove': case 'rowBelow': {
+        const at = action === 'rowAbove' ? rg.r0 : rg.r1 + 1;
+        if (tableStruct(t, { action: 'insertRows', at, count: 1, size: avg(px(t.rowH, t.rows, t.h)) })) sel = [at, rg.c0];
+        break;
+      }
+      case 'colLeft': case 'colRight': {
+        const at = action === 'colLeft' ? rg.c0 : rg.c1 + 1;
+        if (tableStruct(t, { action: 'insertCols', at, count: 1, size: avg(px(t.colW, t.cols, t.w)) })) sel = [rg.r0, at];
+        break;
+      }
+      case 'deleteRows': {
+        const n = rg.r1 - rg.r0 + 1;
+        if (n >= t.rows) return toast('Die letzte Zeile kann nicht gelöscht werden');
+        if (tableStruct(t, { action: 'deleteRows', at: rg.r0, count: n })) sel = [Math.min(rg.r0, t.rows - n - 1), rg.c0];
+        break;
+      }
+      case 'deleteCols': {
+        const n = rg.c1 - rg.c0 + 1;
+        if (n >= t.cols) return toast('Die letzte Spalte kann nicht gelöscht werden');
+        if (tableStruct(t, { action: 'deleteCols', at: rg.c0, count: n })) sel = [rg.r0, Math.min(rg.c0, t.cols - n - 1)];
+        break;
+      }
+      case 'clear': {
+        const cells = [];
+        for (let r = rg.r0; r <= rg.r1; r++) for (let c = rg.c0; c <= rg.c1; c++) cells.push([r, c, '']);
+        tablePatch(t, { cells });
+        break;
+      }
+      case 'clearFormat': {
+        const styles = [];
+        for (let r = rg.r0; r <= rg.r1; r++) for (let c = rg.c0; c <= rg.c1; c++) styles.push([r, c, null]);
+        tablePatch(t, { styles });
+        break;
+      }
+      case 'equalCols':
+        tablePatch(t, { props: { colW: Array(t.cols).fill(1 / t.cols) } });
+        break;
+      case 'equalRows':
+        tablePatch(t, { props: { rowH: Array(t.rows).fill(1 / t.rows) } });
+        break;
+    }
+  });
+  if (sel && !rg.whole) app.cellSel = { id: t.id, r0: sel[0], c0: sel[1], r1: sel[0], c1: sel[1] };
+  scheduleRender(true);
+  app.emit('selection');
 }
 
 // Neue Größe für ein Element (Freihandlinien skalieren ihre Punkte mit)
@@ -2417,6 +2630,45 @@ window.addEventListener('keydown', (e) => {
     if (key === 'v' || key === 'h' || key === 'x') setTool(TOOL_KEYS[key]);
     return;
   }
+  // Zellauswahl in einer Tabelle: Pfeiltasten wandern, Enter bearbeitet, Entf leert, Tippen überschreibt
+  const cs = app.cellSel && app.sel.size === 1 && app.sel.has(app.cellSel.id) ? app.cellSel : null;
+  const tbl = cs && getEl(cs.id);
+  if (tbl && tbl.type === 'table' && !tbl.locked) {
+    if (e.key.startsWith('Arrow')) {
+      e.preventDefault();
+      const dr = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0, dc = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      const r = clamp(cs.r1 + dr, 0, tbl.rows - 1), c = clamp(cs.c1 + dc, 0, tbl.cols - 1);
+      app.cellSel = e.shiftKey ? { ...cs, r1: r, c1: c } : { id: cs.id, r0: r, c0: c, r1: r, c1: c };
+      scheduleRender(true);
+      app.emit('selection');
+      return;
+    }
+    if (e.key === 'Enter' || e.key === 'F2') {
+      e.preventDefault();
+      startEdit(tbl.id, { cell: [cs.r1, cs.c1], selectAll: false });
+      return;
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      tableAction('clear');
+      return;
+    }
+    if (e.key === 'Escape') {
+      app.cellSel = null;
+      scheduleRender(true);
+      app.emit('selection');
+      return;
+    }
+    if (e.key.length === 1 && !e.altKey) {
+      // Tippen überschreibt die Zelle (wie in einer Tabellenkalkulation)
+      e.preventDefault();
+      startEdit(tbl.id, { cell: [cs.r1, cs.c1] });
+      editor.value = e.key;
+      editor.dispatchEvent(new Event('input'));
+      editor.setSelectionRange(1, 1);
+      return;
+    }
+  }
   if (e.key === 'Delete' || e.key === 'Backspace') {
     if (app.sel.size) {
       e.preventDefault();
@@ -2616,7 +2868,8 @@ export function initCore() {
   const saved = loadPref('view.' + boardId, null);
   if (saved) app.view = saved;
   stage.dataset.tool = app.tool;
-  document.body.classList.toggle('dark', !!app.settings.dark);
+  document.body.classList.toggle('dark', !!app.settings.dark || !!app.settings.neon);
+  document.body.classList.toggle('neon', !!app.settings.neon);
   stage.classList.toggle('nogrid', !app.settings.grid);
   $('#cursors').classList.toggle('off', !!app.settings.hideCursors);
   applyView(true);
@@ -2628,7 +2881,8 @@ export function initCore() {
 
 export function saveSettings() {
   savePref('settings', app.settings);
-  document.body.classList.toggle('dark', !!app.settings.dark);
+  document.body.classList.toggle('dark', !!app.settings.dark || !!app.settings.neon);
+  document.body.classList.toggle('neon', !!app.settings.neon);
   stage.classList.toggle('nogrid', !app.settings.grid);
   $('#cursors').classList.toggle('off', !!app.settings.hideCursors);
   rerenderAll();

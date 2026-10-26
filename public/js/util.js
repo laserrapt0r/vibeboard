@@ -454,6 +454,8 @@ export const ICONS = {
   arrowEnd: I('<path d="M3 12h16M14 7l5 5-5 5"/>'),
   arrowStart: I('<path d="M21 12H5M10 7l-5 5 5 5"/>'),
   code: I('<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>'),
+  underline: I('<path d="M6 4v7a6 6 0 0 0 12 0V4M5 21h14"/>'),
+  strike: I('<path d="M16 6c-.8-1.4-2.4-2-4-2-2.5 0-4.5 1.3-4.5 3.5 0 1.4.8 2.5 2.4 3.2M4 12h16M8 18c.9 1.3 2.4 2 4.3 2 2.6 0 4.7-1.4 4.7-3.6 0-.9-.3-1.7-.9-2.3"/>'),
   tasks: I('<path d="M9 6h12M9 12h12M9 18h12"/><path d="M3 6l1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/>'),
   history: I('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'),
   poker: I('<rect x="3" y="5" width="11" height="15" rx="2"/><path d="M10 4.2L11 3.6a2 2 0 0 1 2.7.7l6.5 11.3a2 2 0 0 1-.7 2.7l-3.4 2"/><path d="M8.5 10.5v4M6.5 12.5h4"/>'),

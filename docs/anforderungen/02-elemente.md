@@ -5,6 +5,7 @@
 - **Beschreibung:** Farbige Notizzettel mit Text.
 - **Akzeptanzkriterien:**
   - 16 Farben; die Textfarbe passt sich automatisch für ausreichenden Kontrast an.
+  - Geändert in 3.5.0: Text in Notizen, Formen und Textfeldern kann zusätzlich unterstrichen und durchgestrichen werden; Notizen und Formen haben eine senkrechte Ausrichtung (oben/Mitte/unten).
   - Die Schriftgröße passt sich automatisch an (ohne Wörter zu zerteilen, sofern möglich) oder wird fest eingestellt.
   - Optional wird der Name der Person angezeigt, die die Notiz erstellt hat.
   - Anlegen per Werkzeug (N), Doppelklick auf eine freie Fläche oder Kontextmenü.
@@ -86,6 +87,21 @@
   - Zeilen und Spalten hinzufügen und entfernen, Kopfzeile ein/aus, Schriftgröße.
   - Doppelklick bearbeitet eine Zelle; Tab/Umschalt+Tab springt zur nächsten/vorigen Zelle.
   - Entfernt jemand anderes die gerade bearbeitete Zeile, endet die Bearbeitung ohne Fehler.
+  - Geändert in 3.5.0 – Zellauswahl:
+    - Ein Klick in die ausgewählte Tabelle wählt eine Zelle; Umschalt-Klick oder Umschalt+Pfeil wählt einen Bereich.
+    - Die Kontextleiste zeigt die Auswahl an („Zelle B2“, „A1:C3“, „Ganze Tabelle“).
+    - Pfeiltasten bewegen die Auswahl; Enter oder F2 bearbeitet, Tippen überschreibt die Zelle, Entf leert, Esc hebt die Zellauswahl auf.
+  - Geändert in 3.5.0 – Formatierung je Zelle: fett, kursiv, unterstrichen, durchgestrichen, Ausrichtung waagerecht (links/Mitte/rechts) und senkrecht (oben/Mitte/unten), Schriftgröße, Textfarbe, Zellenfarbe. Ohne Zellauswahl gilt sie für die ganze Tabelle. Der Editor zeigt die Formatierung der bearbeiteten Zelle.
+  - Geändert in 3.5.0 – Zeilen, Spalten, Linien:
+    - Zeilen und Spalten lassen sich an der Auswahl einfügen (oberhalb/unterhalb, links/rechts) und löschen, auch mehrere; Inhalte und Formate der übrigen Zellen bleiben erhalten.
+    - Inhalt leeren, Formatierung entfernen, Spaltenbreiten bzw. Zeilenhöhen angleichen.
+    - Farben von Kopfzeile und Linien sind wählbar.
+    - Spaltenbreiten und Zeilenhöhen lassen sich durch Ziehen an den inneren Linien ändern; beim Vergrößern der Tabelle bleiben die Verhältnisse erhalten.
+  - Formate, Breiten und Höhen werden auf dem Server geprüft (nur bekannte Werte, gültige Farben).
+  - Geändert in 3.5.0 – gemeinsames Bearbeiten:
+    - Zellinhalte und -formate werden zellgenau übertragen. Bearbeiten oder formatieren zwei Personen gleichzeitig verschiedene Zellen, bleiben beide Änderungen erhalten, und alle sehen denselben Stand.
+    - Fügt jemand Zeilen oder Spalten ein oder löscht sie, während eine andere Person eine Zelle bearbeitet oder ausgewählt hat, wandern Bearbeitung und Auswahl mit der Zelle mit. Wurde die Zelle gelöscht, endet die Bearbeitung.
+    - Rückgängig nimmt nur die eigenen Zelländerungen zurück, nicht die anderer Personen.
 
 ### REQ-ELEM-010 Mindmaps
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt

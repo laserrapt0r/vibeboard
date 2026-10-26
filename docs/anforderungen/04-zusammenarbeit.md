@@ -6,6 +6,7 @@
 - **Akzeptanzkriterien:**
   - Änderungen sind bei anderen Teilnehmenden im lokalen Netz in der Regel innerhalb einer Sekunde sichtbar.
   - Konflikte am selben Element werden nach „die letzte Änderung gewinnt“ aufgelöst.
+  - Geändert in 3.5.0: Bei Tabellen gilt das je Zelle. Änderungen an verschiedenen Zellen gehen nicht verloren, und eingefügte oder gelöschte Zeilen und Spalten verschieben die Zellen anderer Personen korrekt (REQ-ELEM-009).
   - Nur angemeldete Personen mit mindestens Leserecht erhalten den Echtzeitkanal; Änderungen erfordern Schreibrecht (Prüfung auf dem Server).
 
 ### REQ-COLLAB-002 Echtzeit ohne WebSockets, mit Rückfalloption

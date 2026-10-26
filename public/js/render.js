@@ -26,7 +26,8 @@ export const SHAPE_GROUPS = [
 export const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace";
 
 export function defsMarkup() {
-  return `<filter id="shadow" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.16"/></filter>
+  return `<filter id="neon-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="shadow" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.16"/></filter>
 <filter id="shadow-sm" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.18"/></filter>`;
 }
 
@@ -43,7 +44,7 @@ export function textLayout(el, box) {
   return { size, lines: wrap(el.text || '', box.w, size, bold, italic), bold, italic };
 }
 
-export function textSvg(box, layout, { color = '#1a1a1a', align = 'center', valign = 'middle', cls = 't' } = {}) {
+export function textSvg(box, layout, { color = '#1a1a1a', align = 'center', valign = 'middle', cls = 't', underline = false, strike = false } = {}) {
   const { size, lines, bold, italic } = layout;
   if (!lines.length || (lines.length === 1 && !lines[0])) return '';
   const total = lines.length * size * LH;
@@ -55,7 +56,50 @@ export function textSvg(box, layout, { color = '#1a1a1a', align = 'center', vali
   lines.forEach((l, i) => {
     if (l) spans += `<tspan x="${r1(tx)}" y="${r1(ty + i * size * LH + base)}">${esc(l)}</tspan>`;
   });
-  return `<text class="${cls}" font-family="${esc(FONT)}" font-size="${size}" fill="${color}" text-anchor="${anchor}"${bold ? ' font-weight="bold"' : ''}${italic ? ' font-style="italic"' : ''} xml:space="preserve">${spans}</text>`;
+  const deco = [underline && 'underline', strike && 'line-through'].filter(Boolean).join(' ');
+  return `<text class="${cls}" font-family="${esc(FONT)}" font-size="${size}" fill="${color}" text-anchor="${anchor}"${bold ? ' font-weight="bold"' : ''}${italic ? ' font-style="italic"' : ''}${deco ? ` text-decoration="${deco}"` : ''} xml:space="preserve">${spans}</text>`;
+}
+
+/* ---------------- Tabellen ---------------- */
+
+// Spaltenbreiten bzw. Zeilenhöhen als Anteile (Summe 1); fehlend oder ungültig = gleichmäßig
+export function fractions(list, n) {
+  const ok = Array.isArray(list) && list.length === n && list.every((v) => Number.isFinite(v) && v > 0);
+  if (!ok) return Array(n).fill(1 / n);
+  const sum = list.reduce((a, b) => a + b, 0);
+  return list.map((v) => v / sum);
+}
+
+// Linienpositionen einer Tabelle: xs (cols + 1 Werte) und ys (rows + 1 Werte)
+export function tableLayout(el) {
+  const rows = Math.max(1, el.rows || 1), cols = Math.max(1, el.cols || 1);
+  const fw = fractions(el.colW, cols), fh = fractions(el.rowH, rows);
+  const xs = [el.x], ys = [el.y];
+  fw.forEach((f) => xs.push(xs[xs.length - 1] + f * el.w));
+  fh.forEach((f) => ys.push(ys[ys.length - 1] + f * el.h));
+  return { xs, ys, rows, cols };
+}
+
+export function cellAt(el, wx, wy) {
+  const { xs, ys, rows, cols } = tableLayout(el);
+  let c = 0, r = 0;
+  while (c < cols - 1 && wx > xs[c + 1]) c++;
+  while (r < rows - 1 && wy > ys[r + 1]) r++;
+  return [r, c];
+}
+
+// Formatierung einer Zelle (Kopfzeile ist standardmäßig fett)
+export function cellStyle(el, r, c) {
+  const st = (el.styles && el.styles[r] && el.styles[r][c]) || {};
+  const header = el.header !== false && r === 0;
+  return {
+    bold: st.b ?? header, italic: !!st.i, underline: !!st.u, strike: !!st.s,
+    align: ['left', 'center', 'right'].includes(st.al) ? st.al : 'left',
+    valign: ['top', 'middle', 'bottom'].includes(st.va) ? st.va : 'middle',
+    size: Number(st.fs) || Number(el.fontSize) || 14,
+    color: st.c || el.textColor || '#1a1a1a',
+    bg: st.bg || (header ? el.headerFill || '#eef1ff' : null),
+  };
 }
 
 const r1 = (v) => Math.round(v * 10) / 10;
@@ -186,7 +230,7 @@ export function safeEl(el) {
   const o = { ...el };
   for (const k of ['x', 'y', 'w', 'h', 'strokeWidth', 'rows', 'cols', 'opacity']) if (k in o) o[k] = fin(o[k]);
   if (o.fontSize != null && o.fontSize !== 'auto') o.fontSize = fin(o.fontSize) || 16;
-  for (const k of ['fill', 'stroke', 'textColor', 'color', 'headerFill']) {
+  for (const k of ['fill', 'stroke', 'textColor', 'color', 'headerFill', 'borderColor']) {
     if (!(k in o)) continue;
     if (typeof o[k] === 'string' && COLOR_RE.test(o[k].trim())) o[k] = o[k].trim();
     else delete o[k];
@@ -203,6 +247,19 @@ export function safeEl(el) {
   if (o.type === 'table') {
     o.rows = Math.max(1, Math.min(200, Math.round(o.rows) || 1));
     o.cols = Math.max(1, Math.min(50, Math.round(o.cols) || 1));
+    // Zellformate: nur bekannte Felder, Farben geprüft (werden in SVG-Attribute geschrieben)
+    if (Array.isArray(o.styles)) {
+      o.styles = o.styles.map((row) => (Array.isArray(row) ? row.map((st) => {
+        if (!st || typeof st !== 'object') return null;
+        const c = {};
+        for (const k of ['b', 'i', 'u', 's']) if (st[k] !== undefined) c[k] = !!st[k];
+        if (['left', 'center', 'right'].includes(st.al)) c.al = st.al;
+        if (['top', 'middle', 'bottom'].includes(st.va)) c.va = st.va;
+        if (Number(st.fs) > 0) c.fs = Math.min(200, Number(st.fs));
+        for (const k of ['c', 'bg']) if (typeof st[k] === 'string' && COLOR_RE.test(st[k].trim())) c[k] = st[k].trim();
+        return c;
+      }) : []));
+    } else delete o.styles;
   }
   return o;
 }
@@ -550,8 +607,80 @@ function linkBadge(el) {
     `<g transform="translate(${cx - 12 * k * 0.6},${cy - 12 * k * 0.6}) scale(${k * 0.6})" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></g></g>`;
 }
 
+/* ---------------- Neon-Darstellung ---------------- */
+
+// Nur für die eigene Ansicht: Flächen dunkel im Farbton, Umrisse und Texte leuchtend. Exporte bleiben unverändert.
+function toHsl(c) {
+  // sechsstellig zuerst prüfen (sonst würde #fff9b1 als #fff gelesen); optional mit Alphakanal
+  const m = /^#([0-9a-f]{6}|[0-9a-f]{3})(?:[0-9a-f]{2}|[0-9a-f])?$/i.exec(String(c || '').trim());
+  if (!m) return null;
+  let hex = m[1];
+  if (hex.length === 3) hex = [...hex].map((x) => x + x).join('');
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const hue = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return { h: hue * 60, s: sat, l };
+}
+const hsl = (h, sat, l) => `hsl(${Math.round(h)}, ${Math.round(sat * 100)}%, ${Math.round(l * 100)}%)`;
+const NEON_TEXT = '#e6fbff', NEON_LINE = '#00f0ff', NEON_BG = '#07070f';
+const neonBright = (c, neutral = NEON_LINE, l = 0.6) => {
+  const v = toHsl(c);
+  return !v || v.s < 0.15 ? neutral : hsl(v.h, 1, l);
+};
+// Texte etwas heller als Linien – besser lesbar auf dunklem Grund
+const neonText = (c) => neonBright(c, NEON_TEXT, 0.74);
+const neonDark = (c) => {
+  const v = toHsl(c);
+  return !v || v.s < 0.15 ? NEON_BG : hsl(v.h, 0.75, 0.11);
+};
+
+function neonize(el) {
+  const o = { ...el, _neon: true };
+  switch (el.type) {
+    case 'sticky':
+      o._neonStroke = neonBright(el.fill || '#fff9b1');
+      o.textColor = neonText(el.textColor && el.textColor !== '#1a1a1a' ? el.textColor : el.fill || '#fff9b1');
+      o.fill = neonDark(el.fill || '#fff9b1');
+      break;
+    case 'shape': {
+      const base = el.stroke && el.stroke !== 'none' ? el.stroke : el.fill;
+      o.stroke = neonBright(base);
+      o.strokeWidth = Math.max(2, el.strokeWidth || 0);
+      if (el.fill && el.fill !== 'transparent' && el.fill !== 'none') o.fill = neonDark(el.fill);
+      o.textColor = neonText(el.textColor || base);
+      break;
+    }
+    case 'text':
+      o.color = neonText(el.color);
+      if (el.fill && el.fill !== 'transparent') o.fill = neonDark(el.fill);
+      break;
+    case 'connector': case 'pen':
+      o.stroke = neonBright(el.stroke);
+      break;
+    case 'frame':
+      o.fill = NEON_BG;
+      o.stroke = '#ff2bd6';
+      break;
+    case 'card':
+      o.color = neonBright(el.color || '#4262ff');
+      break;
+    case 'table':
+      o.fill = NEON_BG;
+      o.stroke = NEON_LINE;
+      o.headerFill = neonDark(el.headerFill || '#4262ff');
+      o.textColor = NEON_TEXT;
+      if (Array.isArray(el.styles)) o.styles = el.styles.map((row) => (row || []).map((st) => (st ? { ...st, ...(st.c ? { c: neonText(st.c) } : {}), ...(st.bg ? { bg: neonDark(st.bg) } : {}) } : st)));
+      break;
+  }
+  return o;
+}
+
 export function renderElement(el, env = {}) {
   el = safeEl(el);
+  if (env.neon) el = neonize(el);
   // Privater Modus: fremde private Elemente kommen ohne Inhalt vom Server (hidden); eigene werden in
   // Vorschaubildern und Exporten ebenfalls verdeckt
   if (el.hidden || (el.priv && env.redactPrivate)) return hiddenMarkup(el);
@@ -590,8 +719,8 @@ function renderBody(el, env) {
       const box = { x: x + pad, y: y + pad, w: w - pad * 2, h: h - pad * 2 };
       const lay = textLayout(el, box);
       const author = env.showAuthor && el.author ? `<text x="${x + w - 8}" y="${y + h - 7}" font-family="${esc(FONT)}" font-size="${Math.max(8, Math.min(w, h) * 0.055)}" fill="${contrastText(el.fill)}" fill-opacity="0.55" text-anchor="end">${esc(el.author)}</text>` : '';
-      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#fff9b1'}" filter="url(#shadow)"/>` +
-        textSvg(box, lay, { color: el.textColor || contrastText(el.fill), align: el.align || 'center', valign: el.valign || 'middle' }) + author;
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#fff9b1'}"${el._neon ? ` stroke="${el._neonStroke}" stroke-width="2" rx="4"` : ' filter="url(#shadow)"'}/>` +
+        textSvg(box, lay, { color: el.textColor || contrastText(el.fill), align: el.align || 'center', valign: el.valign || 'middle', underline: el.underline, strike: el.strike }) + author;
     }
     case 'shape': {
       const fill = el.fill || 'transparent';
@@ -603,7 +732,7 @@ function renderBody(el, env) {
       const lay = textLayout(el, box);
       // 'none' = ohne Füllung und innen durchklickbar (z. B. Rahmen von Blöcken im Sequenzdiagramm)
       return `${geo} fill="${fill === 'transparent' ? 'rgba(255,255,255,0.001)' : fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>` +
-        textSvg(box, lay, { color: el.textColor || contrastText(fill === 'transparent' || fill === 'none' ? '#ffffff' : fill), align: el.align || 'center', valign: el.valign || 'middle' });
+        textSvg(box, lay, { color: el.textColor || contrastText(fill === 'transparent' || fill === 'none' ? '#ffffff' : fill), align: el.align || 'center', valign: el.valign || 'middle', underline: el.underline, strike: el.strike });
     }
     case 'text': {
       const pad = 4;
@@ -611,7 +740,7 @@ function renderBody(el, env) {
       const lay = textLayout(el, box);
       const bg = el.fill && el.fill !== 'transparent' ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill}" rx="4"/>` : `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent" class="hit"/>`;
       const ph = !el.text && env.placeholders ? `<text x="${x + pad}" y="${y + pad + lay.size}" font-family="${esc(FONT)}" font-size="${lay.size}" fill="#999">Text</text>` : '';
-      return bg + textSvg(box, lay, { color: el.color || '#1a1a1a', align: el.align || 'left', valign: 'top' }) + ph;
+      return bg + textSvg(box, lay, { color: el.color || '#1a1a1a', align: el.align || 'left', valign: 'top', underline: el.underline, strike: el.strike }) + ph;
     }
     case 'frame': {
       const ts = Math.max(14, Math.min(48, Math.min(w, h) / 45));
@@ -619,7 +748,7 @@ function renderBody(el, env) {
       const tw = measure(title, ts, true) + 8;
       return `<rect class="frame-body" x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#ffffff'}" stroke="${el.stroke || '#d6d6d6'}" stroke-width="1"/>` +
         `<rect class="frame-title" x="${x}" y="${y - ts * 1.6}" width="${tw}" height="${ts * 1.5}" fill="transparent"/>` +
-        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#6b6b6b">${esc(title)}</text>`;
+        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="${el._neon ? '#ff2bd6' : '#6b6b6b'}">${esc(title)}</text>`;
     }
     case 'connector': {
       const g = connectorGeom(el, get);
@@ -683,7 +812,9 @@ function renderBody(el, env) {
     case 'card': {
       const color = el.color || '#4262ff';
       const pad = 14;
-      let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#ffffff" stroke="#e3e3e3" filter="url(#shadow-sm)"/>`;
+      let out = el._neon
+        ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${NEON_BG}" stroke="${color}" stroke-width="1.5"/>`
+        : `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#ffffff" stroke="#e3e3e3" filter="url(#shadow-sm)"/>`;
       out += `<path d="M${x + 8},${y} H${x + w - 8} Q${x + w},${y} ${x + w},${y + 8} V${y + 6} H${x} V${y + 8} Q${x},${y} ${x + 8},${y} Z" fill="${color}"/>`;
       let top = y + 16;
       if (el.key) {
@@ -693,12 +824,12 @@ function renderBody(el, env) {
       const tags = cardTags(el);
       const footer = 28 + (tags.length ? 24 : 0);
       const tlay = { size: 15, bold: true, italic: false, lines: wrap(el.title || 'Neue Karte', w - pad * 2, 15, true).slice(0, 3) };
-      out += textSvg({ x: x + pad, y: top, w: w - pad * 2, h: 60 }, tlay, { align: 'left', valign: 'top', color: '#1a1a1a' });
+      out += textSvg({ x: x + pad, y: top, w: w - pad * 2, h: 60 }, tlay, { align: 'left', valign: 'top', color: el._neon ? NEON_TEXT : '#1a1a1a' });
       const ty = top + tlay.lines.length * 15 * LH + 6;
       if (el.description) {
         const maxL = Math.max(0, Math.floor((y + h - footer - 12 - ty) / (13 * LH)));
         const dl = wrap(el.description, w - pad * 2, 13).slice(0, maxL);
-        out += textSvg({ x: x + pad, y: ty, w: w - pad * 2, h: 200 }, { size: 13, lines: dl }, { align: 'left', valign: 'top', color: '#666666' });
+        out += textSvg({ x: x + pad, y: ty, w: w - pad * 2, h: 200 }, { size: 13, lines: dl }, { align: 'left', valign: 'top', color: el._neon ? '#9fb3d8' : '#666666' });
       }
       const fy = y + h - 28;
       if (tags.length) {
@@ -706,7 +837,7 @@ function renderBody(el, env) {
         for (const t of tags) {
           const tw = measure(t, 10) + 12;
           if (tx + tw > x + w - pad) break;
-          out += `<rect x="${tx}" y="${fy - 23}" width="${tw}" height="16" rx="4" fill="#f1f3f5" stroke="#dee2e6"/><text x="${tx + 6}" y="${fy - 11.5}" font-family="${esc(FONT)}" font-size="10" fill="#495057">${esc(t)}</text>`;
+          out += `<rect x="${tx}" y="${fy - 23}" width="${tw}" height="16" rx="4" fill="${el._neon ? '#141433' : '#f1f3f5'}" stroke="${el._neon ? color : '#dee2e6'}"/><text x="${tx + 6}" y="${fy - 11.5}" font-family="${esc(FONT)}" font-size="10" fill="${el._neon ? NEON_TEXT : '#495057'}">${esc(t)}</text>`;
           tx += tw + 5;
         }
       }
@@ -749,22 +880,27 @@ function renderBody(el, env) {
       return out;
     }
     case 'table': {
-      const rows = el.rows || 3, cols = el.cols || 3;
-      const cw = w / cols, rh = h / rows;
-      const fs = el.fontSize || 14;
-      const hcolor = el.headerFill || '#eef1ff';
-      let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#ffffff'}" stroke="#b9b9b9"/>`;
-      if (el.header !== false) out += `<rect x="${x}" y="${y}" width="${w}" height="${rh}" fill="${hcolor}"/>`;
-      for (let r = 1; r < rows; r++) out += `<line x1="${x}" y1="${r1(y + r * rh)}" x2="${x + w}" y2="${r1(y + r * rh)}" stroke="#d0d0d0"/>`;
-      for (let c = 1; c < cols; c++) out += `<line x1="${r1(x + c * cw)}" y1="${y}" x2="${r1(x + c * cw)}" y2="${y + h}" stroke="#d0d0d0"/>`;
-      out += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#b9b9b9"/>`;
+      const { xs, ys, rows, cols } = tableLayout(el);
+      const line = el.stroke || '#d0d0d0';
+      let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#ffffff'}"/>`;
+      // Zellhintergründe
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const bg = cellStyle(el, r, c).bg;
+          if (bg) out += `<rect x="${r1(xs[c])}" y="${r1(ys[r])}" width="${r1(xs[c + 1] - xs[c])}" height="${r1(ys[r + 1] - ys[r])}" fill="${bg}"/>`;
+        }
+      }
+      for (let r = 1; r < rows; r++) out += `<line x1="${x}" y1="${r1(ys[r])}" x2="${x + w}" y2="${r1(ys[r])}" stroke="${line}"/>`;
+      for (let c = 1; c < cols; c++) out += `<line x1="${r1(xs[c])}" y1="${y}" x2="${r1(xs[c])}" y2="${y + h}" stroke="${line}"/>`;
+      out += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${el.stroke || '#b9b9b9'}"/>`;
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const t = el.cells?.[r]?.[c];
           if (!t || (env.editingCell && env.editingCell[0] === r && env.editingCell[1] === c)) continue;
-          const bold = el.header !== false && r === 0;
-          const box = { x: x + c * cw + 8, y: y + r * rh + 6, w: cw - 16, h: rh - 12 };
-          out += textSvg(box, { size: fs, bold, lines: wrap(t, box.w, fs, bold) }, { align: 'left', valign: 'middle', color: '#1a1a1a' });
+          const st = cellStyle(el, r, c);
+          const box = { x: xs[c] + 8, y: ys[r] + 6, w: xs[c + 1] - xs[c] - 16, h: ys[r + 1] - ys[r] - 12 };
+          out += textSvg(box, { size: st.size, bold: st.bold, italic: st.italic, lines: wrap(t, box.w, st.size, st.bold, st.italic) },
+            { align: st.align, valign: st.valign, color: st.color, underline: st.underline, strike: st.strike });
         }
       }
       return out;

@@ -63,7 +63,7 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 - Verschieben mit Leertaste, Hand-Werkzeug, mittlerer Maustaste oder Trackpad; Pinch-Zoom auf Touch-Geräten
 - Minimap, „Alles anzeigen“, feste Zoomstufen
 - Punktraster, Einrasten am Raster, intelligente Hilfslinien beim Verschieben
-- Helles und dunkles Design; die Ansicht wird pro Board gemerkt
+- Helles, dunkles und **Neon-Design** (leuchtende Umrisse und Texte auf dunklem Grund); die Ansicht wird pro Board gemerkt
 
 ### Inhalte
 | Element | Möglichkeiten |
@@ -78,7 +78,7 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 | **Karten** | Aufgaben mit Beschreibung, Zuständigkeit, Fälligkeitsdatum, Status, Priorität, Story Points, Ticketnummer, Labels und Farbe |
 | **Code-Blöcke** | Quelltext mit Syntaxhervorhebung für 13 Sprachen, Zeilennummern, hellem oder dunklem Schema, Kopieren-Knopf |
 | **Diagramm aus Text** | Fluss- und Sequenzdiagramme in Mermaid-Schreibweise eingeben, mit Live-Vorschau; es entstehen normale, bearbeitbare Formen und Verbindungen |
-| **Tabellen** | Zeilen und Spalten hinzufügen oder entfernen, Kopfzeile; Tab springt zur nächsten Zelle |
+| **Tabellen** | Zellen und Bereiche auswählen; je Zelle fett, kursiv, unterstrichen, durchgestrichen, Ausrichtung, Schriftgröße, Text- und Zellenfarbe; Zeilen/Spalten an beliebiger Stelle einfügen und löschen; Spaltenbreiten und Zeilenhöhen ziehen; Tastaturbedienung wie in einer Tabellenkalkulation |
 | **Mindmaps** | Knoten auswählen, dann **Tab** für einen Unterknoten und **Enter** für einen Geschwisterknoten |
 | **Bilder** | per Upload, Drag & Drop oder aus der Zwischenablage; große Bilder werden automatisch verkleinert |
 | **Sticker** | Emojis als frei platzierbare Elemente |

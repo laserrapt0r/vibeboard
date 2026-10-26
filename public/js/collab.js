@@ -2,7 +2,7 @@
 import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util.js';
 import {
   app, $, stage, getEl, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
-  loadElements, applyRemoteOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
+  loadElements, applyRemoteOp, applyRemoteTableOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
 } from './core.js';
 import { throttle } from './util.js';
 import { menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
@@ -659,6 +659,7 @@ export function initCollab() {
   s.on('ops', (msg) => {
     for (const op of msg.ops) {
       if (op.op === 'upsert' || op.op === 'delete') applyRemoteOp(op);
+      else if (op.op === 'tpatch' || op.op === 'tstruct') applyRemoteTableOp(op);
       else if (op.op === 'rename') {
         app.name = op.name;
         app.emit('name');

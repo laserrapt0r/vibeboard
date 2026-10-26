@@ -10,7 +10,8 @@ const main = document.getElementById('admin-main');
 const nav = document.getElementById('admin-nav');
 let me = null;
 
-if (loadPref('settings', {}).dark) document.body.classList.add('dark');
+if (loadPref('settings', {}).dark || loadPref('settings', {}).neon) document.body.classList.add('dark');
+if (loadPref('settings', {}).neon) document.body.classList.add('neon');
 
 const SECTIONS = [
   ['overview', 'Übersicht', 'grid'],
