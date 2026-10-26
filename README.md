@@ -1,13 +1,13 @@
-# dlzboard
+# vibeboard
 
 Ein selbst gehostetes, kollaboratives Online-Whiteboard. Mehrere Personen arbeiten gleichzeitig auf einer
 unendlichen Leinwand: mit Sticky Notes, Formen, Verbindungen, Mindmaps, Kommentaren, Abstimmungen und über 35
-Vorlagen für Workshops, Retrospektiven und Strategiearbeit. Dazu gibt es Benutzerkonten mit Rechten pro Board und eine
-Administrationsoberfläche. Die Daten liegen in PostgreSQL.
+Vorlagen für Workshops, Retrospektiven und Strategiearbeit. Dazu gibt es Benutzerkonten mit E-Mail-Bestätigung und
+optionaler Zwei-Faktor-Anmeldung, Rechte pro Board und eine Administrationsoberfläche. Die Daten liegen in PostgreSQL.
 
-- Läuft komplett auf dem eigenen Server: keine externen Dienste, keine CDNs, kein Tracking.
+- Läuft komplett auf dem eigenen Server: keine CDNs, kein Tracking, keine Pflicht-Abhängigkeit von externen Diensten.
 - Frontend in reinem JavaScript und SVG, ohne Build-Schritt.
-- Backend in Node.js mit nur zwei Abhängigkeiten (`pg`, `nodemailer`).
+- Backend in Node.js mit nur drei Abhängigkeiten (`pg`, `nodemailer`, `uqr`).
 
 ---
 
@@ -17,10 +17,11 @@ Administrationsoberfläche. Die Daten liegen in PostgreSQL.
 - [Vorlagen](#vorlagen)
 - [Installation](#installation)
 - [Konfiguration](#konfiguration)
-- [Benutzer und Rechte](#benutzer-und-rechte)
+- [Konten und Anmeldung](#konten-und-anmeldung)
+- [Rechte auf Boards](#rechte-auf-boards)
 - [Administration](#administration)
-- [Datenhaltung und Datenschutz](#datenhaltung-und-datenschutz)
 - [Sicherheit](#sicherheit)
+- [Datenhaltung und Datenschutz](#datenhaltung-und-datenschutz)
 - [Architektur](#architektur)
 - [Lizenz](#lizenz)
 
@@ -70,6 +71,9 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 - Teilnehmerliste mit „Folgen“ (der Ansicht einer Person folgen) und „Alle zu mir holen“
 - Fliegende Reaktionen (Emojis) und Laserpointer
 - Automatisches Wiederverbinden; ungesendete Änderungen gehen nicht verloren
+- **Funktioniert auch in restriktiven Netzen:** Es werden keine WebSockets benötigt. Die Echtzeit-Übertragung läuft über
+  Server-Sent Events (normales HTTP). Werden auch diese blockiert oder von einem Proxy gepuffert, wechselt vibeboard
+  automatisch auf Long-Polling.
 
 ### Moderation
 - **Timer** für alle Teilnehmenden, mit Pause, Verlängerung und Signalton
@@ -110,21 +114,28 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 ```bash
 git clone https://github.com/laserrapt0r/vibeboard.git
 cd vibeboard
-cp .env.example .env            # mindestens POSTGRES_PASSWORD ändern
-docker compose up -d --build    # startet PostgreSQL und dlzboard
+cp .env.example .env            # POSTGRES_PASSWORD auf ein langes, zufälliges Kennwort setzen
+docker compose up -d --build    # startet PostgreSQL und vibeboard
 ```
 
-Danach ist dlzboard unter http://localhost:3000 erreichbar. Den Port legt `PORT` in der `.env` fest.
+Danach ist vibeboard unter http://localhost:3000 erreichbar. Den Port legt `PORT` in der `.env` fest.
 
-Beim ersten Aufruf öffnet sich die Registrierung. **Das erste Konto wird automatisch Administrator.** Alternativ
-legen `ADMIN_USERNAME` und `ADMIN_PASSWORD` in der `.env` den Administrator beim Start an.
+So geht es weiter:
+1. Beim ersten Aufruf öffnet sich die Registrierung. **Das erste Konto wird automatisch Administrator.**
+2. Unter **Administration → Mailserver** den SMTP-Zugang eintragen. Erst danach können sich weitere Personen
+   registrieren, denn jede Registrierung braucht eine E-Mail-Bestätigung.
+3. Unter **Administration → Allgemein** die öffentliche Adresse eintragen, wenn vibeboard über einen Domainnamen
+   erreichbar ist.
+4. Empfohlen: im Profil unter „Sicherheit & Geräte“ die Zwei-Faktor-Anmeldung einrichten.
+
+Alternativ legen `ADMIN_USERNAME`, `ADMIN_PASSWORD` und `ADMIN_EMAIL` in der `.env` den Administrator beim Start an.
 
 Nützliche Befehle:
 
 ```bash
 docker compose logs -f app                                        # Protokoll
 docker compose down                                               # stoppen (Daten bleiben erhalten)
-docker compose exec db pg_dump -U dlzboard dlzboard > backup.sql  # Datenbank sichern
+docker compose exec db pg_dump -U vibeboard vibeboard > backup.sql  # Datenbank sichern
 docker compose --profile mailtest up -d                           # zusätzlich Test-Mailserver (Mailpit)
 ```
 
@@ -137,7 +148,7 @@ Voraussetzungen: Node.js ≥ 20 und PostgreSQL ≥ 13.
 
 ```bash
 npm ci
-DATABASE_URL=postgres://benutzer:kennwort@localhost:5432/dlzboard node server.js
+DATABASE_URL=postgres://benutzer:kennwort@localhost:5432/vibeboard node server.js
 ```
 
 Die Tabellen werden beim Start automatisch angelegt und migriert.
@@ -152,29 +163,54 @@ Umgebungsvariablen (bei Docker in der `.env`):
 |----------|----------|-----------|
 | `PORT` | `3000` | HTTP-Port |
 | `HOST` | `0.0.0.0` | Bind-Adresse |
-| `DATABASE_URL` | `postgres://dlzboard:dlzboard@localhost:5432/dlzboard` | Datenbankverbindung (alternativ `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPORT`) |
-| `POSTGRES_PASSWORD` | `dlzboard` | Kennwort der Datenbank im Docker-Setup – **unbedingt ändern** |
+| `POSTGRES_PASSWORD` | – (Pflicht) | Kennwort der Datenbank im Docker-Setup |
+| `POSTGRES_DB`, `POSTGRES_USER` | `vibeboard` | Name und Benutzer der Datenbank im Docker-Setup |
+| `DATABASE_URL` | `postgres://vibeboard:vibeboard@localhost:5432/vibeboard` | Datenbankverbindung ohne Docker (alternativ `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPORT`) |
 | `PUBLIC_URL` | – | Öffentliche Adresse für Links in E-Mails, z. B. `https://board.example.de` |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` | – | Legt diesen Administrator an, falls es ihn noch nicht gibt |
-| `TRUST_PROXY` | `0` | `1` hinter einem Reverse-Proxy (wertet `X-Forwarded-For` aus) |
-| `DATA_DIR` | `./data` | Ordner mit JSON-Boards der dateibasierten Version 1 für einen einmaligen Import |
+| `TRUST_PROXY` | `0` | `1` hinter einem Reverse-Proxy (wertet `X-Forwarded-For` und `X-Forwarded-Proto` aus) |
+| `DATA_DIR` | `./data` | Ordner mit JSON-Boards einer früheren dateibasierten Version für einen einmaligen Import |
 
-Alle weiteren Einstellungen (Name der Instanz, Registrierung, Mailserver) nimmst du in der Administration vor.
+Alle weiteren Einstellungen nimmst du in der Administration vor.
 
 ---
 
-## Benutzer und Rechte
+## Konten und Anmeldung
 
-- **Registrierung** mit Benutzername und Kennwort. E-Mail-Adresse und Anzeigename sind optional; die E-Mail-Adresse
-  lässt sich als Pflichtfeld einstellen.
+- **Registrierung** mit Benutzername, E-Mail-Adresse und Kennwort.
+  - Das Konto wird erst aktiv, wenn der **Bestätigungslink** aus der E-Mail geöffnet wurde (48 Stunden gültig).
+  - Die Bestätigungsmail lässt sich auf der Anmeldeseite erneut anfordern.
+  - Nie bestätigte Konten werden nach 14 Tagen automatisch entfernt.
+- **Wegwerf-E-Mail-Adressen** sind gesperrt: eine Liste mit rund 10.000 bekannten Anbietern, Subdomains
+  eingeschlossen. Zusätzlich kann der Admin eigene Domains sperren oder nur bestimmte Domains zulassen, z. B. die
+  Firmendomain.
 - **Registrierungsmodus:**
-  - *offen*: Jede Person kann sich registrieren.
-  - *mit Freigabe*: Neue Konten warten, bis ein Admin sie freischaltet. Admins werden per E-Mail informiert.
-  - *geschlossen*: Nur Admins legen Konten an.
-- **Kennwort vergessen** per E-Mail-Link (eine Stunde gültig). Ohne Mailserver erzeugt ein Admin einen Link zum
-  Weitergeben.
-- **Profil:** Anzeigename, E-Mail-Adresse, Farbe für Cursor und Avatar, Kennwort ändern.
-- **Boards** gehören der Person, die sie angelegt hat. Die Besitzerin oder der Besitzer kann
+  - *offen*: Nach der E-Mail-Bestätigung ist das Konto aktiv.
+  - *mit Freigabe*: Nach der Bestätigung schaltet ein Admin das Konto frei. Admins werden per E-Mail informiert.
+  - *geschlossen*: Nur Admins legen Konten an bzw. laden per E-Mail ein.
+- **Kennwortregeln** nach NIST SP 800-63B:
+  - Mindestlänge 12 Zeichen (einstellbar)
+  - Abgelehnt werden die 10.000 häufigsten Kennwörter, bekannte Wörter mit angehängten Ziffern, Tastaturreihen,
+    Wiederholungen und Kennwörter, die Benutzername oder E-Mail-Adresse enthalten.
+  - Optional zusätzlich der Abgleich mit „Have I Been Pwned“ (k-Anonymität).
+  - Eine Stärkeanzeige hilft bei der Wahl. Erzwungene Sonderzeichen gibt es bewusst nicht.
+- **Zwei-Faktor-Anmeldung (TOTP):**
+  - Einrichtung per QR-Code mit jeder gängigen Authenticator-App
+  - 10 Wiederherstellungscodes für den Notfall
+  - Für Administratoren auf Wunsch verpflichtend
+- **Kennwort vergessen** per E-Mail-Link (eine Stunde gültig).
+- **Profil:**
+  - Anzeigename und Farbe
+  - E-Mail-Adresse; eine neue Adresse wird erst nach Bestätigung übernommen, die alte erhält einen Hinweis
+  - Kennwort ändern; andere Geräte werden dabei abgemeldet
+- **Sicherheit & Geräte:** Übersicht aller angemeldeten Geräte mit letzter Aktivität. Einzelne oder alle anderen
+  Geräte lassen sich abmelden.
+- **Benachrichtigungen** per E-Mail bei sicherheitsrelevanten Änderungen: Kennwort geändert, E-Mail-Adresse geändert,
+  Zwei-Faktor-Anmeldung an oder aus, Registrierungsversuch mit einer bereits verwendeten Adresse.
+
+## Rechte auf Boards
+
+- Boards gehören der Person, die sie angelegt hat. Die Besitzerin oder der Besitzer kann
   - Personen als *Bearbeiter* oder *Betrachter* einladen, optional mit Einladungs-Mail,
   - den Link für alle angemeldeten Nutzer zum *Ansehen* oder *Bearbeiten* freigeben,
   - Mitglieder verwalten, das Board umbenennen und löschen.
@@ -186,19 +222,71 @@ Alle weiteren Einstellungen (Name der Instanz, Registrierung, Mailserver) nimmst
 
 Unter `/admin`, nur für Administratoren:
 
-- **Übersicht:** Benutzer, Boards, Elemente, aktive Verbindungen, Datenbankgröße; Hinweise auf wartende Freigaben
-  und einen fehlenden Mailserver
-- **Benutzer:**
-  - anlegen, bearbeiten, freischalten, deaktivieren, Adminrechte vergeben
-  - Kennwort-Link erzeugen
-  - löschen, dabei die Boards übertragen oder mitlöschen
-  - der letzte Administrator ist geschützt
+- **Übersicht:**
+  - Benutzer, Anteil mit Zwei-Faktor-Anmeldung, unbestätigte Konten
+  - fehlgeschlagene Anmeldungen der letzten 24 Stunden
+  - Boards, aktive Verbindungen, Datenbankgröße
+  - Hinweise auf wartende Freigaben und fehlende Einstellungen
+- **Benutzerverwaltung:**
+  - Suche und Filter (wartend, unbestätigt, deaktiviert, Admins, ohne Zwei-Faktor)
+  - Benutzer anlegen, bevorzugt per Einladungs-Mail, sodass die Person ihr Kennwort selbst festlegt
+  - bearbeiten, freischalten, deaktivieren, Adminrechte vergeben
+  - Bestätigungsmail erneut senden oder E-Mail manuell bestätigen
+  - Kennwort-Link erzeugen, Zwei-Faktor zurücksetzen, alle Sitzungen beenden
+  - löschen, dabei die Boards übertragen oder mitlöschen; der letzte Administrator ist geschützt
 - **Boards:** alle Boards mit Besitzer, Mitgliedern und Freigabe; Besitzer ändern, löschen
-- **Allgemein:** Name der Instanz, öffentliche Adresse, Registrierungsmodus, E-Mail-Pflicht
+- **Allgemein:** Name der Instanz, öffentliche Adresse, Registrierungsmodus
+- **Sicherheit:** Kennwort-Mindestlänge, Abgleich mit „Have I Been Pwned“, Wegwerf-Adressen, gesperrte bzw.
+  erlaubte Domains, Zwei-Faktor-Pflicht für Admins
 - **Mailserver:** SMTP-Host, Port, Verschlüsselung (STARTTLS, SSL/TLS, keine), Anmeldung, Absender,
   Zertifikatsprüfung; Testmail auch vor dem Speichern
+- **Protokoll:** Sicherheitsprotokoll der letzten 12 Monate mit Suche und Filter. Es enthält
+  - Anmeldungen und fehlgeschlagene Versuche,
+  - Kennwort-, E-Mail- und Zwei-Faktor-Änderungen,
+  - Admin-Aktionen mit IP-Adresse.
 
 ---
+
+## Sicherheit
+
+**Konten**
+- Kennwörter: scrypt mit N=2¹⁷, r=8, p=1 (OWASP-Empfehlung) und Salt; Vergleich in konstanter Zeit, auch bei
+  unbekannten Benutzernamen. Ältere Hashes werden beim nächsten Login automatisch erneuert.
+- Höchstens zwei Hash-Berechnungen gleichzeitig, damit massenhafte Anmeldeversuche den Server nicht überlasten.
+- Rate-Limits für Anmeldung, Registrierung, Zwei-Faktor-Codes, „Kennwort vergessen“ und Bestätigungsmails.
+- TOTP-Codes können nicht wiederverwendet werden; Wiederherstellungscodes werden nur gehasht gespeichert.
+- Schutz gegen das Ausforschen von Konten:
+  - „Kennwort vergessen“ und „Bestätigungsmail erneut senden“ antworten immer gleich.
+  - Eine Registrierung mit bereits verwendeter E-Mail-Adresse sieht von außen aus wie eine normale Registrierung.
+    Die Inhaberin bzw. der Inhaber der Adresse wird stattdessen per E-Mail informiert.
+- Einmal-Links (Bestätigung, Reset, Einladung) sind zufällig (256 Bit), zeitlich begrenzt und nur einmal verwendbar.
+  In der Datenbank steht nur ihr Hash.
+
+**Sitzungen**
+- Das Session-Cookie ist `HttpOnly`, `SameSite=Lax` und unter HTTPS `Secure` mit `__Host-`-Präfix. In der Datenbank
+  steht nur ein SHA-256-Hash des Tokens.
+- Sitzungen laufen nach 30 Tagen bzw. nach 14 Tagen ohne Aktivität ab.
+- Kennwortwechsel, Deaktivierung und Abmeldung beenden auch offene Live-Verbindungen.
+
+**Web**
+- Strenge Content-Security-Policy: nur eigene Skripte, keine Inline-Skripte, keine fremden Quellen, kein Einbetten in
+  Frames.
+- Weitere Header: HSTS (unter HTTPS), `X-Frame-Options: DENY`, `X-Content-Type-Options`,
+  `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Referrer-Policy`, `Permissions-Policy`.
+- CSRF-Schutz: Ändernde API-Aufrufe brauchen den Header `X-Vibeboard: 1`.
+- Rechte werden auf dem Server geprüft, für die REST-API und den Echtzeitkanal.
+- Board-Elemente werden auf dem Server und beim Darstellen geprüft (Farb-Whitelist, Zahlen erzwungen, Bilder nur
+  eingebettet). So lässt sich kein Markup oder Skript einschleusen.
+- Links in E-Mails entstehen nur aus der konfigurierten öffentlichen Adresse oder aus Adressen dieses Rechners. Ein
+  gefälschter `Host`-Header kann sie nicht umlenken.
+- Timeouts gegen langsame Verbindungen (Slowloris), Größenlimits für Anfragen.
+
+**Betrieb**
+- Der Docker-Container der Anwendung läuft als normaler Benutzer mit schreibgeschütztem Dateisystem, ohne Linux-Capabilities
+  und mit `no-new-privileges`.
+- Ohne gesetztes Datenbank-Kennwort startet docker-compose nicht.
+- Für den Betrieb im Internet gehört ein Reverse-Proxy mit HTTPS davor (z. B. Caddy, nginx, Traefik). Setze dann
+  `TRUST_PROXY=1` und `PUBLIC_URL`.
 
 ## Datenhaltung und Datenschutz
 
@@ -206,68 +294,59 @@ Alle Daten liegen in der eigenen PostgreSQL-Datenbank:
 
 | Tabelle | Inhalt |
 |---------|--------|
-| `users` | Konten mit Rolle, Status und Kennwort-Hash (scrypt) |
-| `sessions` | Anmeldesitzungen; gespeichert wird nur ein SHA-256-Hash des Tokens |
-| `tokens` | Einmal-Links zum Zurücksetzen des Kennworts |
+| `users` | Konten mit Rolle, Status, Bestätigungszeitpunkt, Kennwort-Hash, Zwei-Faktor-Schlüssel, gehashten Wiederherstellungscodes |
+| `sessions` | Anmeldesitzungen (Token-Hash, Gerät, IP-Adresse, letzte Aktivität) |
+| `tokens` | Einmal-Links für Bestätigung, Einladung und Kennwort-Reset (nur als Hash) |
+| `audit_log` | Sicherheitsprotokoll, 12 Monate aufbewahrt |
 | `settings` | Einstellungen der Instanz, inklusive SMTP-Zugang |
 | `boards`, `board_members`, `board_visits` | Boards, Freigaben, zuletzt geöffnete Boards |
 | `elements` | Ein Datensatz pro Board-Element; Bilder werden verkleinert eingebettet |
 
-- dlzboard ruft keine externen Dienste auf und lädt keine Ressourcen von Dritten.
-- Ausgehende Verbindungen gibt es nur zum konfigurierten Mailserver.
-- Im Browser speichert dlzboard nur Ansichtseinstellungen (Zoom, dunkles Design, Werkzeugoptionen) im `localStorage`.
+- Ausgehende Verbindungen gibt es nur zum konfigurierten Mailserver und, falls aktiviert, zur Pwned-Passwords-API.
+- Im Browser speichert vibeboard nur Ansichtseinstellungen (Zoom, dunkles Design, Werkzeugoptionen) im `localStorage`.
 - Das Repository enthält keine Nutzerdaten: `data/`, `.env` und Datenbankdateien sind in `.gitignore` ausgeschlossen.
-
-## Sicherheit
-
-- Kennwörter werden mit scrypt und Salt gehasht und in konstanter Zeit verglichen. Unbekannte Benutzernamen lassen sich
-  nicht an der Antwortzeit erkennen.
-- Das Session-Cookie ist `HttpOnly`, `SameSite=Lax` und bei HTTPS `Secure`.
-- CSRF-Schutz: Ändernde API-Aufrufe brauchen den Header `X-DLZ: 1`.
-- Rate-Limits für Anmeldung, Registrierung und „Kennwort vergessen“.
-- Rechte werden auf dem Server geprüft, für die REST-API und den Echtzeitkanal.
-- Board-Elemente werden auf dem Server und beim Darstellen geprüft (Farb-Whitelist, Zahlen erzwungen). So lässt sich
-  kein Markup oder Skript einschleusen.
-- Links in E-Mails entstehen nur aus der konfigurierten öffentlichen Adresse oder aus Adressen dieses Rechners. Ein
-  gefälschter `Host`-Header kann sie nicht umlenken.
-
-Für den Betrieb im Internet gehört ein Reverse-Proxy mit HTTPS davor (z. B. Caddy, nginx, Traefik). Setze dann
-`TRUST_PROXY=1` und `PUBLIC_URL`.
 
 ---
 
 ## Architektur
 
 ```
-server.js              HTTP-Server, Seiten-Routing (Anmeldung erforderlich), CSRF-Schutz
+server.js              HTTP-Server, Seiten-Routing, Sicherheits-Header, CSRF-Schutz, Timeouts
 lib/
   db.js                PostgreSQL-Pool, Schema-Migrationen
-  auth.js              Kennwort-Hashes, Sessions, Einmal-Tokens, Rate-Limits
-  boards.js            Zugriffsrechte, Board-Cache, verzögertes Speichern, Echtzeit-Räume
+  auth.js              Kennwort-Hashes, Sessions, Einmal-Tokens, Zwei-Faktor-Tickets, Rate-Limits
+  password.js          Kennwortrichtlinie (Länge, Listen, Muster, optional HIBP)
+  email.js             E-Mail-Prüfung, Wegwerf-Domains, Sperr-/Erlaubnislisten
+  totp.js              Zeitbasierte Einmalcodes (RFC 6238), Wiederherstellungscodes
+  audit.js             Sicherheitsprotokoll
+  boards.js            Zugriffsrechte, Board-Cache, verzögertes Speichern, Echtzeit-Räume, Long-Polling
   sanitize.js          Prüfung von Board-Elementen
   settings.js          Einstellungen der Instanz
   mail.js              E-Mail-Versand
   setup.js             Admin aus Umgebungsvariablen, Import alter Boards, Aufräumen
   routes/              REST-API: auth.js, boards.js, admin.js
+  data/                Liste der Wegwerf-Domains und häufigen Kennwörter
 public/
-  auth.html            Anmelden, Registrieren, Kennwort        → js/auth.js
-  index.html           Board-Übersicht                         → js/dashboard.js
-  board.html           Board-Editor                            → js/main.js (core, ui, collab, render, sync, …)
-  admin.html           Administration                          → js/admin.js
+  auth.html            Anmelden, Registrieren, Bestätigen, Kennwort  → js/auth.js
+  index.html           Board-Übersicht                               → js/dashboard.js
+  board.html           Board-Editor                                  → js/main.js (core, ui, collab, render, sync, …)
+  admin.html           Administration                                → js/admin.js
 ```
 
 **Echtzeit:**
 - Jeder Client empfängt Änderungen über Server-Sent Events (`/api/boards/:id/events`) und sendet eigene Änderungen
   gebündelt per POST.
-- Der Server hält aktive Boards im Arbeitsspeicher und verteilt Änderungen sofort an alle anderen.
-- Geänderte Elemente schreibt er etwa eine Sekunde später gesammelt in die Datenbank.
+- Kommt über den Stream innerhalb von 8 Sekunden keine Begrüßung an, nutzt der Client Long-Polling
+  (`/api/boards/:id/poll`). Zum Testen lässt sich das mit `?transport=poll` erzwingen.
+- Der Server hält aktive Boards im Arbeitsspeicher, verteilt Änderungen sofort und schreibt sie gesammelt in die
+  Datenbank.
 - Ändern zwei Personen gleichzeitig dasselbe Element, gewinnt die letzte Änderung.
 
 ---
 
 ## Lizenz
 
-dlzboard steht unter der [MIT-Lizenz](LICENSE).
+vibeboard steht unter der [MIT-Lizenz](LICENSE).
 
 Ausnahmen und Inhalte Dritter, Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md):
 
@@ -275,5 +354,7 @@ Ausnahmen und Inhalte Dritter, Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_N
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Lean Canvas**: Adaption des „Lean Canvas“ von Ash Maurya (leanstack.com), lizenziert unter CC BY-SA 3.0.
 - **Icons**: teilweise aus bzw. nach [Lucide](https://lucide.dev) (ISC) und [Feather](https://feathericons.com) (MIT).
+- **Wegwerf-Domains**: [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) (CC0).
+- **Häufige Kennwörter**: [SecLists](https://github.com/danielmiessler/SecLists) (MIT).
 
 Erwähnte Produkt- und Methodennamen gehören ihren jeweiligen Inhabern und dienen nur der Beschreibung.

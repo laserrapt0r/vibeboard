@@ -14,6 +14,8 @@ export class Sync {
     this.connected = false;
     this.inflight = Promise.resolve();
     this.sending = [];
+    this.transport = null;
+    this.pollLoop = 0;
   }
 
   on(type, fn) {
@@ -25,10 +27,32 @@ export class Sync {
     this.handlers[type] && this.handlers[type](data);
   }
 
+  dispatch(msg) {
+    if (msg.type === 'hello') {
+      this.connected = true;
+      this.emit('status', true);
+    }
+    this.emit(msg.type, msg);
+  }
+
+  // Bevorzugt Server-Sent Events; werden diese blockiert oder von einem Proxy gepuffert,
+  // geht es automatisch mit Long-Polling weiter (normales HTTP, funktioniert praktisch überall)
   connect() {
-    // Identität und Rechte ermittelt der Server aus der Session
+    this.stopped = false;
+    if (this.transport === 'poll' || new URLSearchParams(location.search).get('transport') === 'poll') return this.connectPoll();
+    this.transport = 'sse';
     const p = new URLSearchParams({ client: this.clientId });
+    let greeted = false;
+    let failures = 0;
     this.es = new EventSource(`/api/boards/${this.boardId}/events?${p}`);
+    const fallback = () => {
+      if (this.transport !== 'sse' || this.stopped) return;
+      console.warn('Echtzeit-Stream nicht verfügbar – wechsle auf Long-Polling');
+      this.es.close();
+      this.connectPoll();
+    };
+    // Keine Begrüßung innerhalb von 8 Sekunden → Stream kommt vermutlich nicht durch (z. B. Pufferung)
+    this.sseTimer = setTimeout(() => !greeted && fallback(), 8000);
     this.es.onmessage = (e) => {
       let msg;
       try {
@@ -37,20 +61,58 @@ export class Sync {
         return;
       }
       if (msg.type === 'hello') {
-        this.connected = true;
-        this.emit('status', true);
+        greeted = true;
+        clearTimeout(this.sseTimer);
       }
-      this.emit(msg.type, msg);
+      this.dispatch(msg);
     };
     this.es.onerror = () => {
       this.connected = false;
       this.emit('status', false);
+      if (!greeted && ++failures >= 2) fallback();
     };
+  }
+
+  async connectPoll() {
+    this.transport = 'poll';
+    this.emit('transport', 'poll');
+    const loop = ++this.pollLoop;
+    const p = new URLSearchParams({ client: this.clientId, transport: 'poll' });
+    while (!this.stopped && this.pollLoop === loop) {
+      try {
+        // Anmelden am Board (liefert die Begrüßung mit dem aktuellen Stand)
+        const r = await fetch(`/api/boards/${this.boardId}/events?${p}`, { cache: 'no-store', credentials: 'same-origin' });
+        if (r.status === 401 || r.status === 403 || r.status === 404) {
+          this.emit('status', false);
+          return;
+        }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        for (const m of (await r.json()).messages || []) this.dispatch(m);
+        // Nachrichten abholen, bis die Verbindung serverseitig beendet wird (410)
+        while (!this.stopped && this.pollLoop === loop) {
+          const q = await fetch(`/api/boards/${this.boardId}/poll?client=${encodeURIComponent(this.clientId)}`, { cache: 'no-store', credentials: 'same-origin' });
+          if (q.status === 410) break;
+          if (!q.ok) throw new Error('HTTP ' + q.status);
+          for (const m of (await q.json()).messages || []) this.dispatch(m);
+        }
+      } catch {
+        this.connected = false;
+        this.emit('status', false);
+        await new Promise((res) => setTimeout(res, 2000));
+      }
+    }
+  }
+
+  close() {
+    this.stopped = true;
+    this.pollLoop++;
+    clearTimeout(this.sseTimer);
+    if (this.es) this.es.close();
   }
 
   reconnectAs(user) {
     this.user = user;
-    this.es && this.es.close();
+    this.close();
     this.connect();
   }
 
@@ -98,7 +160,7 @@ export class Sync {
     this.sending.push(ops);
     return fetch(`/api/boards/${this.boardId}/ops`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-DLZ': '1' },
+      headers: { 'Content-Type': 'application/json', 'X-Vibeboard': '1' },
       body,
       keepalive: body.length < 60000, // Browser erlauben keepalive nur bis 64 KB
     })
@@ -141,7 +203,7 @@ export class Sync {
   signal(kind, data) {
     fetch(`/api/boards/${this.boardId}/signal`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-DLZ': '1' },
+      headers: { 'Content-Type': 'application/json', 'X-Vibeboard': '1' },
       body: JSON.stringify({ clientId: this.clientId, kind, data }),
     }).catch(() => {});
   }

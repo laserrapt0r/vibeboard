@@ -201,7 +201,7 @@ export function relTime(ts) {
 
 // Alle Anfragen tragen den CSRF-Header; Fehler werden als Exception mit Meldung geworfen
 export async function api(url, { method = 'GET', body, raw } = {}) {
-  const opts = { method, headers: { 'X-DLZ': '1' }, credentials: 'same-origin' };
+  const opts = { method, headers: { 'X-Vibeboard': '1' }, credentials: 'same-origin' };
   if (body !== undefined) {
     if (typeof body === 'string') opts.body = body;
     else {
@@ -219,6 +219,7 @@ export async function api(url, { method = 'GET', body, raw } = {}) {
   if (!r.ok) {
     const err = new Error(data.error || r.statusText);
     err.status = r.status;
+    err.code = data.code;
     throw err;
   }
   return data;
@@ -231,7 +232,7 @@ export async function logout() {
 
 export function loadPref(key, def) {
   try {
-    const v = localStorage.getItem('dlzboard.' + key);
+    const v = localStorage.getItem('vibeboard.' + key);
     return v == null ? def : JSON.parse(v);
   } catch {
     return def;
@@ -240,7 +241,7 @@ export function loadPref(key, def) {
 
 export function savePref(key, val) {
   try {
-    localStorage.setItem('dlzboard.' + key, JSON.stringify(val));
+    localStorage.setItem('vibeboard.' + key, JSON.stringify(val));
   } catch {}
 }
 

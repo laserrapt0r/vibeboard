@@ -29,7 +29,7 @@ async function boot() {
   app.viewOnly = meta.role === 'viewer';
   app.boardMeta = meta;
   app.name = meta.name;
-  document.title = meta.name + ' – dlzboard';
+  document.title = meta.name + ' – vibeboard';
   initUI();
   initCollab();
 }

@@ -1,4 +1,4 @@
-/* dlzboard – Stylesheet */
+/* vibeboard – Stylesheet */
 :root {
   --accent: #4262ff;
   --accent-soft: rgba(66, 98, 255, 0.12);
@@ -617,3 +617,34 @@ body.dark .pill.off { background: #33353c; }
   .admin-nav-item { white-space: nowrap; }
   .invite-row { flex-wrap: wrap; }
 }
+
+/* ================================================================== */
+/* Sicherheit: Kennwortstärke, Zwei-Faktor, Geräte                     */
+/* ================================================================== */
+
+.pw-meter { display: flex; flex-direction: column; gap: 4px; margin-top: -6px; }
+.pw-bar { height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.pw-bar span { display: block; height: 100%; width: 0; border-radius: 3px; transition: width 0.2s, background 0.2s; }
+.pw-meter[data-score="1"] .pw-bar span { width: 25%; background: #e03131; }
+.pw-meter[data-score="2"] .pw-bar span { width: 50%; background: #f08c00; }
+.pw-meter[data-score="3"] .pw-bar span { width: 75%; background: #2f9e44; }
+.pw-meter[data-score="4"] .pw-bar span { width: 100%; background: #2b8a3e; }
+.pw-text { font-size: 12px; font-weight: 600; color: var(--muted); min-height: 15px; }
+.field-hint.warn { color: #d9480f; }
+
+.security { gap: 6px; }
+.sec-block { border-top: 1px solid var(--border); padding: 14px 0 6px; display: flex; flex-direction: column; gap: 10px; }
+.sec-block:first-child { border-top: 0; padding-top: 0; }
+.sec-block h3 { margin: 0; font-size: 15px; }
+.sec-block p { margin: 0; line-height: 1.5; }
+.sessions { display: flex; flex-direction: column; gap: 6px; }
+.session { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.session .pill { margin-left: 6px; }
+.qr { width: 200px; height: 200px; align-self: center; background: #fff; border-radius: 8px; padding: 6px; border: 1px solid var(--border); }
+.qr svg { width: 100%; height: 100%; display: block; }
+.secret { display: block; font-size: 15px; letter-spacing: 0.08em; padding: 8px 10px; margin: 6px 0; word-break: break-all; }
+.codes { background: var(--panel-2); border-radius: 8px; padding: 12px 16px; font-size: 15px; line-height: 1.8; columns: 2; margin: 0; user-select: all; }
+details summary { cursor: pointer; font-size: 13px; color: var(--accent); }
+.admin-filter { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--panel); }
+.admin-form textarea { font-family: inherit; }
+.notice .btn { margin-left: 8px; }

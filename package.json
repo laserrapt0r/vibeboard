@@ -1,6 +1,6 @@
 {
-  "name": "dlzboard",
-  "version": "2.0.0",
+  "name": "vibeboard",
+  "version": "3.0.0",
   "description": "Kollaboratives Online-Whiteboard mit Echtzeit-Zusammenarbeit, Vorlagen, Benutzerverwaltung und PostgreSQL",
   "main": "server.js",
   "scripts": {
@@ -14,6 +14,7 @@
   "private": true,
   "dependencies": {
     "nodemailer": "^10.2.1",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "uqr": "^0.1.3"
   }
 }

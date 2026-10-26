@@ -1896,7 +1896,7 @@ window.addEventListener('keyup', (e) => {
 });
 
 /* Zwischenablage über System-Events (funktioniert auch boardübergreifend) */
-const CLIP_PREFIX = 'dlzboard-clipboard:';
+const CLIP_PREFIX = 'vibeboard-clipboard:';
 
 document.addEventListener('copy', (e) => {
   if (isTyping(e) || app.editing || !app.sel.size) return;

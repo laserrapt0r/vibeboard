@@ -183,7 +183,7 @@ importInput.addEventListener('change', async () => {
   try {
     const d = JSON.parse(await f.text());
     const elements = Array.isArray(d) ? d : Array.isArray(d.elements) ? d.elements : Object.values(d.elements || {});
-    const b = await api('/api/boards', { method: 'POST', body: { name: d.name || f.name.replace(/\.(dlzboard\.)?json$/, ''), elements } });
+    const b = await api('/api/boards', { method: 'POST', body: { name: d.name || f.name.replace(/\.((dlz|vibe)board\.)?json$/, ''), elements } });
     location.href = '/board/' + b.id;
   } catch (e) {
     toast('Import fehlgeschlagen: ' + e.message);

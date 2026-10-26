@@ -631,7 +631,7 @@ export function initCollab() {
     }
   });
   s.on('reload', (msg) => {
-    s.es.close();
+    s.close();
     if (msg.reason === 'disabled') location.href = '/login';
     else location.reload();
   });

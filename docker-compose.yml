@@ -1,4 +1,4 @@
-# dlzboard mit PostgreSQL
+# vibeboard mit PostgreSQL
 #   docker compose up -d --build        → http://localhost:3000
 # Optional mit Test-Mailserver (Weboberfläche http://localhost:8025, SMTP: mailpit:1025):
 #   docker compose --profile mailtest up -d --build
@@ -8,20 +8,22 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: dlzboard
-      POSTGRES_USER: dlzboard
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dlzboard}
+      POSTGRES_DB: ${POSTGRES_DB:-vibeboard}
+      POSTGRES_USER: ${POSTGRES_USER:-vibeboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Bitte POSTGRES_PASSWORD in der .env setzen}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dlzboard -d dlzboard"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 20
+    security_opt:
+      - no-new-privileges:true
 
   app:
     build: .
-    image: dlzboard:latest
+    image: vibeboard:latest
     restart: unless-stopped
     depends_on:
       db:
@@ -29,22 +31,30 @@ services:
     environment:
       PGHOST: db
       PGPORT: 5432
-      PGDATABASE: dlzboard
-      PGUSER: dlzboard
-      PGPASSWORD: ${POSTGRES_PASSWORD:-dlzboard}
+      PGDATABASE: ${POSTGRES_DB:-vibeboard}
+      PGUSER: ${POSTGRES_USER:-vibeboard}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
       # Optional: Administrator beim ersten Start anlegen
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       # Öffentliche Adresse für Links in E-Mails (alternativ in der Administration einstellbar)
       PUBLIC_URL: ${PUBLIC_URL:-}
-      # Hinter einem Reverse-Proxy auf 1 setzen (echte Client-IP für Rate-Limits)
+      # Hinter einem Reverse-Proxy auf 1 setzen (echte Client-IP für Rate-Limits und Protokoll)
       TRUST_PROXY: ${TRUST_PROXY:-0}
     ports:
       - "${PORT:-3000}:3000"
     # Boards der dateibasierten Version 1 (./data/boards) werden beim ersten Start einmalig übernommen
     volumes:
       - ./data:/import:ro
+    # Härtung: schreibgeschütztes Dateisystem, keine zusätzlichen Rechte
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
   mailpit:
     image: axllent/mailpit:latest

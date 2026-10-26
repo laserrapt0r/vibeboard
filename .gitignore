@@ -2,14 +2,14 @@
 node_modules/
 
 # Nutzerdaten und Laufzeitdaten – niemals einchecken
-data/
-import/
+/data/
+/import/
 *.sql
 *.sql.gz
 *.dump
 *.sqlite
 *.db
-pgdata/
+/pgdata/
 
 # Zugangsdaten und lokale Konfiguration
 .env

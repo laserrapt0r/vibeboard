@@ -673,8 +673,8 @@ function exportSvg() {
 }
 
 function exportJson() {
-  const data = { format: 'dlzboard', version: 1, name: app.name, exportedAt: new Date().toISOString(), elements: [...app.els.values()] };
-  download(safeName(app.name) + '.dlzboard.json', new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
+  const data = { format: 'vibeboard', version: 1, name: app.name, exportedAt: new Date().toISOString(), elements: [...app.els.values()] };
+  download(safeName(app.name) + '.vibeboard.json', new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
 }
 
 async function exportPdf() {
@@ -979,7 +979,7 @@ function buildTopbar() {
   nameInput.addEventListener('change', () => {
     const n = nameInput.value.trim() || 'Unbenanntes Board';
     app.name = n;
-    document.title = n + ' – dlzboard';
+    document.title = n + ' – vibeboard';
     app.sync.op({ op: 'rename', name: n });
   });
   nameInput.addEventListener('keydown', (e) => {
@@ -988,7 +988,7 @@ function buildTopbar() {
   });
   app.on('name', () => {
     nameInput.value = app.name;
-    document.title = app.name + ' – dlzboard';
+    document.title = app.name + ' – vibeboard';
   });
   const status = h('span', { id: 'conn-status', title: 'Verbindung' });
   app.on('status', (ok) => {

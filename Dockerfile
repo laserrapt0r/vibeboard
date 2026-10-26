@@ -1,4 +1,4 @@
-# dlzboard – kollaboratives Whiteboard
+# vibeboard – kollaboratives Whiteboard
 FROM node:22-alpine
 
 WORKDIR /app
@@ -17,6 +17,6 @@ ENV NODE_ENV=production \
 USER node
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=20s CMD wget -qO- http://127.0.0.1:3000/api/info > /dev/null || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s CMD wget -qO- http://127.0.0.1:3000/healthz > /dev/null || exit 1
 
 CMD ["node", "server.js"]

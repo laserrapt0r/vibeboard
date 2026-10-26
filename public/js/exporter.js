@@ -69,9 +69,12 @@ export async function printFrames(elements, frames, rawTitle) {
     .p { page-break-after: always; display: flex; align-items: center; justify-content: center; height: 95vh; }
     .p:last-child { page-break-after: auto; }
     img { max-width: 100%; max-height: 100%; }
-  </style></head><body>${pages.map((p) => `<div class="p"><img src="${p}"></div>`).join('')}
-  <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script></body></html>`;
+  </style></head><body>${pages.map((p) => `<div class="p"><img src="${p}"></div>`).join('')}</body></html>`;
   win.document.open();
   win.document.write(html);
   win.document.close();
+  // Druckdialog von hier aus öffnen (Inline-Skripte im Druckfenster verbietet die Content-Security-Policy)
+  await Promise.all([...win.document.images].map((img) => img.decode().catch(() => {})));
+  win.focus();
+  win.print();
 }
