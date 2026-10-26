@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.2.1] – 2026-10-26
+
+### Behoben
+- Verschieben mit der mittleren Maustaste legte unter Linux zusätzlich eine Sticky Note mit dem zuletzt markierten Text
+  an (Einfügen der „Primary Selection“).
+
 ## [3.2.0] – 2026-10-26
 
 ### Hinzugefügt

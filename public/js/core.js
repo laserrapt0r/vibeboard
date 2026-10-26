@@ -1975,7 +1975,22 @@ document.addEventListener('cut', (e) => {
   deleteEls([...app.sel]);
 });
 
+// Mittlere Maustaste = Verschieben. Unter Linux fügt sie sonst zusätzlich die markierte Auswahl ein
+// („Primary Selection“), was eine ungewollte Sticky Note erzeugen würde.
+let lastMiddleClick = 0;
+for (const type of ['mousedown', 'mouseup', 'auxclick']) {
+  stage.addEventListener(type, (e) => {
+    if (e.button !== 1) return;
+    lastMiddleClick = Date.now();
+    e.preventDefault();
+  });
+}
+
 document.addEventListener('paste', (e) => {
+  if (Date.now() - lastMiddleClick < 1000) {
+    e.preventDefault();
+    return;
+  }
   if (isTyping(e) || app.editing || app.viewOnly) return;
   const files = [...(e.clipboardData.files || [])].filter((f) => f.type.startsWith('image/'));
   if (files.length) {
