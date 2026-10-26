@@ -169,6 +169,7 @@ export class Sync {
         // 409: Verbindung (noch) nicht registriert – nach dem Wiederverbinden erneut senden
         if (r.status === 409 || r.status >= 500) throw new Error(res.error || 'retry');
         if (res.voting !== undefined) this.emit('voting', res.voting);
+        if (res.rejected && res.rejected.length) this.emit('rejected', res.rejected);
         if (res.error) this.emit('error', res.error);
       })
       .catch(() => {

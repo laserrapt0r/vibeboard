@@ -6,6 +6,9 @@ Vorlagen für Workshops, Retrospektiven und Strategiearbeit. Dazu gibt es Benutz
 optionaler Zwei-Faktor-Anmeldung, Rechte pro Board und eine Administrationsoberfläche. Die Daten liegen in PostgreSQL.
 
 - Läuft komplett auf dem eigenen Server: keine CDNs, kein Tracking, keine Pflicht-Abhängigkeit von externen Diensten.
+- Hochgeladene Dateien werden mit ClamAV auf Schadsoftware geprüft.
+- Automatische Upgrades mit Sicherung: Neue Versionen aktualisieren die Datenbank beim Start selbst.
+- Alle Funktionen sind als Anforderungen dokumentiert: [docs/anforderungen](docs/anforderungen/README.md).
 - Frontend in reinem JavaScript und SVG, ohne Build-Schritt.
 - Backend in Node.js mit nur drei Abhängigkeiten (`pg`, `nodemailer`, `uqr`).
 
@@ -20,6 +23,8 @@ optionaler Zwei-Faktor-Anmeldung, Rechte pro Board und eine Administrationsoberf
 - [Konten und Anmeldung](#konten-und-anmeldung)
 - [Rechte auf Boards](#rechte-auf-boards)
 - [Administration](#administration)
+- [Virenschutz für Uploads](#virenschutz-für-uploads)
+- [Versionen und Upgrades](#versionen-und-upgrades)
 - [Sicherheit](#sicherheit)
 - [Datenhaltung und Datenschutz](#datenhaltung-und-datenschutz)
 - [Architektur](#architektur)
@@ -115,7 +120,7 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 git clone https://github.com/laserrapt0r/vibeboard.git
 cd vibeboard
 cp .env.example .env            # POSTGRES_PASSWORD auf ein langes, zufälliges Kennwort setzen
-docker compose up -d --build    # startet PostgreSQL und vibeboard
+docker compose up -d --build    # startet PostgreSQL, ClamAV und vibeboard
 ```
 
 Danach ist vibeboard unter http://localhost:3000 erreichbar. Den Port legt `PORT` in der `.env` fest.
@@ -129,6 +134,9 @@ So geht es weiter:
 4. Empfohlen: im Profil unter „Sicherheit & Geräte“ die Zwei-Faktor-Anmeldung einrichten.
 
 Alternativ legen `ADMIN_USERNAME`, `ADMIN_PASSWORD` und `ADMIN_EMAIL` in der `.env` den Administrator beim Start an.
+
+ClamAV braucht etwa 1,5 GB Arbeitsspeicher. Beim ersten Start lädt es einige Minuten lang die Virensignaturen herunter;
+bis dahin werden Uploads mit einem Hinweis abgelehnt.
 
 Nützliche Befehle:
 
@@ -144,11 +152,12 @@ Mit dem Profil `mailtest` trägst du in der Administration den SMTP-Server `mail
 
 ### Ohne Docker
 
-Voraussetzungen: Node.js ≥ 20 und PostgreSQL ≥ 13.
+Voraussetzungen: Node.js ≥ 20, PostgreSQL ≥ 13, für Uploads ClamAV (`clamd`) und für Sicherungen vor Upgrades `pg_dump`.
 
 ```bash
 npm ci
-DATABASE_URL=postgres://benutzer:kennwort@localhost:5432/vibeboard node server.js
+DATABASE_URL=postgres://benutzer:kennwort@localhost:5432/vibeboard \
+CLAMAV_HOST=127.0.0.1 BACKUP_DIR=/var/backups/vibeboard node server.js
 ```
 
 Die Tabellen werden beim Start automatisch angelegt und migriert.
@@ -169,6 +178,11 @@ Umgebungsvariablen (bei Docker in der `.env`):
 | `PUBLIC_URL` | – | Öffentliche Adresse für Links in E-Mails, z. B. `https://board.example.de` |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` | – | Legt diesen Administrator an, falls es ihn noch nicht gibt |
 | `TRUST_PROXY` | `0` | `1` hinter einem Reverse-Proxy (wertet `X-Forwarded-For` und `X-Forwarded-Proto` aus) |
+| `CLAMAV_HOST`, `CLAMAV_PORT` | `clamav`, `3310` (Docker) | clamd-Dienst für den Virenscan; leer = kein Scanner |
+| `BACKUP_DIR` | `/backups` (Docker) | Verzeichnis für Sicherungen vor Datenbank-Upgrades; leer = keine Sicherung |
+| `BACKUP_KEEP` | `10` | Anzahl aufbewahrter Sicherungen |
+| `BACKUP_BEFORE_UPGRADE` | `1` | `0` überspringt die Sicherung (nicht empfohlen) |
+| `ALLOW_DOWNGRADE` | `0` | `1` erlaubt den Start einer älteren Version auf einer neueren Datenbank (nicht empfohlen) |
 | `DATA_DIR` | `./data` | Ordner mit JSON-Boards einer früheren dateibasierten Version für einen einmaligen Import |
 
 Alle weiteren Einstellungen nimmst du in der Administration vor.
@@ -265,6 +279,48 @@ Unter `/admin`, nur für Administratoren:
 
 ---
 
+## Virenschutz für Uploads
+
+- **Was geprüft wird:** Jede hochgeladene Datei, bevor sie gespeichert oder an andere verteilt wird:
+  - Bilder per Upload, Drag & Drop oder Zwischenablage
+  - Bilder in importierten Boards
+  - Vorschaubilder
+- **Wie geprüft wird:**
+  - Mit ClamAV über das clamd-Protokoll. Im Docker-Setup läuft ClamAV als eigener Dienst und aktualisiert seine
+    Signaturen selbstständig mehrmals täglich (`freshclam`).
+  - Zusätzlich muss der Dateiinhalt zum angegebenen Bildtyp passen (PNG, JPEG, GIF, WebP, SVG).
+- **Bei einem Fund:**
+  - Die Datei wird nicht gespeichert und bei der hochladenden Person wieder entfernt; sie sieht eine Meldung mit dem
+    Namen des Funds.
+  - Der Vorgang steht im Sicherheitsprotokoll.
+- **Ohne Scanner:**
+  - Ist kein Scanner eingerichtet oder ist er nicht erreichbar, werden Uploads standardmäßig abgelehnt. Beides ist in
+    der Administration unter „Sicherheit“ einstellbar.
+- **In der Administration:** Status und Signaturstand stehen in der Übersicht. Sind die Signaturen älter als drei
+  Tage, erscheint eine Warnung.
+
+## Versionen und Upgrades
+
+- **Versionsnummern:** vibeboard folgt [Semantic Versioning](https://semver.org/lang/de/). Die Version steht in
+  `package.json`, alle Änderungen im [CHANGELOG](CHANGELOG.md).
+- **Automatisches Upgrade beim Start:** Wird eine neue Version gestartet, aktualisiert sie die Datenbank selbst –
+  auch über mehrere Versionen hinweg:
+  1. Eine Datenbanksperre verhindert parallele Upgrades mehrerer Instanzen.
+  2. Stehen Migrationen an, wird zuerst eine **Sicherung** mit `pg_dump` erstellt (Docker: Volume `backups`, die
+     letzten 10 bleiben erhalten). Scheitert sie, bleibt die Datenbank unverändert und der Start bricht ab.
+  3. Die Migrationen laufen nacheinander, jede in einer eigenen Transaktion; ein Fehler wird vollständig
+     zurückgerollt.
+  4. Version, Vorgänger und Sicherung werden in der Versionshistorie festgehalten (Administration → Übersicht).
+- **Downgrade-Schutz:** Eine ältere Version startet nicht auf einer Datenbank, die schon von einer neueren verwendet
+  wurde.
+- **Offene Boards** erhalten nach einem Update den Hinweis „Neu laden“.
+- **Update im Docker-Setup:** `git pull && docker compose up -d --build`.
+- **Sicherung zurückspielen:**
+  `docker compose exec -T db pg_restore -U vibeboard -d vibeboard --clean < sicherung.dump`
+  (vorher `docker compose stop app`).
+
+---
+
 ## Sicherheit
 
 **Konten**
@@ -326,6 +382,18 @@ Alle Daten liegen in der eigenen PostgreSQL-Datenbank:
 
 ---
 
+## Anforderungen und Mitarbeit
+
+- [docs/anforderungen](docs/anforderungen/README.md) beschreibt alle Funktionen als Anforderungen mit dauerhaften IDs
+  und Akzeptanzkriterien.
+- [CONTRIBUTING.md](CONTRIBUTING.md) legt fest, was bei jeder neuen Funktion dazugehört:
+  - Anforderung ergänzen
+  - Version erhöhen
+  - CHANGELOG ergänzen
+  - Migration plus Upgrade-Test
+
+---
+
 ## Architektur
 
 ```
@@ -337,6 +405,9 @@ lib/
   email.js             E-Mail-Prüfung, Wegwerf-Domains, Sperr-/Erlaubnislisten
   totp.js              Zeitbasierte Einmalcodes (RFC 6238), Wiederherstellungscodes
   audit.js             Sicherheitsprotokoll
+  version.js           Versionsverwaltung, automatisches Upgrade, Sicherung, Downgrade-Schutz
+  virusscan.js         ClamAV-Anbindung (clamd), Dateityp-Prüfung
+  uploads.js           Prüfrichtlinie für hochgeladene Dateien
   boards.js            Zugriffsrechte, Board-Cache, verzögertes Speichern, Echtzeit-Räume, Long-Polling
   sanitize.js          Prüfung von Board-Elementen
   settings.js          Einstellungen der Instanz
@@ -344,6 +415,8 @@ lib/
   setup.js             Admin aus Umgebungsvariablen, Import alter Boards, Aufräumen
   routes/              REST-API: auth.js, boards.js, admin.js, legal.js
   data/                Liste der Wegwerf-Domains und häufigen Kennwörter
+scripts/test-upgrade.js  Upgrade-Test für Datenbank-Migrationen (npm run test:upgrade)
+docs/anforderungen/      Anforderungsdokumente
 public/
   auth.html            Anmelden, Registrieren, Bestätigen, Kennwort  → js/auth.js
   legal.html           Impressum, Datenschutzerklärung (öffentlich)  → js/legal.js, js/markdown.js

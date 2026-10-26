@@ -77,6 +77,11 @@ async function overview() {
     pending ? h('a', { class: 'notice warn', href: '#users' }, `⏳ ${pending} Registrierung${pending > 1 ? 'en warten' : ' wartet'} auf Freigabe →`) : null,
     !o.mailConfigured ? h('a', { class: 'notice warn', href: '#mail' }, '✉️ Es ist noch kein Mailserver eingerichtet. Ohne Mailserver ist keine Registrierung möglich (E-Mail-Bestätigung), und „Kennwort vergessen“ funktioniert nicht →') : null,
     o.mailConfigured && !o.baseUrl ? h('a', { class: 'notice', href: '#settings' }, '🔗 Tipp: Trage unter „Allgemein“ die öffentliche Adresse ein, damit Links in E-Mails auch bei Zugriff über einen Domainnamen funktionieren →') : null,
+    !o.virusScanner.configured ? h('a', { class: 'notice warn', href: '#security' }, o.requireVirusScan
+      ? '🦠 Es ist kein Virenscanner eingerichtet – Datei-Uploads sind deshalb gesperrt. Mit docker compose wird ClamAV automatisch mitgestartet (CLAMAV_HOST) →'
+      : '🦠 Es ist kein Virenscanner eingerichtet – hochgeladene Dateien werden nicht auf Schadsoftware geprüft →') : null,
+    o.virusScanner.configured && !o.virusScanner.reachable ? h('a', { class: 'notice warn', href: '#security' }, `🦠 Der Virenscanner ist nicht erreichbar (${o.virusScanner.error}). Nach einem Neustart braucht ClamAV einige Minuten.`) : null,
+    o.virusScanner.outdated ? h('a', { class: 'notice warn', href: '#security' }, '🦠 Die Virensignaturen sind älter als drei Tage – bitte die automatische Aktualisierung (freshclam) prüfen.') : null,
     o.failedLogins24h >= 20 ? h('a', { class: 'notice warn', href: '#audit' }, `🔐 ${o.failedLogins24h} fehlgeschlagene Anmeldungen in den letzten 24 Stunden →`) : null,
     h('div', { class: 'stat-grid' },
       tile('Benutzer', total, `${o.users.active || 0} aktiv · ${pending} wartend · ${o.users.disabled || 0} deaktiviert`),
@@ -86,8 +91,14 @@ async function overview() {
       tile('Gerade online', o.online, `auf ${o.activeBoards} Board${o.activeBoards === 1 ? '' : 's'}`),
       tile('Angemeldete Sitzungen', o.sessions),
       tile('Datenbank', fmtBytes(o.dbSize), o.pgVersion),
+      tile('Virenscanner', o.virusScanner.configured ? (o.virusScanner.reachable ? 'aktiv' : 'nicht erreichbar') : 'aus',
+        o.virusScanner.reachable ? `${o.virusScanner.engine} · Signaturen ${o.virusScanner.signatures}${o.virusScanner.signaturesDate ? ' vom ' + new Date(o.virusScanner.signaturesDate).toLocaleDateString('de-DE') : ''} · ${o.uploadsBlocked30d} blockiert (30 Tage)` : ''),
       tile('System', 'v' + o.version, `Laufzeit ${fmtUptime(o.uptime)} · ${o.disposableDomains.toLocaleString('de-DE')} gesperrte Wegwerf-Domains`),
-    ));
+    ),
+    o.versionHistory.length ? h('div', { class: 'version-history' }, h('h3', {}, 'Versionshistorie'),
+      h('table', { class: 'admin-table' }, h('thead', {}, h('tr', {}, ['Version', 'vorher', 'Schema', 'Sicherung vor dem Upgrade', 'gestartet'].map((t) => h('th', {}, t)))),
+        h('tbody', {}, o.versionHistory.map((v) => h('tr', {}, h('td', {}, h('b', {}, v.version)), h('td', {}, v.previous || '–'), h('td', {}, v.schema),
+          h('td', { class: 'small' }, v.backup || h('span', { class: 'muted' }, '–')), h('td', {}, fmtDate(v.started_at))))))) : null);
 }
 
 /* ---------------- Benutzerverwaltung ---------------- */
@@ -381,7 +392,11 @@ async function settings() {
 /* ---------------- Sicherheit ---------------- */
 
 async function security() {
-  const s = (await api('/api/admin/settings')).security;
+  const all = await api('/api/admin/settings');
+  const s = all.security;
+  const vs = all.virusScanner;
+  const requireScan = h('input', { type: 'checkbox', checked: s.requireVirusScan });
+  const failOpen = h('input', { type: 'checkbox', checked: s.virusScanFailOpen });
   const err = errorBox();
   const minLen = h('input', { type: 'number', min: 8, max: 64, value: s.passwordMinLength });
   const hibp = h('input', { type: 'checkbox', checked: s.hibpCheck });
@@ -396,6 +411,7 @@ async function security() {
       await api('/api/admin/settings', { method: 'PUT', body: { security: {
         passwordMinLength: Number(minLen.value), hibpCheck: hibp.checked, blockDisposable: disposable.checked,
         blockedDomains: blocked.value, allowedDomains: allowed.value, requireMfaAdmins: requireMfa.checked,
+        requireVirusScan: requireScan.checked, virusScanFailOpen: failOpen.checked,
       } } });
       toast('Sicherheitseinstellungen gespeichert');
       security();
@@ -411,6 +427,15 @@ async function security() {
     h('label', { class: 'check' }, disposable, 'Wegwerf-E-Mail-Adressen sperren (mehrere Tausend bekannte Anbieter)'),
     h('label', {}, 'Zusätzlich gesperrte Domains', blocked),
     h('label', {}, 'Nur diese Domains zulassen', allowed, h('span', { class: 'field-hint' }, 'Z. B. die Firmendomain. Ist hier etwas eingetragen, sind alle anderen Domains gesperrt. Subdomains sind eingeschlossen.'))),
+  h('fieldset', {}, h('legend', {}, 'Virenscan für hochgeladene Dateien'),
+    h('p', {}, vs.configured
+      ? (vs.reachable
+        ? h('span', {}, h('span', { class: 'pill ok' }, 'aktiv'), ` ${vs.engine}, Signaturen ${vs.signatures}${vs.signaturesDate ? ' vom ' + new Date(vs.signaturesDate).toLocaleString('de-DE') : ''}. Die Signaturen aktualisiert ClamAV selbstständig (freshclam).`)
+        : h('span', {}, h('span', { class: 'pill warn' }, 'nicht erreichbar'), ` ${vs.error || ''}`))
+      : h('span', {}, h('span', { class: 'pill off' }, 'nicht eingerichtet'), ' Mit docker compose wird ClamAV automatisch mitgestartet. Ohne Docker: ClamAV (clamd) installieren und CLAMAV_HOST/CLAMAV_PORT setzen.')),
+    h('p', { class: 'muted small' }, 'Geprüft werden alle hochgeladenen Bilder (Einfügen, Drag & Drop, Upload), Bilder in importierten Boards und Vorschaubilder. Zusätzlich muss der Dateiinhalt zum angegebenen Bildtyp passen.'),
+    h('label', { class: 'check' }, requireScan, 'Uploads sperren, solange kein Virenscanner eingerichtet ist (empfohlen)'),
+    h('label', { class: 'check' }, failOpen, 'Uploads trotzdem annehmen, wenn der Scanner vorübergehend nicht erreichbar ist (nicht empfohlen)')),
   h('fieldset', {}, h('legend', {}, 'Zwei-Faktor-Anmeldung'),
     h('label', { class: 'check' }, requireMfa, 'Für Administratoren verpflichtend'),
     h('p', { class: 'muted small' }, 'Administratoren ohne Zwei-Faktor-Anmeldung haben dann keinen Zugriff auf die Administration, bis sie sie im Profil unter „Sicherheit & Geräte“ eingerichtet haben. Jeder Benutzer kann sie freiwillig nutzen.'),

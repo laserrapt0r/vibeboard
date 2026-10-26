@@ -429,14 +429,18 @@ body.presenting #stage { background-image: none; }
 
 /* ---------------- Vorlagen-Galerie ---------------- */
 
-.tpl-wrap { display: grid; grid-template-columns: 200px 1fr; gap: 20px; height: 100%; min-height: 0; }
-.tpl-side { display: flex; flex-direction: column; gap: 4px; }
+.tpl-wrap { display: grid; grid-template-columns: 200px 1fr; grid-template-rows: minmax(0, 1fr); gap: 20px; height: 100%; min-height: 0; }
+.tpl-side { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; }
 .tpl-search { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel); }
 .tpl-cats { display: flex; flex-direction: column; gap: 2px; }
 .tpl-cat { text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 6px; }
 .tpl-cat:hover { background: var(--panel-2); }
 .tpl-cat.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; overflow-y: auto; align-content: start; padding: 2px; }
+.tpl-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; padding: 2px 6px 12px 2px;
+  /* Zeilen behalten ihre volle Höhe, der Bereich scrollt (sonst werden die Karten in die Modalhöhe gestaucht) */
+  grid-auto-rows: max-content; align-content: start; overflow-y: auto; min-height: 0; overscroll-behavior: contain;
+}
 .tpl-card {
   display: flex; flex-direction: column; text-align: left; border: 1px solid var(--border); background: var(--panel);
   border-radius: 10px; padding: 0; overflow: hidden; transition: box-shadow 0.15s, border-color 0.15s;
@@ -499,10 +503,14 @@ body.dash-page { min-height: 100vh; }
   #bottom-right { bottom: 74px; }
   #minimap { display: none; }
   #sidepanel { left: 12px; width: auto; top: 124px; bottom: 130px; }
-  .tpl-wrap { grid-template-columns: 1fr; }
+  .tpl-wrap { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .tpl-cats { flex-direction: row; overflow-x: auto; }
   .tpl-cat { white-space: nowrap; }
-  .dash-top { padding: 10px 16px; }
+  .dash-top { padding: 10px 12px; gap: 8px; }
+  .dash-top .spacer { display: none; }
+  .dash-brand span { display: none; }
+  #dash-search { width: auto; flex: 1; min-width: 0; }
+  .dash-section-head { flex-wrap: wrap; }
   .dash-main { padding: 16px; }
   .form-row { grid-template-columns: 1fr; }
 }
@@ -687,3 +695,11 @@ details summary { cursor: pointer; font-size: 13px; color: var(--accent); }
   .legal-split { grid-template-columns: 1fr; }
   .legal-page .legal-main { padding: 24px 18px; margin: 12px; }
 }
+
+#update-banner {
+  position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; align-items: center;
+  gap: 12px; padding: 8px 8px 8px 16px; border: 2px solid var(--accent); font-weight: 500;
+}
+.version-history { margin-top: 24px; }
+.version-history h3 { font-size: 15px; margin: 0 0 10px; }
+.version-history .admin-table { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }

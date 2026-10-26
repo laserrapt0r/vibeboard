@@ -528,6 +528,13 @@ app.on('buildCollabTools', (box) => {
 /* Server-Ereignisse                                                   */
 /* ================================================================== */
 
+function showUpdateBanner(version) {
+  if (document.getElementById('update-banner')) return;
+  document.body.append(h('div', { id: 'update-banner', class: 'panel' },
+    h('span', {}, `vibeboard wurde auf Version ${version} aktualisiert.`),
+    h('button', { class: 'btn small primary', onclick: () => location.reload() }, 'Neu laden')));
+}
+
 export function initCollab() {
   const hadView = initCore();
   const s = app.sync;
@@ -536,6 +543,11 @@ export function initCollab() {
     // Rechte haben sich geändert (z. B. Rolle angepasst) – Oberfläche neu aufbauen
     if (msg.role && msg.role !== app.role) return location.reload();
     app.serverOffset = msg.serverTime - Date.now();
+    // Nach einem Update des Servers: Hinweis zum Neuladen (neue Oberfläche, evtl. geänderte Schnittstellen)
+    if (msg.version) {
+      if (app.serverVersion && app.serverVersion !== msg.version) showUpdateBanner(msg.version);
+      app.serverVersion = app.serverVersion || msg.version;
+    }
     loadElements(msg.board.elements);
     // Eigene, noch nicht bestätigte Änderungen wieder anwenden – sie werden gleich (erneut) gesendet
     for (const op of app.sync.pendingOps()) applyRemoteOp(op);
@@ -641,6 +653,11 @@ export function initCollab() {
   });
   s.on('error', (err) => toast(err));
   let checking = false;
+  // Vom Server abgelehnte Uploads (Virenscan/Dateityp) auch lokal entfernen
+  s.on('rejected', (list) => {
+    for (const r of list) applyRemoteOp({ op: 'delete', id: r.id });
+    toast(list[0].reason, 7000);
+  });
   s.on('status', async (ok) => {
     app.emit('status', ok);
     // Verbindung verloren: prüfen, ob Session oder Zugriff weggefallen sind

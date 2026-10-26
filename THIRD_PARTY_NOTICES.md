@@ -117,8 +117,11 @@ Diese Pakete sind nicht im Repository enthalten. Sie werden bei der Installation
 | [nodemailer](https://nodemailer.com) | MIT-0 |
 | [uqr](https://github.com/unjs/uqr) (QR-Codes für die Zwei-Faktor-Einrichtung) | MIT |
 
-Die Docker-Konfiguration verwendet die öffentlichen Images `node` (Node.js, MIT), `postgres` (PostgreSQL License)
-und optional `axllent/mailpit` (MIT). Für diese Images gelten die Lizenzen ihrer Herausgeber.
+Die Docker-Konfiguration verwendet die öffentlichen Images `node` (Node.js, MIT), `postgres` (PostgreSQL License),
+`clamav/clamav` (ClamAV, GPL-2.0) und optional `axllent/mailpit` (MIT). Das Anwendungs-Image enthält zusätzlich die
+PostgreSQL-Clientprogramme (`pg_dump`, PostgreSQL License) aus den Alpine-Paketquellen. ClamAV läuft als eigenständiger
+Dienst und wird über das Netzwerkprotokoll angesprochen; es ist nicht Teil des vibeboard-Codes. Für diese Images gelten
+die Lizenzen ihrer Herausgeber.
 
 ## Externe Dienste
 

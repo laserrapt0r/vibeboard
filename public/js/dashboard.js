@@ -185,6 +185,11 @@ importInput.addEventListener('change', async () => {
     const d = JSON.parse(await f.text());
     const elements = Array.isArray(d) ? d : Array.isArray(d.elements) ? d.elements : Object.values(d.elements || {});
     const b = await api('/api/boards', { method: 'POST', body: { name: d.name || f.name.replace(/\.((dlz|vibe)board\.)?json$/, ''), elements } });
+    if (b.rejected && b.rejected.length) {
+      toast(`${b.rejected.length} Bild(er) wurden nicht übernommen: ${b.rejected[0].reason}`, 6000);
+      setTimeout(() => (location.href = '/board/' + b.id), 4000);
+      return;
+    }
     location.href = '/board/' + b.id;
   } catch (e) {
     toast('Import fehlgeschlagen: ' + e.message);

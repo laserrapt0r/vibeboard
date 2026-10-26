@@ -11,6 +11,7 @@ const db = require('./lib/db');
 const auth = require('./lib/auth');
 const boards = require('./lib/boards');
 const setup = require('./lib/setup');
+const versions = require('./lib/version');
 const { Router } = require('./lib/router');
 const { HttpError, json, redirect, serveFile, serveStatic, isHttps } = require('./lib/http');
 const pkg = require('./package.json');
@@ -123,7 +124,7 @@ server.maxHeadersCount = 100;
 
 async function start() {
   await db.waitForDb();
-  await db.migrate();
+  await versions.upgrade(); // Downgrade-Schutz, Sicherung, Migrationen, Versionshistorie
   await setup.seedAdmin();
   await setup.importLegacy(DATA_DIR);
   setup.scheduleCleanup();

@@ -1,5 +1,6 @@
 # vibeboard mit PostgreSQL
 #   docker compose up -d --build        → http://localhost:3000
+# Enthalten: PostgreSQL, ClamAV (Virenscan, Signaturen aktualisieren sich automatisch), vibeboard
 # Optional mit Test-Mailserver (Weboberfläche http://localhost:8025, SMTP: mailpit:1025):
 #   docker compose --profile mailtest up -d --build
 
@@ -42,17 +43,33 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-}
       # Hinter einem Reverse-Proxy auf 1 setzen (echte Client-IP für Rate-Limits und Protokoll)
       TRUST_PROXY: ${TRUST_PROXY:-0}
+      # Virenscan hochgeladener Dateien über den ClamAV-Dienst
+      CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
+      CLAMAV_PORT: 3310
+      # Vor jedem Datenbank-Upgrade wird eine Sicherung nach /backups geschrieben (die letzten 10 bleiben erhalten)
+      BACKUP_KEEP: ${BACKUP_KEEP:-10}
     ports:
       - "${PORT:-3000}:3000"
     # Boards der dateibasierten Version 1 (./data/boards) werden beim ersten Start einmalig übernommen
     volumes:
       - ./data:/import:ro
+      - backups:/backups
     # Härtung: schreibgeschütztes Dateisystem, keine zusätzlichen Rechte
     read_only: true
     tmpfs:
       - /tmp
     cap_drop:
       - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  # Virenscanner; aktualisiert seine Signaturen selbstständig (freshclam, mehrmals täglich).
+  # Benötigt etwa 1,5 GB Arbeitsspeicher; der erste Start dauert einige Minuten (Download der Signaturen).
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    volumes:
+      - clamav:/var/lib/clamav
     security_opt:
       - no-new-privileges:true
 
@@ -65,3 +82,5 @@ services:
 
 volumes:
   pgdata:
+  backups:
+  clamav:
