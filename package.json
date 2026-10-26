@@ -1,15 +1,19 @@
 {
   "name": "dlzboard",
-  "version": "1.0.0",
-  "description": "Kollaboratives Online-Whiteboard (wie Miro / Conceptboard) – ohne externe Abhängigkeiten",
+  "version": "2.0.0",
+  "description": "Kollaboratives Online-Whiteboard (wie Miro / Conceptboard) mit Benutzerverwaltung und PostgreSQL",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "check": "node --check server.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "license": "MIT",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "nodemailer": "^10.2.1",
+    "pg": "^8.23.1"
+  }
 }

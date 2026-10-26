@@ -1,24 +1,20 @@
 // Board-Übersicht (Startseite)
-import { h, ICONS, esc, toast, modal, promptDialog, confirmDialog, getUser, saveUser, initials, relTime, USER_COLORS, loadPref, savePref } from './util.js';
+import { h, api, ICONS, toast, modal, promptDialog, confirmDialog, initials, relTime, loadPref, savePref } from './util.js';
 import { TEMPLATES } from './templates.js';
 import { templateGallery, templatePreview } from './gallery.js';
+import { menu } from './menu.js';
+import { openShareDialog } from './share.js';
+import { accountMenuItems } from './account.js';
 
-let boards = [];
-let user = getUser();
+let data = { owned: [], shared: [] };
+let me = null;
 let dark = loadPref('settings', {}).dark;
-
-const api = async (url, opts = {}) => {
-  const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
-  return r.json();
-};
 
 async function load() {
   try {
-    boards = await api('/api/boards');
+    data = await api('/api/boards');
   } catch (e) {
     toast('Boards konnten nicht geladen werden: ' + e.message);
-    boards = [];
   }
   renderBoards();
 }
@@ -26,16 +22,18 @@ async function load() {
 async function createFromTemplate(t) {
   const name = await promptDialog('Neues Board', 'Name des Boards', t.id === 'blank' ? 'Unbenanntes Board' : t.name);
   if (name === null) return;
-  const elements = t.build();
-  const b = await api('/api/boards', { method: 'POST', body: JSON.stringify({ name: name.trim() || t.name, elements }) });
-  location.href = '/board/' + b.id;
+  try {
+    const b = await api('/api/boards', { method: 'POST', body: { name: name.trim() || t.name, elements: t.build() } });
+    location.href = '/board/' + b.id;
+  } catch (e) {
+    toast(e.message);
+  }
 }
 
 function renderTemplates() {
   const box = document.getElementById('dash-templates');
   box.innerHTML = '';
-  const featured = ['blank', 'brainstorm', 'kanban', 'retro-ssc', 'mindmap', 'bmc', 'swot', 'flowchart', 'journey'];
-  for (const id of featured) {
+  for (const id of ['blank', 'brainstorm', 'kanban', 'retro-ssc', 'mindmap', 'bmc', 'swot', 'flowchart', 'journey']) {
     const t = TEMPLATES.find((x) => x.id === id);
     const prev = h('div', { class: 'tpl-prev' });
     prev.innerHTML = templatePreview(t);
@@ -43,104 +41,98 @@ function renderTemplates() {
   }
 }
 
-function renderBoards() {
-  const box = document.getElementById('dash-boards');
+const ROLE_LABEL = { owner: 'Besitzer', editor: 'Bearbeiten', viewer: 'Ansehen' };
+
+function sortList(list) {
   const q = document.getElementById('dash-search').value.trim().toLowerCase();
   const sort = document.getElementById('dash-sort').value;
-  let list = boards.filter((b) => !q || b.name.toLowerCase().includes(q));
-  list.sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name, 'de') : sort === 'created' ? b.createdAt - a.createdAt : b.updatedAt - a.updatedAt));
+  return list
+    .filter((b) => !q || b.name.toLowerCase().includes(q) || (b.owner && b.owner.displayName.toLowerCase().includes(q)))
+    .sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name, 'de') : sort === 'created' ? b.createdAt - a.createdAt : b.updatedAt - a.updatedAt));
+}
+
+function card(b, shared) {
+  const thumb = h('div', { class: 'board-thumb' });
+  if (b.hasThumb) thumb.append(h('img', { src: `/api/boards/${b.id}/thumb?t=${b.updatedAt}`, alt: '', loading: 'lazy' }));
+  else thumb.append(h('div', { class: 'board-thumb-empty' }, '🗒️'));
+  const more = h('button', { class: 'icon-btn small', title: 'Aktionen', html: ICONS.more });
+  more.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    boardMenu(more, b);
+  };
+  const badges = [];
+  if (b.linkAccess !== 'private') badges.push(h('span', { class: 'tag', title: 'Per Link freigegeben' }, '🔗'));
+  if (b.memberCount) badges.push(h('span', { class: 'tag', title: `${b.memberCount} Mitglied(er)` }, '👥 ' + b.memberCount));
+  return h('a', { class: 'board-card', href: '/board/' + b.id }, thumb,
+    h('div', { class: 'board-info' },
+      h('div', { class: 'board-name' }, b.name),
+      h('div', { class: 'board-meta' },
+        shared && b.owner ? `von ${b.owner.displayName} · ${ROLE_LABEL[b.role]} · ` : '',
+        `${relTime(b.updatedAt)} · ${b.elementCount} Elemente`,
+        b.online ? h('span', { class: 'online' }, ` · ${b.online} online`) : null),
+      badges.length ? h('div', { class: 'board-tags' }, badges) : null),
+    more);
+}
+
+function renderBoards() {
+  const owned = sortList(data.owned);
+  const shared = sortList(data.shared);
+  const box = document.getElementById('dash-boards');
+  const sbox = document.getElementById('dash-shared');
   box.innerHTML = '';
-  if (!list.length) {
-    box.append(h('div', { class: 'dash-empty' }, q ? 'Keine Boards gefunden.' : 'Noch keine Boards – wähle oben eine Vorlage, um loszulegen.'));
-    return;
-  }
-  for (const b of list) {
-    const thumb = h('div', { class: 'board-thumb' });
-    if (b.hasThumb) thumb.append(h('img', { src: `/api/boards/${b.id}/thumb?t=${b.updatedAt}`, alt: '', loading: 'lazy' }));
-    else thumb.append(h('div', { class: 'board-thumb-empty' }, '🗒️'));
-    const more = h('button', { class: 'icon-btn small', title: 'Aktionen', html: ICONS.more });
-    more.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      boardMenu(more, b);
-    };
-    box.append(h('a', { class: 'board-card', href: '/board/' + b.id }, thumb,
-      h('div', { class: 'board-info' },
-        h('div', { class: 'board-name' }, b.name),
-        h('div', { class: 'board-meta' }, `${relTime(b.updatedAt)} · ${b.elementCount} Elemente`, b.online ? h('span', { class: 'online' }, ` · ${b.online} online`) : null)),
-      more));
-  }
+  sbox.innerHTML = '';
+  if (owned.length) owned.forEach((b) => box.append(card(b, false)));
+  else box.append(h('div', { class: 'dash-empty' }, data.owned.length ? 'Keine passenden Boards.' : 'Noch keine eigenen Boards – wähle oben eine Vorlage, um loszulegen.'));
+  document.getElementById('dash-shared-section').classList.toggle('hidden', !data.shared.length);
+  shared.forEach((b) => sbox.append(card(b, true)));
 }
 
 function boardMenu(anchor, b) {
-  document.querySelector('.popover')?.remove();
-  const close = () => pop.remove();
-  const item = (label, icon, fn, danger) => h('button', { class: 'menu-item' + (danger ? ' danger' : ''), onclick: () => { close(); fn(); } }, h('span', { class: 'mi-icon', html: ICONS[icon] }), h('span', { class: 'mi-label' }, label));
-  const pop = h('div', { class: 'popover panel' }, h('div', { class: 'menu' },
-    item('Öffnen', 'fit', () => (location.href = '/board/' + b.id)),
-    item('Umbenennen', 'edit', async () => {
+  const owner = b.role === 'owner';
+  menu(anchor, [
+    { label: 'Öffnen', icon: 'fit', onClick: () => (location.href = '/board/' + b.id) },
+    { label: 'Teilen …', icon: 'share', onClick: () => openShareDialog(b.id, { me, onLeave: load }) },
+    b.role !== 'viewer' ? { label: 'Umbenennen', icon: 'edit', onClick: async () => {
       const n = await promptDialog('Board umbenennen', 'Name', b.name);
       if (n && n.trim()) {
-        await api('/api/boards/' + b.id, { method: 'PATCH', body: JSON.stringify({ name: n.trim() }) });
+        await api('/api/boards/' + b.id, { method: 'PATCH', body: { name: n.trim() } }).catch((e) => toast(e.message));
         load();
       }
-    }),
-    item('Duplizieren', 'copy', async () => {
-      await api(`/api/boards/${b.id}/duplicate`, { method: 'POST' });
-      toast('Board dupliziert');
+    } } : null,
+    { label: 'Duplizieren', icon: 'copy', onClick: async () => {
+      await api(`/api/boards/${b.id}/duplicate`, { method: 'POST' }).catch((e) => toast(e.message));
+      toast('Board dupliziert – die Kopie gehört dir');
       load();
-    }),
-    item('Link kopieren', 'link', async () => {
+    } },
+    { label: 'Link kopieren', icon: 'link', onClick: async () => {
       try {
         await navigator.clipboard.writeText(location.origin + '/board/' + b.id);
         toast('Link kopiert');
       } catch {
         toast(location.origin + '/board/' + b.id, 5000);
       }
-    }),
-    h('div', { class: 'menu-sep' }),
-    item('Löschen', 'trash', async () => {
-      if (await confirmDialog('Board löschen', `„${b.name}“ wird unwiderruflich gelöscht.`, 'Löschen', true)) {
-        await api('/api/boards/' + b.id, { method: 'DELETE' });
+    } },
+    '-',
+    owner ? { label: 'Löschen', icon: 'trash', danger: true, onClick: async () => {
+      if (await confirmDialog('Board löschen', `„${b.name}“ wird für alle Mitglieder unwiderruflich gelöscht.`, 'Löschen', true)) {
+        await api('/api/boards/' + b.id, { method: 'DELETE' }).catch((e) => toast(e.message));
         toast('Board gelöscht');
         load();
       }
-    }, true)));
-  document.body.append(pop);
-  const r = anchor.getBoundingClientRect();
-  const pr = pop.getBoundingClientRect();
-  pop.style.left = Math.min(innerWidth - pr.width - 8, r.right - pr.width) + 'px';
-  pop.style.top = Math.min(innerHeight - pr.height - 8, r.bottom + 6) + 'px';
-  setTimeout(() => document.addEventListener('pointerdown', function off(e) {
-    if (!pop.contains(e.target)) {
-      pop.remove();
-      document.removeEventListener('pointerdown', off, true);
-    }
-  }, true), 0);
+    } } : { label: 'Aus meiner Liste entfernen', icon: 'close', danger: true, onClick: async () => {
+      await api(`/api/boards/${b.id}/members/${me.id}`, { method: 'DELETE' }).catch((e) => toast(e.message));
+      load();
+    } },
+  ], { placement: 'bottom' });
 }
 
 function renderUser() {
   const b = document.getElementById('dash-user');
-  b.textContent = initials(user.name || 'Gast');
-  b.style.background = user.color;
-  b.title = (user.name || 'Gast') + ' – Profil bearbeiten';
-}
-
-function editProfile() {
-  let color = user.color;
-  const name = h('input', { type: 'text', value: user.name || '', maxlength: 40 });
-  const sw = h('div', { class: 'swatches' }, USER_COLORS.map((c) => h('button', { type: 'button', class: 'swatch' + (c === color ? ' active' : ''), title: c, style: { background: c }, onclick: () => {
-    color = c;
-    sw.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('active', s.title === c));
-  } })));
-  const m = modal('Profil', h('form', { class: 'form', onsubmit: (e) => {
-    e.preventDefault();
-    user = { ...user, name: name.value.trim(), color };
-    saveUser(user);
-    renderUser();
-    m.close();
-  } }, h('label', {}, 'Name', name), h('div', {}, h('div', { class: 'label' }, 'Farbe'), sw),
-  h('div', { class: 'form-actions' }, h('button', { class: 'btn primary', type: 'submit' }, 'Speichern'))));
+  b.textContent = initials(me.displayName);
+  b.style.background = me.color;
+  b.title = me.displayName + ' – Konto';
+  document.getElementById('dash-admin').classList.toggle('hidden', me.role !== 'admin');
 }
 
 function applyDark() {
@@ -150,7 +142,11 @@ function applyDark() {
 
 document.getElementById('dash-search').addEventListener('input', renderBoards);
 document.getElementById('dash-sort').addEventListener('change', renderBoards);
-document.getElementById('dash-user').addEventListener('click', editProfile);
+document.getElementById('dash-user').addEventListener('click', (e) => menu(e.currentTarget, accountMenuItems(me, (u) => {
+  me = u;
+  renderUser();
+}), { placement: 'bottom' }));
+document.getElementById('dash-admin').innerHTML = ICONS.settings;
 document.getElementById('dash-dark').addEventListener('click', () => {
   dark = !dark;
   savePref('settings', { ...loadPref('settings', {}), dark });
@@ -171,17 +167,25 @@ importInput.addEventListener('change', async () => {
   importInput.value = '';
   if (!f) return;
   try {
-    const data = JSON.parse(await f.text());
-    const elements = Array.isArray(data) ? data : Array.isArray(data.elements) ? data.elements : Object.values(data.elements || {});
-    const b = await api('/api/boards', { method: 'POST', body: JSON.stringify({ name: data.name || f.name.replace(/\.(dlzboard\.)?json$/, ''), elements }) });
+    const d = JSON.parse(await f.text());
+    const elements = Array.isArray(d) ? d : Array.isArray(d.elements) ? d.elements : Object.values(d.elements || {});
+    const b = await api('/api/boards', { method: 'POST', body: { name: d.name || f.name.replace(/\.(dlzboard\.)?json$/, ''), elements } });
     location.href = '/board/' + b.id;
   } catch (e) {
     toast('Import fehlgeschlagen: ' + e.message);
   }
 });
 
-applyDark();
-renderUser();
-renderTemplates();
-load();
-setInterval(load, 30000);
+(async () => {
+  applyDark();
+  try {
+    me = (await api('/api/auth/me')).user;
+  } catch {
+    location.href = '/login';
+    return;
+  }
+  renderUser();
+  renderTemplates();
+  load();
+  setInterval(load, 30000);
+})();

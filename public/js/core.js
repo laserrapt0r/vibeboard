@@ -1,18 +1,18 @@
 // Kern des Board-Editors: Zustand, Ansicht, Rendering, Historie, Interaktion
 import {
-  SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, getUser, loadPref, savePref,
-  debounce, throttle, toast, contrastText, STICKY_COLORS,
+  SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
+  debounce, throttle, toast, contrastText, STICKY_COLORS, api,
 } from './util.js';
 import { renderElement, elBounds, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint } from './render.js';
 import { Sync } from './sync.js';
 
-const params = new URLSearchParams(location.search);
 const boardId = location.pathname.split('/').filter(Boolean).pop();
 
 export const app = {
   boardId,
-  viewOnly: params.get('mode') === 'view',
-  user: getUser(),
+  viewOnly: false,   // wird nach dem Laden aus der Rolle gesetzt
+  role: null,
+  user: { id: '', name: '', color: '#4262ff' },
   sync: null,
   name: '',
   els: new Map(),
@@ -409,7 +409,7 @@ const scheduleSaveThumb = debounce(async () => {
   try {
     const { thumbnail } = await import('./exporter.js');
     const url = await thumbnail([...app.els.values()]);
-    if (url) fetch(`/api/boards/${boardId}/thumb`, { method: 'PUT', body: url });
+    if (url) api(`/api/boards/${boardId}/thumb`, { method: 'PUT', body: url }).catch(() => {});
   } catch {}
 }, 4000);
 

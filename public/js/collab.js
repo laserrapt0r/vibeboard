@@ -1,5 +1,5 @@
 // Zusammenarbeit: Teilnehmer, Cursor, Folgen, Timer, Abstimmung, Reaktionen, Laser, Präsentation
-import { h, append, ICONS, esc, toast, modal, initials, FONT } from './util.js';
+import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util.js';
 import {
   app, $, stage, getEl, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
   loadElements, applyRemoteOp, scheduleRender, rerenderAll, setSelection, finishEdit, initCore,
@@ -411,7 +411,7 @@ app.on('vote', (elId, delta) => {
   const v = app.session.voting;
   if (!v || !v.active) return;
   if (delta > 0 && myVotesUsed(v) >= v.votesPerUser) return toast('Du hast alle Stimmen vergeben (Alt+Klick nimmt eine zurück)');
-  app.sync.op({ op: 'vote', elId, userId: app.user.id, delta });
+  app.sync.op({ op: 'vote', elId, delta });
 });
 
 /* ================================================================== */
@@ -533,6 +533,8 @@ export function initCollab() {
   const s = app.sync;
   let first = true;
   s.on('hello', (msg) => {
+    // Rechte haben sich geändert (z. B. Rolle angepasst) – Oberfläche neu aufbauen
+    if (msg.role && msg.role !== app.role) return location.reload();
     app.serverOffset = msg.serverTime - Date.now();
     loadElements(msg.board.elements);
     app.name = msg.board.name;
@@ -625,12 +627,29 @@ export function initCollab() {
         break;
     }
   });
+  s.on('reload', (msg) => {
+    s.es.close();
+    if (msg.reason === 'disabled') location.href = '/login';
+    else location.reload();
+  });
   s.on('deleted', () => {
     alert('Dieses Board wurde gelöscht.');
     location.href = '/';
   });
   s.on('error', (err) => toast(err));
-  s.on('status', (ok) => app.emit('status', ok));
+  let checking = false;
+  s.on('status', async (ok) => {
+    app.emit('status', ok);
+    // Verbindung verloren: prüfen, ob Session oder Zugriff weggefallen sind
+    if (ok || checking) return;
+    checking = true;
+    try {
+      await api(`/api/boards/${app.boardId}`);
+    } catch (e) {
+      if (e.status === 403 || e.status === 404) location.reload();
+    } finally {
+      setTimeout(() => (checking = false), 5000);
+    }
+  });
   s.connect();
-  if (!app.user.name && !app.viewOnly) openProfile(true);
 }

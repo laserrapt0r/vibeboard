@@ -1,34 +1,82 @@
 # dlzboard
 
-Kollaboratives Online-Whiteboard nach dem Vorbild von **Miro** und **Conceptboard** – unendliche Leinwand,
-Echtzeit-Zusammenarbeit, Moderationswerkzeuge und über 35 Vorlagen. Komplett ohne externe Abhängigkeiten:
-Node.js-Server mit Standardbibliothek, Frontend in reinem JavaScript/SVG.
+Kollaboratives Online-Whiteboard nach dem Vorbild von **Miro** und **Conceptboard**: unendliche Leinwand,
+Echtzeit-Zusammenarbeit, Moderationswerkzeuge und über 35 Vorlagen. Dazu kommen Benutzerkonten, Freigaben pro Board
+und eine Administrationsoberfläche. Die Daten liegen in PostgreSQL.
 
-## Schnellstart
+## Schnellstart mit Docker (empfohlen)
 
 ```bash
-node server.js            # oder: npm start
+cp .env.example .env          # Datenbank-Kennwort anpassen
+docker compose up -d --build  # startet PostgreSQL und dlzboard
 # → http://localhost:3000
 ```
 
-Benötigt Node.js ≥ 18. Es gibt nichts zu installieren (`npm install` ist nicht nötig).
+Beim ersten Aufruf landet man auf der Registrierung. **Das erste Konto wird automatisch Administrator.**
+Alternativ legt `ADMIN_USERNAME`/`ADMIN_PASSWORD` in der `.env` den Administrator beim Start an.
 
-Umgebungsvariablen:
-
-| Variable   | Standard   | Bedeutung                               |
-|------------|------------|-----------------------------------------|
-| `PORT`     | `3000`     | HTTP-Port                               |
-| `HOST`     | `0.0.0.0`  | Bind-Adresse                            |
-| `DATA_DIR` | `./data`   | Ablage der Boards (JSON) und Vorschaubilder |
-
-### Docker
-
-```bash
-docker compose up -d --build     # → http://localhost:3000, Daten im Volume "dlzboard-data"
-```
+- Die Datenbank liegt im Docker-Volume `pgdata`. Ein Backup erzeugt
+  `docker compose exec db pg_dump -U dlzboard dlzboard > backup.sql`.
+- Test-Mailserver ohne echtes Postfach: `docker compose --profile mailtest up -d`. Danach in der Administration
+  den SMTP-Server `mailpit`, Port `1025`, Verschlüsselung „keine“ eintragen. Die Mails erscheinen unter
+  http://localhost:8025.
+- Alte Boards aus der dateibasierten Version 1 (`data/boards/*.json`) werden beim ersten Start einmalig übernommen,
+  wenn der Ordner eingebunden ist (siehe Kommentar `volumes` in `docker-compose.yml`).
 
 Falls `permission denied … docker.sock` erscheint, ist der Benutzer nicht in der Gruppe `docker`
-(`sudo usermod -aG docker $USER`, danach neu anmelden) – oder die Befehle mit `sudo` ausführen.
+(`sudo usermod -aG docker $USER`, danach neu anmelden). Alternativ die Befehle mit `sudo` ausführen.
+
+## Ohne Docker
+
+Voraussetzungen: Node.js ≥ 20 und ein PostgreSQL-Server (ab Version 13).
+
+```bash
+npm ci
+DATABASE_URL=postgres://dlzboard:kennwort@localhost:5432/dlzboard node server.js
+```
+
+Die Tabellen werden beim Start automatisch angelegt bzw. migriert.
+
+| Variable | Standard | Bedeutung |
+|----------|----------|-----------|
+| `PORT` | `3000` | HTTP-Port |
+| `HOST` | `0.0.0.0` | Bind-Adresse |
+| `DATABASE_URL` | `postgres://dlzboard:dlzboard@localhost:5432/dlzboard` | Datenbankverbindung (alternativ `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPORT`) |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` | – | Legt diesen Administrator an, falls es ihn noch nicht gibt |
+| `DATA_DIR` | `./data` | Ordner mit alten JSON-Boards für den einmaligen Import |
+| `TRUST_PROXY` | `0` | `1` hinter einem Reverse-Proxy (wertet `X-Forwarded-For` aus) |
+
+## Benutzer und Rechte
+
+- **Registrierung** mit Benutzername und Kennwort. E-Mail-Adresse und Anzeigename sind optional; die Adresse lässt sich
+  als Pflichtfeld einstellen.
+- **Registrierungsmodus** (Administration → Allgemein):
+  - *offen*: Jede Person kann sich registrieren.
+  - *mit Freigabe*: Neue Konten warten, bis ein Admin sie freischaltet. Admins werden per Mail informiert, die Person
+    bekommt nach der Freigabe eine Mail.
+  - *geschlossen*: Nur Admins legen Konten an.
+- **Kennwort vergessen** per E-Mail-Link (eine Stunde gültig). Ohne Mailserver erzeugt ein Admin einen Link zum
+  Weitergeben (24 Stunden gültig).
+- **Profil**: Anzeigename, E-Mail, Farbe für Cursor und Avatar, Kennwort ändern. Beim Ändern des Kennworts werden
+  andere Geräte abgemeldet.
+- **Boards** gehören der Person, die sie anlegt. Die Besitzerin oder der Besitzer kann
+  - Personen einladen, als *Bearbeiter* oder *Betrachter* (mit optionaler Einladungs-Mail),
+  - den Link für alle angemeldeten Nutzer zum *Ansehen* oder *Bearbeiten* freigeben,
+  - das Board umbenennen, löschen und Mitglieder entfernen.
+- Betrachter sehen das Board live, dürfen aber nur Laserpointer, Reaktionen und Abstimmungen nutzen. Rechteänderungen
+  wirken sofort, offene Boards laden sich dafür neu.
+- **Administratoren** haben Zugriff auf alle Boards.
+
+## Administration (`/admin`)
+
+- **Übersicht**: Benutzer, Boards, Elemente, aktive Verbindungen, Datenbankgröße. Hinweis auf wartende Freigaben und
+  fehlenden Mailserver.
+- **Benutzer**: anlegen, bearbeiten, freischalten, deaktivieren, zum Admin machen, Kennwort-Link erzeugen, löschen.
+  Beim Löschen werden die Boards übertragen oder ebenfalls gelöscht. Der letzte Admin ist geschützt.
+- **Boards**: alle Boards mit Besitzer und Freigabe; Besitzer ändern, löschen.
+- **Allgemein**: Name der Anwendung, öffentliche Adresse für Links in E-Mails, Registrierungsmodus.
+- **Mailserver**: SMTP-Host, Port, STARTTLS/SSL/ohne, Anmeldung, Absender, Zertifikatsprüfung und eine Testmail
+  (funktioniert auch vor dem Speichern). Das SMTP-Kennwort wird nie an den Browser zurückgegeben.
 
 ## Funktionen
 
@@ -62,7 +110,7 @@ Falls `permission denied … docker.sock` erscheint, ist der Benutzer nicht in d
 - Alle Änderungen live bei allen Teilnehmenden, inkl. Live-Cursor und Auswahl der anderen
 - Teilnehmerliste, „Folgen“ einer Person, „Alle zu mir holen“
 - Kommentare mit Threads, @Erwähnungen, „Erledigt“-Status und Kommentarübersicht
-- Teilen-Links zum Bearbeiten oder **nur Ansehen** (`?mode=view`), Anzeige der LAN-Adressen
+- Teilen-Dialog mit Mitgliedern, Rollen und Link-Freigabe, Anzeige der LAN-Adressen
 - Reaktionen (fliegende Emojis) und Laserpointer
 
 **Moderation**
@@ -75,7 +123,7 @@ Falls `permission denied … docker.sock` erscheint, ist der Benutzer nicht in d
 - JSON-Import (im Board oder als neues Board auf der Übersicht)
 
 **Übersicht**
-- Board-Liste mit Vorschaubildern, Suche, Sortierung, Umbenennen, Duplizieren, Löschen
+- Eigene und geteilte Boards mit Vorschaubildern, Suche, Sortierung, Teilen, Umbenennen, Duplizieren, Löschen
 - Neues Board direkt aus einer Vorlage
 
 ## Vorlagen
@@ -92,44 +140,52 @@ Falls `permission denied … docker.sock` erscheint, ist der Benutzer nicht in d
 ## Architektur
 
 ```
-server.js            HTTP-Server: statische Dateien, REST-API, SSE-Echtzeitkanal, JSON-Persistenz
+server.js              HTTP-Server, Seiten-Routing (Anmeldung erforderlich), CSRF-Schutz
+lib/
+  db.js                PostgreSQL-Pool, Schema-Migrationen
+  auth.js              scrypt-Kennwort-Hashes, Sessions (HttpOnly-Cookie), Einmal-Tokens, Rate-Limits
+  boards.js            Zugriffsrechte, Board-Cache im Speicher, verzögertes Speichern, Echtzeit-Räume
+  settings.js          Systemeinstellungen (Tabelle settings)
+  mail.js              E-Mail-Versand (nodemailer) mit HTML-/Text-Vorlage
+  setup.js             Admin aus Umgebungsvariablen, Import alter JSON-Boards, Aufräumen
+  routes/auth.js       Registrierung, Anmeldung, Profil, Kennwort vergessen, Benutzersuche
+  routes/boards.js     Boards, Mitglieder, Vorschaubilder, SSE-Kanal, Operationen
+  routes/admin.js      Administration
 public/
-  index.html         Board-Übersicht       → js/dashboard.js
-  board.html         Board-Editor          → js/main.js
-  css/app.css        Gesamtes Styling (hell/dunkel, responsiv)
-  js/core.js         Zustand, Ansicht, Rendering-Schleife, Undo/Redo, Werkzeuge, Maus/Tastatur
-  js/ui.js           Werkzeugleisten, Kontextleiste, Panels, Menüs, Export, Minimap
-  js/collab.js       Teilnehmende, Cursor, Folgen, Timer, Abstimmung, Präsentation
-  js/render.js       Elemente → SVG (wird auch für Vorschau und Export genutzt)
-  js/templates.js    Vorlagen-Bibliothek
-  js/sync.js         Senden (gebündelte POSTs) / Empfangen (EventSource)
-  js/exporter.js     PNG/SVG/PDF-Export, Vorschaubilder
+  auth.html            Anmelden / Registrieren / Kennwort  → js/auth.js
+  index.html           Board-Übersicht                      → js/dashboard.js
+  board.html           Board-Editor                         → js/main.js (core, ui, collab, …)
+  admin.html           Administration                       → js/admin.js
 ```
 
-**Synchronisation:** Jeder Client hält eine EventSource-Verbindung (`/api/boards/:id/events`). Änderungen werden
-als Operationen (`upsert`, `delete`, `timer`, `voting`, `vote`, `rename`) gebündelt per POST gesendet, vom Server
-angewendet und an alle anderen verteilt (Last-Writer-Wins pro Element). Flüchtige Signale wie Cursor, Auswahl,
-Laser oder Reaktionen laufen über `/signal` und werden nicht gespeichert.
+### Datenmodell
 
-**Speicherung:** Ein Board = eine JSON-Datei in `data/boards/`, verzögert und atomar geschrieben.
+| Tabelle | Inhalt |
+|---------|--------|
+| `users` | Konten mit Rolle (`admin`/`user`), Status (`active`/`pending`/`disabled`) und scrypt-Hash |
+| `sessions` | Anmeldesitzungen (nur SHA-256 des Tokens wird gespeichert), 30 Tage gültig |
+| `tokens` | Einmal-Links zum Zurücksetzen des Kennworts |
+| `settings` | Einstellungen als JSON (`general`, `smtp`) |
+| `boards` | Name, Besitzer, Link-Freigabe, Timer/Abstimmung, Vorschaubild |
+| `board_members` | Freigaben pro Person (`editor`/`viewer`) |
+| `board_visits` | Zuletzt geöffnete Boards (für „Mit mir geteilt“ bei Link-Freigaben) |
+| `elements` | Ein Datensatz pro Board-Element (JSONB) |
 
-### REST-API
+**Synchronisation:** Jeder Client hält eine EventSource-Verbindung (`/api/boards/:id/events`). Die Rolle prüft der
+Server beim Verbindungsaufbau. Änderungen gehen als gebündelte Operationen per POST an den Server. Er wendet sie auf
+die Kopie im Arbeitsspeicher an, verteilt sie sofort an alle anderen und schreibt geänderte Elemente nach etwa einer
+Sekunde gesammelt in die Datenbank. Gleichzeitige Änderungen am selben Element lösen sich nach „Last-Writer-Wins“
+auf. Beim Beenden (SIGTERM/SIGINT) werden offene Änderungen gespeichert.
 
-| Methode | Pfad | Zweck |
-|---------|------|-------|
-| GET | `/api/boards` | Liste aller Boards |
-| POST | `/api/boards` | Board anlegen (`{ name, elements? }`) |
-| GET / PATCH / DELETE | `/api/boards/:id` | Board lesen / umbenennen / löschen |
-| POST | `/api/boards/:id/duplicate` | Board duplizieren |
-| GET | `/api/boards/:id/events` | Echtzeit-Stream (SSE) |
-| POST | `/api/boards/:id/ops` | Operationen anwenden |
-| POST | `/api/boards/:id/signal` | Flüchtiges Signal verteilen |
-| GET / PUT | `/api/boards/:id/thumb` | Vorschaubild |
-| GET | `/api/info` | Version und LAN-Adressen |
+### Sicherheit
+
+- Kennwörter mit scrypt (N=16384) und Salt; Vergleich in konstanter Zeit, auch bei unbekannten Benutzernamen.
+- Session-Cookie `HttpOnly`, `SameSite=Lax`, bei HTTPS `Secure`. In der Datenbank steht nur der Hash des Tokens.
+- CSRF-Schutz: Alle ändernden API-Aufrufe müssen den Header `X-DLZ: 1` tragen.
+- Rate-Limits für Anmeldung, Registrierung und „Kennwort vergessen“.
+- Für den Betrieb im Internet HTTPS über einen Reverse-Proxy (Caddy, nginx, Traefik) und `TRUST_PROXY=1` setzen.
 
 ## Hinweise
 
-- Es gibt keine Benutzerkonten: Wer den Link kennt, hat Zugriff. Der Nur-Ansehen-Link schränkt die Oberfläche ein und
-  der Server lehnt Änderungen dieses Clients ab, ist aber kein Ersatz für eine Authentifizierung. Für den Einsatz im
-  Internet einen Reverse-Proxy mit Anmeldung (z. B. Basic Auth) davorschalten.
-- Bilder werden (verkleinert) direkt im Board gespeichert.
+- Bilder werden verkleinert direkt im Board gespeichert (als Element in der Datenbank).
+- Gleichzeitige Bearbeitung desselben Elements: Die letzte Änderung gewinnt. Es gibt keine Versionshistorie.

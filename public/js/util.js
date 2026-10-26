@@ -197,24 +197,36 @@ export function relTime(ts) {
   return new Date(ts).toLocaleDateString('de-DE');
 }
 
-/* ---------------- Benutzer ---------------- */
+/* ---------------- Server-API ---------------- */
 
-export function getUser() {
-  let u = null;
-  try {
-    u = JSON.parse(localStorage.getItem('dlzboard.user') || 'null');
-  } catch {}
-  if (!u || !u.id) {
-    u = { id: uid(), name: '', color: USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)] };
-    saveUser(u);
+// Alle Anfragen tragen den CSRF-Header; Fehler werden als Exception mit Meldung geworfen
+export async function api(url, { method = 'GET', body, raw } = {}) {
+  const opts = { method, headers: { 'X-DLZ': '1' }, credentials: 'same-origin' };
+  if (body !== undefined) {
+    if (typeof body === 'string') opts.body = body;
+    else {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
   }
-  return u;
+  const r = await fetch(url, opts);
+  if (r.status === 401 && !url.startsWith('/api/auth/')) {
+    location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
+    throw new Error('Nicht angemeldet');
+  }
+  if (raw) return r;
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const err = new Error(data.error || r.statusText);
+    err.status = r.status;
+    throw err;
+  }
+  return data;
 }
 
-export function saveUser(u) {
-  try {
-    localStorage.setItem('dlzboard.user', JSON.stringify(u));
-  } catch {}
+export async function logout() {
+  await api('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  location.href = '/login';
 }
 
 export function loadPref(key, def) {

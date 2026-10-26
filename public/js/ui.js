@@ -1,10 +1,15 @@
 // Benutzeroberfläche des Board-Editors
 import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
-  saveUser, initials, relTime, rectsIntersect, throttle, uid,
+  initials, relTime, rectsIntersect, throttle, uid,
 } from './util.js';
 import { SHAPES, shapeGeom, renderSvgDocument, elBounds, safeLink } from './render.js';
 import { templateGallery } from './gallery.js';
+import { popover, closePop, menu } from './menu.js';
+import { openShareDialog } from './share.js';
+import { openProfileDialog, accountMenuItems } from './account.js';
+
+export { popover, closePop, menu };
 import {
   app, $, stage, getEl, bounds, setTool, saveToolOpts, selectedEls, selectionBounds, act, setEl, updateEl, deleteEls,
   undo, redo, canUndo, canRedo, zoomBy, zoomAt, fitAll, fitTo, toScreen, visibleRect, viewCenter, applyView, startEdit,
@@ -18,65 +23,9 @@ import { download, safeName, svgString, pngDataUrl, printFrames } from './export
 /* Allgemeine Popover / Menüs                                          */
 /* ================================================================== */
 
-let openPop = null;
-
-export function closePop() {
-  if (openPop) {
-    openPop.el.remove();
-    openPop.onClose && openPop.onClose();
-    openPop = null;
-  }
-}
-
-export function popover(anchor, content, { placement = 'bottom', onClose, cls = '' } = {}) {
-  closePop();
-  const el = h('div', { class: 'popover panel ' + cls }, content);
-  document.body.append(el);
-  const r = anchor.getBoundingClientRect();
-  const pr = el.getBoundingClientRect();
-  let x, y;
-  if (placement === 'right') {
-    x = r.right + 8;
-    y = r.top;
-  } else if (placement === 'top') {
-    x = r.left + r.width / 2 - pr.width / 2;
-    y = r.top - pr.height - 8;
-  } else if (placement === 'left') {
-    x = r.left - pr.width - 8;
-    y = r.top;
-  } else {
-    x = r.left + r.width / 2 - pr.width / 2;
-    y = r.bottom + 8;
-  }
-  x = Math.max(8, Math.min(innerWidth - pr.width - 8, x));
-  y = Math.max(8, Math.min(innerHeight - pr.height - 8, y));
-  el.style.left = x + 'px';
-  el.style.top = y + 'px';
-  openPop = { el, anchor, onClose };
-  return el;
-}
-
 document.addEventListener('pointerdown', (e) => {
-  if (openPop && !openPop.el.contains(e.target) && !openPop.anchor.contains(e.target)) closePop();
   if (ctxMenu && !ctxMenu.contains(e.target)) closeContextMenu();
 }, true);
-
-export function menu(anchor, items, opts) {
-  const list = h('div', { class: 'menu' }, items.filter(Boolean).map((it) => {
-    if (it === '-') return h('div', { class: 'menu-sep' });
-    if (it.header) return h('div', { class: 'menu-header' }, it.header);
-    return h('button', {
-      class: 'menu-item' + (it.checked ? ' checked' : '') + (it.danger ? ' danger' : ''),
-      disabled: it.disabled,
-      onclick: () => {
-        if (!it.keep) closePop();
-        it.onClick && it.onClick();
-      },
-    }, h('span', { class: 'mi-icon', html: it.icon ? ICONS[it.icon] || it.icon : it.checked !== undefined ? (it.checked ? ICONS.check : '') : '' }),
-    h('span', { class: 'mi-label' }, it.label), it.hint ? h('span', { class: 'mi-hint' }, it.hint) : null);
-  }));
-  return popover(anchor, list, opts);
-}
 
 const iconBtn = (icon, title, onclick, extra = {}) => h('button', { class: 'icon-btn ' + (extra.class || ''), title, 'aria-label': title, onclick, html: ICONS[icon] || icon, ...extra, class: 'icon-btn ' + (extra.class || '') });
 
@@ -774,54 +723,20 @@ function openExportMenu(anchor) {
 /* Teilen, Profil, Einstellungen, Hilfe                                */
 /* ================================================================== */
 
-async function openShare() {
-  const base = location.origin + location.pathname;
-  let lan = [];
-  try {
-    lan = (await (await fetch('/api/info')).json()).addresses || [];
-  } catch {}
-  const row = (label, url) => {
-    const input = h('input', { type: 'text', value: url, readonly: true, onclick: (e) => e.target.select() });
-    return h('label', {}, label, h('div', { class: 'copy-row' }, input, h('button', { class: 'btn', type: 'button', onclick: async () => {
-      try {
-        await navigator.clipboard.writeText(url);
-      } catch {
-        input.select();
-        document.execCommand('copy');
-      }
-      toast('Link kopiert');
-    } }, 'Kopieren')));
-  };
-  const isLocal = /^(localhost|127\.)/.test(location.hostname);
-  modal('Board teilen', h('div', { class: 'form' },
-    h('p', { class: 'muted' }, 'Jede Person mit dem Link kann das Board in Echtzeit mitbearbeiten bzw. ansehen.'),
-    row('✏️ Bearbeiten', base),
-    row('👁️ Nur ansehen', base + '?mode=view'),
-    isLocal && lan.length ? h('div', { class: 'hint' }, h('b', {}, 'Im lokalen Netzwerk erreichbar unter:'), lan.map((a) => h('div', {}, h('code', {}, `http://${a}:${location.port || 80}${location.pathname}`)))) : null));
+function openShare() {
+  openShareDialog(app.boardId, { me: app.me });
 }
 
-export function openProfile(first = false) {
-  let color = app.user.color;
-  const name = h('input', { type: 'text', value: app.user.name || '', placeholder: 'Dein Name', maxlength: 40, required: true });
-  const sw = h('div', { class: 'swatches' }, USER_COLORS.map((c) => h('button', { type: 'button', class: 'swatch' + (c === color ? ' active' : ''), style: { background: c }, title: c, onclick: (e) => {
-    color = c;
-    sw.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('active', s.title === c));
-  } })));
-  const form = h('form', { class: 'form', onsubmit: (e) => {
-    e.preventDefault();
-    const n = name.value.trim();
-    if (!n) return;
-    app.user = { ...app.user, name: n, color };
-    saveUser(app.user);
-    app.sync.reconnectAs(app.user);
-    app.emit('peers');
-    m.close();
-  } },
-  first ? h('p', {}, 'Willkommen bei dlzboard! Wie sollen dich die anderen Teilnehmenden sehen?') : null,
-  h('label', {}, 'Name', name), h('div', {}, h('div', { class: 'label' }, 'Farbe'), sw),
-  h('div', { class: 'form-actions' }, h('button', { type: 'submit', class: 'btn primary' }, first ? 'Los geht\'s' : 'Speichern')));
-  const m = modal(first ? 'Willkommen' : 'Profil', form);
-  setTimeout(() => name.focus(), 0);
+// Profil wurde gespeichert: Anzeige und Echtzeit-Identität aktualisieren
+function profileSaved(user) {
+  app.me = user;
+  app.user = { id: user.id, name: user.displayName, color: user.color };
+  app.sync.reconnectAs(app.user);
+  app.emit('peers');
+}
+
+export function openProfile() {
+  openProfileDialog(app.me, profileSaved);
 }
 
 function openSettings(anchor) {
@@ -841,9 +756,9 @@ function openSettings(anchor) {
     t('snap', 'Am Raster einrasten'),
     t('smartGuides', 'Intelligente Hilfslinien'),
     t('wheelZoom', 'Mausrad zoomt (statt verschieben)'),
-    '-',
-    { label: 'Profil bearbeiten', icon: 'users', onClick: () => openProfile() },
     { label: 'Tastenkürzel', icon: 'keyboard', onClick: openShortcuts },
+    '-',
+    ...accountMenuItems(app.me, profileSaved),
   ], { placement: 'bottom' });
 }
 

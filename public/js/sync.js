@@ -25,13 +25,8 @@ export class Sync {
   }
 
   connect() {
-    const p = new URLSearchParams({
-      client: this.clientId,
-      user: this.user.id,
-      name: this.user.name || 'Gast',
-      color: this.user.color,
-      view: this.viewOnly ? '1' : '0',
-    });
+    // Identität und Rechte ermittelt der Server aus der Session
+    const p = new URLSearchParams({ client: this.clientId });
     this.es = new EventSource(`/api/boards/${this.boardId}/events?${p}`);
     this.es.onmessage = (e) => {
       let msg;
@@ -72,6 +67,7 @@ export class Sync {
 
   op(o) {
     if (this.viewOnly && o.op !== 'vote') return;
+    if (o.op === 'vote') delete o.userId;
     this.extra.push(o);
     this.schedule();
   }
@@ -90,12 +86,14 @@ export class Sync {
     this.inflight = this.inflight.then(() =>
       fetch(`/api/boards/${this.boardId}/ops`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-DLZ': '1' },
         body: JSON.stringify({ clientId: this.clientId, ops }),
         keepalive: JSON.stringify(ops).length < 60000,
       })
-        .then((r) => r.json())
-        .then((res) => {
+        .then(async (r) => {
+          const res = await r.json().catch(() => ({}));
+          // 409: Verbindung (noch) nicht registriert – nach dem Wiederverbinden erneut senden
+          if (r.status === 409 || r.status >= 500) throw new Error(res.error || 'retry');
           if (res.voting !== undefined) this.emit('voting', res.voting);
           if (res.error) this.emit('error', res.error);
         })
@@ -114,7 +112,7 @@ export class Sync {
   signal(kind, data) {
     fetch(`/api/boards/${this.boardId}/signal`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-DLZ': '1' },
       body: JSON.stringify({ clientId: this.clientId, kind, data }),
     }).catch(() => {});
   }

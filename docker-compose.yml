@@ -1,13 +1,55 @@
+# dlzboard mit PostgreSQL
+#   docker compose up -d --build        → http://localhost:3000
+# Optional mit Test-Mailserver (Weboberfläche http://localhost:8025, SMTP: mailpit:1025):
+#   docker compose --profile mailtest up -d --build
+
 services:
-  dlzboard:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dlzboard
+      POSTGRES_USER: dlzboard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dlzboard}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dlzboard -d dlzboard"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
     build: .
     image: dlzboard:latest
-    container_name: dlzboard
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: dlzboard
+      PGUSER: dlzboard
+      PGPASSWORD: ${POSTGRES_PASSWORD:-dlzboard}
+      # Optional: Administrator beim ersten Start anlegen
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      # Hinter einem Reverse-Proxy auf 1 setzen (echte Client-IP für Rate-Limits)
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+    ports:
+      - "${PORT:-3000}:3000"
+    # Alte JSON-Boards einmalig übernehmen: Ordner mit boards/ und thumbs/ einbinden
+    # volumes:
+    #   - ./data:/import:ro
+
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: ["mailtest"]
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    volumes:
-      - dlzboard-data:/data
+      - "8025:8025"
 
 volumes:
-  dlzboard-data:
+  pgdata:
