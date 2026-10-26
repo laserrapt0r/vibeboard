@@ -273,7 +273,31 @@ export function penPath(points) {
 
 const dashFor = (el) => (el.dash === 'dotted' ? `${el.strokeWidth || 2} ${(el.strokeWidth || 2) * 2}` : el.dash ? `${(el.strokeWidth || 2) * 4} ${(el.strokeWidth || 2) * 3}` : '');
 
+const LINKABLE = new Set(['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame']);
+
+export function safeLink(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+  if (/^(https?:|mailto:)/i.test(u)) return u;
+  if (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(u)) return 'https://' + u;
+  return '';
+}
+
+function linkBadge(el) {
+  const href = safeLink(el.link);
+  if (!href || !LINKABLE.has(el.type)) return '';
+  const s = el.type === 'frame' ? 24 : Math.max(16, Math.min(28, Math.min(el.w, el.h) * 0.14));
+  const cx = el.type === 'frame' ? el.x + el.w - s : el.x + el.w - s * 0.75, cy = el.type === 'frame' ? el.y - s : el.y + s * 0.75;
+  const k = s / 24;
+  return `<g class="link-badge" data-link="${esc(href)}"><title>${esc(href)}</title><circle cx="${cx}" cy="${cy}" r="${s / 2}" fill="#4262ff"/>` +
+    `<g transform="translate(${cx - 12 * k * 0.6},${cy - 12 * k * 0.6}) scale(${k * 0.6})" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></g></g>`;
+}
+
 export function renderElement(el, env = {}) {
+  return renderBody(el, env) + (el.link ? linkBadge(el) : '');
+}
+
+function renderBody(el, env) {
   const get = env.get || (() => null);
   const { x = 0, y = 0, w = 0, h = 0 } = el;
   switch (el.type) {

@@ -962,6 +962,12 @@ function onDown(e) {
     return;
   }
 
+  const badge = e.target.closest && e.target.closest('.link-badge');
+  if (badge && e.button === 0 && app.tool === 'select') {
+    window.open(badge.dataset.link, '_blank', 'noopener');
+    return;
+  }
+
   const hit = hitInfo(e.target);
   const handle = e.target.closest && e.target.closest('[data-handle]');
   const qc = e.target.closest && e.target.closest('[data-qc]');

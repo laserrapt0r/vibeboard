@@ -435,10 +435,22 @@ function startPresentation(startId) {
   showSlide();
 }
 
+const mask = $('#present-mask');
+
+function positionMask() {
+  if (!present) return;
+  const f = getEl(present.list[present.i].id) || present.list[present.i];
+  const p1 = toScreen(f.x, f.y), p2 = toScreen(f.x + f.w, f.y + f.h);
+  Object.assign(mask.style, { left: p1.x + 'px', top: p1.y + 'px', width: p2.x - p1.x + 'px', height: p2.y - p1.y + 'px' });
+}
+
+app.on('view', positionMask);
+
 function showSlide() {
   if (!present) return;
   const f = present.list[present.i];
   const el = getEl(f.id) || f;
+  mask.classList.remove('hidden');
   fitTo({ x: el.x, y: el.y, w: el.w, h: el.h }, { pad: 24, maxZ: 8 });
   pbar.innerHTML = '';
   pbar.append(
@@ -461,6 +473,7 @@ function stopPresentation() {
   present = null;
   document.body.classList.remove('presenting');
   pbar.classList.add('hidden');
+  mask.classList.add('hidden');
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }
 

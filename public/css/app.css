@@ -220,6 +220,8 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
 #world .el-frame .frame-title, #world .el-frame .frame-title-text { cursor: move; }
 #world .el-frame .frame-title-text { pointer-events: none; }
 #world .el-comment { cursor: pointer; }
+#world .link-badge { cursor: pointer !important; }
+#world .link-badge:hover circle { fill: #2f4bdb; }
 #world g.editing text.t { opacity: 0; }
 #world text { white-space: pre; }
 
@@ -399,6 +401,7 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
   gap: 8px; padding: 4px 8px; opacity: 0.25; transition: opacity 0.2s;
 }
 #present-bar:hover { opacity: 1; }
+#present-mask { position: absolute; pointer-events: none; box-shadow: 0 0 0 100000px var(--canvas); }
 body.presenting .chrome, body.presenting #ctxbar, body.presenting #timer-widget { display: none !important; }
 body.presenting #stage { background-image: none; }
 

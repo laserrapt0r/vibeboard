@@ -3,7 +3,7 @@ import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
   saveUser, initials, relTime, rectsIntersect, throttle, uid,
 } from './util.js';
-import { SHAPES, shapeGeom, renderSvgDocument, elBounds } from './render.js';
+import { SHAPES, shapeGeom, renderSvgDocument, elBounds, safeLink } from './render.js';
 import { templateGallery } from './gallery.js';
 import {
   app, $, stage, getEl, bounds, setTool, saveToolOpts, selectedEls, selectionBounds, act, setEl, updateEl, deleteEls,
@@ -337,6 +337,15 @@ export function buildCtx() {
       items.push(ab);
     }
     if (items.length) items.push(sep());
+  }
+  if (one && !locked && ['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame'].includes(one.type)) {
+    items.push(toggleBtn('link', !!one.link, one.link ? 'Link: ' + one.link : 'Link hinzufügen', async () => {
+      const v = await promptDialog('Link', 'Adresse (leer lassen zum Entfernen)', one.link || 'https://');
+      if (v === null) return;
+      const href = safeLink(v);
+      if (v.trim() && v.trim() !== 'https://' && !href) return toast('Bitte eine gültige http(s)-Adresse angeben');
+      applySel({ link: href || undefined });
+    }));
   }
   const grouped = sel.some((e) => e.groupId);
   if (sel.length > 1 && !locked) items.push(actBtn('group', grouped ? 'Gruppierung aufheben (Strg+Umschalt+G)' : 'Gruppieren (Strg+G)', grouped ? ungroupSel : groupSel));

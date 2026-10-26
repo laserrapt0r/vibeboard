@@ -48,6 +48,7 @@ Falls `permission denied … docker.sock` erscheint, ist der Benutzer nicht in d
 - Tabellen (Zeilen/Spalten hinzufügen, Tab springt zur nächsten Zelle)
 - Mindmaps: Knoten auswählen und **Tab** (Unterknoten) bzw. **Enter** (Geschwister) drücken
 - Bilder per Upload, Drag & Drop oder Einfügen aus der Zwischenablage, Sticker/Emojis
+- Links an Elementen (Link-Symbol öffnet die Adresse)
 - Mehrzeiligen Text einfügen → eine Sticky Note pro Zeile
 
 **Bearbeiten**
@@ -67,7 +68,7 @@ Falls `permission denied … docker.sock` erscheint, ist der Benutzer nicht in d
 **Moderation**
 - Gemeinsamer Timer mit Signalton
 - Abstimmungen (Stimmen pro Person, verdeckte Stimmabgabe, Ergebnisliste)
-- Präsentationsmodus: Frames werden zu Folien (Vollbild, Pfeiltasten)
+- Präsentationsmodus: Frames werden zu Folien (Vollbild, Pfeiltasten, Umgebung ausgeblendet)
 
 **Export & Import**
 - PNG (ganzes Board oder Auswahl), SVG, PDF (je Frame eine Seite über den Druckdialog), JSON-Backup
