@@ -1,5 +1,12 @@
 .git
+.github
 data
+import
 node_modules
 *.log
+*.sql
 .env
+.env.*
+!.env.example
+README.md
+THIRD_PARTY_NOTICES.md

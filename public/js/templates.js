@@ -1,4 +1,4 @@
-// Vorlagen-Bibliothek – angelehnt an die typischen Miro-/Conceptboard-Vorlagen
+// Vorlagen-Bibliothek mit gängigen Moderations-, Agile- und Strategiemethoden
 import { uid, wrap } from './util.js';
 
 const C = {
@@ -305,7 +305,7 @@ export const TEMPLATES = [
   },
   {
     id: 'bmc', name: 'Business Model Canvas', category: 'Strategie', icon: '🏢',
-    description: 'Geschäftsmodell auf einer Seite – nach Osterwalder.',
+    description: 'Geschäftsmodell auf einer Seite. Business Model Canvas von Strategyzer AG, CC BY-SA 3.0.',
     build: () => {
       const b = new B();
       const X = 60, Y = 190, cw = 330, th = 700, bh = 330;
@@ -321,12 +321,13 @@ export const TEMPLATES = [
       b.block(X, Y + th, cw * 2.5, bh, '💸 Kostenstruktur', 'Welches sind die wichtigsten Kosten? Welche Ressourcen und Aktivitäten sind am teuersten?');
       b.block(X + cw * 2.5, Y + th, cw * 2.5, bh, '💰 Einnahmequellen', 'Wofür sind Kunden bereit zu zahlen? Wie würden sie am liebsten bezahlen?');
       b.sticky(X + cw * 2 + 30, Y + 140, 'Unser Wertversprechen', C.yellow);
+      b.text(X, Y + th + bh + 12, 1600, 'Deutsche Adaption des „Business Model Canvas“ von Strategyzer AG (strategyzer.com), lizenziert unter CC BY-SA 3.0 (creativecommons.org/licenses/by-sa/3.0).', 12, { color: '#8a8a8a' });
       return b.els;
     },
   },
   {
     id: 'lean', name: 'Lean Canvas', category: 'Strategie', icon: '🚀',
-    description: 'Geschäftsidee für Startups schnell validieren.',
+    description: 'Geschäftsidee für Startups schnell validieren. Lean Canvas von Ash Maurya, CC BY-SA 3.0.',
     build: () => {
       const b = new B();
       const X = 60, Y = 190, cw = 330, th = 700, bh = 300;
@@ -341,32 +342,33 @@ export const TEMPLATES = [
       b.block(X + cw * 4, Y, cw, th, '🎯 Kundensegmente', 'Zielkunden und Nutzer.\n\nEarly Adopters: Wer sind die ersten Kunden?');
       b.block(X, Y + th, cw * 2.5, bh, '💸 Kostenstruktur', 'Akquisekosten, Vertriebskosten, Hosting, Personal …');
       b.block(X + cw * 2.5, Y + th, cw * 2.5, bh, '💰 Einnahmequellen', 'Erlösmodell, Customer Lifetime Value, Umsatz, Marge');
+      b.text(X, Y + th + bh + 12, 1600, 'Deutsche Adaption des „Lean Canvas“ von Ash Maurya (leanstack.com), eine Abwandlung des Business Model Canvas, lizenziert unter CC BY-SA 3.0.', 12, { color: '#8a8a8a' });
       return b.els;
     },
   },
   {
-    id: 'vpc', name: 'Value Proposition Canvas', category: 'Strategie', icon: '💎',
-    description: 'Wertangebot und Kundenprofil aufeinander abstimmen.',
+    id: 'vpc', name: 'Angebot & Kundenprofil', category: 'Strategie', icon: '💎',
+    description: 'Prüfen, ob das eigene Angebot zu Aufgaben, Problemen und Wünschen der Kunden passt.',
     build: () => {
       const b = new B();
-      b.frame(0, 0, 1720, 1000, 'Value Proposition Canvas');
-      b.heading(60, 40, 'Value Proposition Canvas', 'Passt unser Angebot zu den Bedürfnissen der Kunden?', 1200);
+      b.frame(0, 0, 1720, 1000, 'Angebot & Kundenprofil');
+      b.heading(60, 40, 'Angebot & Kundenprofil', 'Passt unser Angebot zu den Bedürfnissen der Kunden?', 1200);
       const sx = 80, sy = 220, s = 700;
       b.shape(sx, sy, s, s, { fill: LIGHT.blue, stroke: '#1a1a1a', strokeWidth: 2, locked: true });
       b.line(sx, sy + s / 2, sx + s / 2, sy + s / 2);
       b.line(sx + s / 2, sy, sx + s / 2, sy + s);
       b.text(sx + 20, sy + 20, 320, '🎁 Produkte & Services', 20, { bold: true });
-      b.text(sx + s / 2 + 20, sy + 20, 320, '📈 Gewinn-Erzeuger', 20, { bold: true });
-      b.text(sx + s / 2 + 20, sy + s / 2 + 20, 320, '💊 Schmerz-Killer', 20, { bold: true });
+      b.text(sx + s / 2 + 20, sy + 20, 320, '📈 Nutzen schaffen', 20, { bold: true });
+      b.text(sx + s / 2 + 20, sy + s / 2 + 20, 320, '💊 Probleme lösen', 20, { bold: true });
       b.text(sx + 20, sy + s - 60, 320, 'Wertangebot', 26, { bold: true, color: '#4262ff' });
       const cx = 940, cy = 220;
       b.shape(cx, cy, s, s, { shape: 'ellipse', fill: LIGHT.yellow, stroke: '#1a1a1a', strokeWidth: 2, locked: true });
       b.line(cx + s / 2, cy + s / 2, cx + s / 2 - s * 0.354, cy + s / 2 - s * 0.354);
       b.line(cx + s / 2, cy + s / 2, cx + s / 2 - s * 0.354, cy + s / 2 + s * 0.354);
       b.line(cx + s / 2, cy + s / 2, cx + s, cy + s / 2);
-      b.text(cx + 400, cy + 180, 260, '😊 Gewinne', 20, { bold: true });
+      b.text(cx + 400, cy + 180, 260, '😊 Wünsche', 20, { bold: true });
       b.text(cx + 400, cy + 480, 260, '😣 Probleme', 20, { bold: true });
-      b.text(cx + 60, cy + 330, 220, '🧰 Kundenaufgaben', 20, { bold: true });
+      b.text(cx + 60, cy + 330, 220, '🧰 Aufgaben', 20, { bold: true });
       b.text(cx + s - 220, cy + s - 40, 260, 'Kundenprofil', 26, { bold: true, color: '#e8590c' });
       b.line(sx + s + 20, sy + s / 2 - 30, cx - 20, sy + s / 2 - 30, { arrowEnd: true, arrowStart: true, strokeWidth: 3, dash: true });
       b.text(sx + s + 30, sy + s / 2 - 80, 140, 'Fit?', 24, { bold: true, align: 'center' });
@@ -511,15 +513,15 @@ export const TEMPLATES = [
     })), { colW: 240, colH: 640, stickies: 0 }),
   },
   {
-    id: 'six-hats', name: 'Sechs Denkhüte', category: 'Brainstorming', icon: '🎩',
-    description: 'Ein Thema aus sechs Perspektiven betrachten (de Bono).',
-    build: () => columnsTemplate('Sechs Denkhüte', 'Thema: …', [
-      { title: 'Weiß', emoji: '🤍', color: '#f1f3f5', light: LIGHT.grey, hint: 'Fakten & Informationen' },
-      { title: 'Rot', emoji: '❤️', color: '#ffa8a8', light: LIGHT.red, hint: 'Gefühle & Intuition' },
-      { title: 'Schwarz', emoji: '🖤', color: '#adb5bd', light: LIGHT.grey, hint: 'Risiken & Bedenken' },
-      { title: 'Gelb', emoji: '💛', color: '#ffe066', light: LIGHT.yellow, hint: 'Chancen & Vorteile' },
-      { title: 'Grün', emoji: '💚', color: '#8ce99a', light: LIGHT.green, hint: 'Kreativität & neue Ideen' },
-      { title: 'Blau', emoji: '💙', color: '#74c0fc', light: LIGHT.blue, hint: 'Überblick & Moderation' },
+    id: 'six-hats', name: 'Sechs Perspektiven', category: 'Brainstorming', icon: '🎨',
+    description: 'Ein Thema nacheinander aus sechs Blickwinkeln betrachten.',
+    build: () => columnsTemplate('Sechs Perspektiven', 'Thema: …', [
+      { title: 'Fakten', emoji: '📊', color: '#f1f3f5', light: LIGHT.grey, hint: 'Was wissen wir? Welche Informationen fehlen?' },
+      { title: 'Gefühle', emoji: '❤️', color: '#ffa8a8', light: LIGHT.red, hint: 'Was sagt das Bauchgefühl?' },
+      { title: 'Risiken', emoji: '⚠️', color: '#adb5bd', light: LIGHT.grey, hint: 'Was könnte schiefgehen?' },
+      { title: 'Chancen', emoji: '☀️', color: '#ffe066', light: LIGHT.yellow, hint: 'Welche Vorteile bietet es?' },
+      { title: 'Ideen', emoji: '💡', color: '#8ce99a', light: LIGHT.green, hint: 'Welche neuen Ansätze gibt es?' },
+      { title: 'Vorgehen', emoji: '🧭', color: '#74c0fc', light: LIGHT.blue, hint: 'Was ist der nächste Schritt?' },
     ], { colW: 260, colH: 640 }),
   },
   {

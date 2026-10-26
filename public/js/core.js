@@ -1950,7 +1950,7 @@ export function pasteText(text, at) {
     addElements([el]);
     return;
   }
-  // Mehrere Zeilen -> eine Sticky Note pro Zeile (wie in Miro)
+  // Mehrere Zeilen -> eine Sticky Note pro Zeile
   const cols = Math.ceil(Math.sqrt(lines.length));
   const size = 200, gap = 20;
   const ox = at.x - (cols * (size + gap)) / 2, oy = at.y - (Math.ceil(lines.length / cols) * (size + gap)) / 2;

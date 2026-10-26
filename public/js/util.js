@@ -364,7 +364,10 @@ export function confirmDialog(title, text, okLabel = 'OK', danger = false) {
   });
 }
 
-/* ---------------- Icons (Lucide-Stil, inline) ---------------- */
+/* ---------------- Icons ----------------
+ * Ein Teil der Pfade stammt aus bzw. basiert auf Lucide (https://lucide.dev, ISC-Lizenz)
+ * und Feather (https://feathericons.com, MIT-Lizenz). Lizenztexte: THIRD_PARTY_NOTICES.md
+ */
 
 const I = (d, extra = '') =>
   `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;

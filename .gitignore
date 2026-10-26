@@ -1,5 +1,30 @@
-data/
+# Abhängigkeiten
 node_modules/
-*.log
-.DS_Store
+
+# Nutzerdaten und Laufzeitdaten – niemals einchecken
+data/
+import/
+*.sql
+*.sql.gz
+*.dump
+*.sqlite
+*.db
+pgdata/
+
+# Zugangsdaten und lokale Konfiguration
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Protokolle und Systemdateien
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editoren
+.vscode/
+.idea/
+*.swp

@@ -1,7 +1,7 @@
 {
   "name": "dlzboard",
   "version": "2.0.0",
-  "description": "Kollaboratives Online-Whiteboard (wie Miro / Conceptboard) mit Benutzerverwaltung und PostgreSQL",
+  "description": "Kollaboratives Online-Whiteboard mit Echtzeit-Zusammenarbeit, Vorlagen, Benutzerverwaltung und PostgreSQL",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
