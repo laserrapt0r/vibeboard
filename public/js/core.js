@@ -3,7 +3,7 @@ import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
   debounce, throttle, toast, contrastText, STICKY_COLORS, api,
 } from './util.js';
-import { renderElement, elBounds, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint } from './render.js';
+import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint } from './render.js';
 import { Sync } from './sync.js';
 
 const boardId = location.pathname.split('/').filter(Boolean).pop();
@@ -151,7 +151,7 @@ export function fitTo(rect, { pad = 80, animate = true, maxZ = 2 } = {}) {
 }
 
 export function fitAll(animate = true) {
-  const b = unionRect([...app.els.values()].map(bounds));
+  const b = unionRect([...app.els.values()].filter((e) => !isOrphan(e, getEl)).map(bounds));
   if (b) fitTo(b, { animate, maxZ: 1 });
   else {
     const r = stage.getBoundingClientRect();
@@ -346,9 +346,19 @@ export function deleteEls(ids) {
 }
 
 function applySnapshot(map) {
+  const removed = new Set();
   for (const [id, el] of map) {
     if (el) setEl(clone(el));
-    else deleteEl(id);
+    else {
+      deleteEl(id);
+      removed.add(id);
+    }
+  }
+  // Verbindungen, die inzwischen an gelöschte Elemente gehängt wurden, ebenfalls entfernen
+  if (removed.size) {
+    for (const el of [...app.els.values()]) {
+      if (el.type === 'connector' && ((el.from?.id && removed.has(el.from.id)) || (el.to?.id && removed.has(el.to.id)))) deleteEl(el.id);
+    }
   }
   for (const id of [...app.sel]) if (!app.els.has(id)) app.sel.delete(id);
   selectionChanged();
@@ -357,6 +367,7 @@ function applySnapshot(map) {
 
 export function undo() {
   if (app.editing) finishEdit();
+  if (drag || tx) return;
   const e = undoStack.pop();
   if (!e) return;
   applySnapshot(e.before);
@@ -365,6 +376,8 @@ export function undo() {
 }
 
 export function redo() {
+  if (app.editing) finishEdit();
+  if (drag || tx) return;
   const e = redoStack.pop();
   if (!e) return;
   applySnapshot(e.after);
@@ -382,11 +395,20 @@ export function applyRemoteOp(op) {
     if (!prev || prev.z !== op.el.z) orderDirty = true;
     if (op.el.z > maxZ) maxZ = op.el.z;
     markDirty(op.el.id);
+    const ed = app.editing;
+    if (ed && ed.id === op.el.id) {
+      // Noch nichts getippt: fremden Text übernehmen; sonst gewinnt die eigene Eingabe beim nächsten Tastendruck
+      if (!ed.dirty) {
+        const v = ed.cell ? op.el.cells?.[ed.cell[0]]?.[ed.cell[1]] : op.el[ed.field];
+        if (v !== undefined && v !== editor.value) editor.value = v ?? '';
+      }
+      requestAnimationFrame(layoutEditor);
+    }
   } else if (op.op === 'delete') {
     app.els.delete(op.id);
     if (app.sel.delete(op.id)) selectionChanged();
     markDirty(op.id);
-    if (app.editing && app.editing.id === op.id) cancelEditUI();
+    if (app.editing && app.editing.id === op.id) abortEdit();
   }
 }
 
@@ -735,7 +757,7 @@ export function layoutEditor() {
   const ed = app.editing;
   if (!ed) return;
   const el = getEl(ed.id);
-  if (!el) return cancelEditUI();
+  if (!el || !cellValid(el, ed.cell)) return abortEdit();
   const { box, lay, align, valign, color, z } = editorGeometry(el);
   const p = toScreen(box.x, box.y);
   const textH = Math.max(1, lay.lines.length) * lay.size * LH;
@@ -758,11 +780,17 @@ export function layoutEditor() {
   });
 }
 
+function cellValid(el, cell) {
+  if (!cell) return true;
+  return el.type === 'table' && cell[0] < el.rows && cell[1] < el.cols && Array.isArray(el.cells?.[cell[0]]);
+}
+
 editor.addEventListener('input', () => {
   const ed = app.editing;
   if (!ed) return;
   const el = getEl(ed.id);
-  if (!el) return;
+  if (!el || !cellValid(el, ed.cell)) return abortEdit();
+  ed.dirty = true;
   if (ed.cell) {
     const cells = el.cells.map((r) => [...r]);
     cells[ed.cell[0]][ed.cell[1]] = editor.value;
@@ -814,6 +842,14 @@ export function finishEdit() {
   if (!ed) return;
   const el = getEl(ed.id);
   if (el && el.type === 'text' && !String(el.text || '').trim()) deleteEls([el.id]);
+  cancelEditUI();
+  commit();
+}
+
+// Bearbeitung von außen beendet (Element gelöscht o. Ä.): Oberfläche schließen und die in startEdit
+// geöffnete Transaktion abschließen, damit die Undo-Historie nicht hängen bleibt
+export function abortEdit() {
+  if (!app.editing) return;
   cancelEditUI();
   commit();
 }
@@ -942,7 +978,10 @@ function onDown(e) {
   if (pointers.size === 2) {
     // Pinch-Zoom
     const [a, b] = [...pointers.values()];
-    if (drag && drag.tx) commit();
+    if (drag && drag.tx) {
+      commit();
+      app.emit('dragging', false);
+    }
     drag = { mode: 'pinch', dist: Math.hypot(a.x - b.x, a.y - b.y), z: app.view.z, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, vx: app.view.x, vy: app.view.y };
     draftRect = null;
     marquee = null;
@@ -997,10 +1036,10 @@ function onDown(e) {
         const k = handle.dataset.handle;
         begin();
         if (k === 'from' || k === 'to') {
-          drag = { mode: 'conn-end', start, end: k, id: [...app.sel][0] };
+          drag = { mode: 'conn-end', start, end: k, id: [...app.sel][0], tx: true };
         } else {
           const sel = selectedEls().filter((x) => !x.locked);
-          drag = { mode: 'resize', start, handle: k, ob: selectionBounds(), origs: sel.map(clone) };
+          drag = { mode: 'resize', start, handle: k, ob: selectionBounds(), origs: sel.map(clone), tx: true };
         }
         return;
       }
@@ -1123,7 +1162,7 @@ function startMove(e, start) {
       if (cand.x.length > 900) break;
     }
   }
-  drag = { mode: 'move', start, origs, ob, cand, moved: false };
+  drag = { mode: 'move', start, origs, ob, cand, moved: false, tx: true };
 }
 
 function onMove(e) {
@@ -1200,7 +1239,7 @@ function onMove(e) {
           }
         }
       }
-      for (const o of drag.origs) setEl(translated(o, dx, dy));
+      for (const o of drag.origs) applyGeom(o, translated(o, dx, dy));
       app.emit('dragging', true);
       return;
     }
@@ -1216,7 +1255,7 @@ function onMove(e) {
       if (k.includes('n')) { y = ob.y + dy; bh = ob.h - dy; }
       const keep = e.shiftKey || drag.origs.some((o) => ['image', 'emoji'].includes(o.type)) || drag.origs.length > 1;
       if (keep && k.length === 2) {
-        const f = Math.max(bw / ob.w, bh / ob.h);
+        const f = Math.max(bw / (ob.w || 1), bh / (ob.h || 1));
         bw = ob.w * f;
         bh = ob.h * f;
         if (k.includes('w')) x = ob.x + ob.w - bw;
@@ -1235,7 +1274,7 @@ function onMove(e) {
       bh = Math.max(10, bh);
       const nb = { x, y, w: bw, h: bh };
       const single = drag.origs.length === 1 && k.length === 2;
-      for (const o of drag.origs) setEl(scaleEl(o, ob, nb, single));
+      for (const o of drag.origs) applyGeom(o, scaleEl(o, ob, nb, single));
       app.emit('dragging', true);
       return;
     }
@@ -1309,6 +1348,17 @@ function onMove(e) {
       eraseAt(e);
       return;
   }
+}
+
+// Nur Position/Größe auf den aktuellen Stand übertragen – Änderungen anderer (Text, Farbe) bleiben erhalten,
+// und während des Ziehens gelöschte Elemente werden nicht wiederbelebt
+const GEOM_KEYS = ['x', 'y', 'w', 'h', 'points', 'from', 'to', 'fontSize'];
+function applyGeom(orig, moved) {
+  const cur = getEl(orig.id);
+  if (!cur) return;
+  const n = { ...cur };
+  for (const k of GEOM_KEYS) if (k in moved) n[k] = moved[k];
+  setEl(n);
 }
 
 function bestSnap(vals, cands, thr) {
@@ -1706,14 +1756,15 @@ window.addEventListener('keydown', (e) => {
   if (document.querySelector('.modal-back')) return;
   const mod = e.ctrlKey || e.metaKey;
   const key = e.key.toLowerCase();
+  // Zuerst Module (z. B. Präsentation) reagieren lassen, damit dort auch die Leertaste ankommt
+  app.emit('key', e);
+  if (e.defaultPrevented) return;
   if (e.key === ' ' && !spaceDown) {
     spaceDown = true;
     stage.classList.add('space');
     e.preventDefault();
     return;
   }
-  app.emit('key', e);
-  if (e.defaultPrevented) return;
   if (mod && key === 'z') {
     e.preventDefault();
     if (e.shiftKey) redo();
@@ -1829,6 +1880,12 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (TOOL_KEYS[key] && !e.altKey) setTool(TOOL_KEYS[key]);
+});
+
+// Leertaste losgelassen, während ein anderes Fenster aktiv war
+window.addEventListener('blur', () => {
+  spaceDown = false;
+  stage.classList.remove('space');
 });
 
 window.addEventListener('keyup', (e) => {
@@ -1969,7 +2026,8 @@ export function initCore() {
   stage.classList.toggle('nogrid', !app.settings.grid);
   applyView(true);
   window.addEventListener('resize', () => applyView(true));
-  window.addEventListener('beforeunload', () => app.sync.flush());
+  window.addEventListener('pagehide', () => app.sync.flushNow());
+  window.addEventListener('beforeunload', () => app.sync.flushNow());
   return !!saved;
 }
 

@@ -133,19 +133,20 @@ function userMenu(anchor, u) {
 
 function editUser(u) {
   const isNew = !u;
+  const self = !!u && u.id === me.id; // eigene Rolle/Status nicht hier ändern (Selbstaussperrung)
   const err = errorBox();
   const username = h('input', { type: 'text', value: u ? u.username : '', disabled: !isNew, required: true });
   const display = h('input', { type: 'text', value: u ? (u.displayName === u.username ? '' : u.displayName) : '' });
   const email = h('input', { type: 'email', value: u ? u.email : '' });
-  const role = h('select', {}, h('option', { value: 'user', selected: !u || u.role === 'user' }, 'Benutzer'), h('option', { value: 'admin', selected: u && u.role === 'admin' }, 'Administrator'));
-  const status = h('select', { disabled: isNew }, Object.entries(STATUS).map(([k, [l]]) => h('option', { value: k, selected: u ? u.status === k : k === 'active' }, l)));
+  const role = h('select', { disabled: self }, h('option', { value: 'user', selected: !u || u.role === 'user' }, 'Benutzer'), h('option', { value: 'admin', selected: u && u.role === 'admin' }, 'Administrator'));
+  const status = h('select', { disabled: isNew || self }, Object.entries(STATUS).map(([k, [l]]) => h('option', { value: k, selected: u ? u.status === k : k === 'active' }, l)));
   const pw = h('input', { type: 'password', autocomplete: 'new-password', required: isNew, minlength: 8, placeholder: isNew ? '' : 'unverändert lassen' });
   const form = h('form', { class: 'form', onsubmit: async (e) => {
     e.preventDefault();
     err.hide();
     try {
       if (isNew) await api('/api/admin/users', { method: 'POST', body: { username: username.value, displayName: display.value, email: email.value, role: role.value, password: pw.value } });
-      else await api('/api/admin/users/' + u.id, { method: 'PATCH', body: { displayName: display.value, email: email.value, role: role.value, status: status.value, ...(pw.value ? { password: pw.value } : {}) } });
+      else await api('/api/admin/users/' + u.id, { method: 'PATCH', body: { displayName: display.value, email: email.value, ...(self ? {} : { role: role.value, status: status.value }), ...(pw.value ? { password: pw.value } : {}) } });
       m.close();
       toast(isNew ? 'Benutzer angelegt' : 'Gespeichert');
       users();
@@ -220,9 +221,13 @@ async function boards() {
           '-',
           { label: 'Löschen', icon: 'trash', danger: true, onClick: async () => {
             if (!(await confirmDialog('Board löschen', `„${b.name}“ wird unwiderruflich gelöscht.`, 'Löschen', true))) return;
-            await api('/api/boards/' + b.id, { method: 'DELETE' }).catch((e) => toast(e.message));
-            toast('Board gelöscht');
-            boards();
+            try {
+              await api('/api/boards/' + b.id, { method: 'DELETE' });
+              toast('Board gelöscht');
+              boards();
+            } catch (e) {
+              toast(e.message);
+            }
           } },
         ], { placement: 'left' });
         return h('tr', {},

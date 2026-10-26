@@ -72,6 +72,7 @@ const server = http.createServer(async (req, res) => {
       const m = router.match(req.method, url.pathname);
       if (!m) throw new HttpError(404, 'Nicht gefunden');
       if (m.methodNotAllowed) throw new HttpError(405, 'Methode nicht erlaubt');
+      if (m.badRequest) throw new HttpError(400, 'Ungültige Adresse');
       return await m.handler(req, res, { params: m.params, url });
     }
     return await handlePage(req, res, url);
@@ -108,6 +109,7 @@ async function shutdown() {
   }
   process.exit(0);
 }
+process.on('unhandledRejection', (e) => console.error('Unbehandelter Fehler:', e));
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 

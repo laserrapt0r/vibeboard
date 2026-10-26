@@ -45,6 +45,7 @@ Die Tabellen werden beim Start automatisch angelegt bzw. migriert.
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` | – | Legt diesen Administrator an, falls es ihn noch nicht gibt |
 | `DATA_DIR` | `./data` | Ordner mit alten JSON-Boards für den einmaligen Import |
 | `TRUST_PROXY` | `0` | `1` hinter einem Reverse-Proxy (wertet `X-Forwarded-For` aus) |
+| `PUBLIC_URL` | – | Öffentliche Adresse für Links in E-Mails (alternativ in der Administration) |
 
 ## Benutzer und Rechte
 
@@ -183,6 +184,11 @@ auf. Beim Beenden (SIGTERM/SIGINT) werden offene Änderungen gespeichert.
 - Session-Cookie `HttpOnly`, `SameSite=Lax`, bei HTTPS `Secure`. In der Datenbank steht nur der Hash des Tokens.
 - CSRF-Schutz: Alle ändernden API-Aufrufe müssen den Header `X-DLZ: 1` tragen.
 - Rate-Limits für Anmeldung, Registrierung und „Kennwort vergessen“.
+- Links in E-Mails (Kennwort-Reset, Einladungen) entstehen nur aus der konfigurierten öffentlichen Adresse. Ohne
+  Konfiguration wird die Adresse der Anfrage nur übernommen, wenn sie auf diesen Rechner zeigt (localhost, eigener
+  Hostname oder eigene IP). Das verhindert, dass ein gefälschter `Host`-Header Reset-Links auf fremde Seiten umlenkt.
+- Board-Elemente werden auf dem Server und beim Darstellen geprüft: Farben nur aus einer Whitelist, Koordinaten nur
+  als Zahlen. So lässt sich kein Markup oder Skript in das SVG einschleusen.
 - Für den Betrieb im Internet HTTPS über einen Reverse-Proxy (Caddy, nginx, Traefik) und `TRUST_PROXY=1` setzen.
 
 ## Hinweise

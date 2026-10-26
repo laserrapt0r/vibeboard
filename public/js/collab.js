@@ -2,7 +2,7 @@
 import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util.js';
 import {
   app, $, stage, getEl, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
-  loadElements, applyRemoteOp, scheduleRender, rerenderAll, setSelection, finishEdit, initCore,
+  loadElements, applyRemoteOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore,
 } from './core.js';
 import { menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
 
@@ -537,6 +537,9 @@ export function initCollab() {
     if (msg.role && msg.role !== app.role) return location.reload();
     app.serverOffset = msg.serverTime - Date.now();
     loadElements(msg.board.elements);
+    // Eigene, noch nicht bestätigte Änderungen wieder anwenden – sie werden gleich (erneut) gesendet
+    for (const op of app.sync.pendingOps()) applyRemoteOp(op);
+    if (app.editing && !getEl(app.editing.id)) abortEdit();
     app.name = msg.board.name;
     app.session = msg.board.session || { timer: null, voting: null };
     app.peers.clear();

@@ -112,13 +112,52 @@ export function shapeTextBox(kind, x, y, w, h, pad = 10) {
 
 /* ---------------- Verbindungen ---------------- */
 
+/* ---------------- Absicherung ---------------- */
+
+// Elemente stammen von anderen Teilnehmenden oder aus Importen. Alles, was in SVG-Attribute geschrieben wird,
+// muss eine echte Zahl bzw. eine gültige Farbe sein – sonst könnte Markup eingeschleust werden.
+const COLOR_RE = /^(#[0-9a-f]{3,8}|transparent|none|rgba?\(\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*(,\s*[\d.]+%?\s*)?\))$/i;
+const fin = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const SHAPE_KEYS = new Set(SHAPES.map(([k]) => k));
+
+export function safeEl(el) {
+  const o = { ...el };
+  for (const k of ['x', 'y', 'w', 'h', 'strokeWidth', 'rows', 'cols', 'opacity']) if (k in o) o[k] = fin(o[k]);
+  if (o.fontSize != null && o.fontSize !== 'auto') o.fontSize = fin(o.fontSize) || 16;
+  for (const k of ['fill', 'stroke', 'textColor', 'color', 'headerFill']) {
+    if (!(k in o)) continue;
+    if (typeof o[k] === 'string' && COLOR_RE.test(o[k].trim())) o[k] = o[k].trim();
+    else delete o[k];
+  }
+  if (o.type === 'shape' && !SHAPE_KEYS.has(o.shape)) o.shape = 'rect';
+  if (o.type === 'pen') o.points = Array.isArray(o.points) ? o.points.map((p) => [fin(p && p[0]), fin(p && p[1])]) : [];
+  if (o.type === 'connector') {
+    const end = (e) => (e && e.id ? { id: String(e.id), side: e.side } : { x: fin(e && e.x), y: fin(e && e.y), side: e && e.side });
+    o.from = end(o.from);
+    o.to = end(o.to);
+  }
+  if (o.type === 'table') {
+    o.rows = Math.max(1, Math.min(200, Math.round(o.rows) || 1));
+    o.cols = Math.max(1, Math.min(50, Math.round(o.cols) || 1));
+  }
+  return o;
+}
+
 export function elBounds(el, get) {
   if (el.type === 'connector') {
     const g = connectorGeom(el, get);
     return g ? g.bbox : { x: 0, y: 0, w: 0, h: 0 };
   }
-  if (el.type === 'comment') return { x: el.x, y: el.y - 30, w: 30, h: 30 };
-  return { x: el.x, y: el.y, w: el.w, h: el.h };
+  if (el.type === 'comment') return { x: fin(el.x), y: fin(el.y) - 30, w: 30, h: 30 };
+  return { x: fin(el.x), y: fin(el.y), w: fin(el.w), h: fin(el.h) };
+}
+
+// Verbindungen, deren Ziel nicht (mehr) existiert, haben keine Geometrie
+export function isOrphan(el, get) {
+  return el.type === 'connector' && !connectorGeom(el, get);
 }
 
 const SIDE_VEC = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -142,7 +181,7 @@ function autoSide(b, toward) {
 function endTarget(end, get) {
   if (end && end.id) {
     const t = get(end.id);
-    if (t && t.type !== 'connector') return t;
+    if (t && t.type !== 'connector') return { x: fin(t.x), y: fin(t.y), w: fin(t.w), h: fin(t.h) };
   }
   return null;
 }
@@ -150,7 +189,7 @@ function endTarget(end, get) {
 function centerOf(end, get) {
   const t = endTarget(end, get);
   if (t) return { x: t.x + t.w / 2, y: t.y + t.h / 2 };
-  return { x: end?.x ?? 0, y: end?.y ?? 0 };
+  return { x: fin(end?.x), y: fin(end?.y) };
 }
 
 function freeSide(from, to) {
@@ -166,14 +205,14 @@ export function connectorGeom(el, get) {
   const c1 = centerOf(el.from, get), c2 = centerOf(el.to, get);
   let p1, p2, s1, s2;
   if (t1) {
-    s1 = el.from.side || autoSide(t1, c2);
+    s1 = (SIDE_VEC[el.from.side] && el.from.side) || autoSide(t1, c2);
     p1 = sidePoint(t1, s1);
   } else p1 = c1;
   if (t2) {
-    s2 = el.to.side || autoSide(t2, t1 ? sidePoint(t1, s1) : c1);
+    s2 = (SIDE_VEC[el.to.side] && el.to.side) || autoSide(t2, t1 ? sidePoint(t1, s1) : c1);
     p2 = sidePoint(t2, s2);
   } else p2 = c2;
-  if (t1 && !el.from.side && t2) {
+  if (t1 && !SIDE_VEC[el.from.side] && t2) {
     s1 = autoSide(t1, p2);
     p1 = sidePoint(t1, s1);
   }
@@ -294,6 +333,7 @@ function linkBadge(el) {
 }
 
 export function renderElement(el, env = {}) {
+  el = safeEl(el);
   return renderBody(el, env) + (el.link ? linkBadge(el) : '');
 }
 
@@ -434,8 +474,10 @@ function renderBody(el, env) {
 export function renderSvgDocument(elements, { padding = 40, background = '#ffffff', width, height, bounds } = {}) {
   const map = new Map(elements.map((e) => [e.id, e]));
   const get = (id) => map.get(id);
-  const list = sortForRender(elements.filter((e) => e.type !== 'comment'));
-  const b = bounds || unionRect(list.map((e) => elBounds(e, get))) || { x: 0, y: 0, w: 100, h: 100 };
+  const list = sortForRender(elements.filter((e) => e.type !== 'comment' && !isOrphan(e, get)));
+  const b = (bounds && { x: fin(bounds.x), y: fin(bounds.y), w: fin(bounds.w), h: fin(bounds.h) }) ||
+    unionRect(list.map((e) => elBounds(e, get))) || { x: 0, y: 0, w: 100, h: 100 };
+  padding = fin(padding);
   const vb = { x: b.x - padding, y: b.y - padding, w: b.w + padding * 2, h: b.h + padding * 2 };
   // Rahmentitel ragen über den Frame hinaus
   if (!bounds && list.some((e) => e.type === 'frame')) {
@@ -445,7 +487,7 @@ export function renderSvgDocument(elements, { padding = 40, background = '#fffff
   const body = list.map((e) => `<g>${renderElement(e, { get })}</g>`).join('');
   return {
     svg: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" width="${width || vb.w}" height="${height || vb.h}"><defs>${defsMarkup()}</defs>` +
-      (background ? `<rect x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="${background}"/>` : '') + body + '</svg>',
+      (background ? `<rect x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="${esc(background)}"/>` : '') + body + '</svg>',
     viewBox: vb,
   };
 }

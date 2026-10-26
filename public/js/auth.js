@@ -10,8 +10,12 @@ if (loadPref('settings', {}).dark) document.body.classList.add('dark');
 
 // Nur relative Ziele innerhalb der Anwendung zulassen
 function nextUrl() {
-  const n = params.get('next') || '/';
-  return n.startsWith('/') && !n.startsWith('//') ? n : '/';
+  try {
+    const u = new URL(params.get('next') || '/', location.origin);
+    return u.origin === location.origin ? u.pathname + u.search + u.hash : '/';
+  } catch {
+    return '/';
+  }
 }
 
 const logo = () => h('div', { class: 'auth-brand', html: `<svg viewBox="0 0 32 32" width="40" height="40"><rect x="2" y="2" width="28" height="28" rx="7" fill="#4262ff"/><rect x="8" y="8" width="9" height="9" rx="1.5" fill="#fff9b1"/><rect x="15" y="15" width="9" height="9" rx="1.5" fill="#ffcee0"/></svg><span></span>` });

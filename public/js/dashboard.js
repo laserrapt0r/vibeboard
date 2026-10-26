@@ -101,9 +101,13 @@ function boardMenu(anchor, b) {
       }
     } } : null,
     { label: 'Duplizieren', icon: 'copy', onClick: async () => {
-      await api(`/api/boards/${b.id}/duplicate`, { method: 'POST' }).catch((e) => toast(e.message));
-      toast('Board dupliziert – die Kopie gehört dir');
-      load();
+      try {
+        await api(`/api/boards/${b.id}/duplicate`, { method: 'POST' });
+        toast('Board dupliziert – die Kopie gehört dir');
+        load();
+      } catch (e) {
+        toast(e.message);
+      }
     } },
     { label: 'Link kopieren', icon: 'link', onClick: async () => {
       try {
@@ -116,13 +120,23 @@ function boardMenu(anchor, b) {
     '-',
     owner ? { label: 'Löschen', icon: 'trash', danger: true, onClick: async () => {
       if (await confirmDialog('Board löschen', `„${b.name}“ wird für alle Mitglieder unwiderruflich gelöscht.`, 'Löschen', true)) {
-        await api('/api/boards/' + b.id, { method: 'DELETE' }).catch((e) => toast(e.message));
-        toast('Board gelöscht');
-        load();
+        try {
+          await api('/api/boards/' + b.id, { method: 'DELETE' });
+          toast('Board gelöscht');
+          load();
+        } catch (e) {
+          toast(e.message);
+        }
       }
-    } } : { label: 'Aus meiner Liste entfernen', icon: 'close', danger: true, onClick: async () => {
-      await api(`/api/boards/${b.id}/members/${me.id}`, { method: 'DELETE' }).catch((e) => toast(e.message));
-      load();
+    } } : { label: b.member ? 'Board verlassen …' : 'Aus meiner Liste entfernen', icon: 'close', danger: true, onClick: async () => {
+      // Mitglieder verlieren dabei den Zugriff – nur nach Rückfrage
+      if (b.member && !(await confirmDialog('Board verlassen', `Du verlierst den Zugriff auf „${b.name}“, bis du erneut eingeladen wirst.`, 'Verlassen', true))) return;
+      try {
+        await api(`/api/boards/${b.id}/members/${me.id}`, { method: 'DELETE' });
+        load();
+      } catch (e) {
+        toast(e.message);
+      }
     } },
   ], { placement: 'bottom' });
 }

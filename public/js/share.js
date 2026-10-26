@@ -1,5 +1,5 @@
 // Teilen-Dialog: Link-Freigabe und Mitglieder eines Boards verwalten
-import { h, api, modal, toast, initials, debounce } from './util.js';
+import { h, api, modal, toast, initials, debounce, confirmDialog } from './util.js';
 
 const LINK_OPTIONS = [
   ['private', '🔒 Nur eingeladene Personen'],
@@ -38,8 +38,10 @@ export async function openShareDialog(boardId, { me, onLeave } = {}) {
     const access = h('select', { disabled: !owner, onchange: async (e) => {
       try {
         await api(`/api/boards/${boardId}`, { method: 'PATCH', body: { linkAccess: e.target.value } });
+        info.linkAccess = e.target.value;
         toast('Freigabe geändert');
       } catch (ex) {
+        e.target.value = info.linkAccess;
         toast(ex.message);
       }
     } }, LINK_OPTIONS.map(([v, l]) => h('option', { value: v, selected: v === info.linkAccess }, l)));
@@ -94,18 +96,33 @@ export async function openShareDialog(boardId, { me, onLeave } = {}) {
       if (owner) {
         controls = h('div', { class: 'row' },
           h('select', { onchange: async (e) => {
-            await api(`/api/boards/${boardId}/members/${mem.id}`, { method: 'PATCH', body: { role: e.target.value } }).catch((ex) => toast(ex.message));
-            toast('Rolle geändert');
+            try {
+              await api(`/api/boards/${boardId}/members/${mem.id}`, { method: 'PATCH', body: { role: e.target.value } });
+              mem.role = e.target.value;
+              toast('Rolle geändert');
+            } catch (ex) {
+              e.target.value = mem.role;
+              toast(ex.message);
+            }
           } }, h('option', { value: 'editor', selected: mem.role === 'editor' }, 'bearbeiten'), h('option', { value: 'viewer', selected: mem.role === 'viewer' }, 'ansehen')),
           h('button', { type: 'button', class: 'btn small', title: 'Entfernen', onclick: async () => {
-            await api(`/api/boards/${boardId}/members/${mem.id}`, { method: 'DELETE' }).catch((ex) => toast(ex.message));
-            render();
+            try {
+              await api(`/api/boards/${boardId}/members/${mem.id}`, { method: 'DELETE' });
+              render();
+            } catch (ex) {
+              toast(ex.message);
+            }
           } }, 'Entfernen'));
       } else if (me && mem.id === me.id) {
         controls = h('button', { type: 'button', class: 'btn small danger', onclick: async () => {
-          await api(`/api/boards/${boardId}/members/${mem.id}`, { method: 'DELETE' });
-          m.close();
-          onLeave ? onLeave() : (location.href = '/');
+          if (!(await confirmDialog('Board verlassen', 'Du verlierst den Zugriff auf dieses Board, bis du erneut eingeladen wirst.', 'Verlassen', true))) return;
+          try {
+            await api(`/api/boards/${boardId}/members/${mem.id}`, { method: 'DELETE' });
+            m.close();
+            onLeave ? onLeave() : (location.href = '/');
+          } catch (ex) {
+            toast(ex.message);
+          }
         } }, 'Board verlassen');
       }
       list.append(row(mem, mem.role === 'editor' ? 'darf bearbeiten' : 'darf ansehen', controls));

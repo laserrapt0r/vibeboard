@@ -530,7 +530,9 @@ export function renderSidePanel() {
   side.classList.toggle('hidden', !sidePanel);
   document.querySelectorAll('[data-panel]').forEach((b) => b.classList.toggle('active', b.dataset.panel === sidePanel));
   if (!sidePanel) return;
-  if (side.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;
+  // Nicht neu aufbauen, während jemand in ein Textfeld des Panels tippt (Checkboxen sind unkritisch)
+  const ae = document.activeElement;
+  if (side.contains(ae) && ae.tagName === 'INPUT' && ae.type !== 'checkbox') return;
   side.innerHTML = '';
   const close = iconBtn('close', 'Schließen', () => toggleSidePanel(sidePanel));
   if (sidePanel === 'frames') {
@@ -691,6 +693,7 @@ importInput.addEventListener('change', () => {
 });
 
 async function importFile(file) {
+  if (app.viewOnly) return toast('Du darfst dieses Board nur ansehen.');
   try {
     const data = JSON.parse(await file.text());
     const list = Array.isArray(data) ? data : Array.isArray(data.elements) ? data.elements : Object.values(data.elements || {});
@@ -934,9 +937,13 @@ mini.addEventListener('pointerdown', (e) => {
   const up = () => {
     mini.removeEventListener('pointermove', mv);
     mini.removeEventListener('pointerup', up);
+    mini.removeEventListener('pointercancel', up);
+    mini.removeEventListener('lostpointercapture', up);
   };
   mini.addEventListener('pointermove', mv);
   mini.addEventListener('pointerup', up);
+  mini.addEventListener('pointercancel', up);
+  mini.addEventListener('lostpointercapture', up);
 });
 
 app.on('render', drawMinimap);

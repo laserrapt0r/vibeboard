@@ -13,6 +13,7 @@ export class Sync {
     this.handlers = {};
     this.connected = false;
     this.inflight = Promise.resolve();
+    this.sending = [];
   }
 
   on(type, fn) {
@@ -78,35 +79,63 @@ export class Sync {
 
   flush() {
     this.flushTimer = null;
+    const ops = this.take();
+    if (!ops.length) return this.inflight;
+    // Reihenfolge der Pakete sicherstellen
+    this.inflight = this.inflight.then(() => this.post(ops));
+    return this.inflight;
+  }
+
+  take() {
     const ops = [...this.queue.values(), ...this.extra];
     this.queue.clear();
     this.extra = [];
-    if (!ops.length) return this.inflight;
-    // Reihenfolge der Pakete sicherstellen
-    this.inflight = this.inflight.then(() =>
-      fetch(`/api/boards/${this.boardId}/ops`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-DLZ': '1' },
-        body: JSON.stringify({ clientId: this.clientId, ops }),
-        keepalive: JSON.stringify(ops).length < 60000,
+    return ops;
+  }
+
+  post(ops) {
+    const body = JSON.stringify({ clientId: this.clientId, ops });
+    this.sending.push(ops);
+    return fetch(`/api/boards/${this.boardId}/ops`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-DLZ': '1' },
+      body,
+      keepalive: body.length < 60000, // Browser erlauben keepalive nur bis 64 KB
+    })
+      .then(async (r) => {
+        const res = await r.json().catch(() => ({}));
+        // 409: Verbindung (noch) nicht registriert – nach dem Wiederverbinden erneut senden
+        if (r.status === 409 || r.status >= 500) throw new Error(res.error || 'retry');
+        if (res.voting !== undefined) this.emit('voting', res.voting);
+        if (res.error) this.emit('error', res.error);
       })
-        .then(async (r) => {
-          const res = await r.json().catch(() => ({}));
-          // 409: Verbindung (noch) nicht registriert – nach dem Wiederverbinden erneut senden
-          if (r.status === 409 || r.status >= 500) throw new Error(res.error || 'retry');
-          if (res.voting !== undefined) this.emit('voting', res.voting);
-          if (res.error) this.emit('error', res.error);
-        })
-        .catch(() => {
-          // Bei Verbindungsproblemen erneut einreihen
-          for (const o of ops) {
-            if (o.op === 'upsert' && !this.queue.has(o.el.id)) this.queue.set(o.el.id, o);
-            else if (o.op === 'delete' && !this.queue.has(o.id)) this.queue.set(o.id, o);
-          }
-          setTimeout(() => this.schedule(), 1500);
-        }),
-    );
-    return this.inflight;
+      .catch(() => {
+        // Bei Verbindungsproblemen erneut einreihen – neuere Änderungen am selben Element haben Vorrang
+        const rest = [];
+        for (const o of ops) {
+          if (o.op === 'upsert') !this.queue.has(o.el.id) && this.queue.set(o.el.id, o);
+          else if (o.op === 'delete') !this.queue.has(o.id) && this.queue.set(o.id, o);
+          else rest.push(o);
+        }
+        this.extra.unshift(...rest);
+        setTimeout(() => this.schedule(), 1500);
+      })
+      .finally(() => {
+        this.sending = this.sending.filter((x) => x !== ops);
+      });
+  }
+
+  // Beim Verlassen der Seite: sofort senden, ohne auf laufende Pakete zu warten
+  flushNow() {
+    clearTimeout(this.flushTimer);
+    this.flushTimer = null;
+    const ops = this.take();
+    if (ops.length) this.post(ops);
+  }
+
+  // Noch nicht bestätigte eigene Änderungen (für den Abgleich nach einem Wiederverbinden)
+  pendingOps() {
+    return [...this.sending.flat(), ...this.queue.values()].filter((o) => o.op === 'upsert' || o.op === 'delete');
   }
 
   signal(kind, data) {

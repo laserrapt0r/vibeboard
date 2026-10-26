@@ -246,12 +246,37 @@ export function savePref(key, val) {
 
 /* ---------------- UI-Helfer ---------------- */
 
+// Läuft ein asynchroner Handler noch, werden weitere Klicks bzw. Absendungen ignoriert
+// und die Schaltflächen gesperrt – verhindert doppelte Anfragen
+function guardAsync(el, fn) {
+  return (e) => {
+    if (el._busy) {
+      e.preventDefault();
+      return;
+    }
+    const r = fn(e);
+    if (!r || typeof r.then !== 'function') return;
+    const btns = el.tagName === 'FORM' ? [...el.querySelectorAll('button')] : [el];
+    const prev = btns.map((b) => b.disabled);
+    el._busy = true;
+    btns.forEach((b) => (b.disabled = true));
+    r.finally(() => {
+      el._busy = false;
+      btns.forEach((b, i) => (b.disabled = prev[i]));
+    }).catch((err) => {
+      console.error(err);
+      toast(err.message || 'Aktion fehlgeschlagen');
+    });
+  };
+}
+
 export function h(tag, attrs = {}, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v == null || v === false) continue;
     if (k === 'class') el.className = v;
     else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if ((k === 'onsubmit' && tag === 'form') || (k === 'onclick' && tag === 'button')) el.addEventListener(k.slice(2), guardAsync(el, v));
     else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
     else if (k === 'html') el.innerHTML = v;
     else el.setAttribute(k, v === true ? '' : v);

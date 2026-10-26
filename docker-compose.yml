@@ -36,6 +36,8 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      # Öffentliche Adresse für Links in E-Mails (alternativ in der Administration einstellbar)
+      PUBLIC_URL: ${PUBLIC_URL:-}
       # Hinter einem Reverse-Proxy auf 1 setzen (echte Client-IP für Rate-Limits)
       TRUST_PROXY: ${TRUST_PROXY:-0}
     ports:

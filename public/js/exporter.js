@@ -1,5 +1,6 @@
 // Export: SVG, PNG, JSON, PDF (Druck), Vorschaubilder
 import { renderSvgDocument } from './render.js';
+import { esc } from './util.js';
 
 export function download(name, blobOrUrl) {
   const a = document.createElement('a');
@@ -50,7 +51,8 @@ export async function thumbnail(elements) {
 }
 
 /* Jeder Frame wird zu einer Druckseite – über den Druckdialog als PDF speichern */
-export async function printFrames(elements, frames, title) {
+export async function printFrames(elements, frames, rawTitle) {
+  const title = esc(rawTitle);
   const win = window.open('', '_blank');
   if (!win) throw new Error('Pop-up wurde blockiert');
   win.document.write(`<!doctype html><title>${title}</title><p style="font-family:sans-serif">PDF wird vorbereitet …</p>`);
