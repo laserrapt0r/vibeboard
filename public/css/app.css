@@ -212,7 +212,8 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
 #laser { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
 #layer-overlay *, #layer-votes, #layer-draft, #layer-draft * { pointer-events: none; }
-#layer-overlay [data-handle], #layer-overlay [data-qc], #layer-overlay [data-qc] * { pointer-events: all; }
+#layer-overlay [data-handle], #layer-overlay [data-handle] *, #layer-overlay [data-qc], #layer-overlay [data-qc] * { pointer-events: all; }
+#layer-overlay .wp-add, #layer-overlay .wp { cursor: move; }
 #layer-overlay [data-qc] { cursor: crosshair; }
 #layer-overlay .qc:hover circle:first-child { fill-opacity: 0.3; }
 [data-handle=nw], [data-handle=se] { cursor: nwse-resize; }
@@ -601,6 +602,9 @@ body.dark .form-error { background: #3b1f22; color: #ffa8a8; border-color: #5c2a
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 .stat-tile { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.stat-tile.warn { border-color: #fa5252; box-shadow: inset 0 0 0 1px #fa5252; }
+.stat-tile .spark { height: 36px; margin-top: 10px; }
+.stat-tile .spark svg { width: 100%; height: 100%; display: block; }
 .stat-label { color: var(--muted); font-size: 13px; }
 .stat-value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
 .stat-sub { color: var(--muted); font-size: 12px; }

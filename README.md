@@ -15,10 +15,30 @@ liegen in PostgreSQL.
 - Frontend in reinem JavaScript und SVG, ohne Build-Schritt.
 - Backend in Node.js mit nur drei Abhängigkeiten (`pg`, `nodemailer`, `uqr`).
 
+![Zusammenarbeit in Echtzeit: Mauszeiger mit Namen, Auswahl einer anderen Person und Cursor-Chat](docs/screenshots/zusammenarbeit.png)
+
+---
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Board-Übersicht mit „Meine Aufgaben“](docs/screenshots/uebersicht.png) | ![Sprint-Planung mit Aufgaben-Panel und Schätzrunde](docs/screenshots/sprint-schaetzrunde.png) |
+| **Übersicht:** eigene und geteilte Boards, „Meine Aufgaben“ über alle Boards | **Sprint-Planung:** Karten mit Priorität und Story Points, Aufgaben-Panel, Schätzrunde mit verdeckten Karten |
+| ![Architekturdiagramm mit gebogenem Verbinder und Knickpunkten](docs/screenshots/architektur-verbinder.png) | ![Dialog „Diagramm aus Text“ mit Live-Vorschau](docs/screenshots/diagramm-aus-text.png) |
+| **Verbinder:** frei andocken, biegen, Knickpunkte, Linienenden | **Diagramm aus Text:** Mermaid-Schreibweise wird zu bearbeitbaren Formen |
+| ![API-Design mit Tabelle und Code-Block](docs/screenshots/api-design-code.png) | ![Vorlage Incident-Postmortem](docs/screenshots/incident-postmortem.png) |
+| **Softwareentwicklung:** Tabellen und Code-Blöcke mit Syntaxhervorhebung | **IT-Service-Management:** z. B. Incident-Postmortem |
+| ![Vorlagen-Galerie, Kategorie IT-Service-Management](docs/screenshots/vorlagen.png) | ![Administration mit Systemmetriken](docs/screenshots/administration.png) |
+| **Über 65 Vorlagen** in 10 Kategorien | **Administration:** Übersicht mit CPU, Arbeitsspeicher, Speicherplatz und mehr |
+
+Alle Inhalte in den Screenshots sind Beispieldaten.
+
 ---
 
 ## Inhalt
 
+- [Screenshots](#screenshots)
 - [Funktionen](#funktionen)
 - [Vorlagen](#vorlagen)
 - [Installation](#installation)
@@ -28,6 +48,7 @@ liegen in PostgreSQL.
 - [Administration](#administration)
 - [Virenschutz für Uploads](#virenschutz-für-uploads)
 - [Versionen und Upgrades](#versionen-und-upgrades)
+- [Protokollierung](#protokollierung)
 - [Sicherheit](#sicherheit)
 - [Datenhaltung und Datenschutz](#datenhaltung-und-datenschutz)
 - [Architektur](#architektur)
@@ -50,7 +71,7 @@ liegen in PostgreSQL.
 | **Sticky Notes** | 16 Farben, automatische Schriftgröße, optional mit Name der Autorin bzw. des Autors |
 | **Text** | Schriftgröße, Farbe, fett, kursiv, Ausrichtung, Hintergrund |
 | **Formen** | 28 Formen in drei Gruppen: Grundformen (Rechteck, Ellipse, Raute, Stern, Wolke, Sprechblase u. a.), Flussdiagramm & UML (Dokument, Unterprozess, Verzögerung, Datenbank, Notiz, Paket, Komponente, Akteur), Software & IT (Server, Warteschlange, Container, Browser, Endgerät, Firewall) – mit Füllung, Rahmen, Strichart und Text |
-| **Verbindungen** | gerade, gewinkelt oder als Kurve; Pfeilspitzen, Beschriftung, Strichart; haften an Elementen |
+| **Verbindungen** | gerade, gewinkelt oder als Kurve; docken an jeder Stelle des Umrisses an (oder automatisch); Linie ziehen biegt sie, Knickpunkte einfügen, verschieben und entfernen; verschiebbare Beschriftung; 9 Linienenden (Pfeil, Raute, Kreis, Krähenfuß u. a.), Strichart |
 | **Quick Connect** | Punkte an einem ausgewählten Element anklicken oder ziehen, um verbundene Elemente zu erzeugen |
 | **Freihand** | Stift, Textmarker, Radierer |
 | **Frames** | Bereiche bzw. Folien mit Formaten (16:9, 4:3, A4, Quadrat, Smartphone); der Inhalt wandert beim Verschieben mit |
@@ -217,6 +238,8 @@ Umgebungsvariablen (bei Docker in der `.env`):
 | `BACKUP_KEEP` | `10` | Anzahl aufbewahrter Sicherungen |
 | `BACKUP_BEFORE_UPGRADE` | `1` | `0` überspringt die Sicherung (nicht empfohlen) |
 | `ALLOW_DOWNGRADE` | `0` | `1` erlaubt den Start einer älteren Version auf einer neueren Datenbank (nicht empfohlen) |
+| `LOG_LEVEL` | `info` | Protokollstufe: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `silent`; in der Administration zur Laufzeit änderbar |
+| `LOG_FORMAT` | `text` | `text` (lesbar) oder `json` (eine JSON-Zeile je Eintrag, z. B. für Loki, Elasticsearch, Graylog) |
 | `DATA_DIR` | `./data` | Ordner mit JSON-Boards einer früheren dateibasierten Version für einen einmaligen Import |
 
 Alle weiteren Einstellungen nimmst du in der Administration vor.
@@ -276,6 +299,14 @@ Unter `/admin`, nur für Administratoren:
   - fehlgeschlagene Anmeldungen der letzten 24 Stunden
   - Boards, aktive Verbindungen, Datenbankgröße
   - Hinweise auf wartende Freigaben und fehlende Einstellungen
+  - **Systemmetriken**, alle 5 Sekunden aktualisiert, mit Verlauf der letzten 10 Minuten:
+    - CPU-Auslastung von vibeboard und des Hosts, Systemlast
+    - Arbeitsspeicher von vibeboard und des Containers bzw. Hosts
+    - Reaktionszeit der Ereignisschleife
+    - freier Speicherplatz für Anwendung und Sicherungen
+    - Datenbankverbindungen und Cache-Trefferquote
+    - Echtzeit-Verbindungen, Laufzeit, Node.js-Version
+    - Kacheln mit Engpässen werden rot hervorgehoben.
 - **Benutzerverwaltung:**
   - Suche und Filter (wartend, unbestätigt, deaktiviert, Admins, ohne Zwei-Faktor)
   - Benutzer anlegen, bevorzugt per Einladungs-Mail, sodass die Person ihr Kennwort selbst festlegt
@@ -355,6 +386,36 @@ Unter `/admin`, nur für Administratoren:
   (vorher `docker compose stop app`).
 
 ---
+
+## Protokollierung
+
+- **Stufen** nach üblichem Schema:
+
+  | Stufe | Inhalt |
+  |---|---|
+  | `fatal` | Fehler, die den Betrieb beenden (z. B. Start fehlgeschlagen) |
+  | `error` | Fehler, die jemand beheben sollte (z. B. E-Mail-Versand, Speichern, unerwartete Serverfehler mit Stacktrace) |
+  | `warn` | Auffälligkeiten ohne Ausfall (z. B. Upgrade ohne Sicherung, abgelehnte Uploads, langsame Anfragen über 2 s) |
+  | `info` | wichtige Abläufe (Start, Upgrades, geänderte Protokollstufe) – **Standard** |
+  | `debug` | zusätzlich jede Anfrage (Methode, Pfad, Status, Dauer) und abgelehnte Anfragen |
+  | `trace` | alles |
+
+- **Einstellen:**
+  - Per `LOG_LEVEL`, oder in der Administration unter „Allgemein → Protokollierung“.
+  - Die Einstellung in der Administration gilt sofort und bleibt über Neustarts erhalten.
+- **Format:**
+  - `LOG_FORMAT=text` erzeugt lesbare Zeilen mit Zeitstempel (UTC), Stufe, Komponente und Feldern.
+  - `LOG_FORMAT=json` schreibt eine JSON-Zeile je Eintrag, für Log-Sammelsysteme.
+  - Fehler und Warnungen gehen nach stderr, alles andere nach stdout.
+  - Ansehen im Docker-Setup: `docker compose logs -f app`.
+- **Request-ID:**
+  - Jede Anfrage erhält eine ID. Sie steht im Header `X-Request-Id` und an allen Protokolleinträgen dieser Anfrage.
+  - Bei Serverfehlern erhält auch der Browser die ID, damit sich ein Fehler im Protokoll wiederfinden lässt.
+  - Ein vorgeschalteter Proxy kann eine eigene ID mitgeben.
+- **Datensparsamkeit:**
+  - Kennwörter, Tokens, Cookies und Schlüssel werden automatisch geschwärzt.
+  - IP-Adressen, E-Mail-Adressen, Query-Parameter und Inhalte von Boards werden nicht protokolliert.
+  - Sicherheitsrelevante Ereignisse stehen getrennt davon im Sicherheitsprotokoll der Administration.
 
 ## Sicherheit
 

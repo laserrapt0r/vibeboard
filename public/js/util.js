@@ -91,6 +91,9 @@ export function measure(text, size, bold, italic) {
   return w;
 }
 
+// Wörter dürfen nach einem Bindestrich umbrechen („KI-|Zusammenfassung“)
+const chunksOf = (para) => para.split(' ').flatMap((word, i) => word.split(/(?<=-)(?=.)/).map((t, k) => ({ t, sp: i > 0 && k === 0 })));
+
 export function wrap(text, maxW, size, bold, italic) {
   const lines = [];
   for (const para of String(text ?? '').split('\n')) {
@@ -99,8 +102,8 @@ export function wrap(text, maxW, size, bold, italic) {
       continue;
     }
     let line = '';
-    for (const word of para.split(' ')) {
-      const test = line ? line + ' ' + word : word;
+    for (const { t: word, sp } of chunksOf(para)) {
+      const test = line ? line + (sp ? ' ' : '') + word : word;
       if (measure(test, size, bold, italic) <= maxW) {
         line = test;
         continue;
@@ -131,11 +134,13 @@ export function fitText(text, w, h, bold, lh = 1.25) {
   if (hit) return hit;
   let res = null;
   const maxSize = Math.max(6, Math.min(h * 0.45, w * 0.3));
-  const words = String(text || '').split(/\s+/).filter(Boolean);
-  // 1. Durchgang: keine Wörter zerteilen, 2. Durchgang: notfalls doch
-  for (const noBreak of [true, false]) {
+  // Unterhalb dieser Größe wird ein langes Wort lieber umbrochen als weiter verkleinert
+  const readable = Math.min(14, maxSize);
+  const words = String(text || '').split(/\s+/).filter(Boolean).flatMap((wd) => wd.split(/(?<=-)(?=.)/));
+  const passes = [[true, readable], [false, 0], [true, 0]];
+  for (const [noBreak, minSize] of passes) {
     for (const s of FIT_SIZES) {
-      if (s > maxSize) continue;
+      if (s > maxSize || s < minSize) continue;
       if (noBreak && words.some((wd) => measure(wd, s, bold) > w)) continue;
       const lines = wrap(text || '', w, s, bold);
       if (lines.length * s * lh <= h && lines.every((l) => measure(l, s, bold) <= w + 0.5)) {

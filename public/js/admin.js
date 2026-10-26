@@ -68,8 +68,60 @@ function route() {
 
 /* ---------------- Übersicht ---------------- */
 
+/* ---------------- Systemmetriken ---------------- */
+
+const pct = (v) => (v == null ? '–' : `${String(Math.round(v * 10) / 10).replace('.', ',')} %`);
+
+// Kleines Verlaufsdiagramm (letzte 10 Minuten) als SVG
+function sparkline(values, max, color = '#4262ff') {
+  if (values.length < 2) return h('div', { class: 'spark empty' });
+  const w = 200, ht = 36, top = Math.max(max || 0, ...values, 1e-9);
+  const pts = values.map((v, i) => `${((i / (values.length - 1)) * w).toFixed(1)},${(ht - (v / top) * (ht - 2) - 1).toFixed(1)}`).join(' ');
+  return h('div', { class: 'spark', html: `<svg viewBox="0 0 ${w} ${ht}" preserveAspectRatio="none"><polyline points="0,${ht} ${pts} ${w},${ht}" fill="${color}" fill-opacity="0.12" stroke="none"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>` });
+}
+
+function renderSystem(box, m) {
+  const tile = (label, value, sub, extra, warn) => h('div', { class: 'stat-tile' + (warn ? ' warn' : '') }, h('div', { class: 'stat-label' }, label), h('div', { class: 'stat-value' }, value), sub ? h('div', { class: 'stat-sub' }, sub) : null, extra || null);
+  const mem = m.memory;
+  const memTotal = mem.containerLimit || mem.hostTotal;
+  const memUsed = mem.containerLimit ? mem.containerUsed : mem.hostTotal - mem.hostFree;
+  const memPct = memTotal ? (memUsed / memTotal) * 100 : null;
+  const hist = m.history || [];
+  box.innerHTML = '';
+  box.append(h('div', { class: 'stat-grid' },
+    tile('CPU (vibeboard)', pct(m.cpu.process), `${String(m.cpu.cores).replace('.', ',')} Kern${m.cpu.cores === 1 ? '' : 'e'} · Host ${pct(m.cpu.host)} · Last ${m.cpu.load.map((v) => v.toFixed(2).replace('.', ',')).join(' / ')}`,
+      sparkline(hist.map((x) => x.cpu), 100), m.cpu.process > 80),
+    tile('Arbeitsspeicher (vibeboard)', fmtBytes(mem.rss), `JavaScript-Heap ${fmtBytes(mem.heapUsed)} von ${fmtBytes(mem.heapTotal)}`,
+      sparkline(hist.map((x) => x.rss), 0, '#12b886')),
+    tile(mem.containerLimit ? 'Arbeitsspeicher (Container)' : 'Arbeitsspeicher (Host)', pct(memPct), `${fmtBytes(memUsed)} von ${fmtBytes(memTotal)} belegt${mem.containerLimit ? '' : ' · kein Container-Limit'}`, null, memPct > 90),
+    tile('Reaktionszeit (Ereignisschleife)', m.eventLoopLagMs == null ? '–' : `${String(Math.round(m.eventLoopLagMs * 10) / 10).replace('.', ',')} ms`,
+      `99 % unter ${m.eventLoopLagP99Ms == null ? '–' : String(Math.round(m.eventLoopLagP99Ms)) + ' ms'} · unter 10 ms ist gut`, sparkline(hist.map((x) => x.lag), 50, '#f59f00'), m.eventLoopLagMs > 50),
+    ...m.disks.map((d) => tile(d.path === m.disks[0].path ? 'Speicherplatz (Anwendung)' : 'Speicherplatz (Sicherungen)', `${fmtBytes(d.free)} frei`,
+      `von ${fmtBytes(d.total)} · ${pct(100 - (d.free / d.total) * 100)} belegt`, null, d.free / d.total < 0.1)),
+    tile('Datenbank-Verbindungen', `${m.db.connections}`, `Pool je Instanz: ${m.db.poolSize} · Cache-Trefferquote ${pct(m.db.cacheHit)}`),
+    tile('Echtzeit', `${m.realtime.online} verbunden`, `${m.realtime.activeBoards} aktive Boards · ${m.realtime.boardsInMemory} im Arbeitsspeicher`),
+    tile('Laufzeit', fmtUptime(m.uptime.process), `Host seit ${fmtUptime(m.uptime.host)} · Node.js ${m.node} · ${m.platform}`),
+  ), h('p', { class: 'muted small' }, 'Wird alle 5 Sekunden aktualisiert. Verlauf: letzte 10 Minuten. Rote Kacheln weisen auf Engpässe hin.'));
+}
+
+let metricsTimer = null;
+
 async function overview() {
   const o = await api('/api/admin/overview');
+  const systemBox = h('div', {}, h('p', { class: 'muted' }, 'Wird geladen …'));
+  const refresh = async () => {
+    if (!document.body.contains(systemBox)) {
+      clearInterval(metricsTimer);
+      metricsTimer = null;
+      return;
+    }
+    try {
+      renderSystem(systemBox, await api('/api/admin/metrics'));
+    } catch {}
+  };
+  clearInterval(metricsTimer);
+  metricsTimer = setInterval(refresh, 5000);
+  setTimeout(refresh, 0);
   const tile = (label, value, sub) => h('div', { class: 'stat-tile' }, h('div', { class: 'stat-label' }, label), h('div', { class: 'stat-value' }, value), sub ? h('div', { class: 'stat-sub' }, sub) : null);
   const pending = o.users.pending || 0;
   const total = (o.users.active || 0) + pending + (o.users.disabled || 0);
@@ -95,6 +147,7 @@ async function overview() {
         o.virusScanner.reachable ? `${o.virusScanner.engine} · Signaturen ${o.virusScanner.signatures}${o.virusScanner.signaturesDate ? ' vom ' + new Date(o.virusScanner.signaturesDate).toLocaleDateString('de-DE') : ''} · ${o.uploadsBlocked30d} blockiert (30 Tage)` : ''),
       tile('System', 'v' + o.version, `Laufzeit ${fmtUptime(o.uptime)} · ${o.disposableDomains.toLocaleString('de-DE')} gesperrte Wegwerf-Domains`),
     ),
+    h('div', { class: 'version-history' }, h('h3', {}, 'System'), systemBox),
     o.versionHistory.length ? h('div', { class: 'version-history' }, h('h3', {}, 'Versionshistorie'),
       h('table', { class: 'admin-table' }, h('thead', {}, h('tr', {}, ['Version', 'vorher', 'Schema', 'Sicherung vor dem Upgrade', 'gestartet'].map((t) => h('th', {}, t)))),
         h('tbody', {}, o.versionHistory.map((v) => h('tr', {}, h('td', {}, h('b', {}, v.version)), h('td', {}, v.previous || '–'), h('td', {}, v.schema),
@@ -356,8 +409,21 @@ function changeOwner(b, userList) {
 
 /* ---------------- Allgemeine Einstellungen ---------------- */
 
+const LOG_LEVELS = [
+  ['trace', 'trace – alles, auch Einzelschritte (nur zur Fehlersuche)'],
+  ['debug', 'debug – zusätzlich jede Anfrage und abgelehnte Anfragen'],
+  ['info', 'info – Start, Upgrades, wichtige Abläufe (empfohlen)'],
+  ['warn', 'warn – nur Warnungen und Fehler'],
+  ['error', 'error – nur Fehler'],
+  ['fatal', 'fatal – nur Fehler, die den Betrieb beenden'],
+  ['silent', 'silent – nichts protokollieren'],
+];
+
 async function settings() {
-  const s = (await api('/api/admin/settings')).general;
+  const all = await api('/api/admin/settings');
+  const s = all.general;
+  const logLevel = h('select', {}, h('option', { value: '' }, `Vorgabe aus LOG_LEVEL (${all.logInfo.envLevel})`),
+    LOG_LEVELS.map(([v, l]) => h('option', { value: v, selected: all.logging.level === v }, l)));
   const err = errorBox();
   const siteName = h('input', { type: 'text', value: s.siteName, maxlength: 60 });
   const baseUrl = h('input', { type: 'url', value: s.baseUrl, placeholder: location.origin });
@@ -369,7 +435,7 @@ async function settings() {
     try {
       await api('/api/admin/settings', { method: 'PUT', body: { general: {
         siteName: siteName.value, baseUrl: baseUrl.value, registration: form.querySelector('input[name=reg]:checked').value, notifyAdmins: notifyAdmins.checked,
-      } } });
+      }, logging: { level: logLevel.value } } });
       toast('Einstellungen gespeichert');
     } catch (ex) {
       err.show(ex.message);
@@ -384,6 +450,10 @@ async function settings() {
     radio('closed', 'Geschlossen', 'Nur Administratoren legen Konten an bzw. laden ein.'),
     h('label', { class: 'check' }, notifyAdmins, 'Administratoren per E-Mail über Registrierungen informieren, die auf Freigabe warten'),
     h('p', { class: 'muted small' }, 'Die E-Mail-Bestätigung ist immer erforderlich. Regeln für Kennwörter und E-Mail-Domains findest du unter „Sicherheit“.')),
+  h('fieldset', {}, h('legend', {}, 'Protokollierung (Server-Log)'),
+    h('label', {}, 'Protokollstufe', logLevel, h('span', { class: 'field-hint' },
+      `Gilt sofort, ohne Neustart. Aktuell: ${all.logInfo.current} · Ausgabeformat: ${all.logInfo.format === 'json' ? 'JSON' : 'Text'} (LOG_FORMAT). Das Protokoll erscheint in der Konsole bzw. in „docker compose logs app“. Geheimnisse wie Kennwörter und Tokens werden geschwärzt, IP-Adressen nicht protokolliert.`)),
+    h('p', { class: 'muted small' }, 'Sicherheitsrelevante Ereignisse (Anmeldungen, Änderungen) stehen unabhängig davon im „Protokoll“ der Administration.')),
   err.el,
   h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, 'Speichern')));
   section('Allgemeine Einstellungen', form);
@@ -519,7 +589,7 @@ async function legal() {
     privacy: { label: 'Datenschutzerklärung', path: '/datenschutz', template: PRIVACY_TEMPLATE },
   };
   let current = (location.hash.split('/')[1] === 'privacy') ? 'privacy' : 'imprint';
-  const texts = { imprint: l.imprint, privacy: l.privacy };
+  const texts = { imprint: l.imprint || '', privacy: l.privacy || '' };
   const err = errorBox();
   const tabs = h('div', { class: 'seg' });
   const editor = h('textarea', { class: 'legal-editor', rows: 24, spellcheck: true });
@@ -579,6 +649,8 @@ async function legal() {
   h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, 'Speichern & veröffentlichen'),
     h('span', { class: 'muted small' }, 'Leere Texte werden nicht veröffentlicht; die Links verschwinden dann automatisch.')));
   section('Impressum & Datenschutz', form);
+  // Gespeicherten Text zuerst in den Editor laden – select() übernimmt sonst den leeren Editor als Text
+  editor.value = texts[current] || '';
   select(current);
 }
 

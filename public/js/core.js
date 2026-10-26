@@ -3,7 +3,8 @@ import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
   debounce, throttle, toast, contrastText, STICKY_COLORS, api,
 } from './util.js';
-import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO } from './render.js';
+import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
+  outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong } from './render.js';
 import { THEMES } from './highlight.js';
 import { Sync } from './sync.js';
 
@@ -512,6 +513,7 @@ export function translated(o, dx, dy) {
   if (o.type === 'connector') {
     if (!o.from.id) n.from = { ...o.from, x: o.from.x + dx, y: o.from.y + dy };
     if (!o.to.id) n.to = { ...o.to, x: o.to.x + dx, y: o.to.y + dy };
+    if (o.waypoints && o.waypoints.length) n.waypoints = waypointsOf(o).map((p) => ({ x: p.x + dx, y: p.y + dy }));
   } else {
     n.x = o.x + dx;
     n.y = o.y + dy;
@@ -526,6 +528,7 @@ function scaleEl(o, ob, nb, singleCorner) {
     const n = { ...o };
     if (!o.from.id) n.from = { ...o.from, x: mx(o.from.x), y: my(o.from.y) };
     if (!o.to.id) n.to = { ...o.to, x: mx(o.to.x), y: my(o.to.y) };
+    if (o.waypoints && o.waypoints.length) n.waypoints = waypointsOf(o).map((p) => ({ x: mx(p.x), y: my(p.y) }));
     return n;
   }
   if (o.type === 'comment') return { ...o, x: mx(o.x), y: my(o.y) };
@@ -578,12 +581,12 @@ export function frames() {
   return [...app.els.values()].filter((e) => e.type === 'frame').sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || a.y - b.y || a.x - b.x);
 }
 
-function elementAt(wx, wy, exclude) {
+function elementAt(wx, wy, exclude, pad = 0) {
   const list = sortForRender([...app.els.values()]).reverse();
   for (const el of list) {
     if (exclude && exclude.has(el.id)) continue;
     if (el.type === 'connector' || el.type === 'pen' || el.type === 'comment' || el.type === 'frame') continue;
-    if (wx >= el.x && wx <= el.x + el.w && wy >= el.y && wy <= el.y + el.h) return el;
+    if (wx >= el.x - pad && wx <= el.x + el.w + pad && wy >= el.y - pad && wy <= el.y + el.h + pad) return el;
   }
   return null;
 }
@@ -612,6 +615,42 @@ const escXml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': 
 let marquee = null;
 let guides = [];
 let hoverTarget = null;
+let hoverAnchor = null; // Andockpunkt beim Ziehen eines Verbinders: { end, pt }
+
+const SIDES = ['top', 'right', 'bottom', 'left'];
+const r3 = (v) => Math.round(v * 1000) / 1000;
+
+// Wo dockt ein Verbinder an, wenn er an Punkt w über Element t losgelassen wird?
+//  – nahe einer Seitenmitte: diese Seite
+//  – nahe dem Umriss: fester Punkt auf dem Umriss
+//  – im Inneren: automatisch (wählt jeweils die günstigste Seite)
+function anchorEnd(t, w) {
+  const b = bounds(t);
+  // Bei kleinen Elementen darf die Schwelle nicht das ganze Innere abdecken
+  const thr = Math.min(14 / app.view.z, b.w / 4, b.h / 4);
+  const shapeKind = { ...b, shape: t.type === 'shape' ? t.shape : 'rect' };
+  for (const side of SIDES) {
+    const p = sideAnchor(shapeKind, side);
+    if (Math.hypot(p.x - w.x, p.y - w.y) < thr) return { end: { id: t.id, side }, pt: p };
+  }
+  const ax = (w.x - (b.x + b.w / 2)) / (b.w / 2 || 1), ay = (w.y - (b.y + b.h / 2)) / (b.h / 2 || 1);
+  if (ax || ay) {
+    const op = outlinePoint(shapeKind, ax, ay);
+    if (Math.hypot(op.x - w.x, op.y - w.y) < thr) {
+      const nx = (op.x - (b.x + b.w / 2)) / (b.w / 2 || 1), ny = (op.y - (b.y + b.h / 2)) / (b.h / 2 || 1);
+      return { end: { id: t.id, ax: r3(nx), ay: r3(ny) }, pt: op };
+    }
+  }
+  return { end: { id: t.id }, pt: null };
+}
+
+// Element unter dem Zeiger für Verbinder – auch knapp außerhalb des Umrisses
+function connectTargetAt(e, w, excludeId) {
+  const hit = hitInfo(e.target);
+  let t = hit && !['connector', 'pen', 'comment', 'frame'].includes(hit.el.type) ? hit.el : elementAt(w.x, w.y, null, 14 / app.view.z);
+  if (t && (t.id === excludeId || t.hidden)) t = null;
+  return t;
+}
 let draftRect = null;
 
 function renderOverlay() {
@@ -661,9 +700,27 @@ function renderOverlay() {
   if (!app.viewOnly && sel.length && !app.editing && !dragging) {
     const hs = 9 / z;
     if (sel.length === 1 && sel[0].type === 'connector') {
-      const g = connectorGeom(sel[0], getEl);
-      if (g) for (const [k, p] of [['from', g.p1], ['to', g.p2]]) {
-        out += `<circle data-handle="${k}" cx="${p.x}" cy="${p.y}" r="${6 / z}" fill="#fff" stroke="#4262ff" stroke-width="${2 / z}"/>`;
+      const c = sel[0];
+      const g = connectorGeom(c, getEl);
+      if (g) {
+        // „+“-Griffe in der Mitte jedes Abschnitts: Ziehen erzeugt einen Knickpunkt
+        const tk = g.keys.map((k) => projectOnPath(g.poly, k).t);
+        for (let i = 0; i < g.keys.length - 1; i++) {
+          const a = g.keys[i], b = g.keys[i + 1];
+          if (Math.hypot(b.x - a.x, b.y - a.y) * z < 48) continue;
+          let tm = (tk[i] + tk[i + 1]) / 2;
+          // Nicht genau auf die Beschriftung legen (die soll greifbar bleiben)
+          const lp = Number.isFinite(Number(c.labelPos)) ? Number(c.labelPos) : 0.5;
+          if (c.label && Math.abs(tm - lp) < 0.1) tm = tk[i] + (tk[i + 1] - tk[i]) * (tm < lp ? 0.25 : 0.75);
+          const m = pointAlong(g.poly, tm);
+          out += `<g data-handle="add-${i}" class="wp-add"><title>Ziehen: Knickpunkt einfügen</title><circle cx="${m.x}" cy="${m.y}" r="${9 / z}" fill="#4262ff" fill-opacity="0.12"/><circle cx="${m.x}" cy="${m.y}" r="${4.5 / z}" fill="#fff" stroke="#4262ff" stroke-width="${1.5 / z}"/></g>`;
+        }
+        waypointsOf(c).forEach((p, i) => {
+          out += `<rect data-handle="wp-${i}" class="wp" x="${p.x - 5 / z}" y="${p.y - 5 / z}" width="${10 / z}" height="${10 / z}" rx="${2 / z}" fill="#4262ff" stroke="#fff" stroke-width="${1.5 / z}"><title>Knickpunkt – ziehen zum Verschieben, Doppelklick zum Entfernen</title></rect>`;
+        });
+        for (const [k, p] of [['from', g.p1], ['to', g.p2]]) {
+          out += `<circle data-handle="${k}" cx="${p.x}" cy="${p.y}" r="${6 / z}" fill="#fff" stroke="#4262ff" stroke-width="${2 / z}"/>`;
+        }
       }
     } else if (!sel.every((e) => e.locked) && !(sel.length === 1 && sel[0].type === 'comment')) {
       const b = selectionBounds();
@@ -688,11 +745,14 @@ function renderOverlay() {
   }
   if (hoverTarget) {
     const b = bounds(hoverTarget);
-    out += `<rect x="${b.x - 4 / z}" y="${b.y - 4 / z}" width="${b.w + 8 / z}" height="${b.h + 8 / z}" fill="#4262ff" fill-opacity="0.08" stroke="#4262ff" stroke-width="${2 / z}" rx="${4 / z}"/>`;
-    for (const s of ['top', 'right', 'bottom', 'left']) {
-      const p = sidePoint(b, s);
+    const floating = !hoverAnchor || !hoverAnchor.pt;
+    // Im Inneren: automatisch andocken (ganze Form hervorgehoben); am Rand: fester Punkt
+    out += `<rect x="${b.x - 4 / z}" y="${b.y - 4 / z}" width="${b.w + 8 / z}" height="${b.h + 8 / z}" fill="#4262ff" fill-opacity="${floating ? 0.12 : 0.04}" stroke="#4262ff" stroke-width="${(floating ? 2.5 : 1.5) / z}" rx="${4 / z}"/>`;
+    for (const side of SIDES) {
+      const p = sideAnchor({ ...b, shape: hoverTarget.type === 'shape' ? hoverTarget.shape : 'rect' }, side);
       out += `<circle cx="${p.x}" cy="${p.y}" r="${4 / z}" fill="#4262ff"/>`;
     }
+    if (!floating) out += `<circle cx="${hoverAnchor.pt.x}" cy="${hoverAnchor.pt.y}" r="${8 / z}" fill="#4262ff" fill-opacity="0.25" stroke="#4262ff" stroke-width="${2 / z}"/><circle cx="${hoverAnchor.pt.x}" cy="${hoverAnchor.pt.y}" r="${3 / z}" fill="#fff"/>`;
   }
   if (marquee) out += `<rect x="${marquee.x}" y="${marquee.y}" width="${marquee.w}" height="${marquee.h}" fill="#4262ff" fill-opacity="0.08" stroke="#4262ff" stroke-width="${1 / z}"/>`;
   if (draftRect) out += `<rect x="${draftRect.x}" y="${draftRect.y}" width="${draftRect.w}" height="${draftRect.h}" fill="#4262ff" fill-opacity="0.06" stroke="#4262ff" stroke-width="${1.5 / z}" stroke-dasharray="${6 / z} ${4 / z}"/>`;
@@ -717,6 +777,11 @@ export function startEdit(id, opts = {}) {
   const el = getEl(id);
   if (!el || app.viewOnly) return;
   if (el.type === 'card') return app.emit('editCard', id);
+  // Beschriftung als eigenes Textelement in derselben Gruppe (z. B. Nachrichten im Sequenzdiagramm)
+  if (el.type === 'connector' && !el.label && el.groupId) {
+    const txt = [...app.els.values()].find((t) => t.type === 'text' && t.groupId === el.groupId);
+    if (txt) return startEdit(txt.id, opts);
+  }
   if (!canEdit(el)) return;
   if (app.editing) finishEdit();
   const field = el.type === 'frame' ? 'title' : el.type === 'connector' ? 'label' : 'text';
@@ -1094,6 +1159,16 @@ function onDown(e) {
         begin();
         if (k === 'from' || k === 'to') {
           drag = { mode: 'conn-end', start, end: k, id: [...app.sel][0], tx: true };
+        } else if (k.startsWith('wp-') || k.startsWith('add-')) {
+          const id = [...app.sel][0];
+          const c = getEl(id);
+          let index = Number(k.split('-')[1]);
+          if (k.startsWith('add-')) {
+            const wps = waypointsOf(c);
+            wps.splice(index, 0, { x: w.x, y: w.y });
+            setEl({ ...c, waypoints: wps });
+          }
+          drag = { mode: 'wp', start, id, index, tx: true };
         } else {
           const sel = selectedEls().filter((x) => !x.locked);
           drag = { mode: 'resize', start, handle: k, ob: selectionBounds(), origs: sel.map(clone), tx: true };
@@ -1125,6 +1200,29 @@ function onDown(e) {
           begin();
           return;
         }
+        // In einer Mehrfachauswahl verschiebt Ziehen an einer Linie die ganze Auswahl
+        const inMulti = app.sel.size > 1 && app.sel.has(el.id);
+        if (el.type === 'connector' && !inMulti && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          // Beschriftung entlang der Linie verschieben
+          if (e.target.closest && e.target.closest('.conn-label')) {
+            setSelection([el.id]);
+            begin();
+            drag = { mode: 'label', start, id: el.id, tx: true };
+            return;
+          }
+          // Liegen mehrere Linien übereinander: Ziehen biegt die ausgewählte, ein Klick wählt die nächste
+          const { current, next } = overlappingConnector(el, w);
+          if (current.from.id || current.to.id) {
+            setSelection([current.id]);
+            begin();
+            drag = { mode: 'bend', start, id: current.id, tx: true, cycleTo: next && next.id };
+            return;
+          }
+          if (next) {
+            setSelection([next.id]);
+            return;
+          }
+        }
         if (e.shiftKey || e.ctrlKey || e.metaKey) {
           const ids = withGroups([el.id]);
           const s = new Set(app.sel);
@@ -1137,6 +1235,9 @@ function onDown(e) {
           setSelection([el.id]);
         }
         startMove(e, start);
+        // Klick ohne Ziehen auf ein Element einer Mehrfachauswahl wählt nur dieses aus
+        const grp = withGroups([el.id]);
+        if (!e.shiftKey && !e.ctrlKey && !e.metaKey && app.sel.size > grp.size) drag.clickSelect = el.id;
         return;
       }
       startMarquee(e, start, null);
@@ -1153,8 +1254,8 @@ function onDown(e) {
       return;
     }
     case 'connector': {
-      const target = hit && !['connector', 'pen', 'comment', 'frame'].includes(hit.el.type) ? hit.el : null;
-      drag = { mode: 'connect', start, from: target ? { id: target.id } : { x: snapV(w.x), y: snapV(w.y) }, fromEl: target };
+      const target = connectTargetAt(e, w, null);
+      drag = { mode: 'connect', start, from: target ? anchorEnd(target, w).end : { x: snapV(w.x), y: snapV(w.y) }, fromEl: target };
       return;
     }
     case 'pen': case 'highlighter':
@@ -1182,6 +1283,19 @@ function onDown(e) {
   }
 }
 
+// Alle Verbinder, die am Punkt w (fast) deckungsgleich verlaufen; ist einer davon ausgewählt, kommt der nächste dran
+function overlappingConnector(hitEl, w) {
+  const tol = 6 / app.view.z;
+  const list = sortForRender([...app.els.values()].filter((c) => c.type === 'connector' && !c.hidden)).reverse().filter((c) => {
+    const g = connectorGeom(c, getEl);
+    return g && projectOnPath(g.poly, w).dist <= tol;
+  });
+  if (list.length < 2) return { current: hitEl, next: null };
+  const cur = list.findIndex((c) => app.sel.size === 1 && app.sel.has(c.id));
+  if (cur < 0) return { current: hitEl, next: null };
+  return { current: list[cur], next: list[(cur + 1) % list.length], count: list.length };
+}
+
 function startMarquee(e, start, pendingSelect) {
   drag = { mode: 'marquee', start, additive: e.shiftKey, base: new Set(e.shiftKey ? app.sel : []), pendingSelect };
   if (!e.shiftKey && !pendingSelect) {
@@ -1199,6 +1313,11 @@ function startMove(e, start) {
     if (el && el.type === 'frame') frameChildren(el).forEach((c) => ids.add(c.id));
   }
   ids = [...ids].filter((id) => getEl(id) && !getEl(id).locked);
+  // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit
+  const idSet = new Set(ids);
+  for (const c of app.els.values()) {
+    if (c.type === 'connector' && !idSet.has(c.id) && waypointsOf(c).length && c.from.id && c.to.id && idSet.has(c.from.id) && idSet.has(c.to.id)) ids.push(c.id);
+  }
   if (e.altKey) {
     // Alt-Ziehen = Kopie
     const copies = duplicateEls(ids.map(getEl), 0, 0, false);
@@ -1235,14 +1354,16 @@ function onMove(e) {
   }
   if (!drag) {
     if (app.tool === 'connector' && !app.viewOnly) {
-      const hit = hitInfo(e.target);
-      const t = hit && !['connector', 'pen', 'comment', 'frame'].includes(hit.el.type) ? hit.el : null;
-      if (t !== hoverTarget) {
+      const t = connectTargetAt(e, w, null);
+      const a = t ? anchorEnd(t, w) : null;
+      if (t !== hoverTarget || JSON.stringify(a) !== JSON.stringify(hoverAnchor)) {
         hoverTarget = t;
+        hoverAnchor = a;
         scheduleRender(true);
       }
     } else if (hoverTarget) {
       hoverTarget = null;
+      hoverAnchor = null;
       scheduleRender(true);
     }
     return;
@@ -1373,29 +1494,75 @@ function onMove(e) {
         drag.from = { id: drag.src.id, side: drag.side };
         drag.fromEl = drag.src;
       }
-      const hit = hitInfo(e.target);
-      let t = hit && !['connector', 'pen', 'comment', 'frame'].includes(hit.el.type) ? hit.el : elementAt(w.x, w.y);
-      if (t && drag.fromEl && t.id === drag.fromEl.id) t = null;
-      if (t !== hoverTarget) {
-        hoverTarget = t;
-        scheduleRender(true);
-      }
-      drag.to = t ? { id: t.id } : { x: snapV(w.x), y: snapV(w.y) };
+      const t = connectTargetAt(e, w, drag.fromEl && drag.fromEl.id);
+      hoverTarget = t;
+      hoverAnchor = t ? anchorEnd(t, w) : null;
+      scheduleRender(true);
+      drag.to = hoverAnchor ? hoverAnchor.end : { x: snapV(w.x), y: snapV(w.y) };
       drawConnectorDraft();
       return;
     }
     case 'conn-end': {
       const c = getEl(drag.id);
       if (!c) return;
-      const hit = hitInfo(e.target);
-      let t = hit && !['connector', 'pen', 'comment', 'frame'].includes(hit.el.type) ? hit.el : elementAt(w.x, w.y);
       const other = drag.end === 'from' ? c.to : c.from;
-      if (t && other.id === t.id) t = null;
-      if (t !== hoverTarget) {
-        hoverTarget = t;
-        scheduleRender(true);
+      const t = connectTargetAt(e, w, other.id);
+      hoverTarget = t;
+      hoverAnchor = t ? anchorEnd(t, w) : null;
+      scheduleRender(true);
+      setEl({ ...c, [drag.end]: hoverAnchor ? hoverAnchor.end : { x: snapV(w.x), y: snapV(w.y) } });
+      return;
+    }
+    case 'bend': {
+      if (!far) return;
+      const c = getEl(drag.id);
+      const g = c && connectorGeom(c, getEl);
+      if (!g) return;
+      // Knickpunkt an der passenden Stelle der Reihenfolge einfügen
+      const tp = projectOnPath(g.poly, s.w).t;
+      const tk = g.keys.map((k) => projectOnPath(g.poly, k).t);
+      let index = 0;
+      while (index < tk.length - 2 && tp > tk[index + 1]) index++;
+      const wps = waypointsOf(c);
+      wps.splice(index, 0, { x: w.x, y: w.y });
+      setEl({ ...c, waypoints: wps });
+      drag = { ...drag, mode: 'wp', index };
+      app.emit('dragging', true);
+      return;
+    }
+    case 'wp': {
+      const c = getEl(drag.id);
+      if (!c) return;
+      const wps = waypointsOf(c);
+      if (!wps[drag.index]) return;
+      const g = connectorGeom(c, getEl);
+      // An Nachbarpunkten waagerecht/senkrecht einrasten (gerade Linien)
+      let { x, y } = w;
+      guides = [];
+      if (g && !e.ctrlKey && !e.metaKey) {
+        const thr = 8 / app.view.z;
+        const nb = [g.keys[drag.index], g.keys[drag.index + 2]].filter(Boolean);
+        for (const q of nb) {
+          if (Math.abs(q.x - x) < thr) {
+            x = q.x;
+            guides.push({ axis: 'x', v: x, a: Math.min(y, q.y) - 40, b: Math.max(y, q.y) + 40 });
+          }
+          if (Math.abs(q.y - y) < thr) {
+            y = q.y;
+            guides.push({ axis: 'y', v: y, a: Math.min(x, q.x) - 40, b: Math.max(x, q.x) + 40 });
+          }
+        }
       }
-      setEl({ ...c, [drag.end]: t ? { id: t.id } : { x: snapV(w.x), y: snapV(w.y) } });
+      wps[drag.index] = { x: snapV(x), y: snapV(y) };
+      setEl({ ...c, waypoints: wps });
+      app.emit('dragging', true);
+      return;
+    }
+    case 'label': {
+      const c = getEl(drag.id);
+      const g = c && connectorGeom(c, getEl);
+      if (!g) return;
+      setEl({ ...c, labelPos: Math.round(projectOnPath(g.poly, w).t * 1000) / 1000 });
       return;
     }
     case 'draw': {
@@ -1413,7 +1580,7 @@ function onMove(e) {
 
 // Nur Position/Größe auf den aktuellen Stand übertragen – Änderungen anderer (Text, Farbe) bleiben erhalten,
 // und während des Ziehens gelöschte Elemente werden nicht wiederbelebt
-const GEOM_KEYS = ['x', 'y', 'w', 'h', 'points', 'from', 'to', 'fontSize'];
+const GEOM_KEYS = ['x', 'y', 'w', 'h', 'points', 'from', 'to', 'fontSize', 'waypoints'];
 function applyGeom(orig, moved) {
   const cur = getEl(orig.id);
   if (!cur) return;
@@ -1448,10 +1615,12 @@ function onUp(e) {
   guides = [];
   const hadHover = hoverTarget;
   hoverTarget = null;
+  hoverAnchor = null;
   switch (d.mode) {
     case 'move':
       commit();
       if (d.clickComment && !d.moved) app.emit('openComment', d.clickComment);
+      if (d.clickSelect && !d.moved) setSelection([d.clickSelect]);
       app.emit('dragging', false);
       break;
     case 'resize':
@@ -1495,8 +1664,18 @@ function onUp(e) {
       quickConnect(d, w, hadHover);
       break;
     }
-    case 'conn-end':
+    case 'bend':
       commit();
+      if (d.cycleTo) {
+        setSelection([d.cycleTo]);
+        toast('Mehrere Linien liegen hier übereinander – jeder weitere Klick wählt die nächste', 2500);
+      }
+      break;
+    case 'conn-end':
+    case 'wp':
+    case 'label':
+      commit();
+      app.emit('dragging', false);
       break;
     case 'draw': {
       layerDraft.innerHTML = '';
@@ -1591,7 +1770,23 @@ function quickConnect(d, w, target) {
 /* Doppelklick: bearbeiten bzw. neue Notiz */
 stage.addEventListener('dblclick', (e) => {
   if (app.viewOnly || e.target === editor) return;
+  // Doppelklick auf einen Knickpunkt entfernt ihn
+  const wh = e.target.closest && e.target.closest('[data-handle^="wp-"]');
+  if (wh) {
+    const c = selectedEls()[0];
+    if (c && c.type === 'connector') {
+      const wps = waypointsOf(c);
+      wps.splice(Number(wh.dataset.handle.slice(3)), 1);
+      act(() => setEl({ ...c, waypoints: wps }));
+    }
+    return;
+  }
   const hit = hitInfo(e.target);
+  if (hit && hit.el.locked) {
+    setSelection([hit.el.id]);
+    toast('Dieses Element ist gesperrt – zum Bearbeiten entsperren (Strg+L oder Schloss-Symbol)', 3500);
+    return;
+  }
   const w = toWorld(e.clientX, e.clientY);
   if (hit) {
     const el = hit.el;
@@ -1661,7 +1856,8 @@ export function duplicateEls(list, dx = 20, dy = 20, select = true) {
       const n = translated(clone(o), dx, dy);
       delete n.priv;
       delete n.privName;
-      n._src = o.id;
+      // nur lokal benötigt (Auswahl beim Alt-Ziehen) – nicht aufzählbar, wird also nie gespeichert oder gesendet
+      Object.defineProperty(n, '_src', { value: o.id, enumerable: false, configurable: true });
       n.id = idMap.get(o.id);
       n.z = nextZ();
       if (n.groupId) {
@@ -1801,6 +1997,10 @@ export function toggleLock() {
 export function nudge(dx, dy) {
   const ids = new Set(app.sel);
   for (const el of selectedEls()) if (el.type === 'frame') frameChildren(el).forEach((c) => ids.add(c.id));
+  // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit (wie beim Ziehen)
+  for (const c of app.els.values()) {
+    if (c.type === 'connector' && !ids.has(c.id) && waypointsOf(c).length && c.from.id && c.to.id && ids.has(c.from.id) && ids.has(c.to.id)) ids.add(c.id);
+  }
   act(() => [...ids].map(getEl).filter((e) => e && !e.locked).forEach((el) => setEl(translated(el, dx, dy))));
 }
 

@@ -61,6 +61,23 @@
 - **Akzeptanzkriterien:**
   - Bei SIGTERM/SIGINT werden Verbindungen geschlossen und ausstehende Änderungen gespeichert, bevor der Prozess endet.
 
+### REQ-OPS-011 Protokollierung
+- **Seit:** 3.3.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Beschreibung:** Nachvollziehbares, datensparsames Server-Protokoll mit üblichen Stufen.
+- **Akzeptanzkriterien:**
+  - Stufen `trace`, `debug`, `info`, `warn`, `error`, `fatal` sowie `silent`.
+    - Die Vorgabe kommt aus `LOG_LEVEL` (Standard `info`).
+    - Administratoren können die Stufe zur Laufzeit ohne Neustart ändern; die Einstellung bleibt erhalten, und die Änderung wird protokolliert.
+  - Format `text` (Zeitstempel ISO 8601 in UTC, Stufe, Komponente, Meldung, Felder) oder `json` (eine Zeile je Eintrag); `warn` und höher nach stderr, sonst nach stdout.
+  - Jede HTTP-Anfrage erhält eine Request-ID:
+    - Sie wird als `X-Request-Id` zurückgegeben und automatisch an alle Einträge dieser Anfrage gehängt.
+    - Eine gültige ID eines vorgeschalteten Proxys wird übernommen.
+    - Antworten auf Serverfehler enthalten die ID.
+  - Zugriffsprotokoll auf `debug` (Methode, Pfad ohne Query, Status, Dauer). Erwartete Fehler (4xx) auf `debug`; unerwartete Fehler (5xx) auf `error` mit Stacktrace. Anfragen über 2 s – außer Echtzeit-Verbindungen – auf `warn`.
+  - Felder mit Kennwörtern, Tokens, Cookies, Sitzungen oder Schlüsseln werden geschwärzt. IP- und E-Mail-Adressen, Query-Parameter und Board-Inhalte werden nicht protokolliert.
+  - Unbehandelte Ausnahmen werden als `fatal` protokolliert und beenden den Prozess (der Container startet neu). Unbehandelte Promise-Ablehnungen werden als `error` protokolliert.
+  - Im Servercode wird ausschließlich der zentrale Logger verwendet.
+
 ### REQ-OPS-010 Dokumentation
 - **Seit:** 3.1.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**

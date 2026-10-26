@@ -33,6 +33,19 @@
   - Mit Elementen verbundene Enden folgen den Elementen beim Verschieben.
   - Endpunkte lassen sich an andere Elemente umhängen.
   - Werden verbundene Elemente gelöscht (auch per Rückgängig), werden die Verbindungen mit entfernt; verwaiste Verbindungen werden nicht dargestellt.
+  - Geändert in 3.3.0 – Andocken:
+    - Ein Ende lässt sich an jeder Stelle des Umrisses andocken, auch bei Ellipsen und Rauten (der Punkt liegt auf dem tatsächlichen Umriss).
+    - Nahe einer Seitenmitte rastet es dort ein. Wird es im Inneren einer Form losgelassen, dockt es automatisch an der jeweils günstigsten Seite an.
+    - Beim Ziehen zeigen Markierungen, wo das Ende andocken wird.
+    - Feste Andockpunkte bleiben beim Verschieben und Vergrößern relativ zur Form erhalten.
+  - Geändert in 3.3.0 – Verlauf:
+    - Eine angedockte Linie anfassen und ziehen biegt sie (Knickpunkt). An jedem Abschnitt der ausgewählten Linie fügt ein Griff weitere Knickpunkte ein.
+    - Knickpunkte lassen sich verschieben (mit Einrasten waagerecht/senkrecht zu den Nachbarpunkten) und per Doppelklick entfernen. Das gilt für Kurven, gewinkelte und gerade Linien.
+    - Knickpunkte wandern mit, wenn beide verbundenen Elemente gemeinsam verschoben werden.
+  - Geändert in 3.3.0 – Beschriftung, Linienenden, Menü:
+    - Die Beschriftung lässt sich entlang der Linie verschieben.
+    - Linienenden sind getrennt für Anfang und Ende wählbar: ohne, Pfeil, Pfeil offen, Dreieck hohl, Raute, Raute gefüllt, Kreis, Querstrich, Krähenfuß (z. B. für ER-Diagramme).
+    - Das Menü „Verlauf & Andocken“ bietet: Knickpunkte entfernen, Beschriftung mittig, Richtung umkehren, beide Enden automatisch andocken.
 
 ### REQ-ELEM-005 Quick Connect
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt

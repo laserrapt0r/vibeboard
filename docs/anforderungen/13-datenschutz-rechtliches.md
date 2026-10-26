@@ -12,6 +12,7 @@
   - Links auf der Anmelde- und Registrierungsseite, in der Übersicht, im Board-Menü und in der Administration – nur wenn ein Text hinterlegt ist.
   - Bei der Registrierung wird auf die Datenschutzerklärung hingewiesen.
   - Nur Administratoren können die Texte ändern.
+  - Geändert in 3.3.0: Beim Öffnen von „Rechtliches“ erscheint der gespeicherte Text beider Dokumente im Editor. Bis 3.2.1 blieb das Impressum leer, und ein erneutes Speichern konnte es löschen.
 
 ### REQ-LEGAL-002 Datensparsamkeit
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt

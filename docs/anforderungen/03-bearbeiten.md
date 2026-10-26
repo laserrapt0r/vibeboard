@@ -4,6 +4,7 @@
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Einzelauswahl per Klick, Mehrfachauswahl per Umschalt-/Strg-Klick oder Auswahlrahmen, alles per Strg+A.
+  - Geändert in 3.3.0: Ein Klick ohne Ziehen auf ein Element innerhalb einer Mehrfachauswahl (z. B. direkt nach dem Einfügen eines Diagramms) wählt nur dieses Element aus; Ziehen verschiebt weiterhin die ganze Auswahl.
   - Frames werden vom Auswahlrahmen nur erfasst, wenn sie vollständig innerhalb liegen.
   - Gesperrte Elemente werden per Klick ausgewählt, Ziehen auf ihnen erzeugt einen Auswahlrahmen.
 
@@ -32,7 +33,7 @@
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Gruppieren (Strg+G) und Aufheben (Strg+Umschalt+G); ein Klick wählt die ganze Gruppe.
-  - Sperren (Strg+L) verhindert Verschieben, Größenänderung, Bearbeiten und Löschen.
+  - Sperren (Strg+L) verhindert Verschieben, Größenänderung, Bearbeiten und Löschen. Geändert in 3.3.0: Ein Doppelklick auf ein gesperrtes Element erklärt, wie es sich entsperren lässt.
   - In den Vorder-/Hintergrund (Strg+] / Strg+[).
 
 ### REQ-EDIT-006 Kopieren, Einfügen, Duplizieren

@@ -27,6 +27,12 @@ Eine Änderung ist erst fertig, wenn alle Punkte erfüllt sind:
    - Keine Inline-Skripte (Content-Security-Policy).
    - Hochgeladene Dateien über `lib/uploads.js` prüfen.
    - Neue Abhängigkeiten nur, wenn nötig: auf Lizenz und `npm audit` prüfen, in `THIRD_PARTY_NOTICES.md` aufnehmen.
+   - Protokollierung nur über `lib/log.js` (kein `console.*` im Server):
+     - je Modul `require('./log').child('komponente')`;
+     - Text kurz und fest, Werte als Felder (`log.info('Board gespeichert', { boardId })`), Fehler als `err`;
+     - passende Stufe wählen: `error` für Fehler, die jemand beheben muss; `warn` für Auffälliges ohne Ausfall;
+       `info` für wichtige Abläufe; `debug`/`trace` für Details zur Fehlersuche;
+     - keine Kennwörter, Tokens, Inhalte von Boards, E-Mail- oder IP-Adressen protokollieren.
 7. **Dokumentation:** README aktualisieren. Bei neuer Verarbeitung personenbezogener Daten zusätzlich die
    Datenschutz-Vorlage in `public/js/legal-templates.js` anpassen.
 8. **Getestet:** Neue Funktion im Browser und, falls betroffen, mit mehreren Personen gleichzeitig sowie im Rückfall-Transport

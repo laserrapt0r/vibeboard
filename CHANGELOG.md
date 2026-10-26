@@ -4,6 +4,44 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.3.0] – 2026-10-26
+
+### Hinzugefügt
+- Verbinder (REQ-ELEM-004):
+  - Andocken an beliebiger Stelle des Umrisses, mit Vorschau beim Ziehen.
+  - Biegen durch Ziehen an der Linie; Knickpunkte einfügen, verschieben (mit Einrasten) und entfernen.
+  - Beschriftung entlang der Linie verschiebbar.
+  - 9 Linienenden für Anfang und Ende getrennt.
+  - Menü „Verlauf & Andocken“ mit Richtung umkehren und Pfad zurücksetzen.
+- Hinweis beim Doppelklick auf gesperrte Elemente.
+- Administration: Systemmetriken in der Übersicht (CPU, Arbeitsspeicher inkl. Container-Limit, Ereignisschleife,
+  Speicherplatz, Datenbankverbindungen, Laufzeit) mit Verlauf und Warnhinweisen (REQ-ADMIN-002).
+- Screenshots in der README.
+- Protokollierung mit Stufen (trace bis fatal), Text- oder JSON-Format, Request-ID, Schwärzung von Geheimnissen und
+  Laufzeit-Einstellung in der Administration; neue Umgebungsvariablen `LOG_LEVEL` und `LOG_FORMAT` (REQ-OPS-011).
+
+### Geändert
+- Ein Klick ohne Ziehen auf ein Element einer Mehrfachauswahl wählt nur dieses Element aus. Bisher blieb nach dem
+  Einfügen eines Diagramms alles ausgewählt, und einzelne Elemente ließen sich kaum bearbeiten.
+
+### Behoben
+- „Rechtliches“ zeigte beim Öffnen ein leeres Impressum; ein erneutes Speichern hätte es gelöscht.
+- Lange Wörter auf Sticky Notes wurden bis zur Unlesbarkeit verkleinert; sie werden jetzt am Bindestrich bzw. notfalls
+  im Wort umbrochen.
+- Beim Umhängen eines Verbinders ging der gewählte Andockpunkt verloren; das Ende hing immer am automatisch gewählten
+  Punkt.
+- Verbinder:
+  - Bei übereinanderliegenden Linien (z. B. Organigramm) wählt ein erneuter Klick die nächste Linie, statt immer die
+    oberste zu treffen.
+  - Andocken an Dreiecken, Sechsecken, Parallelogrammen, Sternen usw. erfolgt an der sichtbaren Kante statt am
+    umgebenden Rechteck.
+  - Pfeiltasten verschieben Knickpunkte mit, wie das Ziehen.
+  - „Richtung umkehren“ spiegelt die Lage der Beschriftung.
+- Sequenzdiagramme:
+  - Blöcke (alt, loop …) verdecken die Lebenslinien nicht mehr.
+  - Pfeil und Text einer Nachricht sind gruppiert; Doppelklick auf den Pfeil bearbeitet den Text.
+- Beim Duplizieren wurde ein internes Hilfsfeld mitgespeichert.
+
 ## [3.2.1] – 2026-10-26
 
 ### Behoben

@@ -362,14 +362,16 @@ export function layoutSequence({ parts, steps, auto }) {
     if (s.kind === 'msg') {
       const x1 = cx.get(s.from), x2 = cx.get(s.to);
       const label = (auto ? `${++n}. ` : '') + s.text + (s.cross ? ' ✕' : '');
-      const o = { dash: s.dashed || undefined, arrowStart: s.both };
+      // Pfeil und Beschriftung gehören zusammen (gemeinsam verschieben; Doppelklick auf den Pfeil bearbeitet den Text)
+      const groupId = uid();
+      const o = { dash: s.dashed || undefined, arrowStart: s.both, groupId };
       const fs = 15, lineH = fs * 1.25;
       if (x1 === x2) {
         line(x1, y, x1 + 60, y, o);
         line(x1 + 60, y, x1 + 60, y + 34, o);
         line(x1 + 60, y + 34, x1, y + 34, { ...o, arrowStart: false, arrowEnd: s.arrow });
         const lines = label ? wrap(label, 212, fs).length : 0;
-        if (label) els.push({ id: uid(), type: 'text', x: x1 + 70, y: y - 4, w: 220, h: lines * lineH + 8, text: label, fontSize: fs, color: '#1a1a1a', align: 'left' });
+        if (label) els.push({ id: uid(), groupId, type: 'text', x: x1 + 70, y: y - 4, w: 220, h: lines * lineH + 8, text: label, fontSize: fs, color: '#1a1a1a', align: 'left' });
         y += Math.max(80, lines * lineH + 40);
       } else {
         // Beschriftung oberhalb des Pfeils; mehrzeilige Texte schieben den Pfeil nach unten
@@ -378,7 +380,7 @@ export function layoutSequence({ parts, steps, auto }) {
         const th = lines * lineH + 8;
         if (lines > 1) y += th - 26;
         line(x1, y, x2, y, { ...o, arrowEnd: s.arrow });
-        if (label) els.push({ id: uid(), type: 'text', x: Math.min(x1, x2) + (Math.abs(x2 - x1) - w) / 2, y: y - th - 4, w, h: th, text: label, fontSize: fs, color: '#1a1a1a', align: 'center' });
+        if (label) els.push({ id: uid(), groupId, type: 'text', x: Math.min(x1, x2) + (Math.abs(x2 - x1) - w) / 2, y: y - th - 4, w, h: th, text: label, fontSize: fs, color: '#1a1a1a', align: 'center' });
         y += 64;
       }
     } else if (s.kind === 'note') {
@@ -409,7 +411,8 @@ export function layoutSequence({ parts, steps, auto }) {
     } else if (s.kind === 'close' && blocks.length) {
       const b = blocks.pop();
       const d = b.depth;
-      els.unshift({ id: uid(), type: 'shape', shape: 'rect', x: minX + d * 12, y: b.y, w: maxX - minX - d * 24, h: y - b.y - 20, fill: 'transparent', stroke: '#868e96', strokeWidth: 1.5, text: b.label, fontSize: 13, bold: true, align: 'left', valign: 'top', textColor: '#495057' });
+      // Ohne Füllung: Lebenslinien und Pfeile im Block bleiben anklickbar
+      els.unshift({ id: uid(), type: 'shape', shape: 'rect', x: minX + d * 12, y: b.y, w: maxX - minX - d * 24, h: y - b.y - 20, fill: 'none', stroke: '#868e96', strokeWidth: 1.5, text: b.label, fontSize: 13, bold: true, align: 'left', valign: 'top', textColor: '#495057' });
       y += 10;
     }
   }

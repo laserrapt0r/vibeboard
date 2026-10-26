@@ -48,6 +48,9 @@ services:
       CLAMAV_PORT: 3310
       # Vor jedem Datenbank-Upgrade wird eine Sicherung nach /backups geschrieben (die letzten 10 bleiben erhalten)
       BACKUP_KEEP: ${BACKUP_KEEP:-10}
+      # Protokollierung (siehe .env.example); ansehen mit: docker compose logs -f app
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-text}
     ports:
       - "${PORT:-3000}:3000"
     # Boards der dateibasierten Version 1 (./data/boards) werden beim ersten Start einmalig übernommen

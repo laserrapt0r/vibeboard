@@ -5,6 +5,8 @@
  * Datenhaltung in PostgreSQL, Benutzerkonten mit Sessions.
  */
 const http = require('http');
+const crypto = require('crypto');
+const log = require('./lib/log');
 const os = require('os');
 const path = require('path');
 const db = require('./lib/db');
@@ -15,6 +17,12 @@ const versions = require('./lib/version');
 const { Router } = require('./lib/router');
 const { HttpError, json, redirect, serveFile, serveStatic, isHttps } = require('./lib/http');
 const pkg = require('./package.json');
+const settings = require('./lib/settings');
+
+const httpLog = log.child('http');
+const SLOW_MS = 2000;
+// Echtzeit-Verbindungen sind absichtlich langlebig und zählen nicht als langsam
+const LONG_LIVED = /^\/api\/boards\/[^/]+\/(events|poll)$/;
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -93,10 +101,33 @@ async function handlePage(req, res, url) {
   return serveStatic(res, PUBLIC_DIR, p);
 }
 
-const server = http.createServer(async (req, res) => {
+// Request-ID: von einem vorgeschalteten Proxy übernehmen (wenn gültig) oder neu erzeugen
+function requestId(req) {
+  const given = req.headers['x-request-id'];
+  return typeof given === 'string' && /^[\w.-]{8,64}$/.test(given) ? given : crypto.randomBytes(8).toString('hex');
+}
+
+const server = http.createServer((req, res) => {
+  const reqId = requestId(req);
+  res.setHeader('X-Request-Id', reqId);
+  log.withContext({ reqId }, () => handle(req, res, reqId));
+});
+
+async function handle(req, res, reqId) {
+  const started = process.hrtime.bigint();
+  let pathname = '';
+  // Zugriffsprotokoll: nur Methode, Pfad (ohne Query – dort können Tokens stehen), Status und Dauer; keine IP-Adressen
+  res.on('close', () => {
+    const ms = Math.round(Number(process.hrtime.bigint() - started) / 1e6);
+    const fields = { method: req.method, path: pathname, status: res.statusCode, ms };
+    if (!res.writableFinished && !LONG_LIVED.test(pathname)) httpLog.debug('Verbindung vorzeitig geschlossen', fields);
+    else if (ms > SLOW_MS && !LONG_LIVED.test(pathname)) httpLog.warn('Langsame Anfrage', fields);
+    else httpLog.debug('Anfrage', fields);
+  });
   securityHeaders(req, res);
   try {
     const url = new URL(req.url, 'http://localhost');
+    pathname = url.pathname;
     if (url.pathname.startsWith('/api/') || url.pathname === '/healthz') {
       if (req.method !== 'GET' && req.method !== 'HEAD' && req.headers[CSRF_HEADER] !== '1') {
         throw new HttpError(403, 'Anfrage abgelehnt (CSRF-Schutz).');
@@ -109,11 +140,14 @@ const server = http.createServer(async (req, res) => {
     }
     return await handlePage(req, res, url);
   } catch (e) {
-    if (!e.status) console.error(e);
-    if (!res.headersSent) json(res, e.status || 500, e.status ? { error: e.message, ...(e.code ? { code: e.code } : {}) } : { error: 'Interner Serverfehler' });
+    // Erwartete Fehler (4xx) nur auf Stufe debug; unerwartete mit Stacktrace als error
+    if (e.status && e.status < 500) httpLog.debug('Anfrage abgelehnt', { method: req.method, path: pathname, status: e.status, reason: e.message });
+    else httpLog.error('Unerwarteter Fehler bei der Anfrage', { method: req.method, path: pathname, err: e });
+    // Die Request-ID hilft, eine Fehlermeldung im Protokoll wiederzufinden
+    if (!res.headersSent) json(res, e.status || 500, e.status && e.status < 500 ? { error: e.message, ...(e.code ? { code: e.code } : {}) } : { error: 'Interner Serverfehler', requestId: reqId });
     else res.end();
   }
-});
+}
 
 // Schutz gegen langsame Verbindungen (Slowloris): Kopfzeilen und Anfragekörper müssen zügig ankommen.
 // Lange Antworten (Echtzeit-Stream, Long-Polling) sind davon nicht betroffen.
@@ -123,13 +157,20 @@ server.keepAliveTimeout = 65000;
 server.maxHeadersCount = 100;
 
 async function start() {
+  log.info('Starte vibeboard', { version: pkg.version, node: process.version, logLevel: log.getLevel(), logFormat: log.format });
   await db.waitForDb();
   await versions.upgrade(); // Downgrade-Schutz, Sicherung, Migrationen, Versionshistorie
+  // In der Administration gewählte Protokollstufe übernehmen
+  const saved = (await settings.get()).logging.level;
+  if (saved) {
+    log.setLevel(saved);
+    log.info('Protokollstufe aus der Administration übernommen', { level: log.getLevel() });
+  }
   await setup.seedAdmin();
   await setup.importLegacy(DATA_DIR);
   setup.scheduleCleanup();
   server.listen(PORT, HOST, () => {
-    console.log(`vibeboard ${pkg.version} läuft auf http://localhost:${PORT}`);
+    log.info(`vibeboard ${pkg.version} läuft auf http://localhost:${PORT}`, { host: HOST, port: PORT });
   });
 }
 
@@ -137,22 +178,28 @@ let stopping = false;
 async function shutdown() {
   if (stopping) return;
   stopping = true;
-  console.log('Beende – speichere offene Änderungen …');
+  log.info('Beende – speichere offene Änderungen …');
   server.close();
   for (const id of [...boards.rooms.keys()]) boards.closeRoom(id);
   try {
     await boards.flushAll();
     await db.pool.end();
   } catch (e) {
-    console.error(e.message);
+    log.error('Fehler beim Beenden', e);
   }
+  log.info('Beendet');
   process.exit(0);
 }
-process.on('unhandledRejection', (e) => console.error('Unbehandelter Fehler:', e));
+process.on('unhandledRejection', (e) => log.error('Unbehandelte Promise-Ablehnung', { err: e instanceof Error ? e : new Error(String(e)) }));
+// Nach einer unbehandelten Ausnahme ist der Zustand unklar: protokollieren und beenden (Docker startet neu)
+process.on('uncaughtException', (e) => {
+  log.fatal('Unbehandelte Ausnahme – Prozess wird beendet', e);
+  process.exit(1);
+});
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 start().catch((e) => {
-  console.error('Start fehlgeschlagen:', e.message);
+  log.fatal('Start fehlgeschlagen', e);
   process.exit(1);
 });

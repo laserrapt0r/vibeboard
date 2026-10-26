@@ -18,6 +18,16 @@
     - Virenscanner-Status mit Signaturstand und Anzahl blockierter Uploads (30 Tage)
   - Hinweise bei wartenden Freigaben, fehlendem Mailserver, fehlender öffentlicher Adresse, vielen Fehlanmeldungen, fehlendem, nicht erreichbarem oder veraltetem Virenscanner.
   - Versionshistorie der letzten Upgrades ([REQ-OPS-003](14-betrieb-versionierung.md)).
+  - Geändert in 3.3.0 – Abschnitt „System“ mit Live-Metriken (alle 5 Sekunden, Verlauf der letzten 10 Minuten als Diagramm):
+    - CPU-Auslastung von vibeboard (bezogen auf die verfügbaren Kerne bzw. das Container-Limit), CPU des Hosts, Systemlast
+    - Arbeitsspeicher von vibeboard (gesamt und JavaScript-Heap) sowie Belegung des Containers (cgroup-Limit) bzw. des Hosts
+    - Reaktionszeit der Ereignisschleife (Mittelwert und 99-%-Wert)
+    - freier Speicherplatz für Anwendung und Sicherungsverzeichnis
+    - Datenbankverbindungen, Poolgröße, Cache-Trefferquote
+    - Echtzeit-Verbindungen, aktive Boards, Boards im Arbeitsspeicher
+    - Laufzeit von vibeboard und Host, Node.js-Version, Betriebssystem
+    - Kacheln mit Engpässen (CPU über 80 %, Speicher über 90 %, Ereignisschleife über 50 ms, weniger als 10 % freier Speicherplatz) werden rot hervorgehoben.
+    - Die Metriken liefert `GET /api/admin/metrics`, nur für Administratoren.
 
 ### REQ-ADMIN-003 Benutzerverwaltung
 - **Seit:** 2.0.0, erweitert in 3.0.0 · **Priorität:** Muss · **Status:** umgesetzt

@@ -3,7 +3,7 @@ import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
   initials, relTime, rectsIntersect, throttle, uid,
 } from './util.js';
-import { SHAPES, SHAPE_GROUPS, shapeGeom, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags } from './render.js';
+import { SHAPES, SHAPE_GROUPS, shapeGeom, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery } from './gallery.js';
 import { popover, closePop, menu } from './menu.js';
@@ -244,9 +244,21 @@ export function buildCtx() {
       items.push(selectBtn(f.strokeWidth || 2, STROKE_W.slice(1), 'Linienstärke', (v) => applySel({ strokeWidth: v }), 60));
       items.push(selectBtn(f.dash || false, [[false, '──── Durchgezogen'], [true, '- - - Gestrichelt'], ['dotted', '····· Gepunktet']], 'Linienstil', (v) => applySel({ dash: v }), 46));
       items.push(selectBtn(f.routing || 'curve', [['curve', '⤴ Kurve'], ['elbow', '⌐ Gewinkelt'], ['straight', '／ Gerade']], 'Linienführung', (v) => applySel({ routing: v }), 100));
-      items.push(toggleBtn('arrowStart', !!f.arrowStart, 'Pfeil am Anfang', () => applySel({ arrowStart: !f.arrowStart })));
-      items.push(toggleBtn('arrowEnd', f.arrowEnd !== false, 'Pfeil am Ende', () => applySel({ arrowEnd: f.arrowEnd === false })));
-      if (one) items.push(actBtn('text', 'Beschriftung', () => startEdit(one.id)));
+      items.push(selectBtn(headType(f.arrowStart, 'none'), ARROW_HEADS, 'Linienende am Anfang', (v) => applySel({ arrowStart: v }), 70));
+      items.push(selectBtn(headType(f.arrowEnd, 'arrow'), ARROW_HEADS, 'Linienende am Ende', (v) => applySel({ arrowEnd: v }), 70));
+      if (one) items.push(actBtn('text', 'Beschriftung (Doppelklick auf die Linie)', () => startEdit(one.id)));
+      if (one) {
+        const routeBtn = actBtn('more', 'Verlauf & Andocken', () => menu(routeBtn, [
+          { header: 'Verlauf' },
+          { label: 'Knickpunkte entfernen (Pfad zurücksetzen)', icon: 'undo', disabled: !waypointsOf(one).length, onClick: () => applySel({ waypoints: [] }) },
+          { label: 'Beschriftung in die Mitte', icon: 'text', disabled: one.labelPos == null || one.labelPos === 0.5, onClick: () => applySel({ labelPos: 0.5 }) },
+          { label: 'Richtung umkehren', icon: 'arrowEnd', onClick: () => applySel((c) => ({ from: c.to, to: c.from, arrowStart: headType(c.arrowEnd, 'arrow'), arrowEnd: headType(c.arrowStart, 'none'), waypoints: waypointsOf(c).reverse(), labelPos: c.labelPos == null ? undefined : 1 - Number(c.labelPos) })) },
+          '-',
+          { header: 'Andocken' },
+          { label: 'Beide Enden automatisch andocken', icon: 'fit', disabled: !(one.from.id || one.to.id), onClick: () => applySel((c) => ({ from: c.from.id ? { id: c.from.id } : c.from, to: c.to.id ? { id: c.to.id } : c.to })) },
+        ], { placement: 'top' }));
+        items.push(routeBtn);
+      }
     } else if (only === 'pen') {
       items.push(colorBtn(f.stroke, 'Farbe', PALETTE.slice(1), (c) => applySel({ stroke: c })));
       items.push(selectBtn(f.strokeWidth, [[1, '1 px'], [2, '2 px'], [3, '3 px'], [5, '5 px'], [8, '8 px'], [12, '12 px'], [20, '20 px'], [32, '32 px']], 'Stärke', (v) => applySel({ strokeWidth: v }), 60));
@@ -814,6 +826,7 @@ export function openShortcuts() {
   const groups = [
     ['Werkzeuge', [['V', 'Auswählen'], ['H / Leertaste', 'Verschieben'], ['N', 'Sticky Note'], ['T', 'Text'], ['S', 'Form'], ['R / O', 'Rechteck / Ellipse'], ['L', 'Verbindungslinie'], ['P', 'Stift'], ['E', 'Radierer'], ['F', 'Frame'], ['K', 'Karte'], ['M', 'Mindmap'], ['C', 'Kommentar'], ['X', 'Laserpointer']]],
     ['Bearbeiten', [['Strg+Z / Strg+Y', 'Rückgängig / Wiederholen'], ['Strg+C / X / V', 'Kopieren / Ausschneiden / Einfügen'], ['Strg+D', 'Duplizieren'], ['Alt + Ziehen', 'Kopie ziehen'], ['Entf', 'Löschen'], ['Strg+A', 'Alles auswählen'], ['Strg+G', 'Gruppieren'], ['Strg+Umschalt+G', 'Gruppe auflösen'], ['Strg+L', 'Sperren'], ['Strg+] / [', 'Vorder-/Hintergrund'], ['Pfeiltasten', 'Verschieben (Umschalt: 10px)'], ['Enter / Doppelklick', 'Text bearbeiten'], ['Esc / Strg+Enter', 'Bearbeitung beenden']]],
+    ['Verbinder', [['Linie ziehen', 'Biegen (Knickpunkt)'], ['◦ auf der Linie ziehen', 'Knickpunkt einfügen'], ['Doppelklick auf ▪', 'Knickpunkt entfernen'], ['Beschriftung ziehen', 'Entlang der Linie verschieben'], ['Ende an Rand ziehen', 'Fester Andockpunkt'], ['Ende in Formmitte', 'Automatisch andocken']]],
     ['Mindmap', [['Tab', 'Unterknoten hinzufügen'], ['Enter (beim Tippen)', 'Geschwisterknoten'], ['Umschalt+Enter', 'Geschwisterknoten']]],
     ['Zusammenarbeit', [['/', 'Cursor-Chat: Nachricht am Mauszeiger'], ['Esc', 'Cursor-Chat schließen']]],
     ['Ansicht', [['Strg + Mausrad', 'Zoomen'], ['Strg + / −', 'Zoomen'], ['Strg+0', 'Auf 100 %'], ['Umschalt+1', 'Alles anzeigen'], ['Umschalt+2', 'Auswahl anzeigen'], ['Strg+F', 'Suchen']]],

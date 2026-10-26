@@ -194,9 +194,11 @@ export function safeEl(el) {
   if (o.type === 'shape' && !SHAPE_KEYS.has(o.shape)) o.shape = 'rect';
   if (o.type === 'pen') o.points = Array.isArray(o.points) ? o.points.map((p) => [fin(p && p[0]), fin(p && p[1])]) : [];
   if (o.type === 'connector') {
-    const end = (e) => (e && e.id ? { id: String(e.id), side: e.side } : { x: fin(e && e.x), y: fin(e && e.y), side: e && e.side });
+    const anchor = (e) => (Number.isFinite(Number(e.ax)) && Number.isFinite(Number(e.ay)) ? { ax: Math.max(-1, Math.min(1, Number(e.ax))), ay: Math.max(-1, Math.min(1, Number(e.ay))) } : {});
+    const end = (e) => (e && e.id ? { id: String(e.id), side: e.side, ...anchor(e) } : { x: fin(e && e.x), y: fin(e && e.y), side: e && e.side });
     o.from = end(o.from);
     o.to = end(o.to);
+    o.waypoints = Array.isArray(o.waypoints) ? o.waypoints.slice(0, 100).map((p) => ({ x: fin(p && p.x), y: fin(p && p.y) })) : [];
   }
   if (o.type === 'table') {
     o.rows = Math.max(1, Math.min(200, Math.round(o.rows) || 1));
@@ -237,12 +239,78 @@ function autoSide(b, toward) {
   return dy > 0 ? 'bottom' : 'top';
 }
 
+// Schnittpunkt eines Strahls von der Mitte in Richtung (ax, ay) – normiert auf die halbe Breite/Höhe – mit dem Umriss
+const ROUND_SHAPES = new Set(['ellipse', 'cloud']);
+
+// Umrisse vieleckiger Formen in normierten Koordinaten (−1 … 1), passend zu shapeGeom()
+const STAR = Array.from({ length: 10 }, (_, i) => {
+  const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 0.4 : 1;
+  return [Math.cos(a) * r, Math.sin(a) * r + 0.1];
+});
+const POLYGONS = {
+  diamond: [[0, -1], [1, 0], [0, 1], [-1, 0]],
+  triangle: [[0, -1], [1, 1], [-1, 1]],
+  hexagon: [[-0.5, -1], [0.5, -1], [1, 0], [0.5, 1], [-0.5, 1], [-1, 0]],
+  parallelogram: [[-0.6, -1], [1, -1], [0.6, 1], [-1, 1]],
+  trapezoid: [[-0.6, -1], [0.6, -1], [1, 1], [-1, 1]],
+  arrow: [[-1, -0.5], [0.2, -0.5], [0.2, -1], [1, 0], [0.2, 1], [0.2, 0.5], [-1, 0.5]],
+  cross: [[-0.4, -1], [0.4, -1], [0.4, -0.4], [1, -0.4], [1, 0.4], [0.4, 0.4], [0.4, 1], [-0.4, 1], [-0.4, 0.4], [-1, 0.4], [-1, -0.4], [-0.4, -0.4]],
+  star: STAR,
+};
+
+// Abstand k entlang des Strahls (0,0) + k·(dx,dy) bis zum ersten Schnitt mit dem Vieleck
+function rayPolygon(poly, dx, dy) {
+  let best = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length];
+    const ex = x2 - x1, ey = y2 - y1;
+    const den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-12) continue;
+    const k = (x1 * ey - y1 * ex) / den;
+    const u = (x1 * dy - y1 * dx) / den;
+    if (k > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9 && k < best) best = k;
+  }
+  return Number.isFinite(best) ? best : 1;
+}
+
+// Punkt auf dem tatsächlichen Umriss in Richtung (ax, ay) von der Mitte aus
+export function outlinePoint(t, ax, ay) {
+  if (!ax && !ay) return { x: t.x + t.w / 2, y: t.y + t.h / 2 };
+  let k;
+  if (Object.hasOwn(POLYGONS, t.shape)) k = rayPolygon(POLYGONS[t.shape], ax, ay);
+  else if (ROUND_SHAPES.has(t.shape)) k = 1 / (Math.hypot(ax, ay) || 1);
+  else k = 1 / (Math.max(Math.abs(ax), Math.abs(ay)) || 1);
+  return { x: t.x + t.w / 2 + (ax * k * t.w) / 2, y: t.y + t.h / 2 + (ay * k * t.h) / 2 };
+}
+
+// Mitte einer Seite – auf dem tatsächlichen Umriss (bei Dreiecken z. B. auf der Schräge)
+export function sideAnchor(t, side) {
+  const v = SIDE_VEC[side];
+  return outlinePoint(t, v[0], v[1]);
+}
+
+// Seite, in deren Richtung ein Andockpunkt zeigt (bestimmt die Austrittsrichtung bei Kurven und Winkeln)
+export function anchorSide(ax, ay) {
+  if (Math.abs(ax) >= Math.abs(ay)) return ax >= 0 ? 'right' : 'left';
+  return ay >= 0 ? 'bottom' : 'top';
+}
+
 function endTarget(end, get) {
   if (end && end.id) {
     const t = get(end.id);
-    if (t && t.type !== 'connector') return { x: fin(t.x), y: fin(t.y), w: fin(t.w), h: fin(t.h) };
+    if (t && t.type !== 'connector') return { x: fin(t.x), y: fin(t.y), w: fin(t.w), h: fin(t.h), shape: t.type === 'shape' ? t.shape : t.type === 'sticky' ? 'rect' : t.type };
   }
   return null;
+}
+
+const hasAnchor = (end) => end && Number.isFinite(end.ax) && Number.isFinite(end.ay);
+
+// Lage eines angedockten Endes: fester Punkt auf dem Umriss, feste Seitenmitte oder automatisch (zur Gegenseite)
+function attach(end, t, toward) {
+  if (hasAnchor(end)) return { p: outlinePoint(t, end.ax, end.ay), s: anchorSide(end.ax, end.ay), fixed: true };
+  if (SIDE_VEC[end.side]) return { p: sideAnchor(t, end.side), s: end.side, fixed: true };
+  const s = autoSide(t, toward);
+  return { p: sideAnchor(t, s), s, fixed: false };
 }
 
 function centerOf(end, get) {
@@ -257,60 +325,103 @@ function freeSide(from, to) {
   return dy > 0 ? 'bottom' : 'top';
 }
 
+export function waypointsOf(el) {
+  return Array.isArray(el.waypoints) ? el.waypoints.filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y)) : [];
+}
+
 export function connectorGeom(el, get) {
   const t1 = endTarget(el.from, get), t2 = endTarget(el.to, get);
   // Verbindung zu einem gelöschten Element
   if ((el.from && el.from.id && !t1) || (el.to && el.to.id && !t2)) return null;
+  const wps = waypointsOf(el);
   const c1 = centerOf(el.from, get), c2 = centerOf(el.to, get);
-  let p1, p2, s1, s2;
-  if (t1) {
-    s1 = (SIDE_VEC[el.from.side] && el.from.side) || autoSide(t1, c2);
-    p1 = sidePoint(t1, s1);
-  } else p1 = c1;
-  if (t2) {
-    s2 = (SIDE_VEC[el.to.side] && el.to.side) || autoSide(t2, t1 ? sidePoint(t1, s1) : c1);
-    p2 = sidePoint(t2, s2);
-  } else p2 = c2;
-  if (t1 && !SIDE_VEC[el.from.side] && t2) {
-    s1 = autoSide(t1, p2);
-    p1 = sidePoint(t1, s1);
-  }
-  if (!s1) s1 = freeSide(p1, p2);
-  if (!s2) s2 = freeSide(p2, p1);
+  // Automatische Seiten richten sich nach dem nächsten Knickpunkt bzw. dem anderen Ende
+  const toward1 = wps[0] || c2, toward2 = wps[wps.length - 1] || c1;
+  let a1 = t1 ? attach(el.from, t1, toward1) : null;
+  let a2 = t2 ? attach(el.to, t2, a1 && !wps.length ? a1.p : toward2) : null;
+  if (a1 && !a1.fixed && a2 && !wps.length) a1 = attach(el.from, t1, a2.p);
+  const p1 = a1 ? a1.p : c1, p2 = a2 ? a2.p : c2;
+  const s1 = a1 ? a1.s : freeSide(p1, wps[0] || p2);
+  const s2 = a2 ? a2.s : freeSide(p2, wps[wps.length - 1] || p1);
 
-  let d, pts, startDir, endDir, mid;
+  let d, pts, poly, startDir, endDir;
   const routing = el.routing || 'curve';
   if (routing === 'straight') {
-    d = `M${r1(p1.x)},${r1(p1.y)} L${r1(p2.x)},${r1(p2.y)}`;
-    pts = [p1, p2];
-    startDir = [p1.x - p2.x, p1.y - p2.y];
-    endDir = [p2.x - p1.x, p2.y - p1.y];
-    mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-  } else if (routing === 'elbow') {
-    pts = elbowPoints(p1, s1, p2, s2);
+    pts = [p1, ...wps, p2];
+    poly = pts;
     d = 'M' + pts.map((p) => `${r1(p.x)},${r1(p.y)}`).join(' L');
-    const n = pts.length;
-    startDir = [pts[0].x - pts[1].x, pts[0].y - pts[1].y];
-    endDir = [pts[n - 1].x - pts[n - 2].x, pts[n - 1].y - pts[n - 2].y];
-    mid = polyMid(pts);
+  } else if (routing === 'elbow') {
+    pts = elbowRoute(p1, s1, wps, p2, s2);
+    poly = pts;
+    d = 'M' + pts.map((p) => `${r1(p.x)},${r1(p.y)}`).join(' L');
   } else {
+    // Kurve durch alle Knickpunkte (Catmull-Rom), Enden treten senkrecht aus der Andockseite aus
+    const keys = [p1, ...wps, p2];
     const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    const k = Math.max(30, dist * 0.4);
+    const k = Math.max(30, (wps.length ? Math.hypot(keys[1].x - p1.x, keys[1].y - p1.y) : dist) * 0.4);
+    const k2 = Math.max(30, (wps.length ? Math.hypot(p2.x - keys[keys.length - 2].x, p2.y - keys[keys.length - 2].y) : dist) * 0.4);
     const v1 = SIDE_VEC[s1], v2 = SIDE_VEC[s2];
-    const cp1 = { x: p1.x + v1[0] * k, y: p1.y + v1[1] * k };
-    const cp2 = { x: p2.x + v2[0] * k, y: p2.y + v2[1] * k };
-    d = `M${r1(p1.x)},${r1(p1.y)} C${r1(cp1.x)},${r1(cp1.y)} ${r1(cp2.x)},${r1(cp2.y)} ${r1(p2.x)},${r1(p2.y)}`;
-    pts = [p1, cp1, cp2, p2];
-    startDir = [p1.x - cp1.x, p1.y - cp1.y];
-    endDir = [p2.x - cp2.x, p2.y - cp2.y];
-    const t = 0.5, mt = 1 - t;
-    mid = {
-      x: mt ** 3 * p1.x + 3 * mt * mt * t * cp1.x + 3 * mt * t * t * cp2.x + t ** 3 * p2.x,
-      y: mt ** 3 * p1.y + 3 * mt * mt * t * cp1.y + 3 * mt * t * t * cp2.y + t ** 3 * p2.y,
-    };
+    const segs = [];
+    for (let i = 0; i < keys.length - 1; i++) {
+      const a = keys[i], b = keys[i + 1];
+      let cpa, cpb;
+      if (i === 0) cpa = { x: a.x + v1[0] * k, y: a.y + v1[1] * k };
+      else {
+        const prev = keys[i - 1];
+        cpa = { x: a.x + (b.x - prev.x) / 6, y: a.y + (b.y - prev.y) / 6 };
+      }
+      if (i === keys.length - 2) cpb = { x: b.x + v2[0] * k2, y: b.y + v2[1] * k2 };
+      else {
+        const next = keys[i + 2];
+        cpb = { x: b.x - (next.x - a.x) / 6, y: b.y - (next.y - a.y) / 6 };
+      }
+      segs.push([a, cpa, cpb, b]);
+    }
+    d = `M${r1(p1.x)},${r1(p1.y)}` + segs.map(([, ca, cb, b]) => ` C${r1(ca.x)},${r1(ca.y)} ${r1(cb.x)},${r1(cb.y)} ${r1(b.x)},${r1(b.y)}`).join('');
+    pts = [p1, ...segs.flatMap(([, ca, cb, b]) => [ca, cb, b])];
+    poly = [p1];
+    for (const [a, ca, cb, b] of segs) {
+      for (let i = 1; i <= 16; i++) {
+        const t = i / 16, mt = 1 - t;
+        poly.push({
+          x: mt ** 3 * a.x + 3 * mt * mt * t * ca.x + 3 * mt * t * t * cb.x + t ** 3 * b.x,
+          y: mt ** 3 * a.y + 3 * mt * mt * t * ca.y + 3 * mt * t * t * cb.y + t ** 3 * b.y,
+        });
+      }
+    }
+    const first = segs[0], last = segs[segs.length - 1];
+    startDir = [p1.x - first[1].x, p1.y - first[1].y];
+    endDir = [p2.x - last[2].x, p2.y - last[2].y];
   }
-  const bbox = unionRect(pts.map((p) => ({ x: p.x, y: p.y, w: 0, h: 0 })));
-  return { p1, p2, s1, s2, d, startDir, endDir, mid, bbox };
+  const n = pts.length;
+  if (!startDir) startDir = [pts[0].x - pts[1].x, pts[0].y - pts[1].y];
+  if (!endDir) endDir = [pts[n - 1].x - pts[n - 2].x, pts[n - 1].y - pts[n - 2].y];
+  const lp = Number.isFinite(Number(el.labelPos)) ? Math.min(0.98, Math.max(0.02, Number(el.labelPos))) : 0.5;
+  const mid = pointAlong(poly, lp);
+  const bbox = unionRect([...pts, ...poly].map((p) => ({ x: p.x, y: p.y, w: 0, h: 0 })));
+  return { p1, p2, s1, s2, d, startDir, endDir, mid, bbox, poly, keys: [p1, ...wps, p2] };
+}
+
+// Rechtwinklige Führung: verläuft durch alle Knickpunkte und tritt senkrecht aus den Andockseiten aus
+function elbowRoute(p1, s1, wps, p2, s2) {
+  if (!wps.length) return elbowPoints(p1, s1, p2, s2);
+  const off = 24;
+  const a = { x: p1.x + SIDE_VEC[s1][0] * off, y: p1.y + SIDE_VEC[s1][1] * off };
+  const b = { x: p2.x + SIDE_VEC[s2][0] * off, y: p2.y + SIDE_VEC[s2][1] * off };
+  const pts = [p1, a];
+  let horiz = s1 === 'left' || s1 === 'right';
+  const chain = [...wps, b];
+  for (let i = 0; i < chain.length; i++) {
+    const prev = pts[pts.length - 1], q = chain[i];
+    const last = i === chain.length - 1;
+    // letzter Abschnitt: so abbiegen, dass das Ende in Richtung der Zielseite verläuft
+    if (last) horiz = !(s2 === 'left' || s2 === 'right');
+    pts.push(horiz ? { x: q.x, y: prev.y } : { x: prev.x, y: q.y });
+    pts.push(q);
+    horiz = !horiz;
+  }
+  pts.push(p2);
+  return pts.filter((p, i) => i === 0 || Math.abs(p.x - pts[i - 1].x) > 0.1 || Math.abs(p.y - pts[i - 1].y) > 0.1);
 }
 
 function elbowPoints(p1, s1, p2, s2) {
@@ -332,27 +443,75 @@ function elbowPoints(p1, s1, p2, s2) {
   return pts.filter((p, i) => i === 0 || Math.abs(p.x - pts[i - 1].x) > 0.1 || Math.abs(p.y - pts[i - 1].y) > 0.1);
 }
 
-function polyMid(pts) {
+// Punkt bei Anteil t (0…1) der Länge eines Linienzugs
+export function pointAlong(pts, t) {
   let total = 0;
   for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
-  let half = total / 2;
+  let rest = total * t;
   for (let i = 1; i < pts.length; i++) {
     const seg = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
-    if (half <= seg && seg > 0) {
-      const t = half / seg;
-      return { x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t, y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * t };
+    if (rest <= seg && seg > 0) {
+      const k = rest / seg;
+      return { x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * k, y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * k };
     }
-    half -= seg;
+    rest -= seg;
   }
-  return pts[0];
+  return pts[pts.length - 1] || { x: 0, y: 0 };
 }
 
-function arrowHead(tip, dir, size, color) {
+// Anteil (0…1) der Länge, an dem ein Punkt am nächsten am Linienzug liegt
+export function projectOnPath(pts, p) {
+  let total = 0, best = Infinity, bestAt = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i];
+    const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy, len = Math.sqrt(len2);
+    const k = len2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0;
+    const dd = Math.hypot(a.x + dx * k - p.x, a.y + dy * k - p.y);
+    if (dd < best) {
+      best = dd;
+      bestAt = total + len * k;
+    }
+    total += len;
+  }
+  return { t: total ? bestAt / total : 0.5, dist: best };
+}
+
+/* ---------------- Linienenden ---------------- */
+
+export const ARROW_HEADS = [
+  ['none', 'Ohne'], ['arrow', 'Pfeil'], ['open', 'Pfeil offen'], ['triangle', 'Dreieck hohl'], ['diamond', 'Raute'],
+  ['diamondFilled', 'Raute gefüllt'], ['circle', 'Kreis'], ['bar', 'Querstrich'], ['crow', 'Krähenfuß (n)'],
+];
+const HEAD_KEYS = new Set(ARROW_HEADS.map(([k]) => k));
+
+// Ältere Boards speichern true/false
+export function headType(v, def) {
+  if (v === true) return 'arrow';
+  if (v === false) return 'none';
+  if (v == null) return def;
+  return HEAD_KEYS.has(v) ? v : def;
+}
+
+function arrowHead(kind, tip, dir, size, color, bg, sw) {
   const len = Math.hypot(dir[0], dir[1]) || 1;
   const ux = dir[0] / len, uy = dir[1] / len;
-  const bx = tip.x - ux * size, by = tip.y - uy * size;
-  const px = -uy * size * 0.55, py = ux * size * 0.55;
-  return `<polygon points="${r1(tip.x)},${r1(tip.y)} ${r1(bx + px)},${r1(by + py)} ${r1(bx - px)},${r1(by - py)}" fill="${color}"/>`;
+  const px = -uy, py = ux;
+  const P = (along, side) => `${r1(tip.x - ux * along + px * side)},${r1(tip.y - uy * along + py * side)}`;
+  const w = size * 0.55;
+  switch (kind) {
+    case 'arrow': return `<polygon points="${P(0, 0)} ${P(size, w)} ${P(size, -w)}" fill="${color}"/>`;
+    case 'open': return `<polyline points="${P(size, w)} ${P(0, 0)} ${P(size, -w)}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    case 'triangle': return `<polygon points="${P(0, 0)} ${P(size, w)} ${P(size, -w)}" fill="${bg}" stroke="${color}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+    case 'diamond': case 'diamondFilled':
+      return `<polygon points="${P(0, 0)} ${P(size * 0.8, w * 0.8)} ${P(size * 1.6, 0)} ${P(size * 0.8, -w * 0.8)}" fill="${kind === 'diamond' ? bg : color}" stroke="${color}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+    case 'circle': {
+      const r = size * 0.4;
+      return `<circle cx="${r1(tip.x - ux * r)}" cy="${r1(tip.y - uy * r)}" r="${r1(r)}" fill="${bg}" stroke="${color}" stroke-width="${sw}"/>`;
+    }
+    case 'bar': return `<polyline points="${P(size * 0.6, w)} ${P(size * 0.6, -w)}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    case 'crow': return `<polyline points="${P(0, w)} ${P(size, 0)} ${P(0, -w)}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${P(size * 1.25, w)} ${P(size * 1.25, -w)}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+  }
+  return '';
 }
 
 /* ---------------- Elemente ---------------- */
@@ -442,8 +601,9 @@ function renderBody(el, env) {
       const geo = shapeGeom(el.shape || 'rect', x, y, w, h);
       const box = shapeTextBox(el.shape, x, y, w, h);
       const lay = textLayout(el, box);
+      // 'none' = ohne Füllung und innen durchklickbar (z. B. Rahmen von Blöcken im Sequenzdiagramm)
       return `${geo} fill="${fill === 'transparent' ? 'rgba(255,255,255,0.001)' : fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>` +
-        textSvg(box, lay, { color: el.textColor || contrastText(fill === 'transparent' ? '#ffffff' : fill), align: el.align || 'center', valign: el.valign || 'middle' });
+        textSvg(box, lay, { color: el.textColor || contrastText(fill === 'transparent' || fill === 'none' ? '#ffffff' : fill), align: el.align || 'center', valign: el.valign || 'middle' });
     }
     case 'text': {
       const pad = 4;
@@ -468,17 +628,18 @@ function renderBody(el, env) {
       const sw = el.strokeWidth || 2;
       const dash = dashFor(el);
       const ah = 7 + sw * 2.2;
+      const bg = env.labelBg || '#ffffff';
       let out = `<path class="hit" d="${g.d}" fill="none" stroke="transparent" stroke-width="${Math.max(14, sw + 10)}"/>`;
       out += `<path d="${g.d}" fill="none" stroke="${color}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ''} stroke-linecap="round" stroke-linejoin="round"/>`;
-      if (el.arrowEnd !== false && el.arrowEnd !== 'none') out += arrowHead(g.p2, g.endDir, ah, color);
-      if (el.arrowStart && el.arrowStart !== 'none') out += arrowHead(g.p1, g.startDir, ah, color);
+      out += arrowHead(headType(el.arrowEnd, 'arrow'), g.p2, g.endDir, ah, color, bg, sw);
+      out += arrowHead(headType(el.arrowStart, 'none'), g.p1, g.startDir, ah, color, bg, sw);
       if (el.label) {
         const fs = el.fontSize || 14;
         const lines = String(el.label).split('\n');
         const lw = Math.max(...lines.map((l) => measure(l, fs))) + 12;
         const lh = lines.length * fs * LH + 6;
-        out += `<rect x="${r1(g.mid.x - lw / 2)}" y="${r1(g.mid.y - lh / 2)}" width="${r1(lw)}" height="${r1(lh)}" rx="4" fill="${env.labelBg || '#ffffff'}"/>`;
-        out += textSvg({ x: g.mid.x - lw / 2, y: g.mid.y - lh / 2, w: lw, h: lh }, { size: fs, lines, bold: false, italic: false }, { color });
+        out += `<g class="conn-label"><rect x="${r1(g.mid.x - lw / 2)}" y="${r1(g.mid.y - lh / 2)}" width="${r1(lw)}" height="${r1(lh)}" rx="4" fill="${bg}"/>`;
+        out += textSvg({ x: g.mid.x - lw / 2, y: g.mid.y - lh / 2, w: lw, h: lh }, { size: fs, lines, bold: false, italic: false }, { color }) + '</g>';
       }
       return out;
     }
