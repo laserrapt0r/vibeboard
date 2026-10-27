@@ -929,8 +929,12 @@ body.edit-locked #btn-timer, body.edit-locked #btn-vote, body.edit-locked #btn-p
 .avatar.guest svg { width: 16px; height: 16px; }
 
 /* Startseite: Ordner und Teams */
-.dash-area { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 8px; }
-.dash-nav { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 2px; }
+/* Navigation als eigene Spalte links, von oben an; bleibt beim Scrollen stehen */
+.dash-main.dash-layout { max-width: 1480px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; align-items: start; }
+.dash-page-content { min-width: 0; }
+.dash-area { margin-top: 8px; }
+#dash-title { scroll-margin-top: 84px; }
+.dash-nav { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 2px; padding-top: 16px; max-height: calc(100vh - 92px); overflow-y: auto; }
 .dash-nav-item {
   display: flex; align-items: center; gap: 8px; border: 0; background: transparent; border-radius: 8px; padding: 7px 10px;
   color: var(--text); text-align: left; font-size: 14px;
@@ -952,8 +956,9 @@ body.edit-locked #btn-timer, body.edit-locked #btn-vote, body.edit-locked #btn-p
 .folder-pick span:first-child { display: inline-flex; }
 #dash-bell { display: inline-flex; }
 @media (max-width: 760px) {
-  .dash-area { grid-template-columns: 1fr; gap: 8px; }
-  .dash-nav { position: static; flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  .dash-main.dash-layout { grid-template-columns: 1fr; gap: 8px; }
+  .dash-nav { position: static; flex-direction: row; overflow-x: auto; gap: 4px; padding: 0 0 4px; max-height: none; scrollbar-width: none; }
+  .dash-nav::-webkit-scrollbar { display: none; }
   .dash-nav-item { flex: none; }
   .dash-nav-head { margin: 0 4px; flex: none; }
   .dash-nav-hint { display: none; }

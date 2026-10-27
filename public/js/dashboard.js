@@ -146,6 +146,10 @@ function setView(v) {
   view = v;
   savePref('dashView', v);
   renderBoards();
+  // Die Board-Liste steht unter Vorlagen und Aufgaben – nach der Auswahl dorthin scrollen, falls nicht sichtbar
+  const t = document.getElementById('dash-title');
+  const r = t.getBoundingClientRect();
+  if (r.top < 60 || r.top > innerHeight * 0.6) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderNav() {

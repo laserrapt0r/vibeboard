@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.7.2] – 2026-10-27
+
+### Geändert
+- Startseite: Die Navigation (Alle, Meine, Geteilt, Ordner, Teams) steht als eigene Spalte links oben und bleibt beim
+  Scrollen sichtbar, statt erst unter Vorlagen und Aufgaben zu erscheinen. Nach einer Auswahl scrollt die Seite zur
+  Board-Liste, falls sie nicht im Blick ist. Auf schmalen Bildschirmen ist sie eine Leiste oben.
+
 ## [3.7.1] – 2026-10-27
 
 ### Behoben

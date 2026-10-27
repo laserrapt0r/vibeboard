@@ -20,7 +20,9 @@
     <button id="dash-dark" class="icon-btn" title="Dunkles Design"></button>
     <button id="dash-user" class="avatar" title="Konto"></button>
   </header>
-  <main class="dash-main">
+  <main class="dash-main dash-layout">
+    <nav id="dash-nav" class="dash-nav" aria-label="Boards ordnen"></nav>
+    <div class="dash-page-content">
     <section>
       <div class="dash-section-head">
         <h2>Neues Board erstellen</h2>
@@ -38,7 +40,6 @@
       <div id="dash-tasks" class="my-task-list"></div>
     </section>
     <section class="dash-area">
-      <nav id="dash-nav" class="dash-nav" aria-label="Boards ordnen"></nav>
       <div class="dash-content">
         <div class="dash-section-head">
           <h2 id="dash-title">Alle Boards</h2>
@@ -55,6 +56,7 @@
         <div id="dash-boards" class="dash-boards"></div>
       </div>
     </section>
+    </div>
   </main>
   <footer class="site-footer" id="footer"></footer>
   <script type="module" src="/js/dashboard.js"></script>

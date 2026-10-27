@@ -6,6 +6,7 @@
   - „Meine Boards“ und „Mit mir geteilt“ mit Vorschaubild, Name, letzter Änderung, Anzahl Elemente, Personen online, Freigabe und Mitgliederzahl.
   - Suche, Sortierung (zuletzt bearbeitet, zuletzt erstellt, Name), Aktualisierung alle 30 Sekunden.
   - Aktionen: öffnen, teilen, umbenennen (ab Bearbeiter), duplizieren (Kopie gehört der duplizierenden Person), Link kopieren, löschen (nur Besitzer, mit Rückfrage), Board verlassen (Mitglieder, mit Rückfrage).
+  - Geändert in 3.7.2: Die Navigation steht als eigene Spalte links oben (beim Scrollen sichtbar), auf schmalen Bildschirmen als Leiste oben.
   - Geändert in 3.7.0: Navigation links mit „Alle Boards“, „Meine Boards“, „Mit mir geteilt“, eigenen Ordnern und Teams ([REQ-BOARD-007](#req-board-007-teams-und-ordner)); Board-Karten zeigen Team und Ordner; Glocke für Benachrichtigungen. Die zuletzt gewählte Ansicht bleibt erhalten.
   - Geändert in 3.2.0: Beim Duplizieren werden private Elemente anderer Personen nicht mitkopiert ([REQ-COLLAB-009](04-zusammenarbeit.md)). Die Übersicht zeigt zusätzlich „Meine Aufgaben“ ([REQ-PROJ-002](16-projektarbeit.md)).
 
