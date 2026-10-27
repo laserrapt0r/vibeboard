@@ -9,8 +9,8 @@ import { legalFooter } from './footer.js';
 
 let data = { owned: [], shared: [] };
 let me = null;
-let dark = loadPref('settings', {}).dark;
-let neon = loadPref('settings', {}).neon;
+// „neon“: Einstellung aus 3.5.0, wird als dunkles Design übernommen
+let dark = loadPref('settings', {}).dark || loadPref('settings', {}).neon;
 
 async function load() {
   try {
@@ -199,11 +199,8 @@ function renderUser() {
 }
 
 function applyDark() {
-  document.body.classList.toggle('dark', !!dark || !!neon);
-  document.body.classList.toggle('neon', !!neon);
-  const b = document.getElementById('dash-dark');
-  b.innerHTML = ICONS.moon;
-  b.title = `Design: ${neon ? 'Neon' : dark ? 'Dunkel' : 'Hell'} (Klick wechselt)`;
+  document.body.classList.toggle('dark', !!dark);
+  document.getElementById('dash-dark').innerHTML = ICONS.moon;
 }
 
 document.getElementById('dash-search').addEventListener('input', renderBoards);
@@ -213,12 +210,9 @@ document.getElementById('dash-user').addEventListener('click', (e) => menu(e.cur
   renderUser();
 }), { placement: 'bottom' }));
 document.getElementById('dash-admin').innerHTML = ICONS.settings;
-// Hell → Dunkel → Neon → Hell
 document.getElementById('dash-dark').addEventListener('click', () => {
-  if (neon) [dark, neon] = [false, false];
-  else if (dark) [dark, neon] = [false, true];
-  else [dark, neon] = [true, false];
-  savePref('settings', { ...loadPref('settings', {}), dark, neon });
+  dark = !dark;
+  savePref('settings', { ...loadPref('settings', {}), dark, neon: undefined });
   applyDark();
 });
 document.getElementById('dash-all-templates').addEventListener('click', () => {

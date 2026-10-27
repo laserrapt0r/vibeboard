@@ -7,6 +7,10 @@
   - **Softwareentwicklung:** Sprint-Planung, Entwicklungs-Kanban mit WIP-Limits, Definition of Ready & Done, Architektur (C4-Kontext), Sequenzdiagramm, ER-Diagramm, Event Storming, Bug-Triage, Tech-Debt-Matrix, Release-Planung, API-Design, Architekturentscheidung (ADR).
   - **Projektmanagement:** Projekt-Kick-off, Risikomatrix, RAID-Log, Projektstatus, Meilensteinplan, RACI-Matrix, Teamübergreifende Planung, Lessons Learned.
   - **IT-Service-Management:** Incident-Postmortem, Major-Incident-Lagezentrum, Problem-Analyse (Ist / Ist nicht), Change-Request & CAB, Service Blueprint, SIPOC, Wertstromanalyse, Service-Katalog, On-Call-Übergabe, Runbook, SLA-/Service-Review.
+- **Geändert in 3.6.0:** Mindestens 75 Vorlagen; neue Kategorien:
+  - **UML:** Klassendiagramm, Anwendungsfalldiagramm, Aktivitätsdiagramm (mit Verantwortungsbereichen), Zustandsdiagramm, Komponentendiagramm, Verteilungsdiagramm; das Sequenzdiagramm wechselt in diese Kategorie.
+  - **IT-Infrastruktur:** Netzwerkplan, Rack-Belegung, Container-Plattform (Cluster).
+  - **IT-Service-Management:** zusätzlich Prozessmodell (BPMN): Störung.
 - **Akzeptanzkriterien:**
   - Jede Vorlage liegt in einem benannten Frame und besteht aus normalen, bearbeitbaren Elementen.
   - Hintergrundflächen von Vorlagen sind gesperrt, damit Inhalte darauf abgelegt werden können.

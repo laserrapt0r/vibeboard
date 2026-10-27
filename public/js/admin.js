@@ -10,8 +10,8 @@ const main = document.getElementById('admin-main');
 const nav = document.getElementById('admin-nav');
 let me = null;
 
+// „neon“: Einstellung aus 3.5.0, wird als dunkles Design übernommen
 if (loadPref('settings', {}).dark || loadPref('settings', {}).neon) document.body.classList.add('dark');
-if (loadPref('settings', {}).neon) document.body.classList.add('neon');
 
 const SECTIONS = [
   ['overview', 'Übersicht', 'grid'],

@@ -3,7 +3,7 @@ import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
   initials, relTime, rectsIntersect, throttle, uid,
 } from './util.js';
-import { SHAPES, SHAPE_GROUPS, shapeGeom, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
+import { SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery } from './gallery.js';
 import { popover, closePop, menu } from './menu.js';
@@ -110,7 +110,7 @@ function showFlyout(id, anchor) {
         h('div', { class: 'pop-title' }, group),
         h('div', { class: 'shape-grid' }, keys.map((k) => h('button', {
           class: 'shape-btn' + (o.shape === k ? ' active' : ''), title: SHAPES.find((x) => x[0] === k)[1],
-          html: `<svg viewBox="0 0 40 30" width="40" height="30">${shapeGeom(k, 3, 3, 34, 24)} fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
+          html: shapePreview(k),
           onclick: () => { o.shape = k; done(); },
         }))),
       ]));
@@ -927,7 +927,6 @@ function openSettings(anchor) {
     { header: 'Ansicht' },
     t('grid', 'Raster anzeigen'),
     t('dark', 'Dunkles Design'),
-    t('neon', 'Neon-Design'),
     t('showAuthor', 'Autor auf Sticky Notes'),
     t('hideResolved', 'Erledigte Kommentare ausblenden'),
     t('hideCursors', 'Mauszeiger anderer ausblenden'),
@@ -1245,4 +1244,12 @@ export function initUI() {
     positionCtx();
     drawMinimap();
   });
+}
+
+// Vorschau einer Form in der Formenauswahl; Flächen in Hintergrundfarbe, damit sich überlappende Teile verdecken
+function shapePreview(k) {
+  const tall = ['rack', 'mobile'].includes(k);
+  const [x, y, w, h] = tall ? [11, 2, 18, 26] : k === 'forkbar' ? [3, 12, 34, 6] : [3, 3, 34, 24];
+  const deco = shapeDecor(k, x, y, w, h, { fill: 'none', stroke: 'currentColor', sw: 1.6, full: true, cls: 'pv-fill' });
+  return `<svg viewBox="0 0 40 30" width="40" height="30">${deco.before}${shapeGeom(k, x, y, w, h, true)} class="pv-fill" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>${deco.after}</svg>`;
 }

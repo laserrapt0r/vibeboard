@@ -1,7 +1,7 @@
 # vibeboard
 
 Ein selbst gehostetes, kollaboratives Online-Whiteboard. Mehrere Personen arbeiten gleichzeitig auf einer
-unendlichen Leinwand: mit Sticky Notes, Formen, Verbindungen, Mindmaps, Kommentaren, Abstimmungen und über 65
+unendlichen Leinwand: mit Sticky Notes, Formen, Verbindungen, Mindmaps, Kommentaren, Abstimmungen und über 75
 Vorlagen für Workshops, Retrospektiven, Strategiearbeit, Softwareentwicklung, Projektmanagement und
 IT-Service-Management. Für Entwicklungsteams gibt es Code-Blöcke, Diagramme aus Text (Mermaid-Schreibweise),
 Schätzrunden und einen Kartenimport aus Jira- oder Excel-Exporten. Dazu gibt es Benutzerkonten mit
@@ -30,7 +30,7 @@ liegen in PostgreSQL.
 | ![API-Design mit Tabelle und Code-Block](docs/screenshots/api-design-code.png) | ![Vorlage Incident-Postmortem](docs/screenshots/incident-postmortem.png) |
 | **Softwareentwicklung:** Tabellen und Code-Blöcke mit Syntaxhervorhebung | **IT-Service-Management:** z. B. Incident-Postmortem |
 | ![Vorlagen-Galerie, Kategorie IT-Service-Management](docs/screenshots/vorlagen.png) | ![Administration mit Systemmetriken](docs/screenshots/administration.png) |
-| **Über 65 Vorlagen** in 10 Kategorien | **Administration:** Übersicht mit CPU, Arbeitsspeicher, Speicherplatz und mehr |
+| **Über 75 Vorlagen** in 12 Kategorien | **Administration:** Übersicht mit CPU, Arbeitsspeicher, Speicherplatz und mehr |
 
 Alle Inhalte in den Screenshots sind Beispieldaten.
 
@@ -63,14 +63,14 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 - Verschieben mit Leertaste, Hand-Werkzeug, mittlerer Maustaste oder Trackpad; Pinch-Zoom auf Touch-Geräten
 - Minimap, „Alles anzeigen“, feste Zoomstufen
 - Punktraster, Einrasten am Raster, intelligente Hilfslinien beim Verschieben
-- Helles, dunkles und **Neon-Design** (leuchtende Umrisse und Texte auf dunklem Grund); die Ansicht wird pro Board gemerkt
+- Helles und dunkles Design; die Ansicht wird pro Board gemerkt
 
 ### Inhalte
 | Element | Möglichkeiten |
 |---------|---------------|
 | **Sticky Notes** | 16 Farben, automatische Schriftgröße, optional mit Name der Autorin bzw. des Autors |
 | **Text** | Schriftgröße, Farbe, fett, kursiv, Ausrichtung, Hintergrund |
-| **Formen** | 28 Formen in drei Gruppen: Grundformen (Rechteck, Ellipse, Raute, Stern, Wolke, Sprechblase u. a.), Flussdiagramm & UML (Dokument, Unterprozess, Verzögerung, Datenbank, Notiz, Paket, Komponente, Akteur), Software & IT (Server, Warteschlange, Container, Browser, Endgerät, Firewall) – mit Füllung, Rahmen, Strichart und Text |
+| **Formen** | Über 60 Formen in sieben Gruppen: Grundformen, Flussdiagramm (Dokument, mehrere Dokumente, manuelle Eingabe, Anzeige u. a.), UML (Klasse mit Abschnitten, Akteur, Paket, Komponente, Knoten, Start/Ende, Gabelung, Signale), BPMN (Ereignisse, Gateways), Netzwerk & Rechenzentrum (Router, Switch, Firewall, Load Balancer, Access Point, Internet, Server, Serverschrank, Speichersystem, PC, Smartphone), Software & IT, Container-Plattform (Pod, Deployment, Service, Ingress, Node, ConfigMap, Secret, Volume) – alles eigene Zeichnungen, mit Füllung, Rahmen, Strichart und Text |
 | **Verbindungen** | gerade, gewinkelt oder als Kurve; docken an jeder Stelle des Umrisses an (oder automatisch); Linie ziehen biegt sie, Knickpunkte einfügen, verschieben und entfernen; verschiebbare Beschriftung; 9 Linienenden (Pfeil, Raute, Kreis, Krähenfuß u. a.), Strichart |
 | **Quick Connect** | Punkte an einem ausgewählten Element anklicken oder ziehen, um verbundene Elemente zu erzeugen |
 | **Freihand** | Stift, Textmarker, Radierer |
@@ -173,9 +173,11 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 | Agile & Projekte | Kanban, Eisenhower-Matrix, Impact/Aufwand-Matrix, Projekt-Canvas, Produkt-Roadmap, Zeitstrahl, Gantt-Diagramm, User Story Map, Wochenplaner |
 | Strategie | SWOT-Analyse, Stakeholder-Map, Business Model Canvas¹, Lean Canvas¹, Angebot & Kundenprofil, OKR-Planung, Entscheidungsmatrix |
 | Design & UX | Customer Journey Map, Empathy Map, User Persona, Moodboard, Wireframe |
-| Softwareentwicklung | Sprint-Planung, Entwicklungs-Kanban mit WIP-Limits, Definition of Ready & Done, Architektur (C4-Kontext), Sequenzdiagramm, ER-Diagramm, Event Storming, Bug-Triage, Tech-Debt-Matrix, Release-Planung, API-Design, Architekturentscheidung (ADR) |
+| Softwareentwicklung | Sprint-Planung, Entwicklungs-Kanban mit WIP-Limits, Definition of Ready & Done, Architektur (C4-Kontext), ER-Diagramm, Event Storming, Bug-Triage, Tech-Debt-Matrix, Release-Planung, API-Design, Architekturentscheidung (ADR) |
+| UML | Klassendiagramm, Anwendungsfalldiagramm, Aktivitätsdiagramm, Zustandsdiagramm, Komponentendiagramm, Verteilungsdiagramm, Sequenzdiagramm |
 | Projektmanagement | Projekt-Kick-off, Risikomatrix, RAID-Log, Projektstatus, Meilensteinplan, RACI-Matrix, Teamübergreifende Planung, Lessons Learned |
-| IT-Service-Management | Incident-Postmortem, Major-Incident-Lagezentrum, Problem-Analyse (Ist / Ist nicht), Change-Request & CAB, Service Blueprint, SIPOC, Wertstromanalyse, Service-Katalog, On-Call-Übergabe, Runbook, SLA-/Service-Review |
+| IT-Service-Management | Incident-Postmortem, Major-Incident-Lagezentrum, Problem-Analyse (Ist / Ist nicht), Change-Request & CAB, Service Blueprint, SIPOC, Wertstromanalyse, Service-Katalog, On-Call-Übergabe, Runbook, SLA-/Service-Review, Prozessmodell (BPMN): Störung |
+| IT-Infrastruktur | Netzwerkplan, Rack-Belegung, Container-Plattform (Cluster) |
 | Diagramme | Flussdiagramm, Organigramm, Ishikawa (Fischgräte), 5-Why-Methode |
 
 ¹ Adaption eines Werks unter CC BY-SA 3.0, siehe [Lizenz](#lizenz).
@@ -536,7 +538,7 @@ public/
   board.html           Board-Editor                                  → js/main.js (core, ui, collab, render, sync, …)
                        teamwork.js (privater Modus, Schätzrunde), planning.js (Aufgaben, Versionen, CSV-Import),
                        diagram-parse.js / diagram-text.js (Diagramm aus Text), highlight.js (Code-Blöcke),
-                       templates.js / templates-tech.js / template-kit.js (Vorlagen)
+                       templates.js / templates-tech.js / templates-diagrams.js / template-kit.js (Vorlagen)
   admin.html           Administration                                → js/admin.js
 ```
 

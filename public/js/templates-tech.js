@@ -130,7 +130,7 @@ export const TECH_TEMPLATES = [
     },
   },
   {
-    id: 'sequence', name: 'Sequenzdiagramm', category: 'Softwareentwicklung', icon: '🔁',
+    id: 'sequence', name: 'Sequenzdiagramm', category: 'UML', icon: '🔁',
     description: 'Ablauf zwischen Akteuren und Systemen – erzeugt aus Text, frei bearbeitbar.',
     build: () => {
       const b = new B();

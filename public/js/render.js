@@ -9,25 +9,56 @@ export const LH = 1.25;
 export const SHAPES = [
   ['rect', 'Rechteck'], ['roundrect', 'Abgerundet'], ['ellipse', 'Ellipse'], ['diamond', 'Raute'],
   ['triangle', 'Dreieck'], ['hexagon', 'Sechseck'], ['parallelogram', 'Parallelogramm'], ['trapezoid', 'Trapez'],
-  ['star', 'Stern'], ['pill', 'Pille'], ['cylinder', 'Zylinder'], ['arrow', 'Blockpfeil'],
+  ['star', 'Stern'], ['pill', 'Pille'], ['cylinder', 'Zylinder / Datenbank'], ['arrow', 'Blockpfeil'],
   ['callout', 'Sprechblase'], ['cross', 'Kreuz'], ['document', 'Dokument'], ['cloud', 'Wolke'],
   ['subprocess', 'Unterprozess'], ['delay', 'Verzögerung'], ['note', 'Notiz'], ['package', 'Paket'],
   ['actor', 'Akteur'], ['server', 'Server'], ['queue', 'Warteschlange'], ['container', 'Container'],
-  ['component', 'Komponente'], ['browser', 'Browser / UI'], ['laptop', 'Endgerät'], ['firewall', 'Firewall'],
+  ['component', 'Komponente'], ['browser', 'Browser / UI'], ['laptop', 'Laptop'], ['firewall', 'Firewall'],
+  // seit 3.6.0
+  ['multidoc', 'Mehrere Dokumente'], ['manualinput', 'Manuelle Eingabe'], ['manualop', 'Manuelle Tätigkeit'],
+  ['display', 'Anzeige'], ['offpage', 'Verweis auf andere Seite'], ['internalstorage', 'Interner Speicher'],
+  ['umlclass', 'Klasse'], ['umlnode', 'Knoten (Verteilung)'], ['initial', 'Startzustand'], ['final', 'Endzustand'],
+  ['forkbar', 'Gabelung / Vereinigung'], ['send', 'Signal senden'], ['receive', 'Signal empfangen'],
+  ['event', 'Startereignis'], ['eventinter', 'Zwischenereignis'], ['eventend', 'Endereignis'],
+  ['gatewayx', 'Exklusives Gateway (XOR)'], ['gatewayplus', 'Paralleles Gateway (AND)'], ['gatewayo', 'Inklusives Gateway (OR)'],
+  ['router', 'Router'], ['switch', 'Switch'], ['loadbalancer', 'Load Balancer'], ['accesspoint', 'WLAN-Access-Point'],
+  ['internet', 'Internet'], ['rack', 'Serverschrank (Rack)'], ['storage', 'Speichersystem (NAS/SAN)'],
+  ['desktop', 'Arbeitsplatz-PC'], ['mobile', 'Smartphone / Tablet'], ['users', 'Benutzergruppe'],
+  ['gear', 'Dienst / Konfiguration'], ['lock', 'Sicherheit / Zugriffsschutz'],
+  ['pod', 'Pod'], ['deployment', 'Deployment / ReplicaSet'], ['k8sservice', 'Service'], ['ingress', 'Ingress'],
+  ['k8snode', 'Knoten (Node)'], ['configmap', 'ConfigMap'], ['secret', 'Secret'], ['volume', 'Volume'],
 ];
 
 // Gruppierung für die Formenauswahl
 export const SHAPE_GROUPS = [
   ['Grundformen', ['rect', 'roundrect', 'ellipse', 'diamond', 'triangle', 'hexagon', 'parallelogram', 'trapezoid', 'star', 'pill', 'arrow', 'callout', 'cross', 'cloud']],
-  ['Flussdiagramm & UML', ['rect', 'pill', 'diamond', 'parallelogram', 'document', 'subprocess', 'delay', 'cylinder', 'note', 'package', 'component', 'actor']],
-  ['Software & IT', ['server', 'cylinder', 'queue', 'container', 'browser', 'laptop', 'firewall', 'cloud', 'actor', 'component']],
+  ['Flussdiagramm', ['pill', 'rect', 'diamond', 'parallelogram', 'document', 'multidoc', 'subprocess', 'manualinput', 'manualop', 'display', 'delay', 'cylinder', 'internalstorage', 'offpage', 'note']],
+  ['UML', ['umlclass', 'actor', 'ellipse', 'package', 'component', 'umlnode', 'note', 'roundrect', 'initial', 'final', 'diamond', 'forkbar', 'send', 'receive']],
+  ['BPMN (Prozesse)', ['roundrect', 'event', 'eventinter', 'eventend', 'gatewayx', 'gatewayplus', 'gatewayo', 'note', 'cylinder']],
+  ['Netzwerk & Rechenzentrum', ['router', 'switch', 'firewall', 'loadbalancer', 'accesspoint', 'internet', 'cloud', 'server', 'rack', 'storage', 'desktop', 'laptop', 'mobile', 'users']],
+  ['Software & IT', ['server', 'cylinder', 'queue', 'container', 'browser', 'laptop', 'firewall', 'cloud', 'actor', 'component', 'gear', 'lock']],
+  ['Container-Plattform', ['pod', 'deployment', 'k8sservice', 'ingress', 'k8snode', 'configmap', 'secret', 'volume']],
 ];
+
+// Standardgröße und -werte neuer Formen (sonst 200 × 140)
+const ICON_DEFAULT = { w: 120, h: 150, fontSize: 14, valign: 'top' };
+export const SHAPE_DEFAULTS = {
+  router: ICON_DEFAULT, loadbalancer: ICON_DEFAULT, accesspoint: ICON_DEFAULT, internet: ICON_DEFAULT, gear: ICON_DEFAULT,
+  lock: ICON_DEFAULT, users: ICON_DEFAULT, pod: ICON_DEFAULT, deployment: ICON_DEFAULT, k8sservice: ICON_DEFAULT,
+  ingress: ICON_DEFAULT, k8snode: ICON_DEFAULT, configmap: ICON_DEFAULT, secret: ICON_DEFAULT, volume: ICON_DEFAULT,
+  switch: { w: 260, h: 80, fontSize: 15 }, storage: { w: 240, h: 110, fontSize: 15 }, rack: { w: 200, h: 360, fontSize: 15, bold: true },
+  desktop: { w: 180, h: 150, fontSize: 15 }, mobile: { w: 100, h: 180, fontSize: 14 },
+  umlclass: { w: 240, h: 170, fontSize: 14, align: 'left', valign: 'top', text: 'Klasse\n--\n- attribut: Typ\n--\n+ methode(): Typ' },
+  initial: { w: 36, h: 36, fill: '#1a1a1a' }, final: { w: 40, h: 40 }, forkbar: { w: 220, h: 10, fill: '#1a1a1a' },
+  send: { w: 200, h: 90 }, receive: { w: 200, h: 90 },
+  event: { w: 56, h: 56, fontSize: 12 }, eventinter: { w: 56, h: 56, fontSize: 12 }, eventend: { w: 56, h: 56, fontSize: 12 },
+  gatewayx: { w: 72, h: 72, fontSize: 12 }, gatewayplus: { w: 72, h: 72, fontSize: 12 }, gatewayo: { w: 72, h: 72, fontSize: 12 },
+};
 
 export const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace";
 
 export function defsMarkup() {
-  return `<filter id="neon-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-<filter id="shadow" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.16"/></filter>
+  return `<filter id="shadow" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.16"/></filter>
 <filter id="shadow-sm" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.18"/></filter>`;
 }
 
@@ -106,7 +137,303 @@ const r1 = (v) => Math.round(v * 10) / 10;
 
 /* ---------------- Formen ---------------- */
 
-export function shapeGeom(kind, x, y, w, h) {
+/* ---------------- Symbole (Netzwerk, Container-Plattform, UML, BPMN) ---------------- */
+
+// Symbole mit Beschriftung darunter: oben ein quadratisches Symbol, darunter der Text
+const ICON_SHAPES = new Set(['router', 'loadbalancer', 'accesspoint', 'internet', 'gear', 'lock', 'users',
+  'pod', 'deployment', 'k8sservice', 'ingress', 'k8snode', 'configmap', 'secret', 'volume']);
+const ICON_F = 0.7;
+const LABEL_BELOW = new Set(['event', 'eventinter', 'eventend', 'gatewayx', 'gatewayplus', 'gatewayo', 'initial', 'final', 'forkbar']);
+export const labelBelow = (k) => LABEL_BELOW.has(k);
+// Beschriftung liegt auf dem Board-Hintergrund statt auf der Füllung der Form
+export const labelOutside = (k) => LABEL_BELOW.has(k) || ICON_SHAPES.has(k) || k === 'actor';
+const iconSize = (w, h) => Math.min(w, h * ICON_F);
+
+// full = Symbol füllt die ganze Fläche (Vorschau in der Formenauswahl)
+function iconBox(x, y, w, h, full) {
+  const s = full ? Math.min(w, h) : iconSize(w, h);
+  const ix = x + (w - s) / 2, iy = full ? y + (h - s) / 2 : y;
+  const X = (u) => ix + u * s, Y = (v) => iy + v * s;
+  return { s, X, Y, P: (u, v) => `${r1(X(u))},${r1(Y(v))}` };
+}
+const circleD = (cx, cy, r) => ellipseD(cx, cy, r, r);
+const ellipseD = (cx, cy, rx, ry) => `M${r1(cx - rx)},${r1(cy)} A${r1(rx)},${r1(ry)} 0 1 0 ${r1(cx + rx)},${r1(cy)} A${r1(rx)},${r1(ry)} 0 1 0 ${r1(cx - rx)},${r1(cy)} Z`;
+const rectD = (x, y, w, h) => `M${r1(x)},${r1(y)} H${r1(x + w)} V${r1(y + h)} H${r1(x)} Z`;
+function rrectD(x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  return `M${r1(x + r)},${r1(y)} H${r1(x + w - r)} A${r1(r)},${r1(r)} 0 0 1 ${r1(x + w)},${r1(y + r)} V${r1(y + h - r)} A${r1(r)},${r1(r)} 0 0 1 ${r1(x + w - r)},${r1(y + h)} H${r1(x + r)} A${r1(r)},${r1(r)} 0 0 1 ${r1(x)},${r1(y + h - r)} V${r1(y + r)} A${r1(r)},${r1(r)} 0 0 1 ${r1(x + r)},${r1(y)} Z`;
+}
+const lineD = (x1, y1, x2, y2) => `M${r1(x1)},${r1(y1)} L${r1(x2)},${r1(y2)}`;
+// Pfeil: Linie bis kurz vor die Spitze und gefüllte Spitze
+function arrowD(x1, y1, x2, y2, size) {
+  const a = Math.atan2(y2 - y1, x2 - x1);
+  const p = (d) => `${r1(x2 - size * Math.cos(a - d))},${r1(y2 - size * Math.sin(a - d))}`;
+  return { line: lineD(x1, y1, x2 - Math.cos(a) * size * 0.7, y2 - Math.sin(a) * size * 0.7), head: `M${r1(x2)},${r1(y2)} L${p(0.45)} L${p(-0.45)} Z` };
+}
+function arrowsU(u, list, size) {
+  const out = { line: '', head: '' };
+  for (const [a, b, c, d] of list) {
+    const r = arrowD(u.X(a), u.Y(b), u.X(c), u.Y(d), size * u.s);
+    out.line += r.line + ' ';
+    out.head += r.head + ' ';
+  }
+  return out;
+}
+// Würfel in Schrägansicht (Umriss und Kanten in einem Pfad; zweipunktige Linien füllen nichts)
+function cubeD(u, cx, cy, k) {
+  const q = k * 0.87;
+  return `M${u.P(cx, cy - k)} L${u.P(cx + q, cy - k / 2)} L${u.P(cx + q, cy + k / 2)} L${u.P(cx, cy + k)} L${u.P(cx - q, cy + k / 2)} L${u.P(cx - q, cy - k / 2)} Z ` +
+    `M${u.P(cx, cy)} L${u.P(cx - q, cy - k / 2)} M${u.P(cx, cy)} L${u.P(cx + q, cy - k / 2)} M${u.P(cx, cy)} L${u.P(cx, cy + k)}`;
+}
+const docD = (x, y, w, h) => {
+  const wv = h * 0.1;
+  return `M${r1(x)},${r1(y)} H${r1(x + w)} V${r1(y + h - wv)} C${r1(x + w * 0.75)},${r1(y + h - wv * 2.5)} ${r1(x + w * 0.5)},${r1(y + h + wv * 0.5)} ${r1(x)},${r1(y + h - wv)} Z`;
+};
+const multidocOffset = (w, h) => Math.min(w, h) * 0.06;
+// Rack: Höhe des Kopfbereichs (Beschriftung) und des Sockels
+const rackHead = (h) => Math.max(18, Math.min(h * 0.1, 40));
+const rackBase = (h) => Math.max(5, Math.min(h * 0.035, 12));
+const monitorH = (h) => h * 0.78;
+
+// Jede Funktion liefert { main: Umriss (gefüllt), under: [Pfade dahinter], lines: nur Linien, solid: in Linienfarbe gefüllt }
+const DRAW = {
+  router(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const a = arrowsU(u, [[0.5, 0.13, 0.5, 0.42], [0.5, 0.87, 0.5, 0.58], [0.4, 0.5, 0.13, 0.5], [0.6, 0.5, 0.87, 0.5]], 0.11);
+    return { main: circleD(u.X(0.5), u.Y(0.5), u.s * 0.46), lines: a.line, solid: a.head };
+  },
+  loadbalancer(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const a = arrowsU(u, [[0.38, 0.5, 0.86, 0.33], [0.38, 0.5, 0.86, 0.5], [0.38, 0.5, 0.86, 0.67]], 0.1);
+    return { main: rrectD(u.X(0.04), u.Y(0.2), u.s * 0.92, u.s * 0.6, u.s * 0.08), lines: lineD(u.X(0.13), u.Y(0.5), u.X(0.38), u.Y(0.5)) + ' ' + a.line, solid: a.head + circleD(u.X(0.38), u.Y(0.5), u.s * 0.035) };
+  },
+  accesspoint(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const cx = 0.5, cy = 0.56;
+    const arc = (r) => {
+      const a0 = (-140 * Math.PI) / 180, a1 = (-40 * Math.PI) / 180;
+      return `M${u.P(cx + r * Math.cos(a0), cy + r * Math.sin(a0))} A${r1(r * u.s)},${r1(r * u.s)} 0 0 1 ${u.P(cx + r * Math.cos(a1), cy + r * Math.sin(a1))}`;
+    };
+    return {
+      main: rrectD(u.X(0.14), u.Y(0.66), u.s * 0.72, u.s * 0.2, u.s * 0.06),
+      lines: [0.14, 0.27, 0.4].map(arc).join(' '),
+      solid: circleD(u.X(cx), u.Y(cy), u.s * 0.045) + ' ' + circleD(u.X(0.26), u.Y(0.76), u.s * 0.025) + ' ' + circleD(u.X(0.34), u.Y(0.76), u.s * 0.025),
+    };
+  },
+  internet(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const r = 0.46, dy = 0.23, hw = Math.sqrt(r * r - dy * dy);
+    return {
+      main: circleD(u.X(0.5), u.Y(0.5), u.s * r),
+      lines: [lineD(u.X(0.04), u.Y(0.5), u.X(0.96), u.Y(0.5)), lineD(u.X(0.5), u.Y(0.04), u.X(0.5), u.Y(0.96)),
+        ellipseD(u.X(0.5), u.Y(0.5), u.s * 0.2, u.s * r), lineD(u.X(0.5 - hw), u.Y(0.5 - dy), u.X(0.5 + hw), u.Y(0.5 - dy)),
+        lineD(u.X(0.5 - hw), u.Y(0.5 + dy), u.X(0.5 + hw), u.Y(0.5 + dy))].join(' '),
+    };
+  },
+  gear(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const pts = [];
+    const at = (deg, r) => u.P(0.5 + r * Math.cos((deg * Math.PI) / 180), 0.5 + r * Math.sin((deg * Math.PI) / 180));
+    for (let i = 0; i < 8; i++) {
+      const a = i * 45;
+      pts.push(at(a - 12, 0.35), at(a - 8, 0.46), at(a + 8, 0.46), at(a + 12, 0.35), at(a + 22.5, 0.35));
+    }
+    return { main: `M${pts.join(' L')} Z`, lines: circleD(u.X(0.5), u.Y(0.5), u.s * 0.14) };
+  },
+  lock(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    return {
+      main: rrectD(u.X(0.18), u.Y(0.44), u.s * 0.64, u.s * 0.48, u.s * 0.07),
+      lines: `M${u.P(0.31, 0.44)} V${r1(u.Y(0.29))} A${r1(u.s * 0.19)},${r1(u.s * 0.19)} 0 0 1 ${u.P(0.69, 0.29)} V${r1(u.Y(0.44))}`,
+      solid: circleD(u.X(0.5), u.Y(0.62), u.s * 0.06) + ' ' + rectD(u.X(0.475), u.Y(0.63), u.s * 0.05, u.s * 0.14),
+    };
+  },
+  users(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const body = (x0, x1, yb, ry) => `M${u.P(x0, yb)} A${r1(((x1 - x0) / 2) * u.s)},${r1(ry * u.s)} 0 0 1 ${u.P(x1, yb)} Z`;
+    return {
+      under: [circleD(u.X(0.66), u.Y(0.3), u.s * 0.12) + ' ' + body(0.44, 0.9, 0.78, 0.3)],
+      main: circleD(u.X(0.38), u.Y(0.4), u.s * 0.14) + ' ' + body(0.08, 0.68, 0.94, 0.36),
+    };
+  },
+  pod(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    return { main: cubeD(u, 0.5, 0.5, 0.42) };
+  },
+  deployment(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    return { under: [cubeD(u, 0.64, 0.36, 0.3)], main: cubeD(u, 0.38, 0.62, 0.3) };
+  },
+  k8sservice(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const xs = [0.18, 0.5, 0.82];
+    return {
+      under: [xs.map((cx) => lineD(u.X(0.5), u.Y(0.3), u.X(cx), u.Y(0.72))).join(' ')],
+      main: circleD(u.X(0.5), u.Y(0.22), u.s * 0.15) + ' ' + xs.map((cx) => cubeD(u, cx, 0.78, 0.13)).join(' '),
+    };
+  },
+  ingress(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const a = arrowsU(u, [[0.04, 0.5, 0.6, 0.5]], 0.12);
+    return { main: rrectD(u.X(0.32), u.Y(0.14), u.s * 0.62, u.s * 0.72, u.s * 0.07) + ' ' + cubeD(u, 0.76, 0.5, 0.11), lines: a.line, solid: a.head };
+  },
+  k8snode(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    return {
+      main: rrectD(u.X(0.06), u.Y(0.1), u.s * 0.88, u.s * 0.8, u.s * 0.07) + ' ' + cubeD(u, 0.32, 0.6, 0.15) + ' ' + cubeD(u, 0.68, 0.6, 0.15),
+      lines: lineD(u.X(0.06), u.Y(0.28), u.X(0.94), u.Y(0.28)),
+      solid: [0.15, 0.22, 0.29].map((cx) => circleD(u.X(cx), u.Y(0.19), u.s * 0.025)).join(' '),
+    };
+  },
+  configmap(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const rows = [0.42, 0.58, 0.74];
+    return {
+      main: `M${u.P(0.18, 0.06)} H${r1(u.X(0.64))} L${u.P(0.82, 0.24)} V${r1(u.Y(0.94))} H${r1(u.X(0.18))} Z`,
+      lines: `M${u.P(0.64, 0.06)} V${r1(u.Y(0.24))} H${r1(u.X(0.82))} ` + rows.map((v) => lineD(u.X(0.4), u.Y(v), u.X(0.7), u.Y(v))).join(' '),
+      solid: rows.map((v) => rectD(u.X(0.27), u.Y(v) - u.s * 0.03, u.s * 0.06, u.s * 0.06)).join(' '),
+    };
+  },
+  secret(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    return {
+      main: circleD(u.X(0.3), u.Y(0.5), u.s * 0.2) + ` M${u.P(0.49, 0.45)} H${r1(u.X(0.92))} V${r1(u.Y(0.55))} H${r1(u.X(0.86))} V${r1(u.Y(0.68))} H${r1(u.X(0.78))} V${r1(u.Y(0.55))} H${r1(u.X(0.72))} V${r1(u.Y(0.64))} H${r1(u.X(0.64))} V${r1(u.Y(0.55))} H${r1(u.X(0.49))} Z`,
+      lines: circleD(u.X(0.25), u.Y(0.5), u.s * 0.06),
+    };
+  },
+  volume(x, y, w, h, full) {
+    const u = iconBox(x, y, w, h, full);
+    const x0 = u.X(0.18), x1 = u.X(0.82), y0 = u.Y(0.1), y1 = u.Y(0.9), rx = (x1 - x0) / 2, ry = u.s * 0.1;
+    return {
+      main: `M${r1(x0)},${r1(y0 + ry)} A${r1(rx)},${r1(ry)} 0 0 1 ${r1(x1)},${r1(y0 + ry)} V${r1(y1 - ry)} A${r1(rx)},${r1(ry)} 0 0 1 ${r1(x0)},${r1(y1 - ry)} Z`,
+      lines: `M${r1(x0)},${r1(y0 + ry)} A${r1(rx)},${r1(ry)} 0 0 0 ${r1(x1)},${r1(y0 + ry)} M${r1(x0)},${r1(u.Y(0.5))} A${r1(rx)},${r1(ry)} 0 0 0 ${r1(x1)},${r1(u.Y(0.5))}`,
+    };
+  },
+  // Geräte mit Beschriftung im Gehäuse
+  switch(x, y, w, h) {
+    const p = Math.max(3, Math.min(h * 0.18, w * 0.06));
+    const n = Math.max(3, Math.min(24, Math.floor((w * 0.86 + p * 0.5) / (p * 1.5))));
+    const total = n * p + (n - 1) * p * 0.5, x0 = x + (w - total) / 2, y0 = y + h * 0.72 - p / 2;
+    let ports = '';
+    for (let i = 0; i < n; i++) ports += rectD(x0 + i * p * 1.5, y0, p, p) + ' ';
+    return { main: rrectD(x, y, w, h, Math.min(w, h) * 0.08), lines: ports };
+  },
+  storage(x, y, w, h) {
+    const y0 = y + h * 0.52, bh = h * 0.34;
+    const n = Math.max(2, Math.min(10, Math.round((w * 0.88) / Math.max(bh * 0.9, 1))));
+    const g = w * 0.02, bw = (w * 0.88 - g * (n - 1)) / n, x0 = x + w * 0.06;
+    let bays = '', leds = '';
+    for (let i = 0; i < n; i++) {
+      const bx = x0 + i * (bw + g);
+      bays += rectD(bx, y0, bw, bh) + ' ';
+      leds += circleD(bx + bw * 0.78, y0 + bh * 0.78, Math.max(1.2, Math.min(bw, bh) * 0.08)) + ' ';
+    }
+    return { main: rrectD(x, y, w, h, Math.min(w, h) * 0.06), lines: bays, solid: leds };
+  },
+  rack(x, y, w, h) {
+    const hb = rackHead(h), bb = rackBase(h), rw = Math.max(6, Math.min(w * 0.07, 16));
+    const top = y + hb, bot = y + h - bb;
+    let holes = '';
+    const step = 12, n = Math.floor((bot - top - 6) / step), hs = Math.max(1.5, Math.min(rw * 0.25, 3));
+    for (let i = 0; i < n; i++) {
+      const cy = top + 6 + i * step + step / 2;
+      holes += rectD(x + rw / 2 - hs / 2, cy - hs / 2, hs, hs) + ' ' + rectD(x + w - rw / 2 - hs / 2, cy - hs / 2, hs, hs) + ' ';
+    }
+    return {
+      main: rrectD(x, y, w, h, Math.min(w, h) * 0.03),
+      lines: `${lineD(x, top, x + w, top)} ${lineD(x, bot, x + w, bot)} ${lineD(x + rw, top, x + rw, bot)} ${lineD(x + w - rw, top, x + w - rw, bot)}`,
+      solid: holes,
+    };
+  },
+  desktop(x, y, w, h) {
+    const mh = monitorH(h), m = Math.min(w, mh) * 0.05;
+    return {
+      main: rrectD(x, y, w, mh, Math.min(w, mh) * 0.04) + ' ' + rectD(x + w * 0.44, y + mh, w * 0.12, h * 0.13) + ' ' + rrectD(x + w * 0.28, y + h * 0.91, w * 0.44, h * 0.09, h * 0.03),
+      lines: rectD(x + m, y + m, w - m * 2, mh - m * 2),
+    };
+  },
+  mobile(x, y, w, h) {
+    return {
+      main: rrectD(x, y, w, h, Math.min(w, h) * 0.14),
+      lines: rectD(x + w * 0.07, y + h * 0.1, w * 0.86, h * 0.8) + ' ' + lineD(x + w * 0.4, y + h * 0.05, x + w * 0.6, y + h * 0.05),
+      solid: circleD(x + w / 2, y + h * 0.95, Math.max(1.5, Math.min(w, h) * 0.035)),
+    };
+  },
+  // Flussdiagramm
+  multidoc(x, y, w, h) {
+    const d = multidocOffset(w, h);
+    return { under: [docD(x + 2 * d, y, w - 2 * d, h - 2 * d), docD(x + d, y + d, w - 2 * d, h - 2 * d)], main: docD(x, y + 2 * d, w - 2 * d, h - 2 * d) };
+  },
+  display(x, y, w, h) {
+    return { main: `M${r1(x)},${r1(y + h / 2)} L${r1(x + w * 0.15)},${r1(y)} H${r1(x + w * 0.85)} A${r1(w * 0.15)},${r1(h / 2)} 0 0 1 ${r1(x + w * 0.85)},${r1(y + h)} H${r1(x + w * 0.15)} Z` };
+  },
+  internalstorage(x, y, w, h) {
+    return { main: rectD(x, y, w, h), lines: lineD(x + w * 0.12, y, x + w * 0.12, y + h) + ' ' + lineD(x, y + h * 0.16, x + w, y + h * 0.16) };
+  },
+  // UML
+  initial(x, y, w, h) {
+    const d = ellipseD(x + w / 2, y + h / 2, w / 2, h / 2);
+    return { main: d, solid: d };
+  },
+  final(x, y, w, h) {
+    return { main: ellipseD(x + w / 2, y + h / 2, w / 2, h / 2), solid: ellipseD(x + w / 2, y + h / 2, w * 0.3, h * 0.3) };
+  },
+  forkbar(x, y, w, h) {
+    const d = rectD(x, y, w, h);
+    return { main: d, solid: d };
+  },
+  umlclass(x, y, w, h) {
+    return { main: rectD(x, y, w, h), lines: lineD(x, y + h * 0.3, x + w, y + h * 0.3) + ' ' + lineD(x, y + h * 0.65, x + w, y + h * 0.65) };
+  },
+  // BPMN
+  event(x, y, w, h) {
+    return { main: ellipseD(x + w / 2, y + h / 2, w / 2, h / 2) };
+  },
+  eventend(x, y, w, h) {
+    const t = Math.max(2.5, Math.min(w, h) * 0.08);
+    return { main: ellipseD(x + w / 2, y + h / 2, w / 2, h / 2), ring: ellipseD(x + w / 2, y + h / 2, w / 2, h / 2) + ' ' + ellipseD(x + w / 2, y + h / 2, w / 2 - t, h / 2 - t) };
+  },
+  eventinter(x, y, w, h) {
+    const t = Math.max(3, Math.min(w, h) * 0.08);
+    return { main: ellipseD(x + w / 2, y + h / 2, w / 2, h / 2), lines: ellipseD(x + w / 2, y + h / 2, w / 2 - t, h / 2 - t) };
+  },
+  gatewayx(x, y, w, h) {
+    const a = 0.34, b = 0.66;
+    return { main: diamondD(x, y, w, h), lines: lineD(x + w * a, y + h * a, x + w * b, y + h * b) + ' ' + lineD(x + w * b, y + h * a, x + w * a, y + h * b) };
+  },
+  gatewayplus(x, y, w, h) {
+    return { main: diamondD(x, y, w, h), lines: lineD(x + w / 2, y + h * 0.27, x + w / 2, y + h * 0.73) + ' ' + lineD(x + w * 0.27, y + h / 2, x + w * 0.73, y + h / 2) };
+  },
+  gatewayo(x, y, w, h) {
+    return { main: diamondD(x, y, w, h), lines: ellipseD(x + w / 2, y + h / 2, w * 0.2, h * 0.2) };
+  },
+};
+// Tiefe des Quaders bei UML-Knoten begrenzt, damit große Knoten nicht klobig wirken
+const nodeDepth = (w, h) => Math.min(Math.min(w, h) * 0.15, 22);
+DRAW.umlnode = (x, y, w, h) => {
+  const d = nodeDepth(w, h);
+  return { main: `M${r1(x)},${r1(y + d)} H${r1(x + w - d)} V${r1(y + h)} H${r1(x)} Z M${r1(x)},${r1(y + d)} L${r1(x + d)},${r1(y)} H${r1(x + w)} V${r1(y + h - d)} L${r1(x + w - d)},${r1(y + h)} M${r1(x + w - d)},${r1(y + d)} L${r1(x + w)},${r1(y)}` };
+};
+function diamondD(x, y, w, h) {
+  return `M${r1(x + w / 2)},${r1(y)} L${r1(x + w)},${r1(y + h / 2)} L${r1(x + w / 2)},${r1(y + h)} L${r1(x)},${r1(y + h / 2)} Z`;
+}
+
+// Zusätzliche Teile einer Form: davor (under) und danach (Linien, gefüllte Details).
+// cls: Klasse für gefüllte Flächen (Vorschau in der Formenauswahl)
+export function shapeDecor(kind, x, y, w, h, { fill, stroke, sw, dash, full = false, cls = '' }) {
+  const f = Object.hasOwn(DRAW, kind) ? DRAW[kind](x, y, w, h, full) : null;
+  if (!f) return { before: '', after: '' };
+  const c = cls ? ` class="${cls}"` : '';
+  const da = dash ? ` stroke-dasharray="${dash}"` : '';
+  let before = '', after = '';
+  for (const d of f.under || []) before += `<path${c} d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${da} stroke-linejoin="round"/>`;
+  if (f.lines) after += `<path d="${f.lines}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  if (f.solid && stroke !== 'none') after += `<path d="${f.solid}" fill="${stroke}"/>`;
+  if (f.ring && stroke !== 'none') after += `<path d="${f.ring}" fill="${stroke}" fill-rule="evenodd"/>`;
+  return { before, after };
+}
+
+export function shapeGeom(kind, x, y, w, h, full = false) {
   const p = (pts) => `<polygon points="${pts.map(([a, b]) => `${r1(a)},${r1(b)}`).join(' ')}"`;
   switch (kind) {
     case 'roundrect': return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w, h) * 0.15}"`;
@@ -179,12 +506,65 @@ export function shapeGeom(kind, x, y, w, h) {
     }
     case 'laptop': return `<path d="M${x + w * 0.1},${y} H${x + w * 0.9} V${y + h * 0.82} H${x + w * 0.1} Z M${x},${y + h * 0.86} H${x + w} L${x + w * 0.95},${y + h} H${x + w * 0.05} Z"`;
     case 'firewall': return `<path d="M${x},${y} H${x + w} V${y + h} H${x} Z M${x},${y + h / 3} H${x + w} M${x},${y + (h * 2) / 3} H${x + w} M${x + w / 2},${y} V${y + h / 3} M${x + w / 4},${y + h / 3} V${y + (h * 2) / 3} M${x + (w * 3) / 4},${y + h / 3} V${y + (h * 2) / 3} M${x + w / 2},${y + (h * 2) / 3} V${y + h}"`;
-    default: return `<rect x="${x}" y="${y}" width="${w}" height="${h}"`;
+    case 'manualinput': return p([[x, y + h * 0.25], [x + w, y], [x + w, y + h], [x, y + h]]);
+    case 'manualop': return p([[x, y], [x + w, y], [x + w * 0.8, y + h], [x + w * 0.2, y + h]]);
+    case 'offpage': return p([[x, y], [x + w, y], [x + w, y + h * 0.7], [x + w / 2, y + h], [x, y + h * 0.7]]);
+    case 'send': return p([[x, y], [x + w * 0.85, y], [x + w, y + h / 2], [x + w * 0.85, y + h], [x, y + h]]);
+    case 'receive': return p([[x, y], [x + w, y], [x + w, y + h], [x, y + h], [x + w * 0.15, y + h / 2]]);
+    default:
+      if (Object.hasOwn(DRAW, kind)) return `<path d="${DRAW[kind](x, y, w, h, full).main}"`;
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}"`;
   }
+}
+
+// UML-Klasse: Abschnitte (Name, Attribute, Operationen) werden durch Zeilen aus „--“ getrennt.
+// Der Name steht fett und mittig, Stereotypen wie «interface» normal darüber; der letzte Abschnitt füllt den Rest.
+export const splitClassText = (text) => String(text || '').split('\n').reduce((acc, l) => {
+  if (/^\s*-{2,}\s*$/.test(l)) acc.push([]);
+  else acc[acc.length - 1].push(l);
+  return acc;
+}, [[]]);
+
+function umlClassSvg(el, x, y, w, h, outline, stroke, sw, color) {
+  const size = Number(el.fontSize) || 14, lh = size * LH, pad = 8, padY = 6;
+  const secs = splitClassText(el.text);
+  while (secs.length < 3) secs.push([]);
+  let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" ${outline}`;
+  let cy = y, seps = '';
+  secs.forEach((sec, i) => {
+    const name = i === 0;
+    const lines = [];
+    for (const l of sec) {
+      const stereo = name && /^\s*(«|<<)/.test(l);
+      for (const t of wrap(l, w - pad * 2, size, name && !stereo, el.italic)) lines.push({ t, bold: name && !stereo });
+    }
+    const last = i === secs.length - 1;
+    const sh = Math.max(1, lines.length) * lh + padY * 2;
+    lines.forEach((ln, k) => {
+      const ty = cy + padY + k * lh;
+      if (ty + lh > y + h + 0.5) return;
+      out += textSvg({ x: x + pad, y: ty, w: w - pad * 2, h: lh },
+        { size, lines: [ln.t], bold: ln.bold || (!name && !!el.bold), italic: !!el.italic }, { color, align: name ? 'center' : 'left', valign: 'top', underline: el.underline, strike: el.strike });
+    });
+    cy += sh;
+    if (!last && cy < y + h - 1) seps += lineD(x, cy, x + w, cy) + ' ';
+  });
+  if (seps) out += `<path d="${seps}" fill="none" stroke="${stroke}" stroke-width="${sw}"/>`;
+  return out;
 }
 
 export function shapeTextBox(kind, x, y, w, h, pad = 10) {
   let ix = 0, iy = 0, iw = 1, ih = 1;
+  // Kleine Formen (BPMN-Ereignisse, Gateways, Start/Ende): Beschriftung wie üblich unter der Form
+  if (LABEL_BELOW.has(kind)) {
+    const bw = Math.max(w, 160);
+    return { x: x + w / 2 - bw / 2, y: y + h + 4, w: bw, h: 60 };
+  }
+  // Symbole: Text im Streifen unter dem Symbol
+  if (ICON_SHAPES.has(kind)) {
+    const s = iconSize(w, h);
+    return { x: x + 2, y: y + s + 2, w: Math.max(4, w - 4), h: Math.max(4, h - s - 4) };
+  }
   switch (kind) {
     case 'ellipse': case 'cloud': ix = 0.15; iy = 0.15; iw = 0.7; ih = 0.7; break;
     case 'diamond': ix = 0.22; iy = 0.22; iw = 0.56; ih = 0.56; break;
@@ -209,6 +589,23 @@ export function shapeTextBox(kind, x, y, w, h, pad = 10) {
     case 'browser': iy = 0.15; ih = 0.85; break;
     case 'laptop': ix = 0.1; iw = 0.8; ih = 0.82; break;
     case 'firewall': iy = 1 / 3; ih = 1 / 3; pad = 4; break;
+    case 'switch': ih = 0.58; pad = 6; break;
+    case 'storage': ih = 0.52; pad = 6; break;
+    case 'rack': ih = rackHead(h) / h; pad = 3; break;
+    case 'desktop': ih = monitorH(h) / h; pad = Math.min(w, monitorH(h)) * 0.05 + 4; break;
+    case 'mobile': ix = 0.07; iw = 0.86; iy = 0.1; ih = 0.8; pad = 4; break;
+    case 'multidoc': {
+      const d = multidocOffset(w, h);
+      return shapeTextBox('document', x, y + 2 * d, w - 2 * d, h - 2 * d, pad);
+    }
+    case 'manualinput': iy = 0.25; ih = 0.75; break;
+    case 'manualop': ix = 0.15; iw = 0.7; break;
+    case 'offpage': ih = 0.7; break;
+    case 'display': ix = 0.12; iw = 0.76; break;
+    case 'internalstorage': ix = 0.12; iw = 0.88; iy = 0.16; ih = 0.84; break;
+    case 'send': iw = 0.85; break;
+    case 'receive': ix = 0.15; iw = 0.85; break;
+    case 'umlnode': iy = nodeDepth(w, h) / h; ih = 1 - iy; iw = 1 - nodeDepth(w, h) / w; break;
   }
   return { x: x + w * ix + pad, y: y + h * iy + pad, w: Math.max(4, w * iw - pad * 2), h: Math.max(4, h * ih - pad * 2) };
 }
@@ -297,7 +694,7 @@ function autoSide(b, toward) {
 }
 
 // Schnittpunkt eines Strahls von der Mitte in Richtung (ax, ay) – normiert auf die halbe Breite/Höhe – mit dem Umriss
-const ROUND_SHAPES = new Set(['ellipse', 'cloud']);
+const ROUND_SHAPES = new Set(['ellipse', 'cloud', 'initial', 'final', 'event', 'eventend', 'eventinter']);
 
 // Umrisse vieleckiger Formen in normierten Koordinaten (−1 … 1), passend zu shapeGeom()
 const STAR = Array.from({ length: 10 }, (_, i) => {
@@ -313,7 +710,13 @@ const POLYGONS = {
   arrow: [[-1, -0.5], [0.2, -0.5], [0.2, -1], [1, 0], [0.2, 1], [0.2, 0.5], [-1, 0.5]],
   cross: [[-0.4, -1], [0.4, -1], [0.4, -0.4], [1, -0.4], [1, 0.4], [0.4, 0.4], [0.4, 1], [-0.4, 1], [-0.4, 0.4], [-1, 0.4], [-1, -0.4], [-0.4, -0.4]],
   star: STAR,
+  manualinput: [[-1, -0.5], [1, -1], [1, 1], [-1, 1]],
+  manualop: [[-1, -1], [1, -1], [0.6, 1], [-0.6, 1]],
+  offpage: [[-1, -1], [1, -1], [1, 0.4], [0, 1], [-1, 0.4]],
+  send: [[-1, -1], [0.7, -1], [1, 0], [0.7, 1], [-1, 1]],
+  receive: [[-1, -1], [1, -1], [1, 1], [-1, 1], [-0.7, 0]],
 };
+POLYGONS.gatewayx = POLYGONS.gatewayplus = POLYGONS.gatewayo = POLYGONS.diamond;
 
 // Abstand k entlang des Strahls (0,0) + k·(dx,dy) bis zum ersten Schnitt mit dem Vieleck
 function rayPolygon(poly, dx, dy) {
@@ -607,80 +1010,8 @@ function linkBadge(el) {
     `<g transform="translate(${cx - 12 * k * 0.6},${cy - 12 * k * 0.6}) scale(${k * 0.6})" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></g></g>`;
 }
 
-/* ---------------- Neon-Darstellung ---------------- */
-
-// Nur für die eigene Ansicht: Flächen dunkel im Farbton, Umrisse und Texte leuchtend. Exporte bleiben unverändert.
-function toHsl(c) {
-  // sechsstellig zuerst prüfen (sonst würde #fff9b1 als #fff gelesen); optional mit Alphakanal
-  const m = /^#([0-9a-f]{6}|[0-9a-f]{3})(?:[0-9a-f]{2}|[0-9a-f])?$/i.exec(String(c || '').trim());
-  if (!m) return null;
-  let hex = m[1];
-  if (hex.length === 3) hex = [...hex].map((x) => x + x).join('');
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
-  if (max === min) return { h: 0, s: 0, l };
-  const d = max - min;
-  const sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  const hue = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-  return { h: hue * 60, s: sat, l };
-}
-const hsl = (h, sat, l) => `hsl(${Math.round(h)}, ${Math.round(sat * 100)}%, ${Math.round(l * 100)}%)`;
-const NEON_TEXT = '#e6fbff', NEON_LINE = '#00f0ff', NEON_BG = '#07070f';
-const neonBright = (c, neutral = NEON_LINE, l = 0.6) => {
-  const v = toHsl(c);
-  return !v || v.s < 0.15 ? neutral : hsl(v.h, 1, l);
-};
-// Texte etwas heller als Linien – besser lesbar auf dunklem Grund
-const neonText = (c) => neonBright(c, NEON_TEXT, 0.74);
-const neonDark = (c) => {
-  const v = toHsl(c);
-  return !v || v.s < 0.15 ? NEON_BG : hsl(v.h, 0.75, 0.11);
-};
-
-function neonize(el) {
-  const o = { ...el, _neon: true };
-  switch (el.type) {
-    case 'sticky':
-      o._neonStroke = neonBright(el.fill || '#fff9b1');
-      o.textColor = neonText(el.textColor && el.textColor !== '#1a1a1a' ? el.textColor : el.fill || '#fff9b1');
-      o.fill = neonDark(el.fill || '#fff9b1');
-      break;
-    case 'shape': {
-      const base = el.stroke && el.stroke !== 'none' ? el.stroke : el.fill;
-      o.stroke = neonBright(base);
-      o.strokeWidth = Math.max(2, el.strokeWidth || 0);
-      if (el.fill && el.fill !== 'transparent' && el.fill !== 'none') o.fill = neonDark(el.fill);
-      o.textColor = neonText(el.textColor || base);
-      break;
-    }
-    case 'text':
-      o.color = neonText(el.color);
-      if (el.fill && el.fill !== 'transparent') o.fill = neonDark(el.fill);
-      break;
-    case 'connector': case 'pen':
-      o.stroke = neonBright(el.stroke);
-      break;
-    case 'frame':
-      o.fill = NEON_BG;
-      o.stroke = '#ff2bd6';
-      break;
-    case 'card':
-      o.color = neonBright(el.color || '#4262ff');
-      break;
-    case 'table':
-      o.fill = NEON_BG;
-      o.stroke = NEON_LINE;
-      o.headerFill = neonDark(el.headerFill || '#4262ff');
-      o.textColor = NEON_TEXT;
-      if (Array.isArray(el.styles)) o.styles = el.styles.map((row) => (row || []).map((st) => (st ? { ...st, ...(st.c ? { c: neonText(st.c) } : {}), ...(st.bg ? { bg: neonDark(st.bg) } : {}) } : st)));
-      break;
-  }
-  return o;
-}
-
 export function renderElement(el, env = {}) {
   el = safeEl(el);
-  if (env.neon) el = neonize(el);
   // Privater Modus: fremde private Elemente kommen ohne Inhalt vom Server (hidden); eigene werden in
   // Vorschaubildern und Exporten ebenfalls verdeckt
   if (el.hidden || (el.priv && env.redactPrivate)) return hiddenMarkup(el);
@@ -719,7 +1050,7 @@ function renderBody(el, env) {
       const box = { x: x + pad, y: y + pad, w: w - pad * 2, h: h - pad * 2 };
       const lay = textLayout(el, box);
       const author = env.showAuthor && el.author ? `<text x="${x + w - 8}" y="${y + h - 7}" font-family="${esc(FONT)}" font-size="${Math.max(8, Math.min(w, h) * 0.055)}" fill="${contrastText(el.fill)}" fill-opacity="0.55" text-anchor="end">${esc(el.author)}</text>` : '';
-      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#fff9b1'}"${el._neon ? ` stroke="${el._neonStroke}" stroke-width="2" rx="4"` : ' filter="url(#shadow)"'}/>` +
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#fff9b1'}" filter="url(#shadow)"/>` +
         textSvg(box, lay, { color: el.textColor || contrastText(el.fill), align: el.align || 'center', valign: el.valign || 'middle', underline: el.underline, strike: el.strike }) + author;
     }
     case 'shape': {
@@ -727,12 +1058,20 @@ function renderBody(el, env) {
       const stroke = el.stroke || 'none';
       const sw = el.strokeWidth ?? 2;
       const dash = dashFor(el);
-      const geo = shapeGeom(el.shape || 'rect', x, y, w, h);
-      const box = shapeTextBox(el.shape, x, y, w, h);
-      const lay = textLayout(el, box);
+      const kind = el.shape || 'rect';
       // 'none' = ohne Füllung und innen durchklickbar (z. B. Rahmen von Blöcken im Sequenzdiagramm)
-      return `${geo} fill="${fill === 'transparent' ? 'rgba(255,255,255,0.001)' : fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>` +
-        textSvg(box, lay, { color: el.textColor || contrastText(fill === 'transparent' || fill === 'none' ? '#ffffff' : fill), align: el.align || 'center', valign: el.valign || 'middle', underline: el.underline, strike: el.strike });
+      const fillAttr = fill === 'transparent' ? 'rgba(255,255,255,0.001)' : fill;
+      const color = el.textColor || (labelOutside(kind) ? '#1a1a1a' : contrastText(fill === 'transparent' || fill === 'none' ? '#ffffff' : fill));
+      const outline = `fill="${fillAttr}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>`;
+      if (kind === 'umlclass') return umlClassSvg(el, x, y, w, h, outline, stroke, sw, color);
+      const geo = shapeGeom(kind, x, y, w, h);
+      const deco = shapeDecor(kind, x, y, w, h, { fill: fillAttr, stroke, sw, dash });
+      // Symbole mit Beschriftung darunter: auch neben dem Symbol und auf dem Text anklickbar
+      const hit = ICON_SHAPES.has(kind) ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent" class="hit"/>` : '';
+      const box = shapeTextBox(kind, x, y, w, h);
+      const lay = textLayout(el, box);
+      return hit + deco.before + `${geo} ${outline}` + deco.after +
+        textSvg(box, lay, { color, align: el.align || 'center', valign: LABEL_BELOW.has(kind) ? 'top' : el.valign || 'middle', underline: el.underline, strike: el.strike });
     }
     case 'text': {
       const pad = 4;
@@ -748,7 +1087,7 @@ function renderBody(el, env) {
       const tw = measure(title, ts, true) + 8;
       return `<rect class="frame-body" x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#ffffff'}" stroke="${el.stroke || '#d6d6d6'}" stroke-width="1"/>` +
         `<rect class="frame-title" x="${x}" y="${y - ts * 1.6}" width="${tw}" height="${ts * 1.5}" fill="transparent"/>` +
-        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="${el._neon ? '#ff2bd6' : '#6b6b6b'}">${esc(title)}</text>`;
+        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#6b6b6b">${esc(title)}</text>`;
     }
     case 'connector': {
       const g = connectorGeom(el, get);
@@ -812,9 +1151,7 @@ function renderBody(el, env) {
     case 'card': {
       const color = el.color || '#4262ff';
       const pad = 14;
-      let out = el._neon
-        ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${NEON_BG}" stroke="${color}" stroke-width="1.5"/>`
-        : `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#ffffff" stroke="#e3e3e3" filter="url(#shadow-sm)"/>`;
+      let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#ffffff" stroke="#e3e3e3" filter="url(#shadow-sm)"/>`;
       out += `<path d="M${x + 8},${y} H${x + w - 8} Q${x + w},${y} ${x + w},${y + 8} V${y + 6} H${x} V${y + 8} Q${x},${y} ${x + 8},${y} Z" fill="${color}"/>`;
       let top = y + 16;
       if (el.key) {
@@ -824,12 +1161,12 @@ function renderBody(el, env) {
       const tags = cardTags(el);
       const footer = 28 + (tags.length ? 24 : 0);
       const tlay = { size: 15, bold: true, italic: false, lines: wrap(el.title || 'Neue Karte', w - pad * 2, 15, true).slice(0, 3) };
-      out += textSvg({ x: x + pad, y: top, w: w - pad * 2, h: 60 }, tlay, { align: 'left', valign: 'top', color: el._neon ? NEON_TEXT : '#1a1a1a' });
+      out += textSvg({ x: x + pad, y: top, w: w - pad * 2, h: 60 }, tlay, { align: 'left', valign: 'top', color: '#1a1a1a' });
       const ty = top + tlay.lines.length * 15 * LH + 6;
       if (el.description) {
         const maxL = Math.max(0, Math.floor((y + h - footer - 12 - ty) / (13 * LH)));
         const dl = wrap(el.description, w - pad * 2, 13).slice(0, maxL);
-        out += textSvg({ x: x + pad, y: ty, w: w - pad * 2, h: 200 }, { size: 13, lines: dl }, { align: 'left', valign: 'top', color: el._neon ? '#9fb3d8' : '#666666' });
+        out += textSvg({ x: x + pad, y: ty, w: w - pad * 2, h: 200 }, { size: 13, lines: dl }, { align: 'left', valign: 'top', color: '#666666' });
       }
       const fy = y + h - 28;
       if (tags.length) {
@@ -837,7 +1174,7 @@ function renderBody(el, env) {
         for (const t of tags) {
           const tw = measure(t, 10) + 12;
           if (tx + tw > x + w - pad) break;
-          out += `<rect x="${tx}" y="${fy - 23}" width="${tw}" height="16" rx="4" fill="${el._neon ? '#141433' : '#f1f3f5'}" stroke="${el._neon ? color : '#dee2e6'}"/><text x="${tx + 6}" y="${fy - 11.5}" font-family="${esc(FONT)}" font-size="10" fill="${el._neon ? NEON_TEXT : '#495057'}">${esc(t)}</text>`;
+          out += `<rect x="${tx}" y="${fy - 23}" width="${tw}" height="16" rx="4" fill="#f1f3f5" stroke="#dee2e6"/><text x="${tx + 6}" y="${fy - 11.5}" font-family="${esc(FONT)}" font-size="10" fill="#495057">${esc(t)}</text>`;
           tx += tw + 5;
         }
       }

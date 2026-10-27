@@ -4,6 +4,29 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.6.0] – 2026-10-27
+
+### Hinzugefügt
+- Über 30 neue Formen (REQ-ELEM-003), alle als eigene Zeichnungen:
+  - Flussdiagramm: mehrere Dokumente, manuelle Eingabe und Tätigkeit, Anzeige, interner Speicher, Seitenverweis.
+  - UML: Klasse mit Abschnitten (Trennzeile „--“), Knoten, Start- und Endzustand, Gabelung/Vereinigung, Signale.
+  - BPMN: Start-, Zwischen- und Endereignis, exklusives, paralleles und inklusives Gateway.
+  - Netzwerk & Rechenzentrum: Router, Switch, Load Balancer, WLAN-Access-Point, Internet, Serverschrank, Speichersystem,
+    Arbeitsplatz-PC, Smartphone/Tablet, Benutzergruppe; dazu Dienst/Konfiguration und Sicherheit.
+  - Container-Plattform (z. B. Kubernetes): Pod, Deployment, Service, Ingress, Node, ConfigMap, Secret, Volume.
+  - Herstellersymbole und Logos (etwa von Cisco oder Kubernetes) werden bewusst nicht nachgebildet.
+- Neue Vorlagen (REQ-TPL-001):
+  - Kategorie UML: Klassen-, Anwendungsfall-, Aktivitäts-, Zustands-, Komponenten- und Verteilungsdiagramm.
+  - Kategorie IT-Infrastruktur: Netzwerkplan, Rack-Belegung, Container-Plattform (Cluster).
+  - IT-Service-Management: Prozessmodell (BPMN) für die Störungsbearbeitung.
+
+### Geändert
+- Die Formenauswahl ist in sieben Gruppen gegliedert; neue Formen erhalten passende Standardgrößen.
+- Das Sequenzdiagramm steht jetzt in der Kategorie UML.
+
+### Entfernt
+- Neon-Design (eingeführt in 3.5.0). Wer es gewählt hatte, erhält automatisch das dunkle Design.
+
 ## [3.5.0] – 2026-10-26
 
 ### Hinzugefügt

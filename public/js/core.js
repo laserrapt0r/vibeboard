@@ -4,7 +4,7 @@ import {
   debounce, throttle, toast, contrastText, STICKY_COLORS, api,
 } from './util.js';
 import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
-  outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions } from './render.js';
+  outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions, SHAPE_DEFAULTS, labelBelow, labelOutside } from './render.js';
 import { THEMES } from './highlight.js';
 import { Sync } from './sync.js';
 
@@ -202,8 +202,7 @@ function renderEnv() {
     showAuthor: app.settings.showAuthor,
     placeholders: true,
     editingCell: app.editing && app.editing.cell,
-    labelBg: app.settings.neon ? '#07070f' : app.settings.dark ? '#2a2b31' : '#ffffff',
-    neon: !!app.settings.neon,
+    labelBg: app.settings.dark ? '#2a2b31' : '#ffffff',
   };
 }
 
@@ -250,9 +249,6 @@ function renderNode(id, env) {
   if (el.locked) cls += ' locked';
   if (app.editing && app.editing.id === id && !app.editing.cell) cls += ' editing';
   g.setAttribute('class', cls);
-  // Neon: Leuchten um Linien und Umrisse (große Flächen wie Frames und Tabellen ohne, wegen der Leistung)
-  if (env.neon && !['frame', 'table', 'image', 'emoji', 'comment', 'code'].includes(el.type)) g.setAttribute('filter', 'url(#neon-glow)');
-  else g.removeAttribute('filter');
   try {
     g.innerHTML = renderElement(el, env);
   } catch (e) {
@@ -548,8 +544,14 @@ export function makeElement(type, x, y, o = {}) {
   switch (type) {
     case 'sticky':
       return { ...base, x: x - 100, y: y - 100, w: 200, h: 200, fill: app.toolOpts.stickyColor, text: '', fontSize: 'auto', ...o };
-    case 'shape':
-      return { ...base, x: x - 100, y: y - 70, w: 200, h: 140, shape: app.toolOpts.shape, fill: '#ffffff', stroke: '#1a1a1a', strokeWidth: 2, text: '', fontSize: 18, ...o };
+    case 'shape': {
+      const kind = o.shape || app.toolOpts.shape;
+      const d = SHAPE_DEFAULTS[kind] || {};
+      const w = d.w || 200, h = d.h || 140;
+      // Beschriftung auf dem Board-Hintergrund: im dunklen Design hell, wie beim Textwerkzeug
+      const label = app.settings.dark && labelOutside(kind) ? { textColor: '#f1f1f1' } : {};
+      return { ...base, shape: kind, fill: '#ffffff', stroke: '#1a1a1a', strokeWidth: 2, text: '', fontSize: 18, ...d, ...label, x: x - w / 2, y: y - h / 2, w, h, ...o };
+    }
     case 'text':
       return autoHeight({ ...base, x: x - 4, y: y - 18, w: 260, h: 38, text: '', fontSize: 24, color: app.settings.dark ? '#f1f1f1' : '#1a1a1a', align: 'left', ...o });
     case 'frame': {
@@ -931,8 +933,8 @@ function editorGeometry(el) {
       box = shapeTextBox(el.shape, el.x, el.y, el.w, el.h);
       lay = textLayout(el, box);
       align = el.align || 'center';
-      valign = el.valign || 'middle';
-      color = el.textColor || contrastText(el.fill === 'transparent' ? '#ffffff' : el.fill);
+      valign = labelBelow(el.shape) ? 'top' : el.valign || 'middle';
+      color = el.textColor || (labelOutside(el.shape) ? '#1a1a1a' : contrastText(el.fill === 'transparent' ? '#ffffff' : el.fill));
       break;
     case 'text':
       box = { x: el.x + 4, y: el.y + 4, w: el.w - 8, h: Math.max(el.h - 8, 20) };
@@ -1001,15 +1003,14 @@ export function layoutEditor() {
     lineHeight: LH,
     paddingTop: padTop * z + 'px',
     textAlign: align,
-    // Im Neon-Design liegt der Text auf dunkler Fläche – hell anzeigen
-    color: app.settings.neon ? '#e6fbff' : color,
+    color,
     fontWeight: lay.bold ? 'bold' : 'normal',
     fontStyle: (lay.italic ?? el.italic) ? 'italic' : 'normal',
     textDecoration: [(lay.underline ?? el.underline) && 'underline', (lay.strike ?? el.strike) && 'line-through'].filter(Boolean).join(' ') || 'none',
     fontFamily: el.type === 'code' ? MONO : '',
     whiteSpace: el.type === 'code' ? 'pre' : '',
     tabSize: '2',
-    background: el.type === 'connector' || el.type === 'frame' ? (app.settings.neon ? '#07070f' : app.settings.dark ? '#2a2b31' : '#ffffff') : 'transparent',
+    background: el.type === 'connector' || el.type === 'frame' ? (app.settings.dark ? '#2a2b31' : '#ffffff') : 'transparent',
   });
 }
 
@@ -2868,8 +2869,13 @@ export function initCore() {
   const saved = loadPref('view.' + boardId, null);
   if (saved) app.view = saved;
   stage.dataset.tool = app.tool;
-  document.body.classList.toggle('dark', !!app.settings.dark || !!app.settings.neon);
-  document.body.classList.toggle('neon', !!app.settings.neon);
+  // Das Neon-Design aus 3.5.0 gibt es nicht mehr; wer es gewählt hatte, erhält das dunkle Design
+  if (app.settings.neon) {
+    app.settings.dark = true;
+    delete app.settings.neon;
+    savePref('settings', app.settings);
+  }
+  document.body.classList.toggle('dark', !!app.settings.dark);
   stage.classList.toggle('nogrid', !app.settings.grid);
   $('#cursors').classList.toggle('off', !!app.settings.hideCursors);
   applyView(true);
@@ -2881,8 +2887,7 @@ export function initCore() {
 
 export function saveSettings() {
   savePref('settings', app.settings);
-  document.body.classList.toggle('dark', !!app.settings.dark || !!app.settings.neon);
-  document.body.classList.toggle('neon', !!app.settings.neon);
+  document.body.classList.toggle('dark', !!app.settings.dark);
   stage.classList.toggle('nogrid', !app.settings.grid);
   $('#cursors').classList.toggle('off', !!app.settings.hideCursors);
   rerenderAll();

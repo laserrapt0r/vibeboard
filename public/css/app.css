@@ -29,29 +29,6 @@ body.dark {
   color-scheme: dark;
 }
 
-/* Neon-Design: dunkler Grund, leuchtende Akzente in Cyan und Magenta */
-body.neon {
-  --accent: #00f0ff;
-  --accent-soft: rgba(0, 240, 255, 0.14);
-  --danger: #ff3b6b;
-  --canvas: #05050a;
-  --grid: #24244a;
-  --panel: #0c0c18;
-  --panel-2: #15152b;
-  --border: #2b2b5c;
-  --text: #e6fbff;
-  --muted: #8f95d6;
-  --shadow: 0 0 0 1px rgba(0, 240, 255, 0.25), 0 0 18px rgba(255, 43, 214, 0.18);
-  color-scheme: dark;
-}
-body.neon .panel { border-color: rgba(0, 240, 255, 0.35); }
-body.neon .btn.primary, body.neon .share-btn { color: #05050a; box-shadow: 0 0 12px rgba(0, 240, 255, 0.55); }
-body.neon .icon-btn.active, body.neon .ctx-btn.active { color: #ff2bd6; text-shadow: 0 0 8px #ff2bd6; }
-body.neon .icon-btn.active svg, body.neon .ctx-btn.active svg { filter: drop-shadow(0 0 4px #ff2bd6); }
-body.neon h1, body.neon h2, body.neon h3 { text-shadow: 0 0 10px rgba(0, 240, 255, 0.45); }
-body.neon a { color: #00f0ff; }
-body.neon #editor { caret-color: #ff2bd6; }
-
 * { box-sizing: border-box; }
 
 html, body {
@@ -205,9 +182,13 @@ kbd {
 .shape-grid { display: grid; grid-template-columns: repeat(4, 48px); gap: 4px; }
 .shape-pop { max-height: min(70vh, 560px); overflow-y: auto; }
 .shape-pop .shape-grid { grid-template-columns: repeat(6, 44px); margin-bottom: 8px; }
+.shape-pop .shape-btn { width: 44px; }
 .lang-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 320px; }
 .shape-btn { width: 48px; height: 40px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); display: flex; align-items: center; justify-content: center; }
 .shape-btn:hover { background: var(--panel-2); }
+.shape-btn .pv-fill { fill: var(--panel); }
+.shape-btn:hover .pv-fill { fill: var(--panel-2); }
+.shape-btn.active .pv-fill { fill: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
 .shape-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .emoji-grid { display: grid; grid-template-columns: repeat(8, 34px); gap: 2px; }
 .emoji-btn { width: 34px; height: 34px; border: 0; background: transparent; border-radius: 6px; font-size: 20px; padding: 0; }

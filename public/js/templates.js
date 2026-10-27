@@ -1,10 +1,11 @@
 // Vorlagen-Bibliothek mit gängigen Moderations-, Agile- und Strategiemethoden
 import { B, C, LIGHT, dayOffset, columnsTemplate, quadrantTemplate } from './template-kit.js';
 import { TECH_TEMPLATES } from './templates-tech.js';
+import { DIAGRAM_TEMPLATES } from './templates-diagrams.js';
 
 /* ---------------- Vorlagen ---------------- */
 
-export const CATEGORIES = ['Alle', 'Brainstorming', 'Meetings & Retros', 'Agile & Projekte', 'Softwareentwicklung', 'Projektmanagement', 'IT-Service-Management', 'Strategie', 'Design & UX', 'Diagramme'];
+export const CATEGORIES = ['Alle', 'Brainstorming', 'Meetings & Retros', 'Agile & Projekte', 'Softwareentwicklung', 'UML', 'Projektmanagement', 'IT-Service-Management', 'IT-Infrastruktur', 'Strategie', 'Design & UX', 'Diagramme'];
 
 export const TEMPLATES = [
   {
@@ -636,7 +637,7 @@ export const TEMPLATES = [
   },
 ];
 
-TEMPLATES.push(...TECH_TEMPLATES);
+TEMPLATES.push(...TECH_TEMPLATES, ...DIAGRAM_TEMPLATES);
 
 export function templateById(id) {
   return TEMPLATES.find((t) => t.id === id);

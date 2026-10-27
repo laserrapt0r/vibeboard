@@ -25,6 +25,16 @@
   - Füllung, Rahmenfarbe, Rahmenstärke, Strichart (durchgezogen, gestrichelt, gepunktet), Textfarbe, Schriftgröße, fett und Ausrichtung sind einstellbar.
   - Die Form kann nachträglich gewechselt werden.
   - Geändert in 3.2.0: zusätzliche Formen für Flussdiagramme, UML und IT-Architektur – Unterprozess, Verzögerung, Notiz, Paket, Komponente, Akteur, Server, Warteschlange, Container, Browser/UI, Endgerät, Firewall. Die Formenauswahl ist in die Gruppen „Grundformen“, „Flussdiagramm & UML“ und „Software & IT“ gegliedert. Alle Formen sind eigene Zeichnungen (keine Symbole Dritter).
+  - Geändert in 3.6.0 – weitere Formen in sieben Gruppen:
+    - Flussdiagramm: mehrere Dokumente, manuelle Eingabe, manuelle Tätigkeit, Anzeige, interner Speicher, Verweis auf andere Seite.
+    - UML: Klasse (Abschnitte für Name, Attribute und Operationen werden durch eine Zeile „--“ getrennt; der Name steht fett und mittig, Stereotypen wie «interface» darüber), Knoten (Verteilung), Start- und Endzustand, Gabelung/Vereinigung, Signal senden und empfangen.
+    - BPMN: Start-, Zwischen- und Endereignis, exklusives, paralleles und inklusives Gateway.
+    - Netzwerk & Rechenzentrum: Router, Switch, Load Balancer, WLAN-Access-Point, Internet, Serverschrank, Speichersystem, Arbeitsplatz-PC, Smartphone/Tablet, Benutzergruppe.
+    - Software & IT: zusätzlich Dienst/Konfiguration und Sicherheit/Zugriffsschutz.
+    - Container-Plattform (z. B. Kubernetes): Pod, Deployment/ReplicaSet, Service, Ingress, Knoten (Node), ConfigMap, Secret, Volume.
+    - Symbole (Router, Pod, …) behalten ihr Seitenverhältnis; die Beschriftung steht darunter. Bei kleinen Formen (Ereignisse, Gateways, Start/Ende, Gabelung) steht sie unter der Form.
+    - Neue Formen erhalten eine passende Standardgröße. Legt man eine Form mit Beschriftung außerhalb im dunklen Design an, ist die Beschriftung hell.
+    - Alle Symbole sind eigene, allgemeine Zeichnungen. Herstellersymbole (z. B. von Cisco), Logos und die Gestaltung fremder Symbolsätze (z. B. das Siebeneck der Kubernetes-Symbole) werden nicht verwendet.
 
 ### REQ-ELEM-004 Verbindungen
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt

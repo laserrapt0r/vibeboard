@@ -46,11 +46,8 @@
 - **Beschreibung:** Die Oberfläche kann hell oder dunkel dargestellt werden.
 - **Akzeptanzkriterien:**
   - Die Wahl gilt für alle Seiten und bleibt im Browser gespeichert.
-  - Geändert in 3.5.0 – Neon-Design:
-    - Dunkler Grund, Oberfläche mit leuchtenden Akzenten in Cyan und Magenta.
-    - Board-Elemente erscheinen mit dunkel getönten Flächen im eigenen Farbton und leuchtenden Umrissen, Linien und Texten (Glow).
-    - Umschaltbar im Board über die Einstellungen; auf der Startseite wechselt der Design-Knopf Hell → Dunkel → Neon.
-    - Es betrifft nur die eigene Darstellung: Exporte, Vorschaubilder und die Ansicht anderer Teilnehmender behalten die Originalfarben.
+  - Geändert in 3.5.0: zusätzlich ein Neon-Design.
+  - Geändert in 3.6.0: Das Neon-Design ist wieder entfernt. Wer es gewählt hatte, erhält automatisch das dunkle Design.
 
 ### REQ-CANVAS-007 Ansicht merken
 - **Seit:** 1.0.0 · **Priorität:** Kann · **Status:** umgesetzt
