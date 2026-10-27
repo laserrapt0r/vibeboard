@@ -174,7 +174,9 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 - Karten aus CSV/Tabellen, Diagramme aus Text (siehe oben)
 
 ### Übersicht
-- Navigation: alle, eigene und geteilte Boards, eigene Ordner, Teams (mit Ordnern als Filter)
+- Navigation links: „+ Neues Board“, Start, Meine Aufgaben, alle/eigene/geteilte Boards, eigene Ordner, Teams
+  (mit Ordnern als Filter); rechts erscheint nur die gewählte Ansicht
+- Start: einklappbare Vorlagenleiste, Hinweis auf fällige Aufgaben, zuletzt bearbeitete Boards
 - Eigene und geteilte Boards mit Vorschaubildern
 - Suche, Sortierung, Teilen, Umbenennen, Duplizieren, Löschen, Board verlassen
 - Neues Board direkt aus einer Vorlage

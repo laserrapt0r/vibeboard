@@ -9,8 +9,9 @@ import { legalFooter } from './footer.js';
 import { bellButton, refresh as refreshBell } from './notifications.js';
 
 let data = { owned: [], shared: [], teams: [], folderList: [] };
-// Ansicht: all | mine | shared | folder:<id> | team:<id> (optional mit Ordner im Team)
-let view = loadPref('dashView', { kind: 'all' });
+// Ansicht: start | tasks | all | mine | shared | folder (id) | team (id, optional mit Ordner im Team)
+let view = location.hash === '#aufgaben' ? { kind: 'tasks' } : loadPref('dashView', { kind: 'start' });
+const BOARD_VIEWS = new Set(['all', 'mine', 'shared', 'folder', 'team']);
 let me = null;
 // „neon“: Einstellung aus 3.5.0, wird als dunkles Design übernommen
 let dark = loadPref('settings', {}).dark || loadPref('settings', {}).neon;
@@ -21,7 +22,7 @@ async function load() {
   } catch (e) {
     toast('Boards konnten nicht geladen werden: ' + e.message);
   }
-  renderBoards();
+  render();
 }
 
 /* Meine Aufgaben: Karten aller zugänglichen Boards, die mir zugewiesen sind */
@@ -35,42 +36,56 @@ async function loadTasks() {
   } catch {
     tasks = [];
   }
-  renderTasks();
+  render();
+}
+
+const todayStr = () => {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+};
+const openTasks = () => tasks.filter((t) => !DONE_RE.test(t.status));
+const overdueTasks = () => openTasks().filter((t) => t.due && t.due < todayStr());
+let taskFilter = loadPref('dashTaskFilter', 'open');
+
+function taskItem(t) {
+  const overdue = t.due && t.due < todayStr() && !DONE_RE.test(t.status);
+  const p = PRIO[t.priority];
+  return h('a', { class: 'my-task', href: `/board/${encodeURIComponent(t.boardId)}#el=${encodeURIComponent(t.id)}` },
+    h('span', { class: 'task-color', style: { background: t.color } }),
+    h('span', { class: 'task-main' },
+      h('span', { class: 'task-title' }, t.comment ? '💬 ' : '', t.key ? h('span', { class: 'muted' }, t.key + ' ') : null, t.title || 'Ohne Titel'),
+      h('span', { class: 'task-meta' },
+        h('span', {}, '🗂 ' + t.boardName),
+        t.comment ? h('span', {}, `Kommentar${t.by ? ' · zugewiesen von ' + t.by : ''}`) : null,
+        t.status ? h('span', {}, t.status) : null,
+        p ? h('span', { style: { color: p[2] } }, `${p[0]} ${p[1]}`) : null,
+        t.due ? h('span', { class: overdue ? 'overdue' : '' }, '📅 ' + new Date(t.due + 'T00:00').toLocaleDateString('de-DE')) : null,
+        t.points !== '' ? h('span', {}, `${t.points} SP`) : null)));
 }
 
 function renderTasks() {
-  const showDone = document.getElementById('dash-tasks-done').checked;
-  const n = new Date();
-  const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
-  const open = tasks.filter((t) => !DONE_RE.test(t.status));
-  const list = (showDone ? tasks : open).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.title.localeCompare(b.title));
-  const section = document.getElementById('aufgaben');
-  const wasHidden = section.classList.contains('hidden');
-  section.classList.toggle('hidden', !tasks.length);
-  // Link „Meine Aufgaben“ (#aufgaben): erst nach dem Laden ist der Abschnitt da
-  if (wasHidden && tasks.length && location.hash === '#aufgaben') setTimeout(() => section.scrollIntoView({ block: 'start' }), 0);
-  document.getElementById('dash-tasks-count').textContent = `${open.length} offen${open.some((t) => t.due && t.due < today) ? ` · ${open.filter((t) => t.due && t.due < today).length} überfällig` : ''}`;
+  const open = openTasks(), overdue = overdueTasks();
+  document.getElementById('dash-tasks-count').textContent = `${open.length} offen${overdue.length ? ` · ${overdue.length} überfällig` : ''}`;
+  const seg = document.getElementById('dash-tasks-filter');
+  seg.innerHTML = '';
+  for (const [k, l] of [['open', 'Offen'], ['overdue', 'Überfällig'], ['done', 'Erledigt'], ['all', 'Alle']]) {
+    seg.append(h('button', { class: 'btn small' + (taskFilter === k ? ' active' : ''), onclick: () => {
+      taskFilter = k;
+      savePref('dashTaskFilter', k);
+      renderTasks();
+    } }, l));
+  }
+  const pick = { open, overdue, done: tasks.filter((t) => DONE_RE.test(t.status)), all: tasks }[taskFilter] || open;
+  const list = [...pick].sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.title.localeCompare(b.title));
   const box = document.getElementById('dash-tasks');
   box.innerHTML = '';
-  if (!list.length) box.append(h('div', { class: 'dash-empty' }, 'Keine offenen Aufgaben – alles erledigt. 🎉'));
-  for (const t of list.slice(0, 60)) {
-    const overdue = t.due && t.due < today && !DONE_RE.test(t.status);
-    const p = PRIO[t.priority];
-    box.append(h('a', { class: 'my-task', href: `/board/${encodeURIComponent(t.boardId)}#el=${encodeURIComponent(t.id)}` },
-      h('span', { class: 'task-color', style: { background: t.color } }),
-      h('span', { class: 'task-main' },
-        h('span', { class: 'task-title' }, t.comment ? '💬 ' : '', t.key ? h('span', { class: 'muted' }, t.key + ' ') : null, t.title || 'Ohne Titel'),
-        h('span', { class: 'task-meta' },
-          h('span', {}, '🗂 ' + t.boardName),
-          t.comment ? h('span', {}, `Kommentar${t.by ? ' · zugewiesen von ' + t.by : ''}`) : null,
-          t.status ? h('span', {}, t.status) : null,
-          p ? h('span', { style: { color: p[2] } }, `${p[0]} ${p[1]}`) : null,
-          t.due ? h('span', { class: overdue ? 'overdue' : '' }, '📅 ' + new Date(t.due + 'T00:00').toLocaleDateString('de-DE')) : null,
-          t.points !== '' ? h('span', {}, `${t.points} SP`) : null))));
+  if (!list.length) {
+    box.append(h('div', { class: 'dash-empty' }, !tasks.length
+      ? 'Dir ist noch nichts zugewiesen. Hier erscheinen Karten mit deinem Namen als Zuständigkeit und Kommentare, die dir zugewiesen wurden – aus allen Boards.'
+      : taskFilter === 'open' ? 'Keine offenen Aufgaben – alles erledigt. 🎉' : 'Keine Aufgaben für diesen Filter.'));
   }
+  for (const t of list.slice(0, 200)) box.append(taskItem(t));
 }
-
-document.getElementById('dash-tasks-done').addEventListener('change', renderTasks);
 
 async function createFromTemplate(t) {
   const name = await promptDialog('Neues Board', 'Name des Boards', t.id === 'blank' ? 'Unbenanntes Board' : t.name);
@@ -83,10 +98,35 @@ async function createFromTemplate(t) {
   }
 }
 
+const QUICK_TEMPLATES = ['blank', 'brainstorm', 'kanban', 'retro-ssc', 'mindmap', 'bmc', 'swot', 'flowchart', 'journey'];
+
+function openAllTemplates() {
+  const m = modal('Neues Board aus Vorlage', templateGallery((t) => {
+    m.close();
+    createFromTemplate(t);
+  }), { wide: true });
+}
+
+// „+ Neues Board“: leeres Board, häufige Vorlagen, alle Vorlagen
+function newBoardMenu(anchor) {
+  menu(anchor, [
+    { header: 'Neues Board' },
+    ...QUICK_TEMPLATES.map((id) => TEMPLATES.find((x) => x.id === id)).filter(Boolean).map((t) => ({ label: `${t.icon}  ${t.name}`, onClick: () => createFromTemplate(t) })),
+    '-',
+    { label: 'Alle Vorlagen …', icon: 'template', onClick: openAllTemplates },
+  ], { placement: 'bottom' });
+}
+
+let tplCollapsed = loadPref('dashTplCollapsed', false);
+
 function renderTemplates() {
   const box = document.getElementById('dash-templates');
+  const toggle = document.getElementById('dash-tpl-toggle');
+  toggle.textContent = tplCollapsed ? 'Ausklappen' : 'Einklappen';
+  box.classList.toggle('hidden', tplCollapsed);
   box.innerHTML = '';
-  for (const id of ['blank', 'brainstorm', 'kanban', 'retro-ssc', 'mindmap', 'bmc', 'swot', 'flowchart', 'journey']) {
+  if (tplCollapsed) return;
+  for (const id of QUICK_TEMPLATES) {
     const t = TEMPLATES.find((x) => x.id === id);
     const prev = h('div', { class: 'tpl-prev' });
     prev.innerHTML = templatePreview(t);
@@ -145,21 +185,60 @@ function card(b) {
 function setView(v) {
   view = v;
   savePref('dashView', v);
-  renderBoards();
-  // Die Board-Liste steht unter Vorlagen und Aufgaben – nach der Auswahl dorthin scrollen, falls nicht sichtbar
-  const t = document.getElementById('dash-title');
-  const r = t.getBoundingClientRect();
-  if (r.top < 60 || r.top > innerHeight * 0.6) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  history.replaceState(null, '', v.kind === 'tasks' ? '/#aufgaben' : '/');
+  render();
+  scrollTo({ top: 0 });
 }
+
+// Rechts erscheint nur, was links gewählt ist (beim Suchen immer die Board-Liste)
+function render() {
+  const searching = !!document.getElementById('dash-search').value.trim();
+  const kind = searching && !BOARD_VIEWS.has(view.kind) ? 'all' : view.kind;
+  document.getElementById('dash-start').classList.toggle('hidden', kind !== 'start');
+  document.getElementById('dash-tasks-view').classList.toggle('hidden', kind !== 'tasks');
+  document.getElementById('dash-boards-view').classList.toggle('hidden', !BOARD_VIEWS.has(kind));
+  if (kind === 'start') renderStart();
+  if (kind === 'tasks') renderTasks();
+  renderBoards();
+}
+
+// Start: einklappbare Vorlagenleiste, Hinweis auf fällige Aufgaben, zuletzt bearbeitete Boards
+function renderStart() {
+  const due = document.getElementById('dash-due');
+  due.innerHTML = '';
+  const overdue = overdueTasks().length;
+  const week = new Date(Date.now() + 7 * 86400000);
+  const weekStr = `${week.getFullYear()}-${String(week.getMonth() + 1).padStart(2, '0')}-${String(week.getDate()).padStart(2, '0')}`;
+  const soon = openTasks().filter((t) => t.due && t.due >= todayStr() && t.due <= weekStr).length;
+  if (overdue || soon) {
+    due.append(h('button', { class: 'due-hint' + (overdue ? ' overdue' : ''), onclick: () => setView({ kind: 'tasks' }) },
+      h('span', { class: 'nav-icon', html: ICONS.tasks }),
+      h('span', {}, [overdue ? `${overdue} überfällige Aufgabe${overdue === 1 ? '' : 'n'}` : '', soon ? `${soon} in den nächsten 7 Tagen fällig` : ''].filter(Boolean).join(' · ')),
+      h('span', { class: 'muted' }, 'Meine Aufgaben →')));
+  }
+  const recent = document.getElementById('dash-recent');
+  recent.innerHTML = '';
+  const list = [...allBoards()].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8);
+  if (list.length) list.forEach((b) => recent.append(card(b)));
+  else recent.append(h('div', { class: 'dash-empty' }, 'Noch keine Boards – wähle oben eine Vorlage oder links „Neues Board“.'));
+}
+
 
 function renderNav() {
   const nav = document.getElementById('dash-nav');
   nav.innerHTML = '';
-  const item = (label, v, count, icon) => h('button', {
+  const item = (label, v, count, icon, cls = '') => h('button', {
     class: 'dash-nav-item' + (view.kind === v.kind && view.id === v.id ? ' active' : ''), onclick: () => setView(v),
-  }, icon ? h('span', { class: 'nav-icon', html: ICONS[icon] }) : null, h('span', { class: 'nav-label' }, label), count != null ? h('span', { class: 'nav-count' }, count) : null);
+  }, icon ? h('span', { class: 'nav-icon', html: ICONS[icon] }) : null, h('span', { class: 'nav-label' }, label), count != null ? h('span', { class: 'nav-count ' + cls }, count) : null);
+  const add = h('button', { class: 'btn primary dash-new' }, h('span', { html: ICONS.plus }), 'Neues Board');
+  add.onclick = () => newBoardMenu(add);
+  const overdue = overdueTasks().length;
   nav.append(
-    item('Alle Boards', { kind: 'all' }, allBoards().length, 'home'),
+    add,
+    item('Start', { kind: 'start' }, null, 'home'),
+    item('Meine Aufgaben', { kind: 'tasks' }, overdue || openTasks().length || null, 'tasks', overdue ? 'alert' : ''),
+    h('div', { class: 'dash-nav-head' }, h('span', {}, 'Boards')),
+    item('Alle Boards', { kind: 'all' }, allBoards().length, 'template'),
     item('Meine Boards', { kind: 'mine' }, data.owned.length, 'users'),
     item('Mit mir geteilt', { kind: 'shared' }, data.shared.length, 'share'));
   const personal = data.folderList.filter((f) => !f.teamId);
@@ -173,7 +252,10 @@ function renderNav() {
 
 function renderBoards() {
   // Ansicht existiert nicht mehr (Ordner gelöscht, Team verlassen)
-  if ((view.kind === 'folder' && !folderById(view.id)) || (view.kind === 'team' && !teamById(view.id))) view = { kind: 'all' };
+  if ((view.kind === 'folder' && !folderById(view.id)) || (view.kind === 'team' && !teamById(view.id))) {
+    view = { kind: 'all' };
+    return render();
+  }
   // Gewählter Ordner im Team gelöscht (auch von anderen) → zurück auf „Alle“
   if (view.kind === 'team' && view.folder && view.folder !== '-' && !folderById(view.folder)) view = { ...view, folder: null };
   renderNav();
@@ -184,7 +266,7 @@ function renderBoards() {
   fbar.innerHTML = '';
   fbar.classList.add('hidden');
   let list = allBoards();
-  let empty = 'Noch keine Boards – wähle oben eine Vorlage, um loszulegen.';
+  let empty = 'Noch keine Boards – lege links über „Neues Board“ eines an.';
   if (view.kind === 'mine') {
     title.textContent = 'Meine Boards';
     list = data.owned;
@@ -231,7 +313,7 @@ function renderBoards() {
       const cur = view.folder && view.folder !== '-' && folderById(view.folder);
       if (cur) actions.append(folderActions(cur));
     }
-  } else title.textContent = 'Alle Boards';
+  } else title.textContent = BOARD_VIEWS.has(view.kind) ? 'Alle Boards' : 'Suchergebnisse';
   const box = document.getElementById('dash-boards');
   box.innerHTML = '';
   const sorted = sortList(list);
@@ -470,7 +552,13 @@ function applyDark() {
   document.getElementById('dash-dark').innerHTML = ICONS.moon;
 }
 
-document.getElementById('dash-search').addEventListener('input', renderBoards);
+document.getElementById('dash-search').addEventListener('input', render);
+document.getElementById('dash-tpl-toggle').addEventListener('click', () => {
+  tplCollapsed = !tplCollapsed;
+  savePref('dashTplCollapsed', tplCollapsed);
+  renderTemplates();
+});
+document.getElementById('dash-show-all').addEventListener('click', () => setView({ kind: 'all' }));
 document.getElementById('dash-sort').addEventListener('change', renderBoards);
 document.getElementById('dash-user').addEventListener('click', (e) => menu(e.currentTarget, accountMenuItems(me, (u) => {
   me = u;
@@ -482,12 +570,8 @@ document.getElementById('dash-dark').addEventListener('click', () => {
   savePref('settings', { ...loadPref('settings', {}), dark, neon: undefined });
   applyDark();
 });
-document.getElementById('dash-all-templates').addEventListener('click', () => {
-  const m = modal('Neues Board aus Vorlage', templateGallery((t) => {
-    m.close();
-    createFromTemplate(t);
-  }), { wide: true });
-});
+document.getElementById('dash-all-templates').addEventListener('click', openAllTemplates);
+window.addEventListener('hashchange', () => location.hash === '#aufgaben' && setView({ kind: 'tasks' }));
 
 const importInput = h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' } });
 document.body.append(importInput);

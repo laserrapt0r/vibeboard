@@ -14,6 +14,7 @@
 - **Akzeptanzkriterien:**
   - Die Board-Übersicht zeigt alle Karten aus zugänglichen Boards, deren Zuständigkeit dem eigenen Anzeigenamen oder Benutzernamen entspricht (Groß-/Kleinschreibung egal) – offene zuerst nach Fälligkeit, erledigte optional.
   - Zugänglich sind eigene Boards, Boards mit Mitgliedschaft und besuchte Boards mit Link-Freigabe – dieselbe Regel wie in der Board-Übersicht ([REQ-BOARD-001](08-boards-teilen.md)). Private Elemente anderer Personen erscheinen nie.
+  - Geändert in 3.8.0: „Meine Aufgaben“ ist eine eigene Ansicht der Startseite mit Filtern „Offen“, „Überfällig“, „Erledigt“, „Alle“; die Navigation zeigt die Zahl offener (bzw. rot die überfälligen) Aufgaben, die Startansicht einen Hinweis auf überfällige und in den nächsten sieben Tagen fällige Aufgaben.
   - Geändert in 3.7.0: Auch Boards eigener Teams zählen als zugänglich; zugewiesene Kommentare erscheinen ebenfalls ([REQ-PROJ-004](#req-proj-004-kommentar-als-aufgabe)).
   - Ein Klick öffnet das Board und springt zur Karte (Direktlink `/board/<id>#el=<elementId>`; gilt für jedes Element). Gibt es das Element nicht mehr, erscheint ein Hinweis.
 

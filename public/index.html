@@ -23,24 +23,35 @@
   <main class="dash-main dash-layout">
     <nav id="dash-nav" class="dash-nav" aria-label="Boards ordnen"></nav>
     <div class="dash-page-content">
-    <section>
-      <div class="dash-section-head">
-        <h2>Neues Board erstellen</h2>
-        <button id="dash-all-templates" class="btn small">Alle Vorlagen anzeigen</button>
-      </div>
-      <div id="dash-templates" class="dash-templates"></div>
-    </section>
-    <section id="aufgaben" class="hidden">
-      <div class="dash-section-head">
-        <h2>Meine Aufgaben</h2>
-        <span id="dash-tasks-count" class="muted"></span>
-        <div class="spacer"></div>
-        <label class="check small"><input id="dash-tasks-done" type="checkbox"> Erledigte anzeigen</label>
-      </div>
-      <div id="dash-tasks" class="my-task-list"></div>
-    </section>
-    <section class="dash-area">
-      <div class="dash-content">
+      <!-- Start: Vorlagenleiste, fällige Aufgaben, zuletzt bearbeitete Boards -->
+      <section id="dash-start" class="dash-view hidden">
+        <div class="dash-section-head">
+          <h2>Neues Board aus Vorlage</h2>
+          <div class="spacer"></div>
+          <button id="dash-tpl-toggle" class="btn small"></button>
+          <button id="dash-all-templates" class="btn small">Alle Vorlagen</button>
+        </div>
+        <div id="dash-templates" class="dash-templates strip"></div>
+        <div id="dash-due"></div>
+        <div class="dash-section-head">
+          <h2>Zuletzt bearbeitet</h2>
+          <div class="spacer"></div>
+          <button id="dash-show-all" class="btn small">Alle Boards anzeigen</button>
+        </div>
+        <div id="dash-recent" class="dash-boards"></div>
+      </section>
+      <!-- Meine Aufgaben -->
+      <section id="dash-tasks-view" class="dash-view hidden">
+        <div class="dash-section-head">
+          <h2>Meine Aufgaben</h2>
+          <span id="dash-tasks-count" class="muted"></span>
+          <div class="spacer"></div>
+          <div id="dash-tasks-filter" class="seg"></div>
+        </div>
+        <div id="dash-tasks" class="my-task-list"></div>
+      </section>
+      <!-- Board-Listen: alle, eigene, geteilte, Ordner, Teams -->
+      <section id="dash-boards-view" class="dash-view hidden">
         <div class="dash-section-head">
           <h2 id="dash-title">Alle Boards</h2>
           <div id="dash-view-actions" class="row"></div>
@@ -54,8 +65,7 @@
         </div>
         <div id="dash-folderbar" class="dash-folderbar hidden"></div>
         <div id="dash-boards" class="dash-boards"></div>
-      </div>
-    </section>
+      </section>
     </div>
   </main>
   <footer class="site-footer" id="footer"></footer>

@@ -955,6 +955,20 @@ body.edit-locked #btn-timer, body.edit-locked #btn-vote, body.edit-locked #btn-p
 .folder-pick.active { border-color: var(--accent); }
 .folder-pick span:first-child { display: inline-flex; }
 #dash-bell { display: inline-flex; }
+.dash-new { justify-content: center; margin-bottom: 10px; }
+.dash-new span { display: inline-flex; }
+.nav-count.alert { background: var(--danger); color: #fff; border-radius: 9px; padding: 0 6px; font-weight: 700; }
+.dash-view > .dash-section-head:first-child { margin-top: 0; }
+/* Vorlagen als einzeilige, waagerecht scrollbare Leiste */
+.dash-templates.strip { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 160px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.due-hint {
+  display: flex; align-items: center; gap: 10px; width: 100%; margin: 18px 0 0; padding: 10px 14px; border-radius: 10px; text-align: left;
+  border: 1px solid #ffd8a8; background: #fff4e6; color: #a6510a; font-size: 14px;
+}
+.due-hint.overdue { border-color: #ffc9c9; background: #fff5f5; color: #c92a2a; }
+.due-hint .muted { margin-left: auto; }
+body.dark .due-hint { background: #3a2a14; border-color: #5c4321; color: #ffc078; }
+body.dark .due-hint.overdue { background: #3b1f22; border-color: #5c2a2f; color: #ffa8a8; }
 @media (max-width: 760px) {
   .dash-main.dash-layout { grid-template-columns: 1fr; gap: 8px; }
   .dash-nav { position: static; flex-direction: row; overflow-x: auto; gap: 4px; padding: 0 0 4px; max-height: none; scrollbar-width: none; }

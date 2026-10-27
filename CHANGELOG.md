@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.8.0] – 2026-10-27
+
+### Geändert
+- Startseite neu gegliedert (REQ-BOARD-001): Die linke Spalte ist die zentrale Navigation, rechts erscheint nur die
+  gewählte Ansicht.
+  - Oben links „+ Neues Board“ mit leerem Board, häufigen Vorlagen und „Alle Vorlagen …“ – von jeder Ansicht aus.
+  - **Start:** einklappbare, einzeilige Vorlagenleiste, Hinweis auf überfällige bzw. bald fällige Aufgaben und die
+    zuletzt bearbeiteten Boards.
+  - **Meine Aufgaben** als eigene Seite mit Filtern (offen, überfällig, erledigt, alle); die Zahl offener bzw.
+    überfälliger Aufgaben steht in der Navigation.
+  - Boards, Ordner und Teams zeigen nur noch ihre Board-Liste. Beim Suchen erscheinen immer die Suchergebnisse.
+
 ## [3.7.2] – 2026-10-27
 
 ### Geändert
