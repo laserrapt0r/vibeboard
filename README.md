@@ -408,8 +408,11 @@ Unter `/admin`, nur für Administratoren:
 - **Ohne Scanner:**
   - Ist kein Scanner eingerichtet oder ist er nicht erreichbar, werden Uploads standardmäßig abgelehnt. Beides ist in
     der Administration unter „Sicherheit“ einstellbar.
-- **In der Administration:** Status und Signaturstand stehen in der Übersicht. Sind die Signaturen älter als drei
-  Tage, erscheint eine Warnung.
+- **Protokoll:** Jedes Prüfergebnis steht im Anwendungsprotokoll (`[uploads]`, mit Ergebnis, Dateiart, Größe,
+  Kurz-Hash, Dauer und Benutzer-ID – nie der Inhalt). Funde, abgelehnte Dateitypen und bei Scannerausfall ungeprüft
+  angenommene Dateien stehen zusätzlich im Sicherheitsprotokoll.
+- **In der Administration:** Status und Signaturstand stehen in der Übersicht, dazu blockierte und ungeprüft
+  angenommene Uploads der letzten 30 Tage. Sind die Signaturen älter als drei Tage, erscheint eine Warnung.
 
 ## Versionen und Upgrades
 

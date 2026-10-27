@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.8.1] – 2026-10-27
+
+### Geändert
+- Virenscan (REQ-UPL-005): Jedes Prüfergebnis wird protokolliert – sauber, aus dem Zwischenspeicher, Fund,
+  falscher Dateityp, ohne Scanner abgelehnt bzw. angenommen, Scannerausfall – mit Dateiart, Größe, Kurz-Hash, Dauer und
+  Benutzer-ID. Bisher erschienen nur Funde und Ausfälle.
+- Sicherheitsprotokoll: abgelehnte Dateitypen und bei Scannerausfall ungeprüft angenommene Dateien werden erfasst;
+  Bezeichnungen für Gastlink-Ereignisse ergänzt. Die Administration zeigt ungeprüft angenommene Uploads (30 Tage).
+
 ## [3.8.0] – 2026-10-27
 
 ### Geändert

@@ -34,3 +34,12 @@
   - Erlaubt sind PNG, JPEG, GIF, WebP und SVG als eingebettete Data-URL.
   - Der Inhalt muss zum angegebenen Typ passen (Signaturbytes bzw. `<svg`), sonst wird die Datei abgelehnt.
   - Externe Bildadressen werden nicht übernommen.
+
+### REQ-UPL-005 Protokollierung der Prüfergebnisse
+- **Seit:** 3.8.1 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Jede Prüfung einer hochgeladenen Datei ist nachvollziehbar.
+- **Akzeptanzkriterien:**
+  - Für jede Prüfung entsteht ein Eintrag im Anwendungsprotokoll (Komponente `uploads`) mit Ergebnis (`clean`, `cached`, `infected`, `type_rejected`, `no_scanner`, `unscanned`, `error`, `error_accepted`), Art der Datei (Bild, Import, Vorschaubild, Tonspur), Größe, den ersten 16 Zeichen des SHA-256-Hashs, Dauer und Benutzer-ID – nie den Dateiinhalt.
+  - Stufen: sauber = `info`, aus dem Zwischenspeicher = `debug`, abgelehnt oder ohne Scanner angenommen = `warn`, Ausfall des Scanners = `error`.
+  - Im Sicherheitsprotokoll stehen zusätzlich Funde und abgelehnte Dateitypen („Upload abgelehnt“) sowie Dateien, die bei nicht erreichbarem Scanner ungeprüft angenommen wurden („Upload ungeprüft angenommen“, nur wenn die Administration das erlaubt).
+  - Die Übersicht der Administration nennt neben blockierten auch ungeprüft angenommene Uploads der letzten 30 Tage.

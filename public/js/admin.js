@@ -147,7 +147,7 @@ async function overview() {
       tile('Angemeldete Sitzungen', o.sessions),
       tile('Datenbank', fmtBytes(o.dbSize), o.pgVersion),
       tile('Virenscanner', o.virusScanner.configured ? (o.virusScanner.reachable ? 'aktiv' : 'nicht erreichbar') : 'aus',
-        o.virusScanner.reachable ? `${o.virusScanner.engine} · Signaturen ${o.virusScanner.signatures}${o.virusScanner.signaturesDate ? ' vom ' + new Date(o.virusScanner.signaturesDate).toLocaleDateString('de-DE') : ''} · ${o.uploadsBlocked30d} blockiert (30 Tage)` : ''),
+        o.virusScanner.reachable ? `${o.virusScanner.engine} · Signaturen ${o.virusScanner.signatures}${o.virusScanner.signaturesDate ? ' vom ' + new Date(o.virusScanner.signaturesDate).toLocaleDateString('de-DE') : ''} · ${o.uploadsBlocked30d} blockiert${o.uploadsUnscanned30d ? `, ${o.uploadsUnscanned30d} ungeprüft angenommen` : ''} (30 Tage)` : ''),
       tile('System', 'v' + o.version, `Laufzeit ${fmtUptime(o.uptime)} · ${o.disposableDomains.toLocaleString('de-DE')} gesperrte Wegwerf-Domains`),
     ),
     h('div', { class: 'version-history' }, h('h3', {}, 'System'), systemBox),
