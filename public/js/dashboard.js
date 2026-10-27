@@ -97,6 +97,7 @@ function renderTemplates() {
 const ROLE_LABEL = { owner: 'Besitzer', editor: 'Bearbeiten', commenter: 'Kommentieren', viewer: 'Ansehen' };
 
 const allBoards = () => [...data.owned, ...data.shared];
+const inTeam = (b, id) => b.team && b.team.id === id && (b.team.member || b.role === 'owner');
 const teamById = (id) => data.teams.find((t) => t.id === id);
 const folderById = (id) => data.folderList.find((f) => f.id === id);
 
@@ -120,7 +121,8 @@ function card(b) {
     boardMenu(more, b);
   };
   const badges = [];
-  if (b.team) badges.push(h('span', { class: 'tag', title: `Team „${b.team.name}“ (${ROLE_LABEL[b.team.role]})` }, '👥 ' + b.team.name));
+  // Team nur anzeigen, wenn man selbst dazugehört (oder das Board besitzt)
+  if (b.team && (b.team.member || b.role === 'owner')) badges.push(h('span', { class: 'tag', title: `Team „${b.team.name}“ (${ROLE_LABEL[b.team.role]})` }, '👥 ' + b.team.name));
   if (b.linkAccess !== 'private') badges.push(h('span', { class: 'tag', title: 'Per Link freigegeben' }, '🔗'));
   if (b.memberCount) badges.push(h('span', { class: 'tag', title: `${b.memberCount} Mitglied(er)` }, '👤 ' + b.memberCount));
   for (const fid of b.folders || []) {
@@ -162,12 +164,14 @@ function renderNav() {
   for (const f of personal) nav.append(item(f.name, { kind: 'folder', id: f.id }, allBoards().filter((b) => b.folders.includes(f.id)).length, 'folder'));
   nav.append(h('div', { class: 'dash-nav-head' }, h('span', {}, 'Teams'), h('button', { class: 'icon-btn small', title: 'Team erstellen', html: ICONS.plus, onclick: newTeam })));
   if (!data.teams.length) nav.append(h('div', { class: 'dash-nav-hint' }, 'Teams teilen Boards mit allen Mitgliedern auf einmal.'));
-  for (const t of data.teams) nav.append(item(t.name, { kind: 'team', id: t.id }, allBoards().filter((b) => b.team && b.team.id === t.id).length, 'team'));
+  for (const t of data.teams) nav.append(item(t.name, { kind: 'team', id: t.id }, allBoards().filter((b) => inTeam(b, t.id)).length, 'team'));
 }
 
 function renderBoards() {
   // Ansicht existiert nicht mehr (Ordner gelöscht, Team verlassen)
   if ((view.kind === 'folder' && !folderById(view.id)) || (view.kind === 'team' && !teamById(view.id))) view = { kind: 'all' };
+  // Gewählter Ordner im Team gelöscht (auch von anderen) → zurück auf „Alle“
+  if (view.kind === 'team' && view.folder && view.folder !== '-' && !folderById(view.folder)) view = { ...view, folder: null };
   renderNav();
   const title = document.getElementById('dash-title');
   const actions = document.getElementById('dash-view-actions');
@@ -193,7 +197,7 @@ function renderBoards() {
   } else if (view.kind === 'team') {
     const t = teamById(view.id);
     title.textContent = '👥 ' + t.name;
-    list = list.filter((b) => b.team && b.team.id === t.id);
+    list = list.filter((b) => inTeam(b, t.id));
     empty = 'Noch keine Boards in diesem Team. Ordne ein Board über „Teilen“ → „Team“ zu.';
     actions.append(
       h('button', { class: 'btn small', onclick: () => openTeamDialog(t.id) }, h('span', { html: ICONS.team }), 'Mitglieder'),
@@ -213,8 +217,13 @@ function renderBoards() {
         fbar.append(c);
       }
       fbar.append(chip('Ohne Ordner', '-', list.filter((b) => !b.folders.some((x) => tf.some((f) => f.id === x))).length));
-      if (view.folder === '-') list = list.filter((b) => !b.folders.some((x) => tf.some((f) => f.id === x)));
-      else if (view.folder) list = list.filter((b) => b.folders.includes(view.folder));
+      if (view.folder === '-') {
+        list = list.filter((b) => !b.folders.some((x) => tf.some((f) => f.id === x)));
+        empty = 'Alle Boards dieses Teams liegen in Ordnern.';
+      } else if (view.folder) {
+        list = list.filter((b) => b.folders.includes(view.folder));
+        empty = 'Dieser Ordner ist leer. Über „…“ an einem Board → „In Ordner verschieben“ legst du Boards hinein.';
+      }
       const cur = view.folder && view.folder !== '-' && folderById(view.folder);
       if (cur) actions.append(folderActions(cur));
     }
@@ -345,6 +354,8 @@ async function openTeamDialog(id) {
           try {
             await api(`/api/teams/${id}/members/${u.id}`, { method: 'PATCH', body: { role: e.target.value } });
             toast('Rolle geändert');
+            render();
+            load();
           } catch (ex) {
             toast(ex.message);
             render();
@@ -392,7 +403,7 @@ function boardMenu(anchor, b) {
   const owner = b.role === 'owner';
   menu(anchor, [
     { label: 'Öffnen', icon: 'fit', onClick: () => (location.href = '/board/' + b.id) },
-    { label: owner ? 'Teilen & Team …' : 'Teilen …', icon: 'share', onClick: () => openShareDialog(b.id, { me, onLeave: load }) },
+    { label: owner ? 'Teilen & Team …' : 'Teilen …', icon: 'share', onClick: () => openShareDialog(b.id, { me, onLeave: load, onClose: load }) },
     { label: 'In Ordner verschieben …', icon: 'folder', onClick: () => moveToFolder(b) },
     ['owner', 'editor'].includes(b.role) ? { label: 'Umbenennen', icon: 'edit', onClick: async () => {
       const n = await promptDialog('Board umbenennen', 'Name', b.name);
@@ -429,7 +440,7 @@ function boardMenu(anchor, b) {
           toast(e.message);
         }
       }
-    } } : b.member || !b.team ? { label: b.member ? 'Board verlassen …' : 'Aus meiner Liste entfernen', icon: 'close', danger: true, onClick: async () => {
+    } } : b.member || !(b.team && b.team.member) ? { label: b.member ? 'Board verlassen …' : 'Aus meiner Liste entfernen', icon: 'close', danger: true, onClick: async () => {
       // Mitglieder verlieren dabei den Zugriff – nur nach Rückfrage
       if (b.member && !(await confirmDialog('Board verlassen', `Du verlierst den Zugriff auf „${b.name}“, bis du erneut eingeladen wirst.`, 'Verlassen', true))) return;
       try {

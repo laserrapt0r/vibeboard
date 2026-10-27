@@ -606,6 +606,11 @@ function openComment(id, isNew) {
   const el = getEl(id);
   if (!el) return;
   const box = h('div', { class: 'comment-pop panel' });
+  // Tasten im Kommentarfenster (auch in Auswahllisten und Datumsfeldern) nie als Board-Kürzel auswerten
+  box.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') closeComment();
+  });
   document.body.append(box);
   commentPop = { id, box, sig: null, taskForm: false };
   renderCommentPop();
@@ -684,7 +689,10 @@ function renderCommentPop() {
   if (commentPop.sig === sig) return;
   commentPop.sig = sig;
   const box = commentPop.box;
-  const draft = box.querySelector('textarea')?.value || '';
+  // Entwurf, Fokus und Cursorposition über den Neuaufbau retten (z. B. wenn jemand anderes antwortet)
+  const old = box.querySelector('textarea');
+  const draft = old?.value || '';
+  const focused = old && document.activeElement === old ? [old.selectionStart, old.selectionEnd] : null;
   box.innerHTML = '';
   const input = h('textarea', { rows: 2, placeholder: thread.length ? 'Antworten … (@ erwähnt jemanden)' : 'Kommentar schreiben … (@ erwähnt jemanden)' }, draft);
   const mention = mentionInput(input);
@@ -733,6 +741,10 @@ function renderCommentPop() {
   );
   const list = box.querySelector('.comment-list');
   list.scrollTop = list.scrollHeight;
+  if (focused) {
+    input.focus();
+    input.setSelectionRange(focused[0], focused[1]);
+  }
 }
 
 // Kommentar als Aufgabe: Zuständigkeit und Fälligkeit (erscheint unter „Meine Aufgaben“)
@@ -1003,9 +1015,11 @@ async function importFile(file) {
     const data = JSON.parse(await file.text());
     const list = Array.isArray(data) ? data : Array.isArray(data.elements) ? data.elements : Object.values(data.elements || {});
     if (!list.length) return toast('Keine Elemente gefunden');
+    const n = list.filter((e) => e && e.type !== 'comment').length;
+    if (!n) return toast('Keine Elemente gefunden (Kommentare werden nicht importiert)');
     pasteElements(list, viewCenter());
     fitTo(selectionBounds(), { maxZ: 1 });
-    toast(`${list.length} Elemente importiert`);
+    toast(`${n} Elemente importiert${n < list.length ? ' – Kommentare werden nicht übernommen' : ''}`);
   } catch {
     toast('Datei konnte nicht importiert werden');
   }
@@ -1183,7 +1197,7 @@ stage.addEventListener('contextmenu', (e) => {
   ] : [
     { label: 'Sticky Note hier', onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
     { label: 'Text hier', onClick: () => { const s = makeElement('text', w.x, w.y); act(() => setEl(s)); startEdit(s.id, { isNew: true }); } },
-    { label: 'Kommentar hier', onClick: () => { const c = makeElement('comment', w.x, w.y); act(() => setEl(c)); app.emit('openComment', c.id, true); } },
+    { label: 'Kommentar hier', onClick: () => newComment(w) },
     { label: 'Vorlage einfügen …', onClick: openTemplates },
     '-',
     { label: 'Alles auswählen', hint: 'Strg+A', onClick: () => setSelection([...app.els.keys()]) },
@@ -1342,7 +1356,7 @@ function buildTopbar() {
   );
   const right = $('#topright');
   const tools = h('div', { class: 'collab-tools' });
-  right.append(tools, h('div', { id: 'avatars' }),
+  append(right, tools, h('div', { id: 'avatars' }),
     app.guest ? null : bellButton({ open: (n) => app.emit('openNotification', n) }),
     app.guest ? null : h('button', { class: 'btn primary small share-btn', onclick: openShare }, h('span', { html: ICONS.share }), 'Teilen'),
     iconBtn('settings', 'Einstellungen', (e) => openSettings(e.currentTarget)));

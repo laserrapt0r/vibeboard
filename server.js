@@ -192,6 +192,7 @@ async function shutdown() {
   for (const id of [...boards.rooms.keys()]) boards.closeRoom(id);
   try {
     await boards.flushAll();
+    await require('./lib/activity').stop();
     await db.pool.end();
   } catch (e) {
     log.error('Fehler beim Beenden', e);

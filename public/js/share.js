@@ -11,9 +11,10 @@ const ROLE_OPTIONS = [['editor', 'bearbeiten'], ['commenter', 'kommentieren'], [
 const ROLE_TEXT = { editor: 'darf bearbeiten', commenter: 'darf kommentieren', viewer: 'darf ansehen' };
 const roleSelect = (cur, onchange) => h('select', { onchange }, ROLE_OPTIONS.map(([v, l]) => h('option', { value: v, selected: v === cur }, l)));
 
-export async function openShareDialog(boardId, { me, onLeave } = {}) {
+// onClose: z. B. Startseite neu laden, damit Team, Freigabe und Mitglieder sofort stimmen
+export async function openShareDialog(boardId, { me, onLeave, onClose } = {}) {
   const body = h('div', { class: 'form share' });
-  const m = modal('Board teilen', body);
+  const m = modal('Board teilen', body, { onClose });
   const url = `${location.origin}/board/${boardId}`;
 
   async function render() {
@@ -163,7 +164,9 @@ async function teamSection(body, boardId) {
     body.append(h('div', { class: 'share-block' }, h('div', { class: 'label' }, 'Team'), h('p', { class: 'muted small' }, 'Du bist in keinem Team. Teams legst du in der Übersicht links unter „Teams“ an – dann gelten Rechte für alle Mitglieder auf einmal.')));
     return;
   }
-  const team = h('select', {}, h('option', { value: '' }, '– keinem Team zugeordnet –'), teams.map((t) => h('option', { value: t.id, selected: cur && cur.id === t.id }, t.name)));
+  // Zugeordnetes Team, in dem man selbst nicht (mehr) Mitglied ist, trotzdem anzeigen
+  const foreign = cur && !teams.some((t) => t.id === cur.id) ? [h('option', { value: cur.id, selected: true }, `${cur.name} (du bist kein Mitglied)`)] : [];
+  const team = h('select', {}, h('option', { value: '' }, '– keinem Team zugeordnet –'), foreign, teams.map((t) => h('option', { value: t.id, selected: cur && cur.id === t.id }, t.name)));
   const role = roleSelect(cur ? cur.role : 'editor');
   const save = async () => {
     try {
@@ -181,9 +184,9 @@ async function teamSection(body, boardId) {
 
 // Gastlinks: Zugang ohne Konto, befristet, nur ansehen oder kommentieren
 async function guestSection(body, boardId) {
-  let info;
+  let info, maxDays = 30;
   try {
-    info = await api(`/api/boards/${boardId}/guest-links`);
+    [info, { features: { guestMaxDays: maxDays = 30 } = {} }] = await Promise.all([api(`/api/boards/${boardId}/guest-links`), api(`/api/boards/${boardId}`)]);
   } catch {
     return;
   }
@@ -194,7 +197,9 @@ async function guestSection(body, boardId) {
     return;
   }
   const role = h('select', {}, h('option', { value: 'commenter' }, 'darf kommentieren'), h('option', { value: 'viewer' }, 'darf ansehen'));
-  const days = h('select', {}, [[1, '1 Tag'], [7, '7 Tage'], [14, '14 Tage'], [30, '30 Tage']].map(([d, l]) => h('option', { value: d, selected: d === 7 }, l)));
+  // Nur Laufzeiten bis zur Grenze der Administration anbieten
+  const choices = [...new Set([1, 7, 14, 30, maxDays].filter((d) => d <= maxDays))].sort((a, b) => a - b);
+  const days = h('select', {}, choices.map((d) => h('option', { value: d, selected: d === Math.min(7, maxDays) }, d === 1 ? '1 Tag' : `${d} Tage`)));
   const label = h('input', { type: 'text', maxlength: 80, placeholder: 'Bezeichnung, z. B. „Workshop Kunde“' });
   const result = h('div');
   const list = h('div', { class: 'guest-links' });

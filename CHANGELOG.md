@@ -4,6 +4,56 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.7.1] – 2026-10-27
+
+### Behoben
+Gefunden von vier Prüf-Agenten (Board-Oberfläche, Startseite und Verwaltung, Server-Logik, Regressionen):
+- **Kommentare:**
+  - Antwortete jemand, verlor das eigene Kommentarfeld den Fokus. Weitere Tasten wirkten als Board-Kürzel; die
+    Rücktaste konnte den ganzen Thread löschen. Gleiches galt für die Personenauswahl beim Zuweisen.
+  - Gleichzeitiges Zuweisen und Antworten konnte Antworten verlieren oder gelöschte Kommentare zurückbringen.
+  - „Kommentar hier“ im Kontextmenü legte keinen Kommentar an.
+  - Strg+L sperrte Kommentare nur lokal.
+  - Ein angefangener Kommentar ging beim Wiederverbinden verloren.
+  - Löschen über das Kommentarfenster entfernte keine Stimmen und ließ sich nicht rückgängig machen.
+  - Ein Fehler beim Benachrichtigen meldete den bereits gespeicherten Beitrag als gescheitert.
+- **Kopieren und Importieren:**
+  - Beim Kopieren, Duplizieren (Strg+D) und JSON-Import ins Board verschwanden Kommentare ohne Hinweis. Sie werden
+    jetzt bewusst nicht übernommen, wie beim Export, und das wird angezeigt.
+  - Board duplizieren und „Version als Board“ übernahmen Zuweisungen und Moderationssperren.
+- **Aktivitätsverlauf:**
+  - „Ältere laden“ übersprang Einträge und wurde nach 15 Sekunden zurückgesetzt.
+  - Mehrere Beiträge und Aufzeichnungen wurden falsch zusammengefasst.
+  - Beim Beenden des Servers ging der Puffer verloren.
+  - „Letzter Besuch“ ist jetzt das Ende des Besuchs.
+- **Moderation:** Bei gesperrtem Bearbeiten ließen sich Timer, Abstimmung und privater Modus weiter bedienen und liefen
+  nur lokal.
+- **Startseite und Teilen:**
+  - Die Startseite übernahm Änderungen aus dem Teilen-Dialog erst nach 30 Sekunden.
+  - Ein gelöschter Team-Ordner hinterließ eine leere Ansicht.
+  - Teams, in denen man nicht Mitglied ist, erschienen als Abzeichen.
+  - „Aus meiner Liste entfernen“ fehlte bei manchen Boards.
+  - Nach dem Herabstufen der eigenen Rolle im Team blieben Verwaltungsknöpfe stehen.
+  - Sehr lange Namen sprengten das Layout.
+- **Gäste:**
+  - In der Board-Kopfzeile stand „nullnull“.
+  - Die Laufzeiten für Gastlinks ignorierten die Grenze der Administration.
+  - Ein erneuter Aufruf des Links legte ein zweites Gastkonto an.
+  - Beim Wechsel des Gastlinks blieb das alte Gastkonto bestehen.
+  - Die Beitrittsseite enthielt einen Grammatikfehler.
+- **Profil:**
+  - Konten ohne E-Mail-Adresse konnten ihr Profil nicht speichern.
+  - Ein Mailfehler hinterließ einen halb gespeicherten Zustand.
+- **Benutzer löschen:** Teams ohne verwaltende Person werden an das dienstälteste Mitglied übergeben, leere Teams
+  entfernt.
+- **Darstellung:**
+  - Ein ausgeblendeter Hinweis mit Knopf fing Klicks auf der Leinwand ab.
+  - Auf schmalen Bildschirmen passte der Player nicht ins Fenster, und das Moderationsbanner verdeckte Knöpfe.
+  - Lange Hinweistexte brachen nicht um.
+- **Sonstiges:**
+  - Aufzeichnungen sind auf 100 je Board begrenzt.
+  - Gäste erhalten keine gespeicherten Benachrichtigungen mehr, die sie nie lesen könnten.
+
 ## [3.7.0] – 2026-10-27
 
 ### Hinzugefügt

@@ -2172,7 +2172,11 @@ export function collectForCopy(ids) {
 }
 
 export function duplicateEls(list, dx = 20, dy = 20, select = true) {
-  list = list.filter((e) => !e.hidden);
+  // Kommentare gehören zu ihrem Ort und ihren Personen – sie werden nicht kopiert (wie beim Export)
+  const comments = list.filter((e) => e.type === 'comment').length;
+  list = list.filter((e) => !e.hidden && e.type !== 'comment');
+  if (comments) toast(`${comments} Kommentar${comments === 1 ? ' wird' : 'e werden'} nicht mitkopiert`, 3500);
+  if (!list.length) return [];
   const idMap = new Map(list.map((e) => [e.id, uid()]));
   const groupMap = new Map();
   const sorted = [...list].sort((a, b) => (a.z || 0) - (b.z || 0));
@@ -2569,7 +2573,7 @@ export function nudge(dx, dy) {
 
 function isTyping(e) {
   const t = e.target;
-  return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) && t !== editor;
+  return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) && t !== editor;
 }
 
 const TOOL_KEYS = { v: 'select', h: 'hand', n: 'sticky', t: 'text', s: 'shape', l: 'connector', p: 'pen', e: 'eraser', f: 'frame', c: 'comment', k: 'card', m: 'mindmap', x: 'laser' };

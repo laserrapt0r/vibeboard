@@ -15,6 +15,7 @@ const VERB = {
 };
 
 let items = [];
+let scrollPos = 0;
 let loadedAt = 0;
 let highlight = false;
 let changedSince = new Set();
@@ -22,9 +23,17 @@ const layer = $('#layer-overlay');
 
 async function load(more = false) {
   try {
-    const before = more && items.length ? items[items.length - 1].id : '';
+    const last = items[items.length - 1];
+    const before = more && last ? `${last.at}:${last.id}` : '';
     const r = await api(`/api/boards/${app.boardId}/activity?limit=60${before ? '&before=' + before : ''}`);
-    items = more ? [...items, ...r.items] : r.items;
+    if (more) items = [...items, ...r.items];
+    else {
+      // Neueste Seite ersetzt nur ihren Bereich; bereits nachgeladene ältere Einträge bleiben erhalten
+      const fresh = new Set(r.items.map((i) => i.id));
+      const oldest = r.items[r.items.length - 1];
+      const older = oldest ? items.filter((i) => !fresh.has(i.id) && (i.at < oldest.at || (i.at === oldest.at && Number(i.id) < Number(oldest.id)))) : [];
+      items = [...r.items, ...older];
+    }
     loadedAt = Date.now();
     computeChanged();
   } catch (e) {
@@ -90,6 +99,9 @@ async function renderPanel(side, close) {
         h('span', { class: 'muted small' }, relTime(i.at)))));
   }
   side.append(list);
+  // Scrollposition über den Neuaufbau erhalten
+  side.scrollTop = scrollPos;
+  side.onscroll = () => (scrollPos = side.scrollTop);
   if (items.length >= 60) side.append(h('div', { class: 'side-actions' }, h('button', { class: 'btn small', onclick: async () => { await load(true); renderSidePanel(); } }, 'Ältere laden')));
 }
 

@@ -311,13 +311,13 @@ export function toast(msg, ms = 2200, action) {
   t.classList.toggle('with-action', !!action);
   if (action) {
     t.append(h('button', { class: 'btn small', onclick: () => {
-      t.classList.remove('show');
+      t.classList.remove('show', 'with-action');
       action.onClick();
     } }, action.label));
   }
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+  toastTimer = setTimeout(() => t.classList.remove('show', 'with-action'), ms);
 }
 
 export function modal(title, content, { wide = false, onClose } = {}) {

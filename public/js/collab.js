@@ -271,7 +271,11 @@ function timerRemaining(t) {
   return Math.max(0, t.endsAt - now());
 }
 
+// Nur anwenden, wenn die Änderung auch gesendet wird (sonst liefe z. B. ein Timer nur lokal)
+const mayChangeSession = () => !app.viewOnly || (toast('Das Bearbeiten ist gerade gesperrt'), false);
+
 function setTimer(t) {
+  if (!mayChangeSession()) return;
   app.session.timer = t;
   app.sync.op({ op: 'timer', timer: t });
   renderTimer();
@@ -370,6 +374,7 @@ function myVotesUsed(v) {
 }
 
 function setVoting(v) {
+  if (!mayChangeSession()) return;
   app.session.voting = v;
   app.sync.op({ op: 'voting', voting: v });
   renderVoting();
@@ -648,7 +653,9 @@ export function initCollab() {
       if (app.serverVersion && app.serverVersion !== msg.version) showUpdateBanner(msg.version);
       app.serverVersion = app.serverVersion || msg.version;
     }
+    const drafts = [...app.els.values()].filter((e) => e.draft);
     loadElements(msg.board.elements);
+    for (const d of drafts) if (!getEl(d.id)) applyRemoteOp({ op: 'upsert', el: d });
     // Eigene, noch nicht bestätigte Änderungen wieder anwenden – sie werden gleich (erneut) gesendet
     for (const op of app.sync.pendingOps()) {
       const srv = op.op === 'upsert' && getEl(op.el.id);

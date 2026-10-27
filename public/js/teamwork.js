@@ -14,6 +14,7 @@ document.body.append(pmBanner);
 let pmWasActive = null;
 
 function setPrivateMode(active) {
+  if (app.viewOnly) return toast('Das Bearbeiten ist gerade gesperrt');
   app.sync.op({ op: 'privateMode', active });
 }
 

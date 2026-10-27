@@ -98,7 +98,7 @@
   - Mehrere Änderungen derselben Person am selben Element innerhalb von fünf Minuten werden zu einem Eintrag mit Zähler zusammengefasst.
   - Private Elemente erscheinen erst nach dem Aufdecken (als ein Eintrag „hat aufgedeckt“).
   - Panel „Aktivität“ (für alle mit Zugriff, auch Gäste): neueste zuerst, „Ältere laden“, ein Klick springt zum Element bzw. öffnet den Kommentar; gelöschte Elemente melden einen Hinweis.
-  - Seit dem letzten Besuch (ein erneutes Verbinden innerhalb von 30 Minuten zählt nicht als neuer Besuch): Beim Öffnen zeigt ein Hinweis, wie viele Elemente andere geändert haben; „Anzeigen“ öffnet das Panel, markiert die Elemente auf der Leinwand und springt zu ihnen. Im Panel sind neue Einträge markiert, der letzte Besuch ist als Trenner sichtbar.
+  - Seit dem letzten Besuch (gemeint ist das Ende des Besuchs; ein erneutes Verbinden innerhalb von 30 Minuten zählt nicht als neuer Besuch): Beim Öffnen zeigt ein Hinweis, wie viele Elemente andere geändert haben; „Anzeigen“ öffnet das Panel, markiert die Elemente auf der Leinwand und springt zu ihnen. Im Panel sind neue Einträge markiert, der letzte Besuch ist als Trenner sichtbar.
   - Einträge werden nach 90 Tagen gelöscht, höchstens 2000 je Board.
 
 ### REQ-COLLAB-012 Geführte Aufzeichnungen (Rundgänge)

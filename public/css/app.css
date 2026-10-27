@@ -488,7 +488,7 @@ body.dash-page { min-height: 100vh; }
 #dash-search { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; width: min(320px, 40vw); background: var(--panel-2); }
 .dash-main { max-width: 1280px; margin: 0 auto; padding: 24px; }
 .dash-section-head { display: flex; align-items: center; gap: 12px; margin: 16px 0 14px; }
-.dash-section-head h2 { margin: 0; font-size: 18px; }
+.dash-section-head h2 { margin: 0; font-size: 18px; min-width: 0; overflow-wrap: anywhere; }
 .dash-templates { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .dash-templates .tpl-info { padding: 8px 10px; font-size: 13px; }
 .dash-boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
@@ -823,7 +823,7 @@ body.dark .est-person.done { background: #1e3a24; color: #8ce99a; }
 /* Zusammenarbeit im Team (3.7.0)                                      */
 /* ================================================================== */
 
-#toast.with-action { pointer-events: auto; display: flex; align-items: center; gap: 12px; text-align: left; }
+#toast.with-action.show { pointer-events: auto; display: flex; align-items: center; gap: 12px; text-align: left; }
 #toast .btn { flex: none; }
 .badge.guest { background: #fff3bf; color: #8a6d00; }
 body.dark .badge.guest { background: #4a3d0a; color: #ffe066; }
@@ -909,6 +909,16 @@ body:has(#timer-widget:not(.hidden)) #moderation-banner { top: 124px; }
 .rec-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .rec-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rec-cursor { z-index: 3; }
+/* Während einer Bearbeitungssperre der Moderation */
+body.edit-locked #btn-timer, body.edit-locked #btn-vote, body.edit-locked #btn-private { display: none; }
+#play-bar { flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 24px); }
+#toast { overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  #play-bar input[type=range] { width: 100%; order: 5; }
+  .play-title { display: none; }
+  #moderation-banner { top: 116px; font-size: 12px; }
+  body:has(#moderation-banner:not(.hidden)) #private-banner { top: 168px; }
+}
 #btn-recordings { color: #e03131; }
 
 /* Teilen: Team und Gastlinks */
