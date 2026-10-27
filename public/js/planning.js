@@ -25,8 +25,21 @@ function jumpTo(el) {
   if (!el) return;
   // Auf schmalen Bildschirmen verdeckt das Panel die Karte
   if (innerWidth < 760 && currentSidePanel()) renderSidePanelClose();
+  if (el.type === 'comment') {
+    fitTo({ x: el.x - 200, y: el.y - 200, w: 400, h: 400 }, { maxZ: 1.5 });
+    setTimeout(() => app.emit('openComment', el.id), 320);
+    return;
+  }
   setSelection([el.id]);
   fitTo(bounds(el), { maxZ: 1.5, pad: 200 });
+}
+
+// Zugewiesene Kommentare erscheinen wie Karten in der Aufgabenliste
+function commentTasks() {
+  return [...app.els.values()].filter((e) => e.type === 'comment' && e.task && (e.thread || []).length).map((c) => ({
+    id: c.id, type: 'comment', title: '💬 ' + String(c.thread[0].text).slice(0, 120), status: c.resolved ? 'Erledigt' : 'Offen',
+    due: c.task.due, assignee: c.task.assignee, assigneeId: c.task.assigneeId, color: '#f08c00',
+  }));
 }
 
 /* ================================================================== */
@@ -36,12 +49,13 @@ function jumpTo(el) {
 let taskFilter = 'open';
 
 function matchesMe(c) {
+  if (c.type === 'comment') return c.assigneeId === String(app.user.id);
   const a = String(c.assignee || '').trim().toLowerCase();
   return !!a && [app.user.name, app.me && app.me.username].filter(Boolean).some((n) => n.toLowerCase() === a);
 }
 
 function renderTasks(side, close) {
-  const cards = [...app.els.values()].filter((e) => e.type === 'card' && !e.hidden);
+  const cards = [...app.els.values()].filter((e) => e.type === 'card' && !e.hidden).concat(commentTasks());
   const filters = [['open', 'Offen'], ['mine', 'Mir zugewiesen'], ['overdue', 'Überfällig'], ['all', 'Alle']];
   const list = cards.filter((c) => taskFilter === 'all' || (taskFilter === 'open' && !isDone(c)) ||
     (taskFilter === 'mine' && matchesMe(c)) || (taskFilter === 'overdue' && isOverdue(c)));
@@ -67,7 +81,7 @@ function renderTasks(side, close) {
     side.append(h('div', { class: 'task-group' }, h('span', {}, status), h('span', { class: 'muted small' }, `${items.length}${pts ? ` · ${pts} SP` : ''}`)));
     for (const c of items) {
       const prio = Object.hasOwn(PRIORITIES, c.priority) ? PRIORITIES[c.priority] : null;
-      side.append(h('button', { class: 'task-row', onclick: () => jumpTo(c) },
+      side.append(h('button', { class: 'task-row', onclick: () => jumpTo(getEl(c.id)) },
         h('span', { class: 'task-color', style: { background: c.color || '#4262ff' } }),
         h('span', { class: 'task-main' },
           h('span', { class: 'task-title' }, c.key ? h('span', { class: 'muted' }, c.key + ' ') : null, c.title || 'Ohne Titel'),

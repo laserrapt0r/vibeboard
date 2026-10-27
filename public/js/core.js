@@ -12,7 +12,9 @@ const boardId = location.pathname.split('/').filter(Boolean).pop();
 
 export const app = {
   boardId,
-  viewOnly: false,   // wird nach dem Laden aus der Rolle gesetzt
+  viewOnly: false,   // wird nach dem Laden aus der Rolle gesetzt (auch während einer Bearbeitungssperre der Moderation)
+  canComment: false, // Rolle „Kommentieren“ oder höher
+  isFacilitator: false, // moderiert gerade (Besitzer immer)
   role: null,
   user: { id: '', name: '', color: '#4262ff' },
   sync: null,
@@ -38,6 +40,9 @@ export const app = {
   _l: {},
   on(ev, fn) {
     (this._l[ev] = this._l[ev] || []).push(fn);
+  },
+  off(ev, fn) {
+    this._l[ev] = (this._l[ev] || []).filter((f) => f !== fn);
   },
   emit(ev, ...a) {
     (this._l[ev] || []).forEach((f) => f(...a));
@@ -246,7 +251,7 @@ function renderNode(id, env) {
     orderDirty = true;
   }
   let cls = 'el el-' + el.type;
-  if (el.locked) cls += ' locked';
+  if (isLocked(el)) cls += ' locked';
   if (app.editing && app.editing.id === id && !app.editing.cell) cls += ' editing';
   g.setAttribute('class', cls);
   try {
@@ -452,6 +457,14 @@ export function applyRemoteOp(op) {
     markDirty(op.id);
     if (app.editing && app.editing.id === op.id) abortEdit();
   }
+}
+
+// Neuer Kommentar: zunächst nur ein lokaler Platzhalter; angelegt wird er erst mit dem ersten Beitrag (Server)
+export function newComment(w) {
+  const el = { ...makeElement('comment', w.x, w.y), draft: true };
+  applyRemoteOp({ op: 'upsert', el });
+  setTool('select');
+  app.emit('openComment', el.id, true);
 }
 
 /* ---------------- Tabellen: zellgenaue Änderungen (siehe table-ops.js) ---------------- */
@@ -768,7 +781,7 @@ function renderOverlay() {
       continue;
     }
     const b = bounds(el);
-    out += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="none" stroke="${el.locked ? '#868e96' : '#4262ff'}" stroke-width="${sw}"${el.locked ? ` stroke-dasharray="${4 / z} ${3 / z}"` : ''}/>`;
+    out += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="none" stroke="${isLocked(el) ? '#868e96' : '#4262ff'}" stroke-width="${sw}"${isLocked(el) ? ` stroke-dasharray="${4 / z} ${3 / z}"` : ''}/>`;
   }
   const dragging = drag && (drag.mode === 'move' || drag.mode === 'marquee');
   if (!app.viewOnly && sel.length && !app.editing && !dragging) {
@@ -796,7 +809,7 @@ function renderOverlay() {
           out += `<circle data-handle="${k}" cx="${p.x}" cy="${p.y}" r="${6 / z}" fill="#fff" stroke="#4262ff" stroke-width="${2 / z}"/>`;
         }
       }
-    } else if (!sel.every((e) => e.locked) && !(sel.length === 1 && sel[0].type === 'comment')) {
+    } else if (!sel.every((e) => isLocked(e)) && !(sel.length === 1 && sel[0].type === 'comment')) {
       const b = selectionBounds();
       if (sel.length > 1) out += `<rect x="${b.x - 4 / z}" y="${b.y - 4 / z}" width="${b.w + 8 / z}" height="${b.h + 8 / z}" fill="none" stroke="#4262ff" stroke-width="${sw}" stroke-dasharray="${5 / z} ${4 / z}"/>`;
       const pts = {
@@ -882,7 +895,7 @@ function renderOverlay() {
 /* ================================================================== */
 
 export function canEdit(el) {
-  return el && !el.locked && !el.hidden && ['sticky', 'shape', 'text', 'frame', 'connector', 'table', 'code'].includes(el.type);
+  return el && !isLocked(el) && !el.hidden && ['sticky', 'shape', 'text', 'frame', 'connector', 'table', 'code'].includes(el.type);
 }
 
 export function startEdit(id, opts = {}) {
@@ -1156,7 +1169,7 @@ export function mindAddSibling(node) {
 /* ================================================================== */
 
 export function setTool(t) {
-  if (app.viewOnly && !['select', 'hand', 'laser'].includes(t)) return;
+  if (app.viewOnly && !['select', 'hand', 'laser'].includes(t) && !(t === 'comment' && app.canComment)) return;
   app.tool = t;
   stage.dataset.tool = t;
   if (t !== 'select') {
@@ -1260,6 +1273,12 @@ function onDown(e) {
     return;
   }
 
+  // Kommentieren dürfen auch Personen mit der Rolle „Kommentieren“ (und Gäste mit dieser Rolle)
+  if (app.tool === 'comment' && app.canComment) {
+    if (hit && hit.el.type === 'comment') app.emit('openComment', hit.el.id);
+    else newComment(w);
+    return;
+  }
   if (app.viewOnly) {
     if (hit && hit.el.type === 'comment') app.emit('openComment', hit.el.id);
     drag = { mode: 'pan', start, vx: app.view.x, vy: app.view.y };
@@ -1287,7 +1306,7 @@ function onDown(e) {
           }
           drag = { mode: 'wp', start, id, index, tx: true };
         } else {
-          const sel = selectedEls().filter((x) => !x.locked);
+          const sel = selectedEls().filter((x) => !isLocked(x));
           drag = { mode: 'resize', start, handle: k, ob: selectionBounds(), origs: sel.map(clone), tx: true, cand: snapCandidates(new Set(sel.map((x) => x.id))) };
         }
         return;
@@ -1304,7 +1323,7 @@ function onDown(e) {
           startMarquee(e, start, el.id);
           return;
         }
-        if (el.locked) {
+        if (isLocked(el)) {
           startMarquee(e, start, el.id);
           return;
         }
@@ -1360,7 +1379,7 @@ function onDown(e) {
         startMove(e, start);
         if (toggleOff) drag.toggleOff = [...toggleOff];
         // Klick in eine bereits ausgewählte Tabelle wählt eine Zelle (Umschalt: Bereich)
-        if (el.type === 'table' && preSelected.size === 1 && preSelected.has(el.id) && !el.locked) drag.cellClick = { id: el.id, cell: cellAt(el, w.x, w.y), extend: e.shiftKey };
+        if (el.type === 'table' && preSelected.size === 1 && preSelected.has(el.id) && !isLocked(el)) drag.cellClick = { id: el.id, cell: cellAt(el, w.x, w.y), extend: e.shiftKey };
         if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
           // Klick ohne Ziehen auf ein Element einer Mehrfachauswahl wählt nur dieses aus
           if (app.sel.size > grp.size) drag.clickSelect = el.id;
@@ -1396,14 +1415,6 @@ function onDown(e) {
       drag = { mode: 'erase', start, tx: true };
       eraseAt(e);
       return;
-    case 'comment': {
-      const el = makeElement('comment', w.x, w.y);
-      act(() => setEl(el));
-      setTool('select');
-      setSelection([el.id]);
-      app.emit('openComment', el.id, true);
-      return;
-    }
     case 'emoji': {
       const el = makeElement('emoji', w.x, w.y);
       act(() => setEl(el));
@@ -1441,7 +1452,7 @@ function startMove(e, start) {
     const el = getEl(id);
     if (el && el.type === 'frame') withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
   }
-  ids = [...ids].filter((id) => getEl(id) && !getEl(id).locked);
+  ids = [...ids].filter((id) => getEl(id) && !isLocked(getEl(id)));
   // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit
   const idSet = new Set(ids);
   for (const c of app.els.values()) {
@@ -2097,9 +2108,9 @@ stage.addEventListener('dblclick', (e) => {
     return;
   }
   const hit = hitInfo(e.target);
-  if (hit && hit.el.locked) {
+  if (hit && isLocked(hit.el)) {
     setSelection([hit.el.id]);
-    toast('Dieses Element ist gesperrt – zum Bearbeiten entsperren (Strg+L oder Schloss-Symbol)', 3500);
+    toast(hit.el.locked ? 'Dieses Element ist gesperrt – zum Bearbeiten entsperren (Strg+L oder Schloss-Symbol)' : 'Dieses Element hat die Moderation für Teilnehmende gesperrt', 3500);
     return;
   }
   const w = toWorld(e.clientX, e.clientY);
@@ -2210,7 +2221,7 @@ export function pasteElements(list, at) {
 /* ================================================================== */
 
 export function alignSel(kind) {
-  const sel = selectedEls().filter((e) => e.type !== 'connector' && !e.locked);
+  const sel = selectedEls().filter((e) => e.type !== 'connector' && !isLocked(e));
   if (sel.length < 2) return;
   const b = unionRect(sel.map(bounds));
   act(() => {
@@ -2228,7 +2239,7 @@ export function alignSel(kind) {
 }
 
 export function distributeSel(axis) {
-  const sel = selectedEls().filter((e) => e.type !== 'connector' && !e.locked);
+  const sel = selectedEls().filter((e) => e.type !== 'connector' && !isLocked(e));
   if (sel.length < 3) return;
   const k = axis === 'h' ? 'x' : 'y', s = axis === 'h' ? 'w' : 'h';
   sel.sort((a, b) => a[k] - b[k]);
@@ -2244,7 +2255,7 @@ export function distributeSel(axis) {
   });
 }
 
-export function arrangeGrid(list = selectedEls().filter((e) => e.type !== 'connector' && !e.locked), gap = 20) {
+export function arrangeGrid(list = selectedEls().filter((e) => e.type !== 'connector' && !isLocked(e)), gap = 20) {
   if (list.length < 2) return;
   const b = unionRect(list.map(bounds));
   const cols = Math.ceil(Math.sqrt(list.length));
@@ -2356,20 +2367,20 @@ function moveWithContent(el, dx, dy, done) {
     if (done.has(id)) continue;
     done.add(id);
     const cur = getEl(id);
-    if (cur && !cur.locked) setEl(translated(cur, dx, dy));
+    if (cur && !isLocked(cur)) setEl(translated(cur, dx, dy));
   }
 }
 
 // Größe anpassen: Breite und/oder Höhe aller ausgewählten Elemente an die des Referenzelements
 // (das zuerst ausgewählte) angleichen
-const sizable = () => selectedEls().filter((e) => e.type !== 'connector' && e.type !== 'comment' && !e.locked && !e.hidden);
+const sizable = () => selectedEls().filter((e) => e.type !== 'connector' && e.type !== 'comment' && !isLocked(e) && !e.hidden);
 
 export function matchSize(kind) {
   // Auch ein gesperrtes Element darf Referenz sein; angepasst werden nur nicht gesperrte
   const all = selectedEls().filter((e) => e.type !== 'connector' && e.type !== 'comment' && !e.hidden);
   if (all.length < 2) return toast('Bitte mindestens zwei Elemente auswählen');
   const ref = all[0];
-  const sel = [ref, ...all.slice(1).filter((e) => !e.locked)];
+  const sel = [ref, ...all.slice(1).filter((e) => !isLocked(e))];
   act(() => {
     for (const el of sel.slice(1)) setEl(resized(el, kind !== 'h' ? ref.w : el.w, kind !== 'w' ? ref.h : el.h));
   });
@@ -2468,7 +2479,7 @@ function smartDuplicate() {
 }
 
 export function clusterByColor() {
-  const stickies = selectedEls().filter((e) => e.type === 'sticky' && !e.locked);
+  const stickies = selectedEls().filter((e) => e.type === 'sticky' && !isLocked(e));
   if (stickies.length < 2) return toast('Bitte mehrere Sticky Notes auswählen');
   const groups = new Map();
   for (const s of stickies) {
@@ -2522,6 +2533,26 @@ export function toggleLock() {
   app.emit('selection');
 }
 
+// Gesperrt für mich: selbst gesperrt oder von der Moderation für Teilnehmende gesperrt
+export function isLocked(el) {
+  return !!el && (!!el.locked || (!!el.modLock && !app.isFacilitator));
+}
+
+// Moderation: Elemente für Teilnehmende sperren bzw. freigeben (der Server prüft die Berechtigung)
+export function toggleModLock() {
+  const sel = selectedEls().filter((e) => e.type !== 'comment');
+  if (!sel.length || !app.isFacilitator) return;
+  const lock = !sel.every((e) => e.modLock);
+  act(() => sel.forEach((el) => {
+    const n = { ...el, modLock: lock };
+    if (!lock) delete n.modLock;
+    setEl(n);
+  }));
+  toast(lock ? 'Für Teilnehmende gesperrt – nur Moderierende können diese Elemente ändern' : 'Für Teilnehmende freigegeben');
+  scheduleRender(true);
+  app.emit('selection');
+}
+
 export function nudge(dx, dy) {
   const ids = new Set(app.sel);
   for (const el of selectedEls()) if (el.type === 'frame') withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
@@ -2529,7 +2560,7 @@ export function nudge(dx, dy) {
   for (const c of app.els.values()) {
     if (c.type === 'connector' && !ids.has(c.id) && waypointsOf(c).length && c.from.id && c.to.id && ids.has(c.from.id) && ids.has(c.to.id)) ids.add(c.id);
   }
-  act(() => [...ids].map(getEl).filter((e) => e && !e.locked).forEach((el) => setEl(translated(el, dx, dy))));
+  act(() => [...ids].map(getEl).filter((e) => e && !isLocked(e)).forEach((el) => setEl(translated(el, dx, dy))));
 }
 
 /* ================================================================== */
@@ -2628,13 +2659,13 @@ window.addEventListener('keydown', (e) => {
   }
   if (mod) return;
   if (app.viewOnly) {
-    if (key === 'v' || key === 'h' || key === 'x') setTool(TOOL_KEYS[key]);
+    if (key === 'v' || key === 'h' || key === 'x' || (key === 'c' && app.canComment)) setTool(TOOL_KEYS[key]);
     return;
   }
   // Zellauswahl in einer Tabelle: Pfeiltasten wandern, Enter bearbeitet, Entf leert, Tippen überschreibt
   const cs = app.cellSel && app.sel.size === 1 && app.sel.has(app.cellSel.id) ? app.cellSel : null;
   const tbl = cs && getEl(cs.id);
-  if (tbl && tbl.type === 'table' && !tbl.locked) {
+  if (tbl && tbl.type === 'table' && !isLocked(tbl)) {
     if (e.key.startsWith('Arrow')) {
       e.preventDefault();
       const dr = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0, dc = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
@@ -2673,7 +2704,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Delete' || e.key === 'Backspace') {
     if (app.sel.size) {
       e.preventDefault();
-      deleteEls([...app.sel].filter((id) => !getEl(id)?.locked));
+      deleteEls([...app.sel].filter((id) => !isLocked(getEl(id))));
     }
     return;
   }
@@ -2865,7 +2896,7 @@ stage.addEventListener('drop', (e) => {
 /* ================================================================== */
 
 export function initCore() {
-  app.sync = new Sync(boardId, app.user, { viewOnly: app.viewOnly });
+  app.sync = new Sync(boardId, app.user, { viewOnly: app.viewOnly, canComment: app.canComment });
   const saved = loadPref('view.' + boardId, null);
   if (saved) app.view = saved;
   stage.dataset.tool = app.tool;

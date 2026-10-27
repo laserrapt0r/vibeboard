@@ -85,3 +85,10 @@
 ### REQ-ADMIN-009 Rechtstexte
 - **Seit:** 3.1.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Beschreibung:** Siehe [REQ-LEGAL-001](13-datenschutz-rechtliches.md).
+
+### REQ-ADMIN-010 Zusammenarbeit
+- **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Bereich „Zusammenarbeit“: E-Mails bei Erwähnungen/Antworten/Zuweisungen (Standard: an), Gastzugang (Standard: aus) mit längster Gültigkeit (Standard 30 Tage), wer Teams anlegen darf (Standard: alle), Aufzeichnungen erlauben (Standard: an) mit Höchstdauer (Standard 10 Minuten, höchstens 30).
+  - Abschalten des Gastzugangs erfordert eine Bestätigung und beendet sofort alle Gastzugänge.
+  - Die Übersicht zeigt die Zahl der Teams und aktiven Gastzugänge; Gäste zählen nicht als Benutzer.

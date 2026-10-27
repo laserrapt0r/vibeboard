@@ -2,10 +2,11 @@
 import { uid } from './util.js';
 
 export class Sync {
-  constructor(boardId, user, { viewOnly = false } = {}) {
+  constructor(boardId, user, { viewOnly = false, canComment = false } = {}) {
     this.boardId = boardId;
     this.user = user;
     this.viewOnly = viewOnly;
+    this.canComment = canComment;
     this.clientId = uid();
     this.queue = new Map(); // dedupliziert upserts pro Element
     this.extra = [];        // nicht deduplizierbare Operationen
@@ -129,8 +130,8 @@ export class Sync {
   }
 
   op(o) {
-    // Abstimmen und Schätzen dürfen auch Betrachter
-    if (this.viewOnly && o.op !== 'vote' && o.op !== 'estimate') return;
+    // Abstimmen und Schätzen dürfen auch Betrachter, Kommentieren ab der Rolle „Kommentieren“
+    if (this.viewOnly && o.op !== 'vote' && o.op !== 'estimate' && !(o.op === 'comment' && this.canComment)) return;
     if (o.op === 'vote') delete o.userId;
     this.extra.push(o);
     this.schedule();
@@ -173,6 +174,9 @@ export class Sync {
         if (res.rejected && res.rejected.length) this.emit('rejected', res.rejected);
         if (res.marks && res.marks.length) this.emit('marks', res.marks);
         if (res.revert && res.revert.length) this.emit('revert', res.revert);
+        // Von der Moderation abgelehnte Sitzungsänderungen (Timer, Abstimmung …): gültigen Zustand übernehmen
+        if (res.session && res.session.length) this.emit('ops', { ops: res.session });
+        if (res.blocked) this.emit('blocked', res.blocked);
         if (res.error) this.emit('error', res.error);
       })
       .catch(() => {

@@ -14,6 +14,7 @@
 - **Akzeptanzkriterien:**
   - Die Board-Übersicht zeigt alle Karten aus zugänglichen Boards, deren Zuständigkeit dem eigenen Anzeigenamen oder Benutzernamen entspricht (Groß-/Kleinschreibung egal) – offene zuerst nach Fälligkeit, erledigte optional.
   - Zugänglich sind eigene Boards, Boards mit Mitgliedschaft und besuchte Boards mit Link-Freigabe – dieselbe Regel wie in der Board-Übersicht ([REQ-BOARD-001](08-boards-teilen.md)). Private Elemente anderer Personen erscheinen nie.
+  - Geändert in 3.7.0: Auch Boards eigener Teams zählen als zugänglich; zugewiesene Kommentare erscheinen ebenfalls ([REQ-PROJ-004](#req-proj-004-kommentar-als-aufgabe)).
   - Ein Klick öffnet das Board und springt zur Karte (Direktlink `/board/<id>#el=<elementId>`; gilt für jedes Element). Gibt es das Element nicht mehr, erscheint ein Hinweis.
 
 ### REQ-PROJ-003 Versionsverlauf
@@ -27,3 +28,13 @@
   - Enthält die Version noch nicht aufgedeckte private Elemente, bleiben diese privat und der private Modus wird wieder aktiviert, damit sie nur gemeinsam aufgedeckt werden.
   - „Als Kopie öffnen“ legt aus einer Version ein neues Board der aufrufenden Person an, ohne private Elemente anderer.
   - Versionen gehören zum Board und werden mit ihm gelöscht. Die Rechte prüft der Server; eine Version lässt sich nur über ihr eigenes Board abrufen.
+
+### REQ-PROJ-004 Kommentar als Aufgabe
+- **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Einen Kommentar einer Person zuweisen, optional mit Fälligkeit – für Feedback, das jemand erledigen soll.
+- **Akzeptanzkriterien:**
+  - Im Kommentar: „Als Aufgabe zuweisen“ mit Auswahl einer Person mit Bezug zum Board und optionalem Fälligkeitsdatum; ändern und entfernen möglich. Zuweisen dürfen alle ab der Rolle „Kommentieren“.
+  - Zuständig sein kann nur, wer mindestens kommentieren darf (sonst Fehlermeldung); der Server prüft das.
+  - Die zuständige Person wird benachrichtigt ([REQ-COLLAB-010](04-zusammenarbeit.md)).
+  - Erledigt ist die Aufgabe, wenn der Kommentar erledigt ist.
+  - Zugewiesene Kommentare tragen am Kommentar-Symbol einen orangefarbenen Punkt, erscheinen im Aufgaben-Panel des Boards und unter „Meine Aufgaben“ auf der Startseite (mit Board, Fälligkeit und Person, die zugewiesen hat). Ein Klick öffnet den Kommentar.

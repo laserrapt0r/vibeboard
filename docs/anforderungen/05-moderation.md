@@ -35,3 +35,14 @@
   - Bearbeitende können aufdecken, neu schätzen lassen, einen der häufigsten Werte als Story Points auf die Karte übernehmen und die Runde beenden.
   - Eine laufende Runde übersteht Neuladen und Verbindungsabbrüche. Wird die Karte gelöscht, endet die Runde.
   - „Einigkeit“ wird nur angezeigt, wenn alle denselben Zahlen- bzw. Größenwert gewählt haben (nicht bei „?“ oder „☕“).
+
+### REQ-MOD-005 Moderationsrechte im Workshop
+- **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Moderierende steuern, wer während eines Workshops was darf.
+- **Akzeptanzkriterien:**
+  - Moderation starten kann, wer bearbeiten darf; die startende Person moderiert, der Besitzer (und Admins) gelten immer als moderierend. Weitere Personen lassen sich über ihr Avatar-Menü zur Moderation hinzufügen oder daraus entfernen.
+  - „Bearbeiten für Teilnehmende sperren“: Alle anderen sehen das Board wie Betrachter (Kommentieren, Abstimmen, Schätzen und Reaktionen bleiben möglich); Werkzeuge und Kontextleiste passen sich sofort an. Der Server lehnt Änderungen ab und schickt den gültigen Stand zurück.
+  - „Timer, Abstimmung & Co. nur für Moderierende“ (beim Start aktiv): Timer, Abstimmung, Schätzrunde, privater Modus sowie „Alle zu mir holen“ / „Alle folgen mir“ sind Moderierenden vorbehalten; andere erhalten einen Hinweis, der Server lehnt ab.
+  - „Für Teilnehmende sperren“ an ausgewählten Elementen (z. B. Hintergründe einer Vorlage): nur Moderierende können diese Elemente ändern, verschieben oder löschen, auch nach Ende der Moderation; danach nur noch der Besitzer. Nur Moderierende können die Sperre setzen oder aufheben.
+  - Die Sperren gelten auch für Umbenennen über die Übersicht und für das Wiederherstellen einer Version: Während der Bearbeitungssperre lehnt der Server beides für Nicht-Moderierende ab; enthält das Board für Teilnehmende gesperrte Elemente, dürfen nur Moderierende bzw. der Besitzer eine Version wiederherstellen. Gesperrte Kommentare können nur Moderierende ändern oder löschen.
+  - Ein Banner zeigt die laufende Moderation, die Moderierenden und gesperrte Bereiche; abgelehnte Aktionen werden erklärt.

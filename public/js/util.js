@@ -300,13 +300,21 @@ export function append(parent, ...kids) {
 }
 
 let toastTimer;
-export function toast(msg, ms = 2200) {
+// action: optionaler Knopf { label, onClick }
+export function toast(msg, ms = 2200, action) {
   let t = document.getElementById('toast');
   if (!t) {
     t = h('div', { id: 'toast' });
     document.body.append(t);
   }
   t.textContent = msg;
+  t.classList.toggle('with-action', !!action);
+  if (action) {
+    t.append(h('button', { class: 'btn small', onclick: () => {
+      t.classList.remove('show');
+      action.onClick();
+    } }, action.label));
+  }
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), ms);
@@ -461,4 +469,12 @@ export const ICONS = {
   poker: I('<rect x="3" y="5" width="11" height="15" rx="2"/><path d="M10 4.2L11 3.6a2 2 0 0 1 2.7.7l6.5 11.3a2 2 0 0 1-.7 2.7l-3.4 2"/><path d="M8.5 10.5v4M6.5 12.5h4"/>'),
   eyeOff: I('<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c5 0 9 4.5 10 7-0.4 1-1.2 2.3-2.4 3.5M6.2 6.3C3.9 7.7 2.5 9.9 2 12c1 2.5 5 7 10 7 1.6 0 3.1-.4 4.4-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
   diagram: I('<rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><path d="M10 5.5h4M6.5 8v10.5H14"/>'),
+  bell: I('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>'),
+  activity: I('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'),
+  shield: I('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'),
+  mic: I('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/>'),
+  record: I('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/>'),
+  folder: I('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
+  team: I('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2A5 5 0 0 1 21 19"/>'),
+  guest: I('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/><path d="M12 2v2"/>'),
 };

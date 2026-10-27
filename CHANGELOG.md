@@ -4,6 +4,46 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [3.7.0] – 2026-10-27
+
+### Hinzugefügt
+- **Benachrichtigungen** (REQ-COLLAB-010): Glocke auf der Startseite und im Board für @Erwähnungen, Antworten in
+  eigenen Threads und zugewiesene Kommentare – live im Board, optional per E-Mail (höchstens eine je Board alle zehn
+  Minuten, nur wenn man gerade nicht im Board ist, im Profil abschaltbar).
+- **Aktivitätsverlauf** (REQ-COLLAB-011): wer hat wann was geändert, zusammengefasst je Person und Element; Hinweis und
+  Markierung der Änderungen anderer seit dem letzten Besuch.
+- **Rolle „Kommentieren“** (REQ-BOARD-002) für Mitglieder, Link-Freigabe und Teams.
+- **Moderationsrechte** (REQ-MOD-005): Bearbeiten für Teilnehmende sperren, Timer/Abstimmung/Schätzrunde/privaten Modus
+  den Moderierenden vorbehalten, Elemente für Teilnehmende sperren, weitere Moderierende ernennen.
+- **Kommentar als Aufgabe** (REQ-PROJ-004) mit Zuständigkeit und Fälligkeit; erscheint im Aufgaben-Panel und unter
+  „Meine Aufgaben“.
+- **Gastzugang per Link** (REQ-BOARD-006): befristet, nur ansehen oder kommentieren, sperrbar; standardmäßig
+  abgeschaltet.
+- **Teams und Ordner** (REQ-BOARD-007): Boards für ganze Teams freigeben, persönliche Ordner und Ordner im Team,
+  neue Navigation auf der Startseite.
+- **Rundgänge aufzeichnen** (REQ-COLLAB-012): Ansicht, Zeiger und Laserpointer, optional mit Ton; Abspielen mit
+  Folgen, Pause und Vorspulen.
+- Administration: Bereich „Zusammenarbeit“ (REQ-ADMIN-010); Übersicht zählt Teams und Gäste.
+- Datenschutz-Vorlage: Aktivitätsverlauf, Benachrichtigungen, Teams, Aufzeichnungen, Gastzugang.
+
+### Geändert
+- Kommentare werden über eigene Server-Operationen geschrieben, beantwortet, erledigt, zugewiesen und gelöscht. Der
+  Server legt Autor und Zeitpunkt fest; ein gleichzeitiges Verschieben kann keine Antworten mehr überschreiben. Beim
+  Tippen von „@“ erscheint eine Vorschlagsliste.
+- Ein neuer Kommentar wird erst mit dem ersten Beitrag gespeichert.
+- Sicherheits-Header: `media-src 'self' blob:` und `microphone=(self)` für Rundgänge mit Ton.
+- Datenbank-Migration 5 (neue Tabellen, Rollen „commenter“ und „guest“). Bestehende Daten bleiben unverändert.
+
+### Sicherheit
+- Unabhängiger Review der neuen Rechte vor der Veröffentlichung; dabei geschlossen:
+  - Kommentare lassen sich nicht mehr per normaler Änderung anlegen, fälschen oder umschreiben.
+  - Moderationssperren gelten auch für das Wiederherstellen von Versionen, das Umbenennen über die Übersicht und
+    für gesperrte Kommentare.
+  - Die letzte Team-Verwaltung kann sich nicht versehentlich herabstufen.
+  - Gäste erhalten keine Anmeldenamen anderer Personen; die Personenliste gibt es erst ab der Rolle „Kommentieren“.
+  - Kommentar-Threads sind begrenzt, Kommentare ratenbegrenzt; Gastlink-Tokens werden im Protokoll maskiert.
+- Abstimmungen: Element-IDs wie `toString` können keine Eigenschaften des Objekt-Prototyps mehr verändern.
+
 ## [3.6.0] – 2026-10-27
 
 ### Hinzugefügt

@@ -15,6 +15,7 @@
     </a>
     <div class="spacer"></div>
     <input id="dash-search" type="search" placeholder="Boards durchsuchen …">
+    <span id="dash-bell"></span>
     <a id="dash-admin" class="icon-btn hidden" href="/admin" title="Administration"></a>
     <button id="dash-dark" class="icon-btn" title="Dunkles Design"></button>
     <button id="dash-user" class="avatar" title="Konto"></button>
@@ -36,22 +37,23 @@
       </div>
       <div id="dash-tasks" class="my-task-list"></div>
     </section>
-    <section>
-      <div class="dash-section-head">
-        <h2>Meine Boards</h2>
-        <div class="spacer"></div>
-        <select id="dash-sort" class="btn small">
-          <option value="updated">Zuletzt bearbeitet</option>
-          <option value="created">Zuletzt erstellt</option>
-          <option value="name">Name</option>
-        </select>
-        <button id="dash-import" class="btn small">JSON importieren</button>
+    <section class="dash-area">
+      <nav id="dash-nav" class="dash-nav" aria-label="Boards ordnen"></nav>
+      <div class="dash-content">
+        <div class="dash-section-head">
+          <h2 id="dash-title">Alle Boards</h2>
+          <div id="dash-view-actions" class="row"></div>
+          <div class="spacer"></div>
+          <select id="dash-sort" class="btn small">
+            <option value="updated">Zuletzt bearbeitet</option>
+            <option value="created">Zuletzt erstellt</option>
+            <option value="name">Name</option>
+          </select>
+          <button id="dash-import" class="btn small">JSON importieren</button>
+        </div>
+        <div id="dash-folderbar" class="dash-folderbar hidden"></div>
+        <div id="dash-boards" class="dash-boards"></div>
       </div>
-      <div id="dash-boards" class="dash-boards"></div>
-    </section>
-    <section id="dash-shared-section" class="hidden">
-      <div class="dash-section-head"><h2>Mit mir geteilt</h2></div>
-      <div id="dash-shared" class="dash-boards"></div>
     </section>
   </main>
   <footer class="site-footer" id="footer"></footer>

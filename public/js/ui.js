@@ -1,7 +1,7 @@
 // Benutzeroberfläche des Board-Editors
 import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
-  initials, relTime, rectsIntersect, throttle, uid,
+  initials, relTime, rectsIntersect, throttle, uid, api,
 } from './util.js';
 import { SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
@@ -10,6 +10,7 @@ import { popover, closePop, menu } from './menu.js';
 import { openShareDialog } from './share.js';
 import { openProfileDialog, accountMenuItems } from './account.js';
 import { legalLinks } from './footer.js';
+import { bellButton, refresh as refreshBell } from './notifications.js';
 
 export { popover, closePop, menu };
 import {
@@ -19,7 +20,7 @@ import {
   arrangeGrid, clusterByColor, frames, makeElement, addElements, nextZ, insertImageFile, setSelection, pasteElements,
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
-  tableRange, formatCells, tableAction,
+  tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
 
@@ -58,6 +59,13 @@ fileInput.addEventListener('change', () => {
   fileInput.value = '';
 });
 
+// Neu aufbauen, wenn sich die Rechte während der Sitzung ändern (Bearbeitungssperre der Moderation)
+export function rebuildTools() {
+  buildTools();
+  syncToolButtons();
+  buildCtx();
+}
+
 function buildTools() {
   const nav = $('#tools');
   nav.innerHTML = '';
@@ -67,7 +75,7 @@ function buildTools() {
       continue;
     }
     const [id, title] = t;
-    if (app.viewOnly && !['select', 'hand', 'laser'].includes(id)) continue;
+    if (app.viewOnly && !['select', 'hand', 'laser'].includes(id) && !(id === 'comment' && app.canComment)) continue;
     const b = iconBtn(id === 'template' ? 'template' : id, title, () => {
       if (id === 'image') return fileInput.click();
       if (id === 'template') return openTemplates();
@@ -220,7 +228,7 @@ export function buildCtx() {
   const types = new Set(sel.map((e) => e.type));
   const one = sel.length === 1 ? sel[0] : null;
   const only = types.size === 1 ? [...types][0] : null;
-  const locked = sel.every((e) => e.locked);
+  const locked = sel.every((e) => isLocked(e));
   const items = [];
   const f = sel[0];
 
@@ -380,14 +388,18 @@ export function buildCtx() {
   }
   const grouped = sel.some((e) => e.groupId);
   if (sel.length > 1 && !locked) items.push(actBtn('group', grouped ? 'Gruppierung aufheben (Strg+Umschalt+G)' : 'Gruppieren (Strg+G)', grouped ? ungroupSel : groupSel));
-  items.push(toggleBtn(locked ? 'lock' : 'unlock', locked, locked ? 'Entsperren (Strg+L)' : 'Sperren (Strg+L)', toggleLock));
+  const modLocked = sel.every((e) => e.modLock);
+  if (!(modLocked && !app.isFacilitator)) {
+    const own = sel.every((e) => e.locked);
+    items.push(toggleBtn(own ? 'lock' : 'unlock', own, own ? 'Entsperren (Strg+L)' : 'Sperren (Strg+L)', toggleLock));
+  }
+  if (app.isFacilitator && sel.some((e) => e.type !== 'comment')) {
+    items.push(toggleBtn('shield', modLocked, modLocked ? 'Für Teilnehmende freigeben' : 'Für Teilnehmende sperren (nur Moderierende können ändern)', toggleModLock));
+  }
   if (!locked) {
     items.push(actBtn('comment', 'Kommentieren', () => {
       const b = selectionBounds();
-      const c = makeElement('comment', b.x + b.w, b.y);
-      act(() => setEl(c));
-      setSelection([c.id]);
-      app.emit('openComment', c.id, true);
+      newComment({ x: b.x + b.w, y: b.y });
     }));
     const more = actBtn('more', 'Mehr', () => menu(more, [
       { label: 'Duplizieren', icon: 'copy', hint: 'Strg+D', onClick: () => duplicateEls(collectForCopy([...app.sel])) },
@@ -572,16 +584,95 @@ let commentPop = null;
 
 app.on('openComment', (id, isNew) => openComment(id, isNew));
 
+// Personen mit Bezug zum Board (für @Erwähnungen und Zuweisungen); kurz zwischengespeichert
+let peopleCache = null;
+export async function boardPeople() {
+  if (!peopleCache || Date.now() - peopleCache.t > 60000) {
+    try {
+      peopleCache = { t: Date.now(), list: (await api(`/api/boards/${app.boardId}/people`)).people };
+    } catch {
+      peopleCache = { t: Date.now(), list: [] };
+    }
+  }
+  return peopleCache.list;
+}
+
+const commentOp = (action, id, extra = {}) => app.sync.op({ op: 'comment', action, id, ...extra });
+const myId = () => String(app.user.id);
+const fmtDate = (d) => (d ? new Date(d + 'T00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
+
 function openComment(id, isNew) {
   closeComment();
   const el = getEl(id);
   if (!el) return;
   const box = h('div', { class: 'comment-pop panel' });
   document.body.append(box);
-  commentPop = { id, box, len: -1, resolved: null };
+  commentPop = { id, box, sig: null, taskForm: false };
   renderCommentPop();
   positionComment();
   if (isNew) box.querySelector('textarea')?.focus();
+  // Benachrichtigungen zu diesem Kommentar gelten als gelesen
+  if (!app.guest && !el.draft) app.emit('readNotifications', { boardId: app.boardId, elementId: id });
+}
+
+// @Erwähnung: Vorschläge beim Tippen von „@“; Pfeiltasten wählen, Enter/Tab übernimmt
+function mentionInput(input) {
+  const list = h('div', { class: 'mention-list hidden', role: 'listbox' });
+  let items = [], active = 0;
+  const query = () => {
+    const m = /@([\p{L}\p{N}._-]*)$/u.exec(input.value.slice(0, input.selectionStart));
+    return m ? m[1].toLowerCase() : null;
+  };
+  const close = () => {
+    list.classList.add('hidden');
+    items = [];
+  };
+  const pick = (p) => {
+    const pos = input.selectionStart;
+    // Gäste erhalten keine Anmeldenamen – dann den Anzeigenamen ohne Leerzeichen einsetzen (erkennt der Server ebenso)
+    const handle = p.username || p.displayName.replace(/\s+/g, '');
+    const before = input.value.slice(0, pos).replace(/@([\p{L}\p{N}._-]*)$/u, '@' + handle + ' ');
+    input.value = before + input.value.slice(pos);
+    input.selectionStart = input.selectionEnd = before.length;
+    close();
+    input.focus();
+  };
+  const show = async () => {
+    const q = query();
+    if (q === null) return close();
+    const people = await boardPeople();
+    items = people.filter((p) => (p.username || '').toLowerCase().startsWith(q) || p.displayName.toLowerCase().includes(q)).slice(0, 6);
+    if (!items.length) return close();
+    active = Math.min(active, items.length - 1);
+    list.innerHTML = '';
+    items.forEach((p, i) => list.append(h('button', {
+      type: 'button', class: 'mention-item' + (i === active ? ' active' : ''), onmousedown: (e) => { e.preventDefault(); pick(p); },
+    }, h('span', { class: 'avatar xs', style: { background: p.color } }, initials(p.displayName)), h('span', {}, p.displayName), h('span', { class: 'muted small' }, (p.username ? '@' + p.username : '') + (p.guest ? ' · Gast' : '')))));
+    list.classList.remove('hidden');
+  };
+  input.addEventListener('input', show);
+  input.addEventListener('blur', () => setTimeout(close, 150));
+  // true = Taste wurde für die Vorschlagsliste verwendet
+  const onKey = (e) => {
+    if (!items.length || list.classList.contains('hidden')) return false;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      active = (active + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length;
+      show();
+      return true;
+    }
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      pick(items[active]);
+      return true;
+    }
+    if (e.key === 'Escape') {
+      close();
+      return true;
+    }
+    return false;
+  };
+  return { list, onKey };
 }
 
 function renderCommentPop() {
@@ -589,49 +680,89 @@ function renderCommentPop() {
   const el = getEl(commentPop.id);
   if (!el) return closeComment();
   const thread = el.thread || [];
-  if (commentPop.len === thread.length && commentPop.resolved === el.resolved) return;
-  commentPop.len = thread.length;
-  commentPop.resolved = el.resolved;
+  const sig = JSON.stringify([thread.length, thread.at(-1)?.pending, el.resolved, el.task || null, commentPop.taskForm]);
+  if (commentPop.sig === sig) return;
+  commentPop.sig = sig;
   const box = commentPop.box;
   const draft = box.querySelector('textarea')?.value || '';
   box.innerHTML = '';
-  const input = h('textarea', { rows: 2, placeholder: thread.length ? 'Antworten …' : 'Kommentar schreiben … (@Name erwähnen)' }, draft);
+  const input = h('textarea', { rows: 2, placeholder: thread.length ? 'Antworten … (@ erwähnt jemanden)' : 'Kommentar schreiben … (@ erwähnt jemanden)' }, draft);
+  const mention = mentionInput(input);
   const send = () => {
     const t = input.value.trim();
     if (!t) return;
     const cur = getEl(commentPop.id);
-    act(() => setEl({ ...cur, thread: [...(cur.thread || []), { author: app.user.name || 'Gast', color: app.user.color, text: t, ts: Date.now() }] }));
+    // Sofort anzeigen; der Server ergänzt Autor und Zeitpunkt und schickt den gültigen Stand
+    applyRemoteOp({ op: 'upsert', el: { ...cur, thread: [...(cur.thread || []), { author: app.user.name, color: app.user.color, text: t, ts: Date.now(), pending: true }] } });
+    commentOp('add', cur.id, { x: cur.x, y: cur.y, text: t });
     input.value = '';
     renderCommentPop();
   };
   input.addEventListener('keydown', (e) => {
     e.stopPropagation();
+    if (mention.onKey(e)) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
     }
     if (e.key === 'Escape') closeComment();
   });
+  const own = thread.length && thread.every((m) => m.uid === myId());
+  const canDelete = !el.draft && (!app.viewOnly || (app.canComment && own));
+  const setLocal = (patch) => applyRemoteOp({ op: 'upsert', el: { ...getEl(el.id), ...patch } });
   append(box,
     h('div', { class: 'comment-head' },
       h('strong', {}, el.resolved ? 'Erledigt' : 'Kommentar'),
       h('span', { class: 'spacer' }),
-      app.viewOnly ? null : iconBtn(el.resolved ? 'undo' : 'check', el.resolved ? 'Wieder öffnen' : 'Als erledigt markieren', () => {
-        act(() => updateEl(el.id, { resolved: !el.resolved }));
+      app.canComment && !el.draft ? iconBtn(el.resolved ? 'undo' : 'check', el.resolved ? 'Wieder öffnen' : 'Als erledigt markieren', () => {
+        setLocal({ resolved: !el.resolved });
+        commentOp('resolve', el.id, { resolved: !el.resolved });
         renderCommentPop();
-      }),
-      app.viewOnly ? null : iconBtn('trash', 'Kommentar löschen', () => {
-        deleteEls([el.id]);
+      }) : null,
+      canDelete ? iconBtn('trash', 'Kommentar löschen', () => {
+        commentOp('delete', el.id);
+        applyRemoteOp({ op: 'delete', id: el.id });
         closeComment();
-      }),
+      }) : null,
       iconBtn('close', 'Schließen', closeComment)),
-    h('div', { class: 'comment-list' }, thread.map((m) => h('div', { class: 'comment-msg' },
-      h('div', { class: 'comment-meta' }, h('span', { class: 'avatar xs', style: { background: m.color || '#888' } }, initials(m.author)), h('b', {}, m.author), h('span', { class: 'muted' }, relTime(m.ts))),
-      h('div', { class: 'comment-text', html: esc(m.text).replace(/@([\wäöüÄÖÜß.-]+)/g, '<span class="mention">@$1</span>') })))),
-    app.viewOnly ? null : h('div', { class: 'comment-input' }, input, h('button', { class: 'btn primary small', onclick: send }, 'Senden')),
+    taskRow(el),
+    h('div', { class: 'comment-list' }, thread.map((m) => h('div', { class: 'comment-msg' + (m.pending ? ' pending' : '') },
+      h('div', { class: 'comment-meta' }, h('span', { class: 'avatar xs', style: { background: m.color || '#888' } }, initials(m.author)), h('b', {}, m.author), h('span', { class: 'muted' }, m.pending ? 'wird gesendet …' : relTime(m.ts))),
+      h('div', { class: 'comment-text', html: esc(m.text).replace(/@([\p{L}\p{N}._-]+)/gu, (all, n) => `<span class="mention${[app.me?.username, String(app.user.name).replace(/\s+/g, '')].some((x) => x && x.toLowerCase() === n.toLowerCase()) ? ' me' : ''}">@${n}</span>`) })))),
+    app.canComment ? h('div', { class: 'comment-input' }, h('div', { class: 'mention-wrap' }, input, mention.list), h('button', { class: 'btn primary small', onclick: send }, 'Senden')) : null,
   );
   const list = box.querySelector('.comment-list');
   list.scrollTop = list.scrollHeight;
+}
+
+// Kommentar als Aufgabe: Zuständigkeit und Fälligkeit (erscheint unter „Meine Aufgaben“)
+function taskRow(el) {
+  if (el.draft) return null;
+  const t = el.task;
+  if (!commentPop.taskForm) {
+    if (!t) return app.canComment && (el.thread || []).length ? h('div', { class: 'comment-task-row' }, h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, h('span', { html: ICONS.tasks }), 'Als Aufgabe zuweisen')) : null;
+    const overdue = t.due && !el.resolved && t.due < new Date().toISOString().slice(0, 10);
+    return h('div', { class: 'comment-task' + (el.resolved ? ' done' : '') },
+      h('span', { html: ICONS.tasks }),
+      h('span', {}, h('b', {}, t.assignee), t.due ? h('span', { class: overdue ? 'overdue' : 'muted' }, ` · fällig ${fmtDate(t.due)}`) : null, el.resolved ? h('span', { class: 'muted' }, ' · erledigt') : null),
+      h('span', { class: 'spacer' }),
+      app.canComment ? h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, 'Ändern') : null);
+  }
+  const who = h('select', {}, h('option', { value: '' }, 'Person wählen …'));
+  const due = h('input', { type: 'date', value: t?.due || '' });
+  boardPeople().then((people) => people.forEach((p) => who.append(h('option', { value: p.id, selected: t && t.assigneeId === p.id }, p.displayName + (p.id === myId() ? ' (du)' : '') + (p.guest ? ' (Gast)' : '')))));
+  return h('form', { class: 'comment-task-form', onsubmit: (e) => {
+    e.preventDefault();
+    if (!who.value) return toast('Bitte eine Person wählen');
+    commentOp('task', el.id, { assigneeId: who.value, due: due.value });
+    commentPop.taskForm = false;
+    renderCommentPop();
+  } },
+  h('div', { class: 'row' }, who, due),
+  h('div', { class: 'row' },
+    h('button', { type: 'submit', class: 'btn primary small' }, 'Zuweisen'),
+    t ? h('button', { type: 'button', class: 'btn small', onclick: () => { commentOp('task', el.id, { assigneeId: null }); commentPop.taskForm = false; renderCommentPop(); } }, 'Zuweisung entfernen') : null,
+    h('button', { type: 'button', class: 'btn small', onclick: () => { commentPop.taskForm = false; renderCommentPop(); } }, 'Abbrechen')));
 }
 
 function positionComment() {
@@ -654,7 +785,8 @@ function closeComment() {
   commentPop.box.remove();
   const id = commentPop.id;
   commentPop = null;
-  if (el && !(el.thread || []).length && !app.viewOnly) deleteEls([id]);
+  // Nie abgeschickter Entwurf: lokalen Platzhalter entfernen
+  if (el && el.draft && !(el.thread || []).length) applyRemoteOp({ op: 'delete', id });
 }
 
 app.on('render', () => {
@@ -731,15 +863,18 @@ export function renderSidePanel() {
   } else if (sidePanel === 'comments') {
     const all = [...app.els.values()].filter((e) => e.type === 'comment' && (e.thread || []).length);
     const open = all.filter((e) => !e.resolved);
+    const mine = all.filter((e) => e.task && e.task.assigneeId === String(app.user.id) && !e.resolved);
     side.append(h('div', { class: 'side-head' }, h('h3', {}, `Kommentare (${open.length} offen)`), h('span', { class: 'spacer' }), close));
-    const toggle = h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !app.settings.hideResolved, onchange: (e) => {
-      app.settings.hideResolved = !e.target.checked;
+    const filters = [['open', 'Offen'], ['mine', `Mir zugewiesen${mine.length ? ` (${mine.length})` : ''}`], ['all', 'Alle']];
+    const f = app.settings.commentFilter || (app.settings.hideResolved ? 'open' : 'all');
+    side.append(h('div', { class: 'side-actions' }, h('div', { class: 'seg' }, filters.map(([k, l]) => h('button', { class: 'btn small' + (f === k ? ' active' : ''), onclick: () => {
+      app.settings.commentFilter = k;
+      app.settings.hideResolved = k !== 'all';
       saveSettings();
       renderSidePanel();
-    } }), 'Erledigte anzeigen');
-    side.append(h('div', { class: 'side-actions' }, toggle));
-    const list = (app.settings.hideResolved ? open : all).sort((a, b) => (b.thread.at(-1)?.ts || 0) - (a.thread.at(-1)?.ts || 0));
-    if (!list.length) side.append(h('p', { class: 'muted pad' }, 'Keine Kommentare. Mit dem Kommentar-Werkzeug (C) kannst du überall auf dem Board Feedback hinterlassen.'));
+    } }, l)))));
+    const list = (f === 'mine' ? mine : f === 'open' ? open : all).sort((a, b) => (b.thread.at(-1)?.ts || 0) - (a.thread.at(-1)?.ts || 0));
+    if (!list.length) side.append(h('p', { class: 'muted pad' }, f === 'mine' ? 'Dir sind keine offenen Kommentare zugewiesen.' : 'Keine Kommentare. Mit dem Kommentar-Werkzeug (C) kannst du überall auf dem Board Feedback hinterlassen und mit @Name jemanden erwähnen.'));
     for (const c of list) {
       const first = c.thread[0], last = c.thread.at(-1);
       side.append(h('div', { class: 'comment-card' + (c.resolved ? ' resolved' : ''), onclick: () => {
@@ -748,6 +883,7 @@ export function renderSidePanel() {
       } },
       h('div', { class: 'comment-meta' }, h('span', { class: 'avatar xs', style: { background: first.color || '#888' } }, initials(first.author)), h('b', {}, first.author), h('span', { class: 'muted' }, relTime(last.ts))),
       h('div', { class: 'comment-text' }, first.text),
+      c.task ? h('div', { class: 'comment-task small' }, h('span', { html: ICONS.tasks }), h('span', {}, c.task.assignee + (c.task.due ? ` · fällig ${fmtDate(c.task.due)}` : ''))) : null,
       c.thread.length > 1 ? h('div', { class: 'muted small' }, `${c.thread.length - 1} Antwort${c.thread.length > 2 ? 'en' : ''}`) : null));
     }
   } else if (sidePanel === 'votes') {
@@ -1038,13 +1174,10 @@ stage.addEventListener('contextmenu', (e) => {
     { label: 'In den Vordergrund', hint: 'Strg+]', onClick: bringToFront },
     { label: 'In den Hintergrund', hint: 'Strg+[', onClick: sendToBack },
     { label: selectedEls().every((x) => x.locked) ? 'Entsperren' : 'Sperren', hint: 'Strg+L', onClick: toggleLock },
+    app.isFacilitator ? { label: selectedEls().every((x) => x.modLock) ? 'Für Teilnehmende freigeben' : 'Für Teilnehmende sperren', onClick: toggleModLock } : null,
     app.sel.size > 1 ? { label: 'Gruppieren', hint: 'Strg+G', onClick: groupSel } : null,
     selectedEls().some((x) => x.groupId) ? { label: 'Gruppierung aufheben', onClick: ungroupSel } : null,
-    { label: 'Kommentar hinzufügen', onClick: () => {
-      const c = makeElement('comment', w.x, w.y);
-      act(() => setEl(c));
-      app.emit('openComment', c.id, true);
-    } },
+    { label: 'Kommentar hinzufügen', onClick: () => newComment(w) },
     '-',
     { label: 'Löschen', hint: 'Entf', danger: true, onClick: () => deleteEls([...app.sel]) },
   ] : [
@@ -1195,12 +1328,14 @@ function buildTopbar() {
   append(top,
     h('a', { href: '/', class: 'icon-btn brand', title: 'Alle Boards', html: '<svg viewBox="0 0 32 32" width="26" height="26"><rect x="2" y="2" width="28" height="28" rx="7" fill="#4262ff"/><rect x="8" y="8" width="9" height="9" rx="1.5" fill="#fff9b1"/><rect x="15" y="15" width="9" height="9" rx="1.5" fill="#ffcee0"/></svg>' }),
     nameInput, status,
-    app.viewOnly ? h('span', { class: 'badge' }, 'Nur ansehen') : null,
+    app.guest ? h('span', { class: 'badge guest', title: 'Du bist als Gast auf diesem Board' }, 'Gast') : null,
+    app.role === 'viewer' ? h('span', { class: 'badge' }, 'Nur ansehen') : app.role === 'commenter' ? h('span', { class: 'badge', title: 'Du kannst ansehen und kommentieren' }, 'Kommentieren') : null,
     h('span', { class: 'top-sep' }),
     app.viewOnly ? null : iconBtn('template', 'Vorlagen', openTemplates),
     iconBtn('frame', 'Frames & Präsentation', () => toggleSidePanel('frames'), { 'data-panel': 'frames' }),
     iconBtn('comment', 'Kommentare', () => toggleSidePanel('comments'), { 'data-panel': 'comments' }),
     iconBtn('tasks', 'Aufgaben auf diesem Board', () => toggleSidePanel('tasks'), { 'data-panel': 'tasks' }),
+    iconBtn('activity', 'Aktivität – wer hat was geändert?', () => toggleSidePanel('activity'), { 'data-panel': 'activity' }),
     app.viewOnly ? null : iconBtn('history', 'Versionsverlauf', () => toggleSidePanel('versions'), { 'data-panel': 'versions' }),
     iconBtn('search', 'Suchen (Strg+F)', openSearch),
     iconBtn('download', 'Exportieren & Importieren', (e) => openExportMenu(e.currentTarget)),
@@ -1208,8 +1343,13 @@ function buildTopbar() {
   const right = $('#topright');
   const tools = h('div', { class: 'collab-tools' });
   right.append(tools, h('div', { id: 'avatars' }),
-    h('button', { class: 'btn primary small share-btn', onclick: openShare }, h('span', { html: ICONS.share }), 'Teilen'),
+    app.guest ? null : bellButton({ open: (n) => app.emit('openNotification', n) }),
+    app.guest ? null : h('button', { class: 'btn primary small share-btn', onclick: openShare }, h('span', { html: ICONS.share }), 'Teilen'),
     iconBtn('settings', 'Einstellungen', (e) => openSettings(e.currentTarget)));
+  if (!app.guest) {
+    refreshBell();
+    setInterval(refreshBell, 60000);
+  }
   app.emit('buildCollabTools', tools);
 }
 

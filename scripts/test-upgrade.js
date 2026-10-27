@@ -43,6 +43,17 @@ const SEEDS = {
     await c.query(`INSERT INTO board_versions (board_id, kind, name, element_count, created_by, data)
                    SELECT 'b1', 'manual', 'Altes Board', 1, 1, jsonb_agg(data) FROM elements WHERE board_id = 'b1'`);
   },
+  5: async (c) => {
+    await c.query(`INSERT INTO teams (id, name, created_by) VALUES (1, 'Team A', 1)`);
+    await c.query(`INSERT INTO team_members (team_id, user_id, role) VALUES (1, 1, 'admin')`);
+    await c.query(`UPDATE boards SET team_id = 1, team_role = 'commenter', link_access = 'comment' WHERE id = 'b1'`);
+    await c.query(`INSERT INTO folders (id, name, team_id) VALUES (1, 'Workshops', 1)`);
+    await c.query(`INSERT INTO folder_boards (folder_id, board_id) VALUES (1, 'b1')`);
+    await c.query(`INSERT INTO notifications (user_id, board_id, kind, actor_name, element_id, excerpt) VALUES (1, 'b1', 'mention', 'alt', 'e1', 'Hallo')`);
+    await c.query(`INSERT INTO board_activity (board_id, user_id, user_name, kind, element_id, element_type, label) VALUES ('b1', 1, 'alt', 'changed', 'e1', 'sticky', 'Hallo')`);
+    await c.query(`INSERT INTO guest_links (board_id, token_hash, role, created_by, expires_at) VALUES ('b1', 'h1', 'viewer', 1, now() + interval '1 day')`);
+    await c.query(`INSERT INTO board_recordings (board_id, created_by, author_name, title, duration_ms, track) VALUES ('b1', 1, 'alt', 'Rundgang', 1000, '[]')`);
+  },
 };
 
 async function structure(c, schema) {

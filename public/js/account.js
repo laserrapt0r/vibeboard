@@ -38,11 +38,12 @@ export function openProfileDialog(me, onSaved) {
   const status = me.pendingEmail
     ? h('span', { class: 'field-hint warn' }, `Änderung auf ${me.pendingEmail} wartet auf Bestätigung – bitte den Link in der E-Mail öffnen.`)
     : h('span', { class: 'field-hint' }, me.emailVerified && me.email ? '✓ bestätigt. Eine neue Adresse wird erst nach Bestätigung übernommen.' : 'Für Einladungen und „Kennwort vergessen“.');
+  const notifyEmail = h('input', { type: 'checkbox', checked: me.notifyEmail !== false });
   const form = h('form', { class: 'form', onsubmit: async (e) => {
     e.preventDefault();
     err.hide();
     try {
-      const r = await api('/api/auth/me', { method: 'PATCH', body: { displayName: display.value, email: email.value, color } });
+      const r = await api('/api/auth/me', { method: 'PATCH', body: { displayName: display.value, email: email.value, color, notifyEmail: notifyEmail.checked } });
       m.close();
       toast(r.mailed ? `Gespeichert – bitte bestätige die neue Adresse über den Link an ${email.value}` : 'Profil gespeichert', r.mailed ? 6000 : 2200);
       onSaved && onSaved(r.user);
@@ -55,6 +56,8 @@ export function openProfileDialog(me, onSaved) {
   h('label', {}, 'Anzeigename', display),
   h('label', {}, 'E-Mail-Adresse', email, status),
   h('div', {}, h('div', { class: 'label' }, 'Farbe (Cursor & Avatar)'), colorPicker(color, (c) => (color = c))),
+  h('label', { class: 'check' }, notifyEmail, 'E-Mail bei Erwähnungen, Antworten und zugewiesenen Kommentaren'),
+  h('span', { class: 'field-hint' }, 'Höchstens eine E-Mail je Board alle zehn Minuten – und nur, wenn du gerade nicht im Board bist. In der Glocke erscheinen die Hinweise immer.'),
   err.box,
   h('div', { class: 'form-actions' },
     h('button', { type: 'button', class: 'btn', onclick: () => { m.close(); openSecurityDialog(me, onSaved); } }, 'Sicherheit …'),
@@ -233,6 +236,15 @@ export async function openSecurityDialog(me, onSaved) {
 
 // Menüeinträge für das Benutzermenü
 export function accountMenuItems(me, onSaved) {
+  // Gäste haben kein Profil – nur Abmelden (Gastzugang beenden)
+  if (me.guest) {
+    return [
+      { header: `${me.displayName} (Gast)` },
+      { label: `Gastzugang gültig bis ${new Date(me.guestExpiresAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}`, disabled: true },
+      '-',
+      { label: 'Gastzugang beenden', icon: 'close', onClick: logout },
+    ];
+  }
   return [
     { header: me.displayName + (me.displayName !== me.username ? ` (@${me.username})` : '') },
     { label: 'Profil bearbeiten', icon: 'users', onClick: () => openProfileDialog(me, onSaved) },

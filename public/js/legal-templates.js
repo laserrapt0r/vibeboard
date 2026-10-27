@@ -62,6 +62,24 @@ Inhalte, die du auf Boards erstellst (z. B. Notizen, Texte, Zeichnungen, Bilder,
 
 Zum Schutz vor Datenverlust speichern wir frühere Stände eines Boards als Versionen (automatisch höchstens alle 30 Minuten während der Bearbeitung sowie auf Wunsch). Versionen enthalten die Inhalte des Boards zum jeweiligen Zeitpunkt und den Namen der Person, die sie angelegt hat. Ältere Versionen werden automatisch gelöscht (es bleiben höchstens 20 automatische, 30 gesicherte und 5 vor einer Wiederherstellung angelegte Versionen je Board); alle Versionen werden mit dem Board gelöscht. Nachrichten im Cursor-Chat sowie deine Abwesenheit (Wechsel in einen anderen Tab) werden nur in Echtzeit an die Teilnehmenden übertragen und nicht gespeichert.
 
+Zu jedem Board führen wir einen Aktivitätsverlauf: Er zeigt allen mit Zugriff auf das Board, wer wann Elemente erstellt, geändert, gelöscht oder kommentiert hat (Anzeigename, Zeitpunkt, Art des Elements und ein kurzer Ausschnitt seines Textes). Außerdem speichern wir den Zeitpunkt deines letzten Besuchs, damit wir dir Änderungen seither zeigen können. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Einträge werden nach 90 Tagen gelöscht, spätestens mit dem Board.
+
+# Kommentare, Erwähnungen und Benachrichtigungen
+
+Kommentare speichern wir mit deinem Anzeigenamen und dem Zeitpunkt. Erwähnst du jemanden mit @Name, antwortet jemand in einem Kommentar-Thread, an dem du beteiligt bist, oder wird dir ein Kommentar als Aufgabe zugewiesen, legen wir eine Benachrichtigung an (Board, auslösende Person, Ausschnitt des Kommentars). Sie erscheint in der Glocke und – sofern du das nicht im Profil abgeschaltet hast – per E-Mail. Benachrichtigungen werden nach 90 Tagen gelöscht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
+
+# Teams und Ordner
+
+Teams bestehen aus ihren Mitgliedern (Benutzername, Anzeigename, Rolle im Team). Mitglieder eines Teams sehen einander und erhalten Zugriff auf die Boards, die dem Team zugeordnet sind. Ordner dienen nur der Ordnung; persönliche Ordner sind nur für dich sichtbar. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
+
+# Aufzeichnungen (Rundgänge)
+
+[Nur aufnehmen, wenn Aufzeichnungen in der Administration erlaubt sind:] Wer einen Rundgang aufzeichnet, speichert die Bewegung der eigenen Ansicht, des Mauszeigers und des Laserpointers sowie – nur bei ausdrücklicher Wahl – eine Tonaufnahme über das Mikrofon. Die Aufzeichnung ist für alle mit Zugriff auf das Board abspielbar und bleibt gespeichert, bis sie von der aufzeichnenden Person oder der Besitzerin bzw. dem Besitzer des Boards gelöscht wird, spätestens mit dem Board. Tonaufnahmen werden vor dem Speichern auf Schadsoftware geprüft. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO, für Tonaufnahmen deine Einwilligung durch das bewusste Einschalten des Mikrofons (Art. 6 Abs. 1 lit. a DSGVO), die du durch Löschen der Aufzeichnung jederzeit widerrufen kannst.
+
+# Gastzugang
+
+[Nur aufnehmen, wenn der Gastzugang in der Administration eingeschaltet ist:] Über einen Gastlink können Personen ohne Benutzerkonto ein einzelnes Board ansehen oder kommentieren. Dabei verarbeiten wir den angegebenen Namen, die Inhalte, die der Gast erstellt (z. B. Kommentare), sowie die technisch notwendigen Sitzungsdaten (Cookie, IP-Adresse, Browser-Kennung, Zeitpunkt der letzten Aktivität). Der Gastzugang und seine Sitzung werden gelöscht, sobald der Link abläuft oder gesperrt wird; erstellte Kommentare bleiben mit dem angegebenen Namen auf dem Board, bis sie gelöscht werden. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b bzw. f DSGVO (Durchführung der Zusammenarbeit, zu der eingeladen wurde).
+
 # Anmeldesitzungen und Cookies
 
 Nach der Anmeldung setzen wir ein technisch notwendiges Cookie, das deine Sitzung kennzeichnet. Zu jeder Sitzung speichern wir die IP-Adresse, die Browser-Kennung und den Zeitpunkt der letzten Aktivität, damit du deine angemeldeten Geräte einsehen und abmelden kannst. Sitzungen enden nach 30 Tagen bzw. nach 14 Tagen ohne Aktivität. Rechtsgrundlage sind Art. 6 Abs. 1 lit. b und f DSGVO sowie § 25 Abs. 2 Nr. 2 TDDDG.
@@ -74,7 +92,7 @@ Zum Schutz vor Missbrauch protokollieren wir sicherheitsrelevante Ereignisse (z.
 
 # E-Mails
 
-Wir senden E-Mails zur Bestätigung deiner E-Mail-Adresse, zum Zurücksetzen des Kennworts, zu Einladungen und Freigaben von Boards sowie bei sicherheitsrelevanten Änderungen an deinem Konto. Der Versand erfolgt über [Mailserver bzw. E-Mail-Anbieter, ggf. mit Auftragsverarbeitungsvertrag].
+Wir senden E-Mails zur Bestätigung deiner E-Mail-Adresse, zum Zurücksetzen des Kennworts, zu Einladungen und Freigaben von Boards, bei Erwähnungen, Antworten und zugewiesenen Kommentaren (abschaltbar im Profil) sowie bei sicherheitsrelevanten Änderungen an deinem Konto. Der Versand erfolgt über [Mailserver bzw. E-Mail-Anbieter, ggf. mit Auftragsverarbeitungsvertrag].
 
 # Prüfung auf kompromittierte Kennwörter
 

@@ -4,9 +4,10 @@ Ein selbst gehostetes, kollaboratives Online-Whiteboard. Mehrere Personen arbeit
 unendlichen Leinwand: mit Sticky Notes, Formen, Verbindungen, Mindmaps, Kommentaren, Abstimmungen und über 75
 Vorlagen für Workshops, Retrospektiven, Strategiearbeit, Softwareentwicklung, Projektmanagement und
 IT-Service-Management. Für Entwicklungsteams gibt es Code-Blöcke, Diagramme aus Text (Mermaid-Schreibweise),
-Schätzrunden und einen Kartenimport aus Jira- oder Excel-Exporten. Dazu gibt es Benutzerkonten mit
-E-Mail-Bestätigung und optionaler Zwei-Faktor-Anmeldung, Rechte pro Board und eine Administrationsoberfläche. Die Daten
-liegen in PostgreSQL.
+Schätzrunden und einen Kartenimport aus Jira- oder Excel-Exporten. Für die Arbeit im Team gibt es Benachrichtigungen
+bei @Erwähnungen, einen Aktivitätsverlauf, Moderationsrechte, Teams und Ordner, befristete Gastlinks und
+aufgezeichnete Rundgänge. Dazu gibt es Benutzerkonten mit E-Mail-Bestätigung und optionaler Zwei-Faktor-Anmeldung,
+Rechte pro Board und eine Administrationsoberfläche. Die Daten liegen in PostgreSQL.
 
 - Läuft komplett auf dem eigenen Server: keine CDNs, kein Tracking, keine Pflicht-Abhängigkeit von externen Diensten.
 - Hochgeladene Dateien werden mit ClamAV auf Schadsoftware geprüft.
@@ -83,7 +84,7 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 | **Bilder** | per Upload, Drag & Drop oder aus der Zwischenablage; große Bilder werden automatisch verkleinert |
 | **Sticker** | Emojis als frei platzierbare Elemente |
 | **Links** | URL an Elemente hängen; ein Link-Symbol öffnet sie |
-| **Kommentare** | Threads an beliebiger Stelle, @Erwähnungen, „Erledigt“-Status, Kommentarübersicht |
+| **Kommentare** | Threads an beliebiger Stelle, @Erwähnungen mit Vorschlagsliste und Benachrichtigung, „Erledigt“-Status, als Aufgabe zuweisen (mit Fälligkeit), Kommentarübersicht mit Filter „Mir zugewiesen“ |
 
 Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pro Zeile.
 
@@ -129,7 +130,23 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   Server-Sent Events (normales HTTP). Werden auch diese blockiert oder von einem Proxy gepuffert, wechselt vibeboard
   automatisch auf Long-Polling.
 
+### Arbeiten im Team
+- **Benachrichtigungen:** Glocke auf der Startseite und im Board für @Erwähnungen, Antworten und zugewiesene
+  Kommentare – live und, wenn gewünscht, per E-Mail (höchstens eine je Board alle zehn Minuten, im Profil abschaltbar).
+- **Aktivitätsverlauf:** wer hat wann was erstellt, geändert, gelöscht oder kommentiert – zusammengefasst, mit Sprung zum
+  Element. Beim Öffnen zeigt ein Hinweis die Änderungen anderer seit dem letzten Besuch und markiert sie auf der Leinwand.
+- **Rolle „Kommentieren“** zwischen Ansehen und Bearbeiten – für Fachbereiche, Kunden oder Reviews.
+- **Teams und Ordner:** Boards für ein ganzes Team freigeben (bearbeiten, kommentieren oder ansehen), persönliche
+  Ordner und Ordner im Team.
+- **Gastlinks:** Personen ohne Konto sehen oder kommentieren ein einzelnes Board – befristet, jederzeit sperrbar,
+  standardmäßig abgeschaltet.
+- **Rundgänge aufzeichnen:** Ansicht, Mauszeiger und Laserpointer, auf Wunsch mit Ton; andere spielen den Rundgang ab
+  und können dabei selbst navigieren.
+
 ### Moderation
+- **Moderationsrechte:** Bearbeiten für Teilnehmende sperren, Timer/Abstimmung/Schätzrunde/privaten Modus den
+  Moderierenden vorbehalten, einzelne Elemente (z. B. Vorlagen-Hintergründe) für Teilnehmende sperren. Weitere
+  Moderierende lassen sich über das Avatar-Menü hinzufügen. Der Server setzt alle Sperren durch.
 - **Timer** für alle Teilnehmenden, mit Pause, Verlängerung und Signalton
 - **Abstimmungen** mit einstellbarer Stimmenzahl pro Person; die Stimmen bleiben bis zum Ende verdeckt, danach gibt es eine Ergebnisliste
 - **Schätzrunde** mit verdeckten Karten für eine Karte: Fibonacci-, T-Shirt- oder Stunden-Deck; die Werte bleiben verdeckt,
@@ -157,10 +174,12 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 - Karten aus CSV/Tabellen, Diagramme aus Text (siehe oben)
 
 ### Übersicht
+- Navigation: alle, eigene und geteilte Boards, eigene Ordner, Teams (mit Ordnern als Filter)
 - Eigene und geteilte Boards mit Vorschaubildern
 - Suche, Sortierung, Teilen, Umbenennen, Duplizieren, Löschen, Board verlassen
 - Neues Board direkt aus einer Vorlage
-- „Meine Aufgaben“ über alle Boards
+- „Meine Aufgaben“ über alle Boards (Karten und zugewiesene Kommentare)
+- Glocke mit Benachrichtigungen
 
 ---
 
@@ -299,12 +318,18 @@ Alle weiteren Einstellungen nimmst du in der Administration vor.
 ## Rechte auf Boards
 
 - Boards gehören der Person, die sie angelegt hat. Die Besitzerin oder der Besitzer kann
-  - Personen als *Bearbeiter* oder *Betrachter* einladen, optional mit Einladungs-Mail,
-  - den Link für alle angemeldeten Nutzer zum *Ansehen* oder *Bearbeiten* freigeben,
+  - Personen als *Bearbeiter*, *Kommentierende* oder *Betrachter* einladen, optional mit Einladungs-Mail,
+  - den Link für alle angemeldeten Nutzer zum *Ansehen*, *Kommentieren* oder *Bearbeiten* freigeben,
+  - das Board einem **Team** zuordnen – alle Mitglieder erhalten dann die gewählte Rolle,
+  - **Gastlinks** für Personen ohne Konto erstellen (nur, wenn ein Admin den Gastzugang eingeschaltet hat),
   - Mitglieder verwalten, das Board umbenennen und löschen.
 - **Betrachter** sehen das Board live und können abstimmen, schätzen, Reaktionen senden, den Cursor-Chat und den
   Laserpointer nutzen. Den Versionsverlauf sehen nur Bearbeitende.
-- Rechteänderungen wirken sofort.
+- **Kommentierende** dürfen zusätzlich kommentieren, Kommentare zuweisen und erledigen sowie Rundgänge aufzeichnen.
+- Gilt eine Rolle aus mehreren Quellen (Mitgliedschaft, Team, Link), zählt die höchste. Rechteänderungen wirken sofort.
+- **Gäste** sehen ausschließlich das Board ihres Links – keine Startseite, keine anderen Boards, keine Profil- oder
+  Teamfunktionen. Mit Ablauf oder Sperre des Links werden ihre Zugänge gelöscht; ihre Beiträge bleiben mit Namen
+  erhalten.
 - **Administratoren** haben Zugriff auf alle Boards.
 
 ## Administration
@@ -335,6 +360,8 @@ Unter `/admin`, nur für Administratoren:
 - **Allgemein:** Name der Instanz, öffentliche Adresse, Registrierungsmodus
 - **Sicherheit:** Kennwort-Mindestlänge, Abgleich mit „Have I Been Pwned“, Wegwerf-Adressen, gesperrte bzw.
   erlaubte Domains, Zwei-Faktor-Pflicht für Admins
+- **Zusammenarbeit:** E-Mails bei Erwähnungen, Gastzugang (standardmäßig aus) und seine längste Gültigkeit, wer
+  Teams anlegen darf, Aufzeichnungen erlauben und ihre Höchstdauer
 - **Mailserver:** SMTP-Host, Port, Verschlüsselung (STARTTLS, SSL/TLS, keine), Anmeldung, Absender,
   Zertifikatsprüfung; Testmail auch vor dem Speichern
 - **Rechtliches:** Impressum und Datenschutzerklärung bearbeiten und veröffentlichen (siehe unten)
@@ -459,9 +486,11 @@ Unter `/admin`, nur für Administratoren:
 - Strenge Content-Security-Policy: nur eigene Skripte, keine Inline-Skripte, keine fremden Quellen, kein Einbetten in
   Frames.
 - Weitere Header: HSTS (unter HTTPS), `X-Frame-Options: DENY`, `X-Content-Type-Options`,
-  `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Referrer-Policy`, `Permissions-Policy`.
+  `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Referrer-Policy`, `Permissions-Policy`
+  (Mikrofon nur für die eigene Seite, für Rundgänge mit Ton; keine Kamera, kein Standort).
 - CSRF-Schutz: Ändernde API-Aufrufe brauchen den Header `X-Vibeboard: 1`.
-- Rechte werden auf dem Server geprüft, für die REST-API und den Echtzeitkanal.
+- Rechte werden auf dem Server geprüft, für die REST-API und den Echtzeitkanal – auch Kommentar-, Moderations- und
+  Teamrechte. Gastzugänge lehnt jede Schnittstelle ab, die sie nicht ausdrücklich zulässt.
 - Board-Elemente werden auf dem Server und beim Darstellen geprüft (Farb-Whitelist, Zahlen erzwungen, Bilder nur
   eingebettet). So lässt sich kein Markup oder Skript einschleusen.
 - Links in E-Mails entstehen nur aus der konfigurierten öffentlichen Adresse oder aus Adressen dieses Rechners. Ein
@@ -486,8 +515,14 @@ Alle Daten liegen in der eigenen PostgreSQL-Datenbank:
 | `tokens` | Einmal-Links für Bestätigung, Einladung und Kennwort-Reset (nur als Hash) |
 | `audit_log` | Sicherheitsprotokoll, 12 Monate aufbewahrt |
 | `settings` | Einstellungen der Instanz, inklusive SMTP-Zugang |
-| `boards`, `board_members`, `board_visits` | Boards, Freigaben, zuletzt geöffnete Boards |
+| `boards`, `board_members`, `board_visits` | Boards, Freigaben, zuletzt geöffnete Boards (für „seit deinem letzten Besuch“) |
 | `elements` | Ein Datensatz pro Board-Element; Bilder werden verkleinert eingebettet |
+| `board_versions` | Gesicherte Stände von Boards |
+| `notifications` | Benachrichtigungen (Erwähnung, Antwort, Zuweisung), 90 Tage aufbewahrt |
+| `board_activity` | Aktivitätsverlauf, zusammengefasst, 90 Tage bzw. höchstens 2000 Einträge je Board |
+| `guest_links` | Gastlinks (nur als Hash) mit Rolle und Ablauf; Gastzugänge sind Konten mit der Rolle `guest` |
+| `teams`, `team_members`, `folders`, `folder_boards` | Teams, Mitgliedschaften, Ordner |
+| `board_recordings` | Aufgezeichnete Rundgänge mit Zeitspur und optionaler Tonspur |
 
 - Ausgehende Verbindungen gibt es nur zum konfigurierten Mailserver und, falls aktiviert, zur Pwned-Passwords-API.
 - Im Browser speichert vibeboard nur Ansichtseinstellungen (Zoom, dunkles Design, Werkzeugoptionen) im `localStorage`.
@@ -522,21 +557,29 @@ lib/
   virusscan.js         ClamAV-Anbindung (clamd), Dateityp-Prüfung
   uploads.js           Prüfrichtlinie für hochgeladene Dateien
   boards.js            Zugriffsrechte, Board-Cache, verzögertes Speichern, Echtzeit-Räume, Long-Polling,
-                       privater Modus, Schätzrunden, Versionen
+                       privater Modus, Schätzrunden, Versionen, Moderation
+  comments.js          Kommentar-Operationen (Autorschaft, Erwähnungen, Zuweisung)
+  notify.js            Benachrichtigungen (Glocke, live, E-Mail)
+  activity.js          Aktivitätsverlauf (zusammengefasst)
+  guests.js            Gastlinks und Gastzugänge
+  teams.js             Teams und Ordner
+  recordings.js        Aufgezeichnete Rundgänge
   sanitize.js          Prüfung von Board-Elementen
   settings.js          Einstellungen der Instanz
   mail.js              E-Mail-Versand
   setup.js             Admin aus Umgebungsvariablen, Import alter Boards, Aufräumen
-  routes/              REST-API: auth.js, boards.js, admin.js, legal.js
+  routes/              REST-API: auth.js, boards.js, collab.js, admin.js, legal.js
   data/                Liste der Wegwerf-Domains und häufigen Kennwörter
 scripts/test-upgrade.js  Upgrade-Test für Datenbank-Migrationen (npm run test:upgrade)
 docs/anforderungen/      Anforderungsdokumente
 public/
   auth.html            Anmelden, Registrieren, Bestätigen, Kennwort  → js/auth.js
   legal.html           Impressum, Datenschutzerklärung (öffentlich)  → js/legal.js, js/markdown.js
-  index.html           Board-Übersicht                               → js/dashboard.js
+  index.html           Board-Übersicht                               → js/dashboard.js, js/notifications.js
+  guest.html           Beitritt per Gastlink                         → js/guest.js
   board.html           Board-Editor                                  → js/main.js (core, ui, collab, render, sync, …)
                        teamwork.js (privater Modus, Schätzrunde), planning.js (Aufgaben, Versionen, CSV-Import),
+                       moderation.js, activity.js, recording.js, notifications.js (Arbeiten im Team),
                        diagram-parse.js / diagram-text.js (Diagramm aus Text), highlight.js (Code-Blöcke),
                        templates.js / templates-tech.js / templates-diagrams.js / template-kit.js (Vorlagen)
   admin.html           Administration                                → js/admin.js
@@ -549,7 +592,8 @@ public/
   (`/api/boards/:id/poll`). Zum Testen lässt sich das mit `?transport=poll` erzwingen.
 - Der Server hält aktive Boards im Arbeitsspeicher, verteilt Änderungen sofort und schreibt sie gesammelt in die
   Datenbank.
-- Ändern zwei Personen gleichzeitig dasselbe Element, gewinnt die letzte Änderung.
+- Ändern zwei Personen gleichzeitig dasselbe Element, gewinnt die letzte Änderung. Tabellen werden zellgenau
+  abgeglichen, Kommentare über eigene Operationen (der Server ergänzt Autor und Zeitpunkt).
 
 ---
 

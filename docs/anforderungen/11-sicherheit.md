@@ -50,6 +50,7 @@ BSI IT-Grundschutz.
     - `Permissions-Policy` ohne Kamera, Mikrofon, Standort und Zahlung
     - HSTS unter HTTPS
   - Kein Bestandteil der Anwendung verstößt gegen die Policy.
+  - Geändert in 3.7.0: Für Aufzeichnungen erlaubt die Policy Medien von der eigenen Seite und `blob:` (`media-src 'self' blob:`), die `Permissions-Policy` das Mikrofon nur für die eigene Seite (`microphone=(self)`). Der Browser fragt vor jeder Tonaufnahme nach Erlaubnis.
 
 ### REQ-SEC-007 Autorisierung
 - **Seit:** 2.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -57,6 +58,7 @@ BSI IT-Grundschutz.
   - Jede Schnittstelle prüft Anmeldung und Rolle auf dem Server, auch der Echtzeitkanal und das Long-Polling.
   - Operationen werden nur von der eigenen, aktiven Verbindung des angemeldeten Benutzers angenommen; fremde Verbindungskennungen werden abgelehnt.
   - `/api/info` (Netzwerkadressen) nur für angemeldete Nutzer.
+  - Geändert in 3.7.0: Gastzugänge ([REQ-BOARD-006](08-boards-teilen.md)) werden von jeder Schnittstelle abgelehnt, die sie nicht ausdrücklich zulässt (nur das eigene Board: Inhalte, Echtzeitkanal, Kommentare, Personen, Aktivität, Aufzeichnungen). Kommentar-, Moderations- und Teamrechte prüft ausschließlich der Server.
 
 ### REQ-SEC-008 Header hinter Proxys
 - **Seit:** 3.0.0 · **Priorität:** Muss · **Status:** umgesetzt

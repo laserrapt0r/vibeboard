@@ -1246,9 +1246,11 @@ function renderBody(el, env) {
       const n = (el.thread || []).length;
       const s = 1 / (env.zoom || 1);
       const color = el.resolved ? '#9e9e9e' : el.color || '#4262ff';
+      // Zugewiesene Kommentare (Aufgaben) tragen einen orangefarbenen Punkt
+      const task = el.task && !el.resolved ? `<circle cx="36" cy="-36" r="6" fill="#f08c00" stroke="#fff" stroke-width="2"/>` : '';
       return `<g transform="translate(${x},${y}) scale(${s})"${el.resolved ? ' opacity="0.6"' : ''}>` +
         `<path d="M0,0 L0,-26 Q0,-36 10,-36 L26,-36 Q36,-36 36,-26 L36,-14 Q36,-4 26,-4 L8,-4 Z" fill="${color}" stroke="#fff" stroke-width="2" filter="url(#shadow-sm)"/>` +
-        `<text x="18" y="-15" font-family="${esc(FONT)}" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle">${n || '+'}</text></g>`;
+        `<text x="18" y="-15" font-family="${esc(FONT)}" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle">${n || '+'}</text>${task}</g>`;
     }
   }
   return '';

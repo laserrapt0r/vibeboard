@@ -6,6 +6,9 @@ import { initCollab } from './collab.js';
 import './teamwork.js';
 import './planning.js';
 import './diagram-text.js';
+import './moderation.js';
+import './activity.js';
+import './recording.js';
 
 function showError(title, text) {
   document.body.innerHTML = '';
@@ -29,7 +32,12 @@ async function boot() {
   app.me = me;
   app.user = { id: me.id, name: me.displayName, color: me.color };
   app.role = meta.role;
-  app.viewOnly = meta.role === 'viewer';
+  app.viewOnly = !['editor', 'owner'].includes(meta.role);
+  app.baseViewOnly = app.viewOnly;
+  app.canComment = meta.role !== 'viewer';
+  app.isFacilitator = meta.role === 'owner';
+  app.guest = !!meta.guest;
+  app.features = meta.features || {};
   app.boardMeta = meta;
   app.name = meta.name;
   document.title = meta.name + ' – vibeboard';

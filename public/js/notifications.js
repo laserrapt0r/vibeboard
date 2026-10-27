@@ -1,0 +1,77 @@
+// Benachrichtigungen (Glocke): Erwähnungen, Antworten und zugewiesene Kommentare – auf der Startseite und im Board
+import { h, api, ICONS, relTime, toast, initials } from './util.js';
+import { popover, closePop } from './menu.js';
+
+const KIND = { mention: 'hat dich erwähnt', reply: 'hat geantwortet', task: 'hat dir einen Kommentar zugewiesen' };
+
+let state = { unread: 0, items: [] };
+const buttons = new Set();
+
+function paint() {
+  for (const b of buttons) {
+    const badge = b.querySelector('.bell-badge');
+    badge.textContent = state.unread > 99 ? '99+' : String(state.unread);
+    badge.classList.toggle('hidden', !state.unread);
+    b.title = state.unread ? `${state.unread} ungelesene Benachrichtigung${state.unread === 1 ? '' : 'en'}` : 'Benachrichtigungen';
+  }
+}
+
+export async function refresh() {
+  try {
+    state = await api('/api/notifications');
+    paint();
+  } catch {
+    /* z. B. abgemeldet */
+  }
+}
+
+export async function markRead(body) {
+  try {
+    state = await api('/api/notifications/read', { method: 'POST', body });
+    paint();
+  } catch {
+    /* ohne Bedeutung für die Bedienung */
+  }
+}
+
+// Live-Benachrichtigung (im Board per Echtzeit-Kanal)
+export function push(item, { onOpen } = {}) {
+  state = { unread: state.unread + 1, items: [item, ...state.items].slice(0, 50) };
+  paint();
+  toast(`🔔 ${item.actor} ${KIND[item.kind] || ''}: „${String(item.excerpt).slice(0, 80)}“`, 6000, onOpen ? { label: 'Öffnen', onClick: () => onOpen(item) } : undefined);
+}
+
+// open(item): Navigation zum Kommentar (im Board ggf. ohne Neuladen)
+export function bellButton({ open } = {}) {
+  const b = h('button', { class: 'icon-btn bell', title: 'Benachrichtigungen', 'aria-label': 'Benachrichtigungen' },
+    h('span', { html: ICONS.bell }), h('span', { class: 'bell-badge hidden' }, '0'));
+  buttons.add(b);
+  b.onclick = async () => {
+    await refresh();
+    const list = h('div', { class: 'notif-list' });
+    if (!state.items.length) list.append(h('p', { class: 'muted pad' }, 'Keine Benachrichtigungen. Hier erscheint, wenn dich jemand in einem Kommentar @erwähnt, dir antwortet oder dir einen Kommentar zuweist.'));
+    for (const n of state.items) {
+      list.append(h('button', { class: 'notif-item' + (n.read ? '' : ' unread'), onclick: () => {
+        closePop();
+        markRead({ ids: [n.id] });
+        (open || defaultOpen)(n);
+      } },
+      h('span', { class: 'avatar xs' }, initials(n.actor || '?')),
+      h('span', { class: 'notif-main' },
+        h('span', {}, h('b', {}, n.actor), ' ', KIND[n.kind] || ''),
+        h('span', { class: 'notif-excerpt' }, n.excerpt),
+        h('span', { class: 'muted small' }, `${n.boardName || 'Board'} · ${relTime(n.createdAt)}`))));
+    }
+    popover(b, h('div', { class: 'notif-pop' },
+      h('div', { class: 'notif-head' }, h('b', {}, 'Benachrichtigungen'), h('span', { class: 'spacer' }),
+        state.unread ? h('button', { class: 'btn small', onclick: async () => { await markRead({ all: true }); closePop(); } }, 'Alle als gelesen markieren') : null),
+      list,
+      h('div', { class: 'muted small pad' }, 'E-Mail-Benachrichtigungen lassen sich im Profil abschalten.')), { placement: 'bottom' });
+  };
+  paint();
+  return b;
+}
+
+function defaultOpen(n) {
+  if (n.boardId) location.href = `/board/${encodeURIComponent(n.boardId)}${n.elementId ? '#el=' + encodeURIComponent(n.elementId) : ''}`;
+}

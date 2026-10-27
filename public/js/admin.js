@@ -19,13 +19,14 @@ const SECTIONS = [
   ['boards', 'Boards', 'template'],
   ['settings', 'Allgemein', 'settings'],
   ['security', 'Sicherheit', 'lock'],
+  ['collab', 'Zusammenarbeit', 'team'],
   ['mail', 'Mailserver', 'comment'],
   ['legal', 'Rechtliches', 'edit'],
   ['audit', 'Protokoll', 'layers'],
 ];
 
 const STATUS = { active: ['Aktiv', 'ok'], pending: ['Wartet auf Freigabe', 'warn'], disabled: ['Deaktiviert', 'off'] };
-const LINK = { private: 'Privat', view: 'Link: ansehen', edit: 'Link: bearbeiten' };
+const LINK = { private: 'Privat', view: 'Link: ansehen', comment: 'Link: kommentieren', edit: 'Link: bearbeiten' };
 
 function fmtBytes(n) {
   const u = ['B', 'KB', 'MB', 'GB'];
@@ -58,7 +59,7 @@ function route() {
   for (const [id, label, icon] of SECTIONS) {
     nav.append(h('a', { href: '#' + id, class: 'admin-nav-item' + (id === cur ? ' active' : '') }, h('span', { html: ICONS[icon] }), label));
   }
-  ({ overview, users, boards, settings, security, mail, legal, audit }[cur] || overview)().catch((e) => {
+  ({ overview, users, boards, settings, security, collab, mail, legal, audit }[cur] || overview)().catch((e) => {
     if (e.code === 'mfa_required') {
       section('Zwei-Faktor-Anmeldung erforderlich',
         h('p', {}, e.message),
@@ -142,6 +143,7 @@ async function overview() {
       tile('Fehlgeschlagene Anmeldungen', o.failedLogins24h, 'in den letzten 24 Stunden'),
       tile('Boards', o.boards, `${o.elements.toLocaleString('de-DE')} Elemente`),
       tile('Gerade online', o.online, `auf ${o.activeBoards} Board${o.activeBoards === 1 ? '' : 's'}`),
+      tile('Teams & Gäste', `${o.teams} / ${o.guests}`, 'Teams · aktive Gastzugänge'),
       tile('Angemeldete Sitzungen', o.sessions),
       tile('Datenbank', fmtBytes(o.dbSize), o.pgVersion),
       tile('Virenscanner', o.virusScanner.configured ? (o.virusScanner.reachable ? 'aktiv' : 'nicht erreichbar') : 'aus',
@@ -514,6 +516,51 @@ async function security() {
   err.el,
   h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, 'Speichern')));
   section('Sicherheit', form);
+}
+
+/* ---------------- Zusammenarbeit ---------------- */
+
+async function collab() {
+  const all = await api('/api/admin/settings');
+  const c = all.collab;
+  const err = errorBox();
+  const mentionEmails = h('input', { type: 'checkbox', checked: c.mentionEmails });
+  const guestLinks = h('input', { type: 'checkbox', checked: c.guestLinks });
+  const guestMaxDays = h('input', { type: 'number', min: 1, max: 365, value: c.guestMaxDays });
+  const teamCreation = h('select', {}, h('option', { value: 'all', selected: c.teamCreation === 'all' }, 'alle angemeldeten Benutzer'), h('option', { value: 'admins', selected: c.teamCreation === 'admins' }, 'nur Administratoren'));
+  const recordings = h('input', { type: 'checkbox', checked: c.recordings });
+  const recordingMax = h('input', { type: 'number', min: 1, max: 30, value: c.recordingMaxMinutes });
+  const form = h('form', { class: 'form admin-form', onsubmit: async (e) => {
+    e.preventDefault();
+    err.hide();
+    if (c.guestLinks && !guestLinks.checked && !(await confirmDialog('Gastzugang abschalten', 'Alle bestehenden Gastlinks werden gesperrt und alle Gäste sofort abgemeldet.', 'Abschalten', true))) return;
+    try {
+      await api('/api/admin/settings', { method: 'PUT', body: { collab: {
+        mentionEmails: mentionEmails.checked, guestLinks: guestLinks.checked, guestMaxDays: Number(guestMaxDays.value),
+        teamCreation: teamCreation.value, recordings: recordings.checked, recordingMaxMinutes: Number(recordingMax.value),
+      } } });
+      toast('Einstellungen gespeichert');
+      collab();
+    } catch (ex) {
+      err.show(ex.message);
+    }
+  } },
+  h('fieldset', {}, h('legend', {}, 'Benachrichtigungen'),
+    h('label', { class: 'check' }, mentionEmails, 'E-Mails bei @Erwähnungen, Antworten und zugewiesenen Kommentaren verschicken'),
+    h('p', { class: 'muted small' }, 'In der Glocke erscheinen Benachrichtigungen immer. E-Mails gehen nur an Personen, die gerade nicht im Board sind – höchstens eine je Board alle zehn Minuten. Jede Person kann sie im Profil abschalten. Voraussetzung ist ein eingerichteter Mailserver.')),
+  h('fieldset', {}, h('legend', {}, 'Gastzugang per Link'),
+    h('label', { class: 'check' }, guestLinks, 'Besitzer dürfen Gastlinks erstellen (Zugang ohne Konto)'),
+    h('label', {}, 'Längste Gültigkeit eines Gastlinks (Tage)', guestMaxDays),
+    h('p', { class: 'muted small' }, 'Gäste geben nur einen Namen an, sehen ausschließlich das eine Board und dürfen höchstens kommentieren. Ihre Zugänge werden mit Ablauf oder Sperre des Links gelöscht. Bitte die Datenschutzerklärung ergänzen (Vorlage unter „Rechtliches“).')),
+  h('fieldset', {}, h('legend', {}, 'Teams'),
+    h('label', {}, 'Teams anlegen dürfen', teamCreation)),
+  h('fieldset', {}, h('legend', {}, 'Aufzeichnungen (Rundgänge)'),
+    h('label', { class: 'check' }, recordings, 'Aufzeichnungen erlauben (Ansicht, Zeiger, Laser – optional mit Ton)'),
+    h('label', {}, 'Längste Aufzeichnung (Minuten)', recordingMax),
+    h('p', { class: 'muted small' }, 'Tonspuren werden wie Uploads auf Schadsoftware geprüft und bis zum Löschen der Aufzeichnung gespeichert.')),
+  err.el,
+  h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, 'Speichern')));
+  section('Zusammenarbeit', form);
 }
 
 /* ---------------- Mailserver ---------------- */

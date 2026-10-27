@@ -6,6 +6,11 @@ import {
 } from './core.js';
 import { throttle } from './util.js';
 import { menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
+import { facilitatorItems, toolsReserved } from './moderation.js';
+import * as bell from './notifications.js';
+
+// Gesperrte Werkzeuge (Moderation): Hinweis statt Aktion
+const reservedHint = () => toolsReserved() && (toast('Das ist während der Moderation den Moderierenden vorbehalten'), true);
 
 /* ================================================================== */
 /* Teilnehmer & Cursor                                                 */
@@ -22,18 +27,19 @@ function renderAvatars() {
   box.append(me);
   const peers = [...app.peers.values()];
   for (const p of peers.slice(0, 6)) {
-    const b = h('button', { class: 'avatar' + (app.following === p.clientId ? ' following' : '') + (p.away ? ' away' : ''), style: { background: p.color }, title: p.name + (p.viewOnly ? ' (ansehen)' : '') + (p.away ? ' – abwesend' : '') }, initials(p.name));
+    const b = h('button', { class: 'avatar' + (app.following === p.clientId ? ' following' : '') + (p.away ? ' away' : ''), style: { background: p.color }, title: p.name + (p.role === 'commenter' ? ' (kommentieren)' : p.viewOnly ? ' (ansehen)' : '') + (p.away ? ' – abwesend' : '') }, initials(p.name));
     b.onclick = () => menu(b, [
       { header: p.name },
       { label: app.following === p.clientId ? 'Nicht mehr folgen' : 'Folgen', icon: 'users', onClick: () => follow(app.following === p.clientId ? null : p.clientId) },
       { label: 'Zur Position springen', icon: 'fit', disabled: !p.view, onClick: () => p.view && fitTo(p.view, { pad: 0, maxZ: 8 }) },
+      ...facilitatorItems(p),
     ]);
     box.append(b);
   }
   if (peers.length > 6) box.append(h('span', { class: 'avatar more' }, '+' + (peers.length - 6)));
   if (peers.length && !app.viewOnly) {
     const all = h('button', { class: 'icon-btn', title: 'Alle zu mir holen / Alle folgen mir', html: ICONS.users });
-    all.onclick = () => menu(all, [
+    all.onclick = () => !reservedHint() && menu(all, [
       { header: 'Aufmerksamkeit lenken' },
       { label: 'Alle zu mir holen (einmalig)', icon: 'fit', onClick: () => {
         app.sync.signal('summon', { rect: visibleRect(), name: app.user.name });
@@ -177,7 +183,7 @@ const lctx = laserCanvas.getContext('2d');
 const trails = new Map(); // clientId -> { color, pts: [{x,y,t}] }
 let laserRaf = 0;
 
-function addLaser(id, color, p) {
+export function addLaser(id, color, p) {
   if (!trails.has(id)) trails.set(id, { color, pts: [] });
   trails.get(id).pts.push({ x: p.x, y: p.y, t: performance.now() });
   if (!laserRaf) laserRaf = requestAnimationFrame(drawLaser);
@@ -582,10 +588,11 @@ app.on('key', (e) => {
 
 app.on('buildCollabTools', (box) => {
   const timerBtn = h('button', { class: 'icon-btn', id: 'btn-timer', title: 'Timer', html: ICONS.timer });
-  timerBtn.onclick = () => openTimerMenu(timerBtn);
+  timerBtn.onclick = () => !reservedHint() && openTimerMenu(timerBtn);
   const voteBtn = h('button', { class: 'icon-btn', id: 'btn-vote', title: 'Abstimmung', html: ICONS.vote });
   voteBtn.onclick = () => {
     const v = app.session.voting;
+    if (toolsReserved()) return v ? openResults() : reservedHint();
     if (v && !v.active && !app.viewOnly) {
       menu(voteBtn, [
         { label: 'Ergebnisse anzeigen', icon: 'vote', onClick: () => { hideResults = false; renderVotes(); openResults(); } },
@@ -615,6 +622,18 @@ function showUpdateBanner(version) {
     h('button', { class: 'btn small primary', onclick: () => location.reload() }, 'Neu laden')));
 }
 
+// Benachrichtigung öffnen: im selben Board ohne Neuladen zum Kommentar springen
+export function openNotification(n) {
+  bell.markRead({ ids: [n.id] });
+  if (n.boardId === app.boardId && n.elementId) {
+    if (location.hash === '#el=' + n.elementId) window.dispatchEvent(new HashChangeEvent('hashchange'));
+    else location.hash = 'el=' + n.elementId;
+  } else if (n.boardId) location.href = `/board/${encodeURIComponent(n.boardId)}${n.elementId ? '#el=' + encodeURIComponent(n.elementId) : ''}`;
+}
+
+app.on('readNotifications', (body) => bell.markRead(body));
+app.on('openNotification', openNotification);
+
 export function initCollab() {
   const hadView = initCore();
   const s = app.sync;
@@ -623,6 +642,7 @@ export function initCollab() {
     // Rechte haben sich geändert (z. B. Rolle angepasst) – Oberfläche neu aufbauen
     if (msg.role && msg.role !== app.role) return location.reload();
     app.serverOffset = msg.serverTime - Date.now();
+    if (first) app.lastVisit = msg.lastVisit || null;
     // Nach einem Update des Servers: Hinweis zum Neuladen (neue Oberfläche, evtl. geänderte Schnittstellen)
     if (msg.version) {
       if (app.serverVersion && app.serverVersion !== msg.version) showUpdateBanner(msg.version);
@@ -678,7 +698,7 @@ export function initCollab() {
           toast(`${op.voting.by || 'Jemand'} hat eine Abstimmung gestartet`);
         }
         renderVoting();
-      } else if (op.op === 'privateMode' || op.op === 'estimation') {
+      } else if (op.op === 'privateMode' || op.op === 'estimation' || op.op === 'moderation') {
         app.session[op.op] = op[op.op];
         app.emit('session', op.op);
       }
@@ -770,7 +790,11 @@ export function initCollab() {
     alert('Dieses Board wurde gelöscht.');
     location.href = '/';
   });
-  s.on('error', (err) => toast(err));
+  s.on('error', (err) => toast(err, 5000));
+  s.on('blocked', (why) => app.emit('blocked', why));
+  s.on('recordings', () => app.emit('recordingsChanged'));
+  // Benachrichtigung in Echtzeit (z. B. @Erwähnung): Glocke aktualisieren, Hinweis mit Sprung zum Kommentar
+  s.on('notify', (msg) => bell.push(msg.item, { onOpen: openNotification }));
   let checking = false;
   // Vom Server abgelehnte Uploads (Virenscan/Dateityp) auch lokal entfernen
   s.on('rejected', (list) => {

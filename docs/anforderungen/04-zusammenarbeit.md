@@ -6,6 +6,7 @@
 - **Akzeptanzkriterien:**
   - Änderungen sind bei anderen Teilnehmenden im lokalen Netz in der Regel innerhalb einer Sekunde sichtbar.
   - Konflikte am selben Element werden nach „die letzte Änderung gewinnt“ aufgelöst.
+  - Geändert in 3.7.0: Kommentare werden nicht mehr als ganzes Element überschrieben, sondern über eigene Operationen geändert ([REQ-ELEM-014](02-elemente.md)).
   - Geändert in 3.5.0: Bei Tabellen gilt das je Zelle. Änderungen an verschiedenen Zellen gehen nicht verloren, und eingefügte oder gelöschte Zeilen und Spalten verschieben die Zellen anderer Personen korrekt (REQ-ELEM-009).
   - Nur angemeldete Personen mit mindestens Leserecht erhalten den Echtzeitkanal; Änderungen erfordern Schreibrecht (Prüfung auf dem Server).
 
@@ -77,3 +78,35 @@
   - Per Rückgängig wiederhergestellte, zuvor öffentliche Elemente werden nicht privat.
   - Solange der Modus aktiv ist, werden keine Vorschaubilder hochgeladen. Startet jemand eine Schätzrunde für eine private Karte, bleibt deren Titel für andere verborgen.
   - „Aufdecken & beenden“ macht alle privaten Elemente sofort für alle sichtbar.
+
+### REQ-COLLAB-010 Benachrichtigungen
+- **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Wer in einem Kommentar erwähnt wird, eine Antwort erhält oder einen Kommentar zugewiesen bekommt, erfährt davon – auch wenn er das Board gerade nicht geöffnet hat.
+- **Akzeptanzkriterien:**
+  - Auslöser: @Erwähnung, neue Antwort in einem Thread, in dem man geschrieben hat oder zuständig ist, Zuweisung eines Kommentars. Die handelnde Person selbst wird nie benachrichtigt; benachrichtigt werden nur Personen mit Zugriff auf das Board.
+  - Eine Glocke mit Zähler ungelesener Hinweise steht auf der Startseite und im Board. Die Liste zeigt Person, Art, Ausschnitt, Board und Zeitpunkt; ein Klick springt zum Kommentar (im selben Board ohne Neuladen) und markiert den Hinweis als gelesen; „Alle als gelesen markieren“.
+  - Ist die Person gerade verbunden, erscheint der Hinweis sofort (auch über den Long-Polling-Rückfall) mit „Öffnen“.
+  - Öffnen eines Kommentars markiert alle Hinweise zu ihm als gelesen.
+  - E-Mail: nur wenn in der Administration erlaubt, im eigenen Profil nicht abgeschaltet, ein Mailserver eingerichtet ist und die Person gerade nicht im Board ist; höchstens eine E-Mail je Person und Board in zehn Minuten.
+  - Gäste erhalten keine Benachrichtigungen. Hinweise werden nach 90 Tagen gelöscht.
+
+### REQ-COLLAB-011 Aktivitätsverlauf
+- **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Nachvollziehen, wer was geändert hat – besonders bei asynchroner Zusammenarbeit.
+- **Akzeptanzkriterien:**
+  - Erfasst werden Erstellen, Ändern und Löschen von Elementen, Kommentieren, Erledigen und Wiedereröffnen, Zuweisen, Umbenennen des Boards, Aufdecken des privaten Modus, Wiederherstellen einer Version und Aufzeichnungen – mit Person, Zeitpunkt, Art des Elements und kurzem Textausschnitt.
+  - Mehrere Änderungen derselben Person am selben Element innerhalb von fünf Minuten werden zu einem Eintrag mit Zähler zusammengefasst.
+  - Private Elemente erscheinen erst nach dem Aufdecken (als ein Eintrag „hat aufgedeckt“).
+  - Panel „Aktivität“ (für alle mit Zugriff, auch Gäste): neueste zuerst, „Ältere laden“, ein Klick springt zum Element bzw. öffnet den Kommentar; gelöschte Elemente melden einen Hinweis.
+  - Seit dem letzten Besuch (ein erneutes Verbinden innerhalb von 30 Minuten zählt nicht als neuer Besuch): Beim Öffnen zeigt ein Hinweis, wie viele Elemente andere geändert haben; „Anzeigen“ öffnet das Panel, markiert die Elemente auf der Leinwand und springt zu ihnen. Im Panel sind neue Einträge markiert, der letzte Besuch ist als Trenner sichtbar.
+  - Einträge werden nach 90 Tagen gelöscht, höchstens 2000 je Board.
+
+### REQ-COLLAB-012 Geführte Aufzeichnungen (Rundgänge)
+- **Seit:** 3.7.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Beschreibung:** Ein Board ohne Termin erklären: Ansicht, Mauszeiger und Laserpointer werden aufgezeichnet, auf Wunsch mit Ton.
+- **Akzeptanzkriterien:**
+  - Aufzeichnen dürfen alle ab der Rolle „Kommentieren“; vor dem Start Titel und Wahl „mit Ton“. Ohne Mikrofonzugriff wird ohne Ton aufgezeichnet.
+  - Während der Aufnahme: Leiste mit Laufzeit, „Beenden & speichern“ und „Verwerfen“. Nach der in der Administration festgelegten Höchstdauer (Standard 10 Minuten) endet die Aufnahme automatisch.
+  - Der Server nimmt nur bekannte Ereignisarten mit Zahlenwerten an, prüft Dauer und Größe, das Tonformat (WebM, Ogg, MP4 anhand der Dateikennung) und scannt die Tonspur auf Schadsoftware.
+  - Abspielen (für alle mit Zugriff, auch Gäste): Ansicht folgt der Aufzeichnung, der Zeiger erscheint mit Namen, Laserspuren werden gezeichnet, Ton läuft synchron. Pause, Vorspulen per Regler, „Ansicht folgen“ (eigenes Verschieben beendet das Folgen), Esc schließt.
+  - Löschen dürfen die aufzeichnende Person und der Besitzer. Andere Teilnehmende sehen neue oder gelöschte Aufzeichnungen sofort in der Liste.

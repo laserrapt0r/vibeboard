@@ -147,6 +147,14 @@
   - Kommentare lassen sich als erledigt markieren und ausblenden; ein Panel listet alle Kommentare.
   - Ein Kommentar ohne Text wird beim Schließen verworfen.
   - Kommentar-Symbole behalten in jeder Zoomstufe ihre Größe.
+  - Geändert in 3.7.0 – Kommentare im Team:
+    - Kommentieren dürfen alle ab der Rolle „Kommentieren“ ([REQ-BOARD-002](08-boards-teilen.md)), auch Gäste mit dieser Rolle.
+    - Schreiben, Antworten, Erledigen, Zuweisen und Löschen laufen über eigene Operationen: Autor (Benutzer-ID und Name) und Zeitpunkt legt der Server fest. Ein Verschieben des Kommentars kann den Thread nicht überschreiben; neue Kommentare oder die Umwandlung anderer Elemente in Kommentare über normale Änderungen lehnt der Server ab. Rückgängig nach dem Löschen stellt den gespeicherten Kommentar wieder her.
+    - Ein Thread fasst höchstens 500 Beiträge; Kommentare sind je Person auf 120 pro Minute begrenzt. Von der Moderation gesperrte Kommentare ändern nur Moderierende.
+    - Beim Tippen von „@“ schlägt das Eingabefeld Personen mit Bezug zum Board vor (Besitzer, Mitglieder, Team, aktive Gäste, bei Link-Freigabe auch Besucher); Pfeiltasten wählen, Enter oder Tab übernimmt. Erwähnungen der eigenen Person sind hervorgehoben. Die Personenliste erhalten nur Personen ab der Rolle „Kommentieren“; Gäste sehen dabei keine Anmeldenamen (sie erwähnen über den Anzeigenamen).
+    - Löschen dürfen Bearbeitende jeden Kommentar, alle anderen nur eigene Threads ohne Antworten anderer.
+    - Ein neuer Kommentar entsteht erst mit dem ersten Beitrag; ein leerer Entwurf verschwindet beim Schließen, ohne gespeichert zu werden.
+    - Das Kommentar-Panel filtert nach „Offen“, „Mir zugewiesen“ und „Alle“.
 
 ### REQ-ELEM-015 Code-Blöcke
 - **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt

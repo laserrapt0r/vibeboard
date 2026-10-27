@@ -35,6 +35,7 @@ const CSRF_HEADER = 'x-vibeboard';
 const router = new Router();
 require('./lib/routes/auth').register(router);
 require('./lib/routes/boards').register(router);
+require('./lib/routes/collab').register(router);
 require('./lib/routes/admin').register(router);
 require('./lib/routes/legal').register(router);
 
@@ -55,7 +56,7 @@ const CSP = [
   "img-src 'self' data: blob:",
   "font-src 'self'",
   "connect-src 'self'",
-  "media-src 'none'",
+  "media-src 'self' blob:", // Wiedergabe von Aufzeichnungen
   "object-src 'none'",
   "frame-src 'none'",
   "frame-ancestors 'none'",
@@ -70,7 +71,7 @@ function securityHeaders(req, res) {
   res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()');
   if (isHttps(req)) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 }
 
@@ -89,6 +90,13 @@ async function handlePage(req, res, url) {
   if (AUTH_PAGES.includes(p)) {
     if (user && ['/login', '/register'].includes(p)) return redirect(res, '/');
     return serveFile(res, page('auth.html'), noStore);
+  }
+  // Gastlink: Seite zum Beitreten (ohne Anmeldung)
+  if (/^\/g\/[\w-]{20,100}$/.test(p)) return serveFile(res, page('guest.html'), noStore);
+  // Gäste sehen nur ihr Board
+  if (user && user.role === 'guest' && !/^\/board\/[^/]+$/.test(p) && !p.includes('.')) {
+    const link = await db.one('SELECT board_id FROM guest_links WHERE id = $1', [user.guest_link_id]);
+    return redirect(res, link ? '/board/' + link.board_id : '/login');
   }
   if (p === '/' || p === '/index.html') return user ? serveFile(res, page('index.html'), noStore) : toLogin();
   if (/^\/board\/[^/]+$/.test(p)) return user ? serveFile(res, page('board.html'), noStore) : toLogin();
@@ -127,7 +135,8 @@ async function handle(req, res, reqId) {
   securityHeaders(req, res);
   try {
     const url = new URL(req.url, 'http://localhost');
-    pathname = url.pathname;
+    // Gastlink-Tokens stehen im Pfad – im Protokoll maskieren
+    pathname = url.pathname.replace(/^(\/g\/|\/api\/guest\/)(?!join$)[^/]+/, '$1***');
     if (url.pathname.startsWith('/api/') || url.pathname === '/healthz') {
       if (req.method !== 'GET' && req.method !== 'HEAD' && req.headers[CSRF_HEADER] !== '1') {
         throw new HttpError(403, 'Anfrage abgelehnt (CSRF-Schutz).');
