@@ -531,9 +531,15 @@ const scheduleSaveThumb = debounce(async () => {
   try {
     const { thumbnail } = await import('./exporter.js');
     const url = await thumbnail([...app.els.values()]);
-    if (url) api(`/api/boards/${boardId}/thumb`, { method: 'PUT', body: url }).catch(() => {});
+    if (url) await api(`/api/boards/${boardId}/thumb`, { method: 'PUT', body: url, quiet: true });
+    if (url && app.boardMeta) app.boardMeta.hasThumb = true;
   } catch {}
 }, 4000);
+
+// Boards aus Vorlagen, Importen oder Kopien haben anfangs Inhalt, aber noch kein Vorschaubild – nach dem Laden erzeugen
+export function ensureThumb() {
+  if (app.boardMeta && !app.boardMeta.hasThumb && app.els.size) scheduleSaveThumb();
+}
 
 /* ================================================================== */
 /* Elemente erzeugen & Hilfen                                          */
@@ -2916,7 +2922,16 @@ export function initCore() {
   applyView(true);
   window.addEventListener('resize', () => applyView(true));
   window.addEventListener('pagehide', () => app.sync.flushNow());
-  window.addEventListener('beforeunload', () => app.sync.flushNow());
+  window.addEventListener('beforeunload', (e) => {
+    // Noch nicht beim Server angekommene Änderungen: Browser fragt nach, bevor die Seite verlassen wird
+    const unsent = app.sync.pending || app.sync.sending.length > 0;
+    app.sync.flushNow();
+    // Speicherfehler des Servers betreffen nur, wer selbst noch ungespeicherte Änderungen hat
+    if ((unsent && (!app.sync.connected || app.sync.retrying)) || (app.sync.save.failed && app.sync.unsaved)) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
   return !!saved;
 }
 

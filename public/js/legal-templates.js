@@ -48,7 +48,7 @@ Diese Anwendung ist ein kollaboratives Online-Whiteboard (vibeboard). Sie wird v
 
 Für die Nutzung ist ein Benutzerkonto erforderlich. Dabei verarbeiten wir:
 
-- Benutzername, Anzeigename und E-Mail-Adresse
+- Name (Anzeigename) und E-Mail-Adresse (für die Anmeldung)
 - Kennwort (ausschließlich als nicht umkehrbarer Hashwert gespeichert)
 - optional: Schlüssel für die Zwei-Faktor-Anmeldung und gehashte Wiederherstellungscodes
 - Zeitpunkte der Registrierung, der Bestätigung der E-Mail-Adresse und der letzten Anmeldung
@@ -70,7 +70,7 @@ Kommentare speichern wir mit deinem Anzeigenamen und dem Zeitpunkt. Erwähnst du
 
 # Teams und Ordner
 
-Teams bestehen aus ihren Mitgliedern (Benutzername, Anzeigename, Rolle im Team). Mitglieder eines Teams sehen einander und erhalten Zugriff auf die Boards, die dem Team zugeordnet sind. Ordner dienen nur der Ordnung; persönliche Ordner sind nur für dich sichtbar. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
+Teams bestehen aus ihren Mitgliedern (Name, Rolle im Team). Mitglied wird man nur, wenn man eine Einladung annimmt; bis dahin speichern wir die offene Einladung (Team, eingeladene und einladende Person, Rolle, Zeitpunkt), und die eingeladene Person erhält eine Benachrichtigung. Mitglieder eines Teams sehen einander und erhalten Zugriff auf die Boards, die dem Team zugeordnet sind; die Team-Verwaltung sieht zusätzlich die E-Mail-Adressen der Mitglieder und Eingeladenen. Ordner dienen nur der Ordnung; persönliche Ordner sind nur für dich sichtbar. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
 
 # Aufzeichnungen (Rundgänge)
 
@@ -84,7 +84,7 @@ Teams bestehen aus ihren Mitgliedern (Benutzername, Anzeigename, Rolle im Team).
 
 Nach der Anmeldung setzen wir ein technisch notwendiges Cookie, das deine Sitzung kennzeichnet. Zu jeder Sitzung speichern wir die IP-Adresse, die Browser-Kennung und den Zeitpunkt der letzten Aktivität, damit du deine angemeldeten Geräte einsehen und abmelden kannst. Sitzungen enden nach 30 Tagen bzw. nach 14 Tagen ohne Aktivität. Rechtsgrundlage sind Art. 6 Abs. 1 lit. b und f DSGVO sowie § 25 Abs. 2 Nr. 2 TDDDG.
 
-Im lokalen Speicher deines Browsers (localStorage) legen wir nur Ansichtseinstellungen wie Zoomstufe, dunkles Design oder Werkzeugoptionen ab. Diese Daten werden nicht an uns übertragen.
+Im lokalen Speicher deines Browsers (localStorage) legen wir nur Ansichtseinstellungen wie Zoomstufe, dunkles Design oder Werkzeugoptionen ab sowie, ob die Echtzeit-Verbindung in deinem Netz das Ersatzverfahren braucht (7 Tage). Diese Daten werden nicht an uns übertragen.
 
 # Sicherheitsprotokoll
 

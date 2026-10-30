@@ -40,6 +40,7 @@
   - Link zum Kennwort-Zurücksetzen (24 h, per Mail oder zum Weitergeben).
   - Zwei-Faktor-Anmeldung zurücksetzen, alle Sitzungen beenden.
   - Löschen mit Wahl, ob die Boards übertragen oder mitgelöscht werden.
+  - Geändert in 4.0.0: Anlegen und Bearbeiten mit Name und E-Mail-Adresse (beide Pflicht, der Name muss nicht eindeutig sein; eine vorhandene Adresse kann nicht entfernt werden). Die Übersicht zeigt die Zahl der Konten ohne E-Mail-Adresse und einen Hinweis bei vermutlich falsch erkannten IP-Adressen ([REQ-SEC-008](11-sicherheit.md)).
   - Der letzte aktive Administrator kann weder herabgestuft, deaktiviert noch gelöscht werden – auch bei gleichzeitigen Änderungen.
   - Administratoren können eigene Rolle und eigenen Status nicht über den Dialog ändern.
 

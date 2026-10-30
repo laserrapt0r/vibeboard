@@ -54,6 +54,10 @@ const SEEDS = {
     await c.query(`INSERT INTO guest_links (board_id, token_hash, role, created_by, expires_at) VALUES ('b1', 'h1', 'viewer', 1, now() + interval '1 day')`);
     await c.query(`INSERT INTO board_recordings (board_id, created_by, author_name, title, duration_ms, track) VALUES ('b1', 1, 'alt', 'Rundgang', 1000, '[]')`);
   },
+  6: async (c) => {
+    await c.query(`INSERT INTO team_invitations (team_id, user_id, role, invited_by) VALUES (1, 1, 'member', 1)`);
+    await c.query(`INSERT INTO notifications (user_id, kind, actor_name, team_id, excerpt) VALUES (1, 'team_invite', 'alt', 1, 'Team A')`);
+  },
 };
 
 async function structure(c, schema) {

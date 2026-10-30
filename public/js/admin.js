@@ -136,7 +136,10 @@ async function overview() {
       : '🦠 Es ist kein Virenscanner eingerichtet – hochgeladene Dateien werden nicht auf Schadsoftware geprüft →') : null,
     o.virusScanner.configured && !o.virusScanner.reachable ? h('a', { class: 'notice warn', href: '#security' }, `🦠 Der Virenscanner ist nicht erreichbar (${o.virusScanner.error}). Nach einem Neustart braucht ClamAV einige Minuten.`) : null,
     o.virusScanner.outdated ? h('a', { class: 'notice warn', href: '#security' }, '🦠 Die Virensignaturen sind älter als drei Tage – bitte die automatische Aktualisierung (freshclam) prüfen.') : null,
-    o.failedLogins24h >= 20 ? h('a', { class: 'notice warn', href: '#audit' }, `🔐 ${o.failedLogins24h} fehlgeschlagene Anmeldungen in den letzten 24 Stunden →`) : null,
+    o.withoutEmail ? h('a', { class: 'notice warn', href: '#users' }, `✉️ ${o.withoutEmail} Konto${o.withoutEmail === 1 ? '' : 'en'} ohne E-Mail-Adresse. Angemeldet wird mit der E-Mail-Adresse – diese Konten können sich nur übergangsweise mit ihrem Namen anmelden. Bitte Adressen ergänzen →`) : null,
+    o.network.hint === 'proxy' ? h('div', { class: 'notice warn' }, `🌐 Die Anfrage kam über einen Reverse-Proxy (X-Forwarded-For), TRUST_PROXY ist aber nicht gesetzt. Im Protokoll und bei den Anmeldesperren steht deshalb die Adresse des Proxys (${o.network.ip}) statt der echten Adresse. Lösung: TRUST_PROXY=1 in der .env setzen (siehe README, „Echte IP-Adressen“).`) : null,
+    o.network.hint === 'gateway' ? h('div', { class: 'notice warn' }, `🌐 Deine Anfrage kommt beim Server von ${o.network.ip} an – das ist vermutlich das Docker-Netz, nicht deine Adresse. Im Protokoll und bei den Anmeldesperren landen dann alle Zugriffe unter derselben Adresse. Lösungen stehen im README unter „Echte IP-Adressen“.`) : null,
+        o.failedLogins24h >= 20 ? h('a', { class: 'notice warn', href: '#audit' }, `🔐 ${o.failedLogins24h} fehlgeschlagene Anmeldungen in den letzten 24 Stunden →`) : null,
     h('div', { class: 'stat-grid' },
       tile('Benutzer', total, `${o.users.active || 0} aktiv · ${pending} wartend · ${o.users.disabled || 0} deaktiviert`),
       tile('Sicherheit', `${o.mfaUsers} / ${total}`, `mit Zwei-Faktor-Anmeldung · ${o.unverified} unbestätigt`),
@@ -169,7 +172,7 @@ async function users() {
   const render = () => {
     const q = search.value.trim().toLowerCase();
     const f = filter.value;
-    const rows = list.filter((u) => (!q || [u.username, u.displayName, u.email].join(' ').toLowerCase().includes(q))
+    const rows = list.filter((u) => (!q || [u.displayName, u.email].join(' ').toLowerCase().includes(q))
       && (!f || (f === 'pending' && u.status === 'pending') || (f === 'disabled' && u.status === 'disabled') || (f === 'unverified' && !u.emailVerified)
         || (f === 'admin' && u.role === 'admin') || (f === 'nomfa' && !u.mfa)));
     count.textContent = `${rows.length} von ${list.length}`;
@@ -182,7 +185,7 @@ async function users() {
         actions.onclick = () => userMenu(actions, u);
         return h('tr', { class: u.status === 'pending' ? 'row-warn' : '' },
           h('td', {}, h('div', { class: 'user-cell' }, h('span', { class: 'avatar sm', style: { background: u.color } }, initials(u.displayName)),
-            h('div', {}, h('b', {}, u.displayName), h('div', { class: 'muted small' }, '@' + u.username + (u.id === me.id ? ' · du' : ''))))),
+            h('div', {}, h('b', {}, u.displayName), h('div', { class: 'muted small' }, (u.email || 'ohne E-Mail-Adresse') + (u.id === me.id ? ' · du' : ''))))),
           h('td', {}, u.email ? h('div', {}, u.email, ' ', u.emailVerified ? h('span', { class: 'pill ok', title: 'bestätigt' }, '✓') : h('span', { class: 'pill warn' }, 'unbestätigt')) : h('span', { class: 'muted' }, '–'),
             u.pendingEmail ? h('div', { class: 'muted small' }, '→ ' + u.pendingEmail + ' (wartet)') : null),
           h('td', {}, u.role === 'admin' ? h('span', { class: 'pill accent' }, 'Admin') : 'Benutzer'),
@@ -236,7 +239,7 @@ function userMenu(anchor, u) {
     u.status === 'active' && !self ? { label: 'Deaktivieren', icon: 'lock', onClick: () => patchUser(u, { status: 'disabled' }, 'Deaktiviert') } : null,
     u.status === 'disabled' ? { label: 'Aktivieren', icon: 'unlock', onClick: () => patchUser(u, { status: 'active' }, 'Aktiviert') } : null,
     !self ? { label: u.role === 'admin' ? 'Adminrechte entziehen' : 'Zum Admin machen', icon: 'settings', onClick: () => patchUser(u, { role: u.role === 'admin' ? 'user' : 'admin' }) } : null,
-    { label: 'Protokoll anzeigen', icon: 'layers', onClick: () => (location.hash = 'audit/' + encodeURIComponent(u.username)) },
+    { label: 'Protokoll anzeigen', icon: 'layers', onClick: () => (location.hash = 'audit/' + encodeURIComponent(u.email || u.displayName)) },
     !self ? '-' : null,
     !self ? { label: 'Löschen …', icon: 'trash', danger: true, onClick: () => deleteUser(u) } : null,
   ], { placement: 'left' });
@@ -244,16 +247,14 @@ function userMenu(anchor, u) {
 
 function createUser() {
   const err = errorBox();
-  const username = h('input', { type: 'text', required: true, autocapitalize: 'none' });
-  const display = h('input', { type: 'text' });
-  const email = h('input', { type: 'email' });
+  const username = h('input', { type: 'text', required: true, maxlength: 60 });
+  const email = h('input', { type: 'email', required: true });
   const role = h('select', {}, h('option', { value: 'user' }, 'Benutzer'), h('option', { value: 'admin' }, 'Administrator'));
   const inviteRadio = h('input', { type: 'radio', name: 'pwmode', checked: true });
   const pwRadio = h('input', { type: 'radio', name: 'pwmode' });
   const pw = h('input', { type: 'password', autocomplete: 'new-password', disabled: true, maxlength: 256 });
   const sync = () => {
     pw.disabled = inviteRadio.checked;
-    email.required = inviteRadio.checked;
   };
   inviteRadio.addEventListener('change', sync);
   pwRadio.addEventListener('change', sync);
@@ -262,7 +263,7 @@ function createUser() {
     e.preventDefault();
     err.hide();
     try {
-      const r = await api('/api/admin/users', { method: 'POST', body: { username: username.value, displayName: display.value, email: email.value, role: role.value, password: pwRadio.checked ? pw.value : '' } });
+      const r = await api('/api/admin/users', { method: 'POST', body: { name: username.value, email: email.value, role: role.value, password: pwRadio.checked ? pw.value : '' } });
       m.close();
       toast(r.invited ? `Einladung an ${r.email} verschickt` : r.inviteError ? `Benutzer angelegt, Einladung fehlgeschlagen: ${r.inviteError}` : 'Benutzer angelegt', 5000);
       users();
@@ -270,9 +271,8 @@ function createUser() {
       err.show(ex.message);
     }
   } },
-  h('label', {}, 'Benutzername', username),
-  h('label', {}, 'Anzeigename (optional)', display),
-  h('label', {}, 'E-Mail-Adresse', email, h('span', { class: 'field-hint' }, 'Vom Admin eingetragene Adressen gelten als bestätigt.')),
+  h('label', {}, 'Name', username, h('span', { class: 'field-hint' }, 'Muss nicht eindeutig sein.')),
+  h('label', {}, 'E-Mail-Adresse', email, h('span', { class: 'field-hint' }, 'Damit meldet sich die Person an. Vom Admin eingetragene Adressen gelten als bestätigt.')),
   h('label', {}, 'Rolle', role),
   h('div', {}, h('div', { class: 'label' }, 'Kennwort'),
     h('label', { class: 'check' }, inviteRadio, 'Einladung per E-Mail – die Person legt ihr Kennwort selbst fest (empfohlen)'),
@@ -286,8 +286,8 @@ function createUser() {
 function editUser(u) {
   const self = u.id === me.id; // eigene Rolle/Status nicht hier ändern (Selbstaussperrung)
   const err = errorBox();
-  const display = h('input', { type: 'text', value: u.displayName === u.username ? '' : u.displayName });
-  const email = h('input', { type: 'email', value: u.email });
+  const display = h('input', { type: 'text', value: u.displayName, required: true, maxlength: 60 });
+  const email = h('input', { type: 'email', value: u.email, required: !!u.email });
   const role = h('select', { disabled: self }, h('option', { value: 'user', selected: u.role === 'user' }, 'Benutzer'), h('option', { value: 'admin', selected: u.role === 'admin' }, 'Administrator'));
   const status = h('select', { disabled: self }, Object.entries(STATUS).map(([k, [l]]) => h('option', { value: k, selected: u.status === k }, l)));
   const pw = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'unverändert lassen', maxlength: 256 });
@@ -303,14 +303,13 @@ function editUser(u) {
       err.show(ex.message);
     }
   } },
-  h('label', {}, 'Benutzername', h('input', { type: 'text', value: u.username, disabled: true })),
-  h('label', {}, 'Anzeigename', display),
-  h('label', {}, 'E-Mail-Adresse', email, h('span', { class: 'field-hint' }, u.emailVerified ? 'Bestätigt. Eine neue Adresse gilt als bestätigt.' : 'Noch nicht bestätigt.')),
+  h('label', {}, 'Name', display),
+  h('label', {}, 'E-Mail-Adresse (Anmeldung)', email, h('span', { class: 'field-hint' }, !u.email ? 'Fehlt – ohne E-Mail-Adresse ist die Anmeldung nur übergangsweise mit dem Namen möglich.' : u.emailVerified ? 'Bestätigt. Eine neue Adresse gilt als bestätigt.' : 'Noch nicht bestätigt.')),
   h('div', { class: 'form-row' }, h('label', {}, 'Rolle', role), h('label', {}, 'Status', status)),
   h('label', {}, 'Neues Kennwort', pw, h('span', { class: 'field-hint' }, 'Besser: „Link zum Kennwort-Zurücksetzen“ im Aktionsmenü. Ein neues Kennwort meldet alle Sitzungen ab.')),
   err.el,
   h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, 'Abbrechen'), h('button', { type: 'submit', class: 'btn primary' }, 'Speichern')));
-  const m = modal(`Benutzer bearbeiten: ${u.username}`, form);
+  const m = modal(`Benutzer bearbeiten: ${u.displayName}`, form);
 }
 
 async function resetLink(u) {
@@ -333,7 +332,7 @@ function deleteUser(u) {
   const transfer = h('input', { type: 'radio', name: 'b', checked: true });
   const del = h('input', { type: 'radio', name: 'b' });
   const m = modal('Benutzer löschen', h('div', { class: 'form' },
-    h('p', {}, `„${u.displayName}“ (@${u.username}) wird endgültig gelöscht.`),
+    h('p', {}, `„${u.displayName}“ (${u.email || 'ohne E-Mail-Adresse'}) wird endgültig gelöscht.`),
     u.boardCount ? h('div', {}, h('div', { class: 'label' }, `Was passiert mit ${u.boardCount} eigenen Board${u.boardCount > 1 ? 's' : ''}?`),
       h('label', { class: 'check' }, transfer, 'An mich übertragen'),
       h('label', { class: 'check' }, del, 'Ebenfalls löschen')) : null,
@@ -395,7 +394,7 @@ async function boards() {
 }
 
 function changeOwner(b, userList) {
-  const sel = h('select', {}, userList.filter((u) => u.status === 'active').map((u) => h('option', { value: u.id, selected: u.id === b.ownerId }, `${u.displayName} (@${u.username})`)));
+  const sel = h('select', {}, userList.filter((u) => u.status === 'active').map((u) => h('option', { value: u.id, selected: u.id === b.ownerId }, `${u.displayName} (${u.email || 'ohne E-Mail'})`)));
   const m = modal('Besitzer ändern', h('form', { class: 'form', onsubmit: async (e) => {
     e.preventDefault();
     try {

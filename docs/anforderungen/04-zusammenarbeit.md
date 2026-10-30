@@ -17,6 +17,9 @@
   - Standard: Server-Sent Events für Server→Client, gebündelte HTTP-POSTs für Client→Server.
   - Erhält der Client innerhalb von 8 Sekunden keine Begrüßung oder scheitert der Stream zweimal ohne Verbindung, wechselt er automatisch auf Long-Polling (`/api/boards/:id/poll`, Antwort spätestens nach 25 s).
   - `?transport=poll` erzwingt Long-Polling (Test).
+  - Geändert in 4.0.0:
+    - Der Server schickt am Anfang des Streams 2 KB Füllzeichen und sofort eine kurze Startnachricht. Kommt diese nicht innerhalb von 4 Sekunden an, wechselt der Client auf Long-Polling; kommt sie an, wartet er ohne Zeitlimit auf die (bei großen Boards evtl. lange) Begrüßung.
+    - Ein Wechsel wegen Zeitüberschreitung wird im Browser 7 Tage lang gemerkt (nicht bei kurzen Verbindungsfehlern); danach wird es erneut mit Server-Sent Events versucht. Kopf, Polster und Startnachricht schickt der Server noch vor dem Laden des Boards. `?transport=sse` erzwingt Server-Sent Events.
   - Polling-Teilnehmende, die eine Minute lang nicht abholen, werden entfernt.
 
 ### REQ-COLLAB-003 Wiederverbinden ohne Datenverlust
@@ -25,6 +28,7 @@
   - Nach einem Verbindungsabbruch verbindet sich der Client automatisch neu und lädt den aktuellen Stand.
   - Noch nicht bestätigte eigene Änderungen (auch Timer, Abstimmung, Umbenennen) werden erneut gesendet und lokal beibehalten.
   - Beim Schließen des Tabs werden ausstehende Änderungen sofort gesendet.
+  - Geändert in 4.0.0: Hängen beim Schließen noch Änderungen fest, weil keine Verbindung besteht oder der Server nicht speichern kann, fragt der Browser vor dem Verlassen der Seite nach.
 
 ### REQ-COLLAB-004 Präsenz
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -110,3 +114,19 @@
   - Der Server nimmt nur bekannte Ereignisarten mit Zahlenwerten an, prüft Dauer und Größe, das Tonformat (WebM, Ogg, MP4 anhand der Dateikennung) und scannt die Tonspur auf Schadsoftware.
   - Abspielen (für alle mit Zugriff, auch Gäste): Ansicht folgt der Aufzeichnung, der Zeiger erscheint mit Namen, Laserspuren werden gezeichnet, Ton läuft synchron. Pause, Vorspulen per Regler, „Ansicht folgen“ (eigenes Verschieben beendet das Folgen), Esc schließt.
   - Löschen dürfen die aufzeichnende Person und der Besitzer. Andere Teilnehmende sehen neue oder gelöschte Aufzeichnungen sofort in der Liste.
+
+### REQ-COLLAB-013 Speicherstatus
+- **Seit:** 4.0.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Beschreibung:** Jederzeit erkennbar, ob alle eigenen Änderungen auf dem Server gespeichert sind.
+- **Akzeptanzkriterien:**
+  - Anzeige in der Kopfzeile neben dem Board-Namen: „Verbinde …“, „Wird gespeichert …“, „Gespeichert“ (Tooltip mit Uhrzeit), „Offline – n ausstehend“, „Speichern verzögert“; Betrachter sehen „Verbunden“.
+  - „Gespeichert“ bedeutet: in der Datenbank angekommen, nicht nur beim Server. Der Server zählt Änderungen je Board (Folgenummer) und meldet nach jedem Schreibvorgang allen Verbundenen den gespeicherten Stand; die Antwort auf eigene Änderungen nennt die Folgenummer, die erreicht sein muss. Lädt der Server das Board neu, beginnt die Zählung erkennbar von vorn (Kennung je Ladevorgang).
+  - Schlägt das Schreiben in die Datenbank oder das Senden an den Server fehl, zeigt die Anzeige „Speichern verzögert“, bis ein erneuter Versuch gelingt.
+  - „Wird gespeichert …“ erscheint erst nach 400 ms (kein Flackern). Bildschirmleser bekommen nur Störungen und deren Ende angesagt; Animationen entfallen bei „Bewegung reduzieren“. Auf schmalen Bildschirmen bleibt nur der farbige Punkt, außer bei Störungen.
+
+### REQ-COLLAB-014 Ladeanzeigen
+- **Seit:** 4.0.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Board: Die Ladeanzeige steht bereits im HTML (sichtbar, bevor Skripte geladen sind), erscheint aber erst nach 250 ms; nach 4 s ergänzt sie einen Hinweis auf einen möglichen Proxy. Sie verschwindet, sobald der Stand des Boards da ist. Die Leinwand trägt bis dahin `aria-busy`, die Anzeige `role="status"`.
+  - Startseite: Platzhalterkarten, bis die Boards geladen sind.
+  - Anfragen über `api()`, die länger als 400 ms dauern, zeigen einen schmalen Fortschrittsbalken am oberen Rand; regelmäßige Hintergrundabfragen nicht.

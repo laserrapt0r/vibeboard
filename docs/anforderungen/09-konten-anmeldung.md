@@ -8,6 +8,7 @@
   - Weitere Registrierungen sind nur möglich, wenn ein Mailserver eingerichtet ist.
   - Registrierungsmodus *offen*, *mit Freigabe* oder *geschlossen* ([REQ-ADMIN-004](10-administration.md)).
   - Bei bereits verwendeter E-Mail-Adresse sieht die Antwort aus wie bei einer erfolgreichen Registrierung; die Inhaberin bzw. der Inhaber der Adresse erhält stattdessen einen Hinweis per E-Mail.
+  - Geändert in 4.0.0: Pflichtangaben sind Name, E-Mail-Adresse und Kennwort. Der Name ist ein Anzeigename (1–60 Zeichen, Leerzeichen erlaubt, Steuerzeichen werden entfernt) und muss nicht eindeutig sein; einen eigenen Benutzernamen gibt es nicht mehr.
 
 ### REQ-AUTH-002 E-Mail-Bestätigung
 - **Seit:** 3.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -28,7 +29,7 @@
 - **Beschreibung:** Kennwortrichtlinie nach NIST SP 800-63B.
 - **Akzeptanzkriterien:**
   - Mindestlänge 12 Zeichen (einstellbar 8–64), höchstens 256 Zeichen; keine erzwungenen Zeichenklassen.
-  - Abgelehnt werden: die 10.000 häufigsten Kennwörter, bekannte Grundwörter mit angehängten Ziffern/Zeichen, Tastaturreihen und Folgen, Wiederholungen sowie Kennwörter, die Benutzername oder E-Mail-Adresse enthalten.
+  - Abgelehnt werden: die 10.000 häufigsten Kennwörter, bekannte Grundwörter mit angehängten Ziffern/Zeichen, Tastaturreihen und Folgen, Wiederholungen sowie Kennwörter, die Name oder E-Mail-Adresse enthalten (geändert in 4.0.0: Name statt Benutzername).
   - Optional: Abgleich mit der Pwned-Passwords-Datenbank per k-Anonymität (standardmäßig aus).
   - Eine Stärkeanzeige gibt beim Eintippen Rückmeldung; geprüft wird verbindlich auf dem Server.
 
@@ -36,6 +37,7 @@
 - **Seit:** 2.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Mit Benutzername oder E-Mail-Adresse und Kennwort.
+  - Geändert in 4.0.0: Anmeldung nur noch mit E-Mail-Adresse und Kennwort. Übergang für ältere Konten ohne E-Mail-Adresse: Anmeldung mit dem bisherigen Namen, sofern genau ein Konto ohne Adresse diesen Namen trägt; die Startseite und die Administration weisen auf fehlende Adressen hin. „Kennwort vergessen“ und „Bestätigungsmail erneut senden“ arbeiten nur mit der E-Mail-Adresse.
   - Fehlermeldungen unterscheiden nicht zwischen unbekanntem Konto und falschem Kennwort.
   - Deaktivierte, unbestätigte und noch nicht freigeschaltete Konten erhalten eine passende Meldung (erst nach korrektem Kennwort).
   - Nach der Anmeldung wird zur ursprünglich aufgerufenen Seite weitergeleitet – nur innerhalb der Anwendung.
@@ -60,6 +62,7 @@
 - **Seit:** 2.0.0, geändert in 3.0.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Anzeigename und Farbe sind direkt änderbar.
+  - Geändert in 4.0.0: Der Name ist Pflicht und für alle Funktionen der angezeigte Name (Board, Kommentare, Teams, Aktivität, Administration). Konten ohne E-Mail-Adresse werden auf der Startseite gebeten, eine Adresse zu ergänzen.
   - Eine neue E-Mail-Adresse wird erst nach Bestätigung über einen Link an die neue Adresse übernommen; die alte Adresse erhält einen Hinweis.
   - Kennwort ändern erfordert das aktuelle Kennwort, meldet andere Geräte ab und verschickt einen Hinweis.
 

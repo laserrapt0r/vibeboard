@@ -1,5 +1,5 @@
 // Teilen-Dialog: Link-Freigabe und Mitglieder eines Boards verwalten
-import { h, api, modal, toast, initials, debounce, confirmDialog, ICONS } from './util.js';
+import { h, api, modal, toast, initials, confirmDialog, ICONS } from './util.js';
 
 const LINK_OPTIONS = [
   ['private', '🔒 Nur eingeladene Personen'],
@@ -52,47 +52,48 @@ export async function openShareDialog(boardId, { me, onLeave, onClose } = {}) {
     } }, LINK_OPTIONS.map(([v, l]) => h('option', { value: v, selected: v === info.linkAccess }, l)));
     body.append(h('label', {}, 'Wer hat über den Link Zugriff?', access));
 
-    // Einladen
+    // Einladen: über die genaue E-Mail-Adresse oder aus den eigenen Teams – eine Suche über alle Nutzenden gibt es nicht
     if (owner) {
-      const input = h('input', { type: 'text', placeholder: 'Name oder E-Mail', autocomplete: 'off' });
+      const input = h('input', { type: 'email', placeholder: 'E-Mail-Adresse', autocomplete: 'off', inputmode: 'email' });
       const role = h('select', {}, ROLE_OPTIONS.map(([v]) => h('option', { value: v }, ROLE_TEXT[v])));
       const notify = h('input', { type: 'checkbox', checked: true });
-      const suggest = h('div', { class: 'suggest hidden' });
-      const search = debounce(async () => {
-        const q = input.value.trim();
-        if (!q) return suggest.classList.add('hidden');
-        const list = await api('/api/users/search?q=' + encodeURIComponent(q)).catch(() => []);
-        suggest.innerHTML = '';
-        list.filter((u) => u.id !== info.owner?.id && !info.members.some((x) => x.id === u.id)).forEach((u) => suggest.append(h('button', {
-          type: 'button', class: 'suggest-item', onclick: () => {
-            input.value = u.username;
-            suggest.classList.add('hidden');
-          },
-        }, h('span', { class: 'avatar xs', style: { background: u.color } }, initials(u.displayName)), h('span', {}, u.displayName), h('span', { class: 'muted small' }, '@' + u.username))));
-        suggest.classList.toggle('hidden', !suggest.childElementCount);
-      }, 200);
-      input.addEventListener('input', search);
-      const invite = async (e) => {
-        e.preventDefault();
-        if (!input.value.trim()) return;
+      const add = async (body) => {
         try {
-          const r = await api(`/api/boards/${boardId}/members`, { method: 'POST', body: { user: input.value.trim(), role: role.value, notify: notify.checked } });
+          const r = await api(`/api/boards/${boardId}/members`, { method: 'POST', body: { ...body, role: role.value, notify: notify.checked } });
           toast(r.mailed ? 'Eingeladen – E-Mail wurde verschickt' : 'Eingeladen');
           render();
         } catch (ex) {
-          toast(ex.message);
+          toast(ex.message, 5000);
         }
       };
+      const invite = (e) => {
+        e.preventDefault();
+        if (input.value.trim()) add({ email: input.value.trim() });
+      };
+      const teamBox = h('div', { class: 'share-candidates' });
       body.append(h('form', { class: 'invite', onsubmit: invite },
         h('div', { class: 'label' }, 'Personen einladen'),
-        h('div', { class: 'invite-row' }, h('div', { class: 'suggest-wrap' }, input, suggest), role, h('button', { type: 'submit', class: 'btn primary' }, 'Einladen')),
-        h('label', { class: 'check' }, notify, 'Per E-Mail benachrichtigen (falls hinterlegt)')));
+        h('div', { class: 'invite-row' }, input, role, h('button', { type: 'submit', class: 'btn primary' }, 'Einladen')),
+        h('label', { class: 'check' }, notify, 'Per E-Mail benachrichtigen'),
+        teamBox));
+      // Vorschläge: Personen aus gemeinsamen Teams
+      api(`/api/boards/${boardId}/share-candidates`).then(({ candidates }) => {
+        if (!candidates.length) return;
+        const list = h('div', { class: 'candidate-list' });
+        for (const c of candidates) {
+          list.append(h('button', { type: 'button', class: 'candidate', title: `Team: ${c.teams.join(', ')}`, onclick: () => add({ userId: c.id }) },
+            h('span', { class: 'avatar xs', style: { background: c.color } }, initials(c.displayName)),
+            h('span', { class: 'candidate-name' }, c.displayName, h('span', { class: 'muted small' }, 'Team: ' + c.teams.join(', '))),
+            h('span', { class: 'muted small' }, '+ einladen')));
+        }
+        teamBox.append(h('div', { class: 'label' }, 'Aus deinen Teams'), list);
+      }).catch(() => {});
     }
 
     // Mitglieder
     const row = (u, roleLabel, controls) => h('div', { class: 'member' },
       h('span', { class: 'avatar sm', style: { background: u.color } }, initials(u.displayName)),
-      h('div', { class: 'member-name' }, h('b', {}, u.displayName + (me && u.id === me.id ? ' (du)' : '')), h('span', { class: 'muted small' }, '@' + u.username)),
+      h('div', { class: 'member-name' }, h('b', {}, u.displayName + (me && u.id === me.id ? ' (du)' : '')), u.email ? h('span', { class: 'muted small' }, u.email) : null),
       controls || h('span', { class: 'muted small' }, roleLabel));
     const list = h('div', { class: 'members' });
     if (info.owner) list.append(row(info.owner, 'Besitzer'));

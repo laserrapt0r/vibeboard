@@ -64,6 +64,10 @@ BSI IT-Grundschutz.
 - **Seit:** 3.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - `X-Forwarded-For` und `X-Forwarded-Proto` werden nur ausgewertet, wenn `TRUST_PROXY=1` gesetzt ist.
+  - Geändert in 4.0.0:
+    - `TRUST_PROXY` akzeptiert die Anzahl der Proxys (`1`, `2` …) oder eine Liste vertrauenswürdiger Adressen/Netze (z. B. `127.0.0.1, 172.16.0.0/12`). Ausgewertet wird nur, wenn die Anfrage tatsächlich von einem vertrauenswürdigen Proxy kommt.
+    - `X-Forwarded-For` wird von rechts gelesen (der linke Teil ist vom Aufrufer fälschbar); bei `X-Forwarded-Proto` zählt der letzte Eintrag.
+    - Die Administration weist darauf hin, wenn Anfragen mit einer Docker-Gateway-Adresse oder mit `X-Forwarded-For` ohne `TRUST_PROXY` ankommen (im Protokoll stünden sonst nicht die echten Adressen).
 
 ### REQ-SEC-009 Robustheit des Servers
 - **Seit:** 2.0.0, erweitert in 3.0.0 · **Priorität:** Muss · **Status:** umgesetzt

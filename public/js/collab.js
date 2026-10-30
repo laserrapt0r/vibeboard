@@ -630,6 +630,7 @@ function showUpdateBanner(version) {
 // Benachrichtigung öffnen: im selben Board ohne Neuladen zum Kommentar springen
 export function openNotification(n) {
   bell.markRead({ ids: [n.id] });
+  if (n.teamId) return bell.openTeamInvite();
   if (n.boardId === app.boardId && n.elementId) {
     if (location.hash === '#el=' + n.elementId) window.dispatchEvent(new HashChangeEvent('hashchange'));
     else location.hash = 'el=' + n.elementId;
@@ -817,6 +818,7 @@ export function initCollab() {
       if (el) applyRemoteOp({ op: 'upsert', el: { ...el, priv: m.priv, privName: m.privName } });
     }
   });
+  s.on('saveState', (st) => app.emit('saveState', st));
   s.on('status', async (ok) => {
     app.emit('status', ok);
     // Verbindung verloren: prüfen, ob Session oder Zugriff weggefallen sind

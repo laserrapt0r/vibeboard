@@ -35,13 +35,15 @@ services:
       PGDATABASE: ${POSTGRES_DB:-vibeboard}
       PGUSER: ${POSTGRES_USER:-vibeboard}
       PGPASSWORD: ${POSTGRES_PASSWORD}
-      # Optional: Administrator beim ersten Start anlegen
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Optional: Administrator beim ersten Start anlegen (Anmeldung mit ADMIN_EMAIL)
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       # Öffentliche Adresse für Links in E-Mails (alternativ in der Administration einstellbar)
       PUBLIC_URL: ${PUBLIC_URL:-}
-      # Hinter einem Reverse-Proxy auf 1 setzen (echte Client-IP für Rate-Limits und Protokoll)
+      # Hinter einem Reverse-Proxy auf 1 setzen (echte Client-IP für Rate-Limits und Protokoll);
+      # auch eine Liste von Proxy-Adressen/Netzen ist möglich – siehe README „Echte IP-Adressen“
       TRUST_PROXY: ${TRUST_PROXY:-0}
       # Virenscan hochgeladener Dateien über den ClamAV-Dienst
       CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
@@ -51,6 +53,7 @@ services:
       # Protokollierung (siehe .env.example); ansehen mit: docker compose logs -f app
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_FORMAT: ${LOG_FORMAT:-text}
+    # PORT=127.0.0.1:3000 veröffentlicht nur auf dem Host (für einen Reverse-Proxy auf demselben Rechner)
     ports:
       - "${PORT:-3000}:3000"
     # Boards der dateibasierten Version 1 (./data/boards) werden beim ersten Start einmalig übernommen

@@ -2,7 +2,7 @@
 import { h, api, ICONS, relTime, toast, initials } from './util.js';
 import { popover, closePop } from './menu.js';
 
-const KIND = { mention: 'hat dich erwähnt', reply: 'hat geantwortet', task: 'hat dir einen Kommentar zugewiesen' };
+const KIND = { mention: 'hat dich erwähnt', reply: 'hat geantwortet', task: 'hat dir einen Kommentar zugewiesen', team_invite: 'lädt dich in ein Team ein' };
 
 let state = { unread: 0, items: [] };
 const buttons = new Set();
@@ -18,7 +18,7 @@ function paint() {
 
 export async function refresh() {
   try {
-    state = await api('/api/notifications');
+    state = await api('/api/notifications', { quiet: true });
     paint();
   } catch {
     /* z. B. abgemeldet */
@@ -49,7 +49,7 @@ export function bellButton({ open } = {}) {
   b.onclick = async () => {
     await refresh();
     const list = h('div', { class: 'notif-list' });
-    if (!state.items.length) list.append(h('p', { class: 'muted pad' }, 'Keine Benachrichtigungen. Hier erscheint, wenn dich jemand in einem Kommentar @erwähnt, dir antwortet oder dir einen Kommentar zuweist.'));
+    if (!state.items.length) list.append(h('p', { class: 'muted pad' }, 'Keine Benachrichtigungen. Hier erscheint, wenn dich jemand in einem Kommentar @erwähnt, dir antwortet, dir einen Kommentar zuweist oder in ein Team einlädt.'));
     for (const n of state.items) {
       list.append(h('button', { class: 'notif-item' + (n.read ? '' : ' unread'), onclick: () => {
         closePop();
@@ -60,7 +60,7 @@ export function bellButton({ open } = {}) {
       h('span', { class: 'notif-main' },
         h('span', {}, h('b', {}, n.actor), ' ', KIND[n.kind] || ''),
         h('span', { class: 'notif-excerpt' }, n.excerpt),
-        h('span', { class: 'muted small' }, `${n.boardName || 'Board'} · ${relTime(n.createdAt)}`))));
+        h('span', { class: 'muted small' }, `${n.teamId ? 'Team' : n.boardName || 'Board'} · ${relTime(n.createdAt)}`))));
     }
     popover(b, h('div', { class: 'notif-pop' },
       h('div', { class: 'notif-head' }, h('b', {}, 'Benachrichtigungen'), h('span', { class: 'spacer' }),
@@ -72,6 +72,13 @@ export function bellButton({ open } = {}) {
   return b;
 }
 
+// Team-Einladungen werden auf der Startseite angenommen oder abgelehnt
+export function openTeamInvite() {
+  if (location.pathname === '/' && location.hash === '#einladungen') window.dispatchEvent(new HashChangeEvent('hashchange'));
+  else location.href = '/#einladungen';
+}
+
 function defaultOpen(n) {
+  if (n.teamId) return openTeamInvite();
   if (n.boardId) location.href = `/board/${encodeURIComponent(n.boardId)}${n.elementId ? '#el=' + encodeURIComponent(n.elementId) : ''}`;
 }

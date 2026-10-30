@@ -4,6 +4,56 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.0.0] – 2026-10-30
+
+Inkompatible Änderungen: Anmeldung nur noch per E-Mail-Adresse, Teams nur noch per Einladung, keine Personensuche
+mehr. Schemaversion 6.
+
+### Hinzugefügt
+- **Speicherstatus** in der Kopfzeile des Boards (REQ-COLLAB-013): „Gespeichert“ erst, wenn alle eigenen Änderungen in
+  der Datenbank angekommen sind; außerdem „Wird gespeichert …“, „Offline – n ausstehend“, „Speichern verzögert“.
+  Warnung vor dem Verlassen der Seite, solange Änderungen offline feststecken.
+- **Ladeanzeigen** (REQ-COLLAB-014): Ladeanzeige beim Öffnen eines Boards (verzögert, mit Proxy-Hinweis nach 4 s),
+  Platzhalter auf der Startseite, Fortschrittsbalken für längere Anfragen.
+- **Einladungen in Teams** (REQ-BOARD-008): Team-Verwaltende laden per E-Mail-Adresse ein; Mitglied wird man erst
+  durch Annehmen (Startseite, Glocke, E-Mail). Offene Einladungen lassen sich zurückziehen.
+- Teilen aus der Liste der Personen, mit denen man ein Team teilt (REQ-BOARD-003).
+- `TRUST_PROXY` akzeptiert die Anzahl der Proxys oder eine Liste von Proxy-Adressen/Netzen; Hinweis in der
+  Administration, wenn Anfragen mit einer Docker-Gateway-Adresse ankommen (REQ-SEC-008). README-Abschnitt
+  „Echte IP-Adressen im Protokoll“.
+- `ADMIN_NAME` für den beim Start angelegten Administrator.
+
+### Geändert
+- **Anmeldung nur mit E-Mail-Adresse** (REQ-AUTH-005). Der bisherige Benutzername ist jetzt ein frei wählbarer,
+  nicht eindeutiger Anzeigename (REQ-AUTH-001, REQ-AUTH-008); vorhandene Konten behalten ihren Namen. Konten ohne
+  E-Mail-Adresse können sich übergangsweise mit ihrem (eindeutigen) Namen anmelden und werden gebeten, eine Adresse zu
+  ergänzen. Registrierung, Profil und Administration fragen „Name“ und E-Mail-Adresse ab.
+- **@Erwähnungen** über den Namen; ausgewählte Personen werden per ID mitgeschickt, damit gleichnamige Personen
+  unterscheidbar bleiben.
+- Boards teilen nur noch per vollständiger E-Mail-Adresse oder aus den eigenen Teams; die Mitgliederliste zeigt
+  E-Mail-Adressen nur dem Besitzer.
+- Echtzeit-Verbindung hinter puffernden Proxys (REQ-COLLAB-002): 2 KB Füllzeichen und Startnachricht am Anfang des
+  Streams (noch vor dem Laden des Boards), Wechsel auf Long-Polling nach 4 statt 8 Sekunden; bleibt der Stream
+  stumm, merkt sich der Browser den Wechsel 7 Tage lang (kurze Störungen wie ein Server-Neustart zählen nicht).
+- Der beim Start angelegte Administrator braucht `ADMIN_EMAIL` (ohne Adresse wird keiner angelegt) und wird nur noch
+  angelegt, solange es keinen aktiven Administrator gibt – so entsteht nach einer Adressänderung kein zweiter Admin.
+- Ungültige Einträge in `TRUST_PROXY` werden mit Warnung übersprungen.
+
+### Behoben
+- Boards aus Vorlagen, Importen und Kopien bekamen erst nach der ersten Änderung ein Vorschaubild (REQ-IO-004).
+- Schriftgrößen-Auswahl von Sticky Notes ohne gesetzte Größe zeigte „undefined“ statt „Auto“.
+
+### Entfernt
+- Personensuche `/api/users/search` und direktes Hinzufügen zu Teams (`POST /api/teams/:id/members`).
+
+### Sicherheit
+- Keine Suche mehr, über die sich die Konten einer Installation abfragen lassen; Einladungen per E-Mail-Adresse sind
+  ratenbegrenzt.
+- Die Mitgliederliste eines Boards zeigt E-Mail-Adressen von Personen aus gemeinsamen Teams nur, wenn man das Team
+  verwaltet (wie die Team-Ansicht).
+- `X-Forwarded-For` wird von rechts ausgewertet; bei einer Liste vertrauenswürdiger Proxys nur, wenn die Anfrage
+  wirklich von einem davon kommt.
+
 ## [3.8.1] – 2026-10-27
 
 ### Geändert

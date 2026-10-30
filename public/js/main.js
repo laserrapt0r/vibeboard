@@ -1,6 +1,6 @@
 // Einstiegspunkt der Board-Seite
 import { api, h } from './util.js';
-import { app } from './core.js';
+import { app, ensureThumb } from './core.js';
 import { initUI } from './ui.js';
 import { initCollab } from './collab.js';
 import './teamwork.js';
@@ -9,6 +9,15 @@ import './diagram-text.js';
 import './moderation.js';
 import './activity.js';
 import './recording.js';
+
+// Ladeanzeige ausblenden, sobald der Stand des Boards da ist
+export function hideLoader() {
+  const l = document.getElementById('board-loader');
+  document.getElementById('stage')?.removeAttribute('aria-busy');
+  if (!l) return;
+  l.classList.add('done');
+  setTimeout(() => l.remove(), 300);
+}
 
 function showError(title, text) {
   document.body.innerHTML = '';
@@ -42,6 +51,10 @@ async function boot() {
   app.name = meta.name;
   document.title = meta.name + ' – vibeboard';
   initUI();
+  app.on('loaded', () => {
+    hideLoader();
+    ensureThumb();
+  });
   initCollab();
 }
 

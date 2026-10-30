@@ -25,6 +25,10 @@
 - **Seit:** 2.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Einladen per Benutzername oder E-Mail mit Vorschlagsliste (nur aktive, bestätigte Konten; ohne Anzeige fremder E-Mail-Adressen).
+  - Geändert in 4.0.0: Eine Suche über alle Konten gibt es nicht mehr (`/api/users/search` entfällt). Eingeladen wird
+    - über die vollständige E-Mail-Adresse (genauer Abgleich, höchstens 30 Versuche je Stunde und Person; gibt es kein Konto, wird das gemeldet) oder
+    - aus der Liste der Personen, mit denen die einladende Person ein Team teilt (Name, Farbe und gemeinsame Teams; ohne E-Mail-Adressen). Der Server prüft das gemeinsame Team.
+  - Geändert in 4.0.0: Die Mitgliederliste zeigt Namen; E-Mail-Adressen nur dem Besitzer (Namen sind nicht eindeutig) – außer bei Personen, die er aus einem Team kennt, in dem er nicht verwaltet (wie in der Team-Ansicht).
   - Optional Einladungs-Mail mit Link zum Board.
   - Rolle ändern und entfernen; Fehler werden angezeigt, die Auswahl springt dann zurück.
 
@@ -65,3 +69,15 @@
   - Ordner: persönliche Ordner (nur für die eigene Person sichtbar, für alle zugänglichen Boards) und Ordner im Team (für alle Mitglieder, nur für Boards des Teams). Je Bereich liegt ein Board in höchstens einem Ordner. Ordner lassen sich umbenennen und löschen; die Boards bleiben erhalten.
   - Startseite: Team-Ansicht mit Mitgliederverwaltung, „Ordner anlegen“ und Ordnern als Filter („Alle“, Ordner, „Ohne Ordner“); Board-Menü „In Ordner verschieben …“.
   - Wird ein Team gelöscht, bleiben die Boards beim Besitzer, sind aber nicht mehr für das Team freigegeben.
+  - Geändert in 4.0.0: Mitglieder werden nicht mehr direkt hinzugefügt, sondern eingeladen und müssen annehmen ([REQ-BOARD-008](#req-board-008-einladungen-in-teams)).
+
+### REQ-BOARD-008 Einladungen in Teams
+- **Seit:** 4.0.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Beschreibung:** Niemand wird ohne Zustimmung Mitglied eines Teams. Ersetzt das direkte Hinzufügen aus [REQ-BOARD-007](#req-board-007-teams-und-ordner).
+- **Akzeptanzkriterien:**
+  - Team-Verwaltende laden über die vollständige E-Mail-Adresse ein und wählen die Rolle (Mitglied/Verwaltung). Ratenbegrenzung gegen das Ausprobieren von Adressen.
+  - Die eingeladene Person erhält eine Benachrichtigung (Glocke, live und – sofern nicht abgeschaltet – per E-Mail) und sieht die Einladung auf der Startseite mit „Annehmen“ und „Ablehnen“; in der Navigation zählt ein Eintrag „Einladungen“ die offenen Einladungen.
+  - Erst mit der Annahme wird die Person Mitglied mit der eingeladenen Rolle; Ablehnen entfernt die Einladung. Die zugehörige Benachrichtigung gilt danach als gelesen.
+  - Team-Verwaltende sehen offene Einladungen (Name, E-Mail-Adresse, Rolle, Zeitpunkt) und können sie zurückziehen; die Benachrichtigung der eingeladenen Person verschwindet dann. Doppelte Einladungen und Einladungen bereits vorhandener Mitglieder werden abgelehnt.
+  - Mitglieder sehen die E-Mail-Adressen anderer Mitglieder nicht, Team-Verwaltende schon (zur Unterscheidung gleichnamiger Personen).
+  - Wird ein Team oder ein Konto gelöscht, verschwinden auch die Einladungen.

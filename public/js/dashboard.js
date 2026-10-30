@@ -4,21 +4,21 @@ import { TEMPLATES } from './templates.js';
 import { templateGallery, templatePreview } from './gallery.js';
 import { menu } from './menu.js';
 import { openShareDialog } from './share.js';
-import { accountMenuItems } from './account.js';
+import { openProfileDialog, accountMenuItems } from './account.js';
 import { legalFooter } from './footer.js';
 import { bellButton, refresh as refreshBell } from './notifications.js';
 
 let data = { owned: [], shared: [], teams: [], folderList: [] };
 // Ansicht: start | tasks | all | mine | shared | folder (id) | team (id, optional mit Ordner im Team)
-let view = location.hash === '#aufgaben' ? { kind: 'tasks' } : loadPref('dashView', { kind: 'start' });
+let view = location.hash === '#aufgaben' ? { kind: 'tasks' } : location.hash === '#einladungen' ? { kind: 'start' } : loadPref('dashView', { kind: 'start' });
 const BOARD_VIEWS = new Set(['all', 'mine', 'shared', 'folder', 'team']);
 let me = null;
 // „neon“: Einstellung aus 3.5.0, wird als dunkles Design übernommen
 let dark = loadPref('settings', {}).dark || loadPref('settings', {}).neon;
 
-async function load() {
+async function load(quiet) {
   try {
-    data = await api('/api/boards');
+    data = await api('/api/boards', { quiet });
   } catch (e) {
     toast('Boards konnten nicht geladen werden: ' + e.message);
   }
@@ -30,9 +30,9 @@ const DONE_RE = /^(fertig|erledigt|done|geschlossen|closed|abgeschlossen|resolve
 const PRIO = { critical: ['⏫', 'Kritisch', '#e03131'], high: ['▲', 'Hoch', '#f08c00'], medium: ['■', 'Mittel', '#1971c2'], low: ['▼', 'Niedrig', '#868e96'] };
 let tasks = [];
 
-async function loadTasks() {
+async function loadTasks(quiet) {
   try {
-    tasks = (await api('/api/tasks')).tasks;
+    tasks = (await api('/api/tasks', { quiet })).tasks;
   } catch {
     tasks = [];
   }
@@ -119,6 +119,44 @@ function newBoardMenu(anchor) {
 
 let tplCollapsed = loadPref('dashTplCollapsed', false);
 
+/* Einladungen in Teams: annehmen oder ablehnen */
+let invitations = [];
+
+async function loadInvitations(quiet) {
+  try {
+    invitations = (await api('/api/team-invitations', { quiet })).invitations;
+  } catch {
+    invitations = [];
+  }
+  renderInvitations();
+  renderNav();
+}
+
+function renderInvitations() {
+  const box = document.getElementById('dash-invites');
+  box.innerHTML = '';
+  for (const i of invitations) {
+    const answer = async (accept) => {
+      try {
+        await api(`/api/team-invitations/${i.teamId}/${accept ? 'accept' : 'decline'}`, { method: 'POST' });
+        toast(accept ? `Du bist jetzt im Team „${i.teamName}“` : 'Einladung abgelehnt');
+        await loadInvitations();
+        await load();
+        refreshBell();
+        if (accept) setView({ kind: 'team', id: i.teamId });
+      } catch (e) {
+        toast(e.message);
+        loadInvitations();
+      }
+    };
+    box.append(h('div', { class: 'invite-card', role: 'group', 'aria-label': `Einladung in ${i.teamName}` },
+      h('span', { class: 'nav-icon', html: ICONS.team }),
+      h('span', { class: 'invite-text' }, h('b', {}, i.by || 'Jemand'), ` lädt dich in das Team „${i.teamName}“ ein`, h('span', { class: 'muted small' }, ` · als ${i.role === 'admin' ? 'Verwaltung' : 'Mitglied'} · ${relTime(i.createdAt)}`)),
+      h('button', { class: 'btn small primary', onclick: () => answer(true) }, 'Annehmen'),
+      h('button', { class: 'btn small', onclick: () => answer(false) }, 'Ablehnen')));
+  }
+}
+
 function renderTemplates() {
   const box = document.getElementById('dash-templates');
   const toggle = document.getElementById('dash-tpl-toggle');
@@ -192,6 +230,7 @@ function setView(v) {
 
 // Rechts erscheint nur, was links gewählt ist (beim Suchen immer die Board-Liste)
 function render() {
+  document.getElementById('dash-skeleton')?.remove();
   const searching = !!document.getElementById('dash-search').value.trim();
   const kind = searching && !BOARD_VIEWS.has(view.kind) ? 'all' : view.kind;
   document.getElementById('dash-start').classList.toggle('hidden', kind !== 'start');
@@ -246,6 +285,7 @@ function renderNav() {
   if (!personal.length) nav.append(h('div', { class: 'dash-nav-hint' }, 'Eigene Ordner – nur für dich sichtbar.'));
   for (const f of personal) nav.append(item(f.name, { kind: 'folder', id: f.id }, allBoards().filter((b) => b.folders.includes(f.id)).length, 'folder'));
   nav.append(h('div', { class: 'dash-nav-head' }, h('span', {}, 'Teams'), h('button', { class: 'icon-btn small', title: 'Team erstellen', html: ICONS.plus, onclick: newTeam })));
+  if (invitations.length) nav.append(h('button', { class: 'dash-nav-item invite-link', onclick: () => setView({ kind: 'start' }) }, h('span', { class: 'nav-icon', html: ICONS.bell }), h('span', { class: 'nav-label' }, 'Einladungen'), h('span', { class: 'nav-count alert' }, invitations.length)));
   if (!data.teams.length) nav.append(h('div', { class: 'dash-nav-hint' }, 'Teams teilen Boards mit allen Mitgliedern auf einmal.'));
   for (const t of data.teams) nav.append(item(t.name, { kind: 'team', id: t.id }, allBoards().filter((b) => inTeam(b, t.id)).length, 'team'));
 }
@@ -418,19 +458,33 @@ async function openTeamDialog(id) {
         await api('/api/teams/' + id, { method: 'PATCH', body: { name: name.value } }).then(() => toast('Gespeichert')).catch((e) => toast(e.message));
         load();
       } }, 'Speichern'))));
-      const input = h('input', { type: 'text', placeholder: 'Benutzername oder E-Mail', autocomplete: 'off' });
+      // Einladen über die E-Mail-Adresse – Mitglied wird die Person erst, wenn sie annimmt
+      const input = h('input', { type: 'email', placeholder: 'E-Mail-Adresse', autocomplete: 'off', inputmode: 'email', required: true });
       const role = h('select', {}, h('option', { value: 'member' }, 'Mitglied'), h('option', { value: 'admin' }, 'Verwaltung'));
       body.append(h('form', { class: 'invite', onsubmit: async (e) => {
         e.preventDefault();
         try {
-          await api(`/api/teams/${id}/members`, { method: 'POST', body: { user: input.value.trim(), role: role.value } });
-          toast('Hinzugefügt');
+          await api(`/api/teams/${id}/invitations`, { method: 'POST', body: { email: input.value.trim(), role: role.value } });
+          toast('Einladung verschickt – die Person muss sie noch annehmen', 4000);
           render();
-          load();
         } catch (ex) {
-          toast(ex.message);
+          toast(ex.message, 5000);
         }
-      } }, h('div', { class: 'label' }, 'Mitglied hinzufügen'), h('div', { class: 'invite-row' }, input, role, h('button', { type: 'submit', class: 'btn primary' }, 'Hinzufügen'))));
+      } }, h('div', { class: 'label' }, 'Person einladen'), h('div', { class: 'invite-row' }, input, role, h('button', { type: 'submit', class: 'btn primary' }, 'Einladen')),
+      h('p', { class: 'muted small' }, 'Die Person bekommt eine Benachrichtigung und tritt dem Team erst bei, wenn sie die Einladung annimmt.')));
+      if (t.invitations.length) {
+        const inv = h('div', { class: 'members' });
+        for (const u of t.invitations) {
+          inv.append(h('div', { class: 'member' },
+            h('span', { class: 'avatar sm', style: { background: u.color } }, initials(u.displayName)),
+            h('div', { class: 'member-name' }, h('b', {}, u.displayName), h('span', { class: 'muted small' }, `${u.email} · eingeladen ${relTime(u.createdAt)} als ${u.role === 'admin' ? 'Verwaltung' : 'Mitglied'}`)),
+            h('button', { class: 'btn small', onclick: async () => {
+              await api(`/api/teams/${id}/invitations/${u.id}`, { method: 'DELETE' }).catch((e) => toast(e.message));
+              render();
+            } }, 'Zurückziehen')));
+        }
+        body.append(h('div', {}, h('div', { class: 'label' }, `Offene Einladungen (${t.invitations.length})`), inv));
+      }
     }
     const list = h('div', { class: 'members' });
     for (const u of t.members) {
@@ -463,7 +517,7 @@ async function openTeamDialog(id) {
         } }, self ? 'Verlassen' : 'Entfernen') : null);
       list.append(h('div', { class: 'member' },
         h('span', { class: 'avatar sm', style: { background: u.color } }, initials(u.displayName)),
-        h('div', { class: 'member-name' }, h('b', {}, u.displayName + (self ? ' (du)' : '')), h('span', { class: 'muted small' }, '@' + u.username)),
+        h('div', { class: 'member-name' }, h('b', {}, u.displayName + (self ? ' (du)' : '')), u.email ? h('span', { class: 'muted small' }, u.email) : null),
         controls));
     }
     body.append(h('div', {}, h('div', { class: 'label' }, `Mitglieder (${t.members.length})`), list));
@@ -545,6 +599,17 @@ function renderUser() {
   b.style.background = me.color;
   b.title = me.displayName + ' – Konto';
   document.getElementById('dash-admin').classList.toggle('hidden', me.role !== 'admin');
+  // Ältere Konten ohne E-Mail-Adresse: Anmeldung künftig nur noch per E-Mail
+  const hint = document.getElementById('dash-account-hint');
+  hint.innerHTML = '';
+  if (!me.email && !me.pendingEmail) {
+    hint.append(h('div', { class: 'invite-card warn', role: 'status' },
+      h('span', { class: 'invite-text' }, h('b', {}, 'Bitte hinterlege eine E-Mail-Adresse. '), 'Die Anmeldung ist künftig nur noch mit E-Mail-Adresse möglich; ohne Adresse kannst du außerdem nicht zu Teams oder Boards eingeladen werden.'),
+      h('button', { class: 'btn small primary', onclick: () => openProfileDialog(me, (u) => {
+        me = u;
+        renderUser();
+      }) }, 'Jetzt ergänzen')));
+  }
 }
 
 function applyDark() {
@@ -571,7 +636,13 @@ document.getElementById('dash-dark').addEventListener('click', () => {
   applyDark();
 });
 document.getElementById('dash-all-templates').addEventListener('click', openAllTemplates);
-window.addEventListener('hashchange', () => location.hash === '#aufgaben' && setView({ kind: 'tasks' }));
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#aufgaben') setView({ kind: 'tasks' });
+  if (location.hash === '#einladungen') {
+    setView({ kind: 'start' });
+    loadInvitations();
+  }
+});
 
 const importInput = h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' } });
 document.body.append(importInput);
@@ -609,10 +680,12 @@ importInput.addEventListener('change', async () => {
   refreshBell();
   load();
   loadTasks();
+  loadInvitations();
   legalFooter().then((f) => document.getElementById('footer').append(f));
   setInterval(() => {
-    load();
-    loadTasks();
+    load(true);
+    loadTasks(true);
+    loadInvitations(true);
     refreshBell();
   }, 30000);
 })();

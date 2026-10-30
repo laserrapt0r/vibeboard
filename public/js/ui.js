@@ -235,7 +235,7 @@ export function buildCtx() {
   if (!locked) {
     if (only === 'sticky') {
       items.push(colorBtn(f.fill, 'Farbe', STICKY_COLORS, (c) => applySel({ fill: c })));
-      items.push(selectBtn(f.fontSize, [['auto', 'Auto'], ...FONT_SIZES], 'Schriftgröße', (v) => applySel({ fontSize: v })));
+      items.push(selectBtn(f.fontSize ?? 'auto', [['auto', 'Auto'], ...FONT_SIZES], 'Schriftgröße', (v) => applySel({ fontSize: v })));
       items.push(...textStyleBtns(f));
       items.push(alignBtn(f.align || 'center'));
       items.push(valignBtn(f.valign || 'middle'));
@@ -621,7 +621,7 @@ function openComment(id, isNew) {
 }
 
 // @Erwähnung: Vorschläge beim Tippen von „@“; Pfeiltasten wählen, Enter/Tab übernimmt
-function mentionInput(input) {
+function mentionInput(input, picked = new Map()) {
   const list = h('div', { class: 'mention-list hidden', role: 'listbox' });
   let items = [], active = 0;
   const query = () => {
@@ -632,11 +632,11 @@ function mentionInput(input) {
     list.classList.add('hidden');
     items = [];
   };
+  // Namen sind nicht eindeutig: ausgewählte Personen merken und ihre IDs mitschicken
   const pick = (p) => {
     const pos = input.selectionStart;
-    // Gäste erhalten keine Anmeldenamen – dann den Anzeigenamen ohne Leerzeichen einsetzen (erkennt der Server ebenso)
-    const handle = p.username || p.displayName.replace(/\s+/g, '');
-    const before = input.value.slice(0, pos).replace(/@([\p{L}\p{N}._-]*)$/u, '@' + handle + ' ');
+    picked.set(p.id, p.displayName);
+    const before = input.value.slice(0, pos).replace(/@([\p{L}\p{N}._-]*)$/u, '@' + p.displayName + ' ');
     input.value = before + input.value.slice(pos);
     input.selectionStart = input.selectionEnd = before.length;
     close();
@@ -646,13 +646,13 @@ function mentionInput(input) {
     const q = query();
     if (q === null) return close();
     const people = await boardPeople();
-    items = people.filter((p) => (p.username || '').toLowerCase().startsWith(q) || p.displayName.toLowerCase().includes(q)).slice(0, 6);
+    items = people.filter((p) => p.displayName.toLowerCase().includes(q)).slice(0, 6);
     if (!items.length) return close();
     active = Math.min(active, items.length - 1);
     list.innerHTML = '';
     items.forEach((p, i) => list.append(h('button', {
       type: 'button', class: 'mention-item' + (i === active ? ' active' : ''), onmousedown: (e) => { e.preventDefault(); pick(p); },
-    }, h('span', { class: 'avatar xs', style: { background: p.color } }, initials(p.displayName)), h('span', {}, p.displayName), h('span', { class: 'muted small' }, (p.username ? '@' + p.username : '') + (p.guest ? ' · Gast' : '')))));
+    }, h('span', { class: 'avatar xs', style: { background: p.color } }, initials(p.displayName)), h('span', {}, p.displayName), p.guest ? h('span', { class: 'muted small' }, 'Gast') : null)));
     list.classList.remove('hidden');
   };
   input.addEventListener('input', show);
@@ -677,7 +677,29 @@ function mentionInput(input) {
     }
     return false;
   };
-  return { list, onKey };
+  // IDs der ausgewählten Personen, deren „@Name“ noch im Text steht
+  const mentions = () => [...picked].filter(([, name]) => input.value.toLowerCase().includes('@' + name.toLowerCase())).map(([id]) => id);
+  const reset = () => picked.clear();
+  return { list, onKey, mentions, reset };
+}
+
+// Kommentartext mit hervorgehobenen Erwähnungen (eigene besonders)
+function commentHtml(m) {
+  const me = myId();
+  if (!Array.isArray(m.mentions) || !m.mentions.length) {
+    // ältere Kommentare: „@Wort“ hervorheben
+    const self = String(app.user.name).replace(/\s+/g, '').toLowerCase();
+    return esc(m.text).replace(/@([\p{L}\p{N}._-]+)/gu, (all, n) => `<span class="mention${n.toLowerCase() === self ? ' me' : ''}">@${n}</span>`);
+  }
+  const names = [...m.mentions].sort((a, b) => b.name.length - a.name.length);
+  const re = new RegExp('@(' + names.map((x) => x.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'giu');
+  let out = '', last = 0;
+  for (const hit of String(m.text).matchAll(re)) {
+    const who = names.find((x) => x.name.toLowerCase() === hit[1].toLowerCase());
+    out += esc(m.text.slice(last, hit.index)) + `<span class="mention${who && who.id === me ? ' me' : ''}">${esc(hit[0])}</span>`;
+    last = hit.index + hit[0].length;
+  }
+  return out + esc(m.text.slice(last));
 }
 
 function renderCommentPop() {
@@ -695,14 +717,15 @@ function renderCommentPop() {
   const focused = old && document.activeElement === old ? [old.selectionStart, old.selectionEnd] : null;
   box.innerHTML = '';
   const input = h('textarea', { rows: 2, placeholder: thread.length ? 'Antworten … (@ erwähnt jemanden)' : 'Kommentar schreiben … (@ erwähnt jemanden)' }, draft);
-  const mention = mentionInput(input);
+  const mention = mentionInput(input, (commentPop.picked ||= new Map()));
   const send = () => {
     const t = input.value.trim();
     if (!t) return;
     const cur = getEl(commentPop.id);
     // Sofort anzeigen; der Server ergänzt Autor und Zeitpunkt und schickt den gültigen Stand
     applyRemoteOp({ op: 'upsert', el: { ...cur, thread: [...(cur.thread || []), { author: app.user.name, color: app.user.color, text: t, ts: Date.now(), pending: true }] } });
-    commentOp('add', cur.id, { x: cur.x, y: cur.y, text: t });
+    commentOp('add', cur.id, { x: cur.x, y: cur.y, text: t, mentions: mention.mentions() });
+    mention.reset();
     input.value = '';
     renderCommentPop();
   };
@@ -736,7 +759,7 @@ function renderCommentPop() {
     taskRow(el),
     h('div', { class: 'comment-list' }, thread.map((m) => h('div', { class: 'comment-msg' + (m.pending ? ' pending' : '') },
       h('div', { class: 'comment-meta' }, h('span', { class: 'avatar xs', style: { background: m.color || '#888' } }, initials(m.author)), h('b', {}, m.author), h('span', { class: 'muted' }, m.pending ? 'wird gesendet …' : relTime(m.ts))),
-      h('div', { class: 'comment-text', html: esc(m.text).replace(/@([\p{L}\p{N}._-]+)/gu, (all, n) => `<span class="mention${[app.me?.username, String(app.user.name).replace(/\s+/g, '')].some((x) => x && x.toLowerCase() === n.toLowerCase()) ? ' me' : ''}">@${n}</span>`) })))),
+      h('div', { class: 'comment-text', html: commentHtml(m) })))),
     app.canComment ? h('div', { class: 'comment-input' }, h('div', { class: 'mention-wrap' }, input, mention.list), h('button', { class: 'btn primary small', onclick: send }, 'Senden')) : null,
   );
   const list = box.querySelector('.comment-list');
@@ -1334,11 +1357,7 @@ function buildTopbar() {
     nameInput.value = app.name;
     document.title = app.name + ' – vibeboard';
   });
-  const status = h('span', { id: 'conn-status', title: 'Verbindung' });
-  app.on('status', (ok) => {
-    status.classList.toggle('ok', ok);
-    status.title = ok ? 'Verbunden – Änderungen werden live gespeichert' : 'Verbindung unterbrochen – wird wiederhergestellt …';
-  });
+  const status = saveIndicator();
   append(top,
     h('a', { href: '/', class: 'icon-btn brand', title: 'Alle Boards', html: '<svg viewBox="0 0 32 32" width="26" height="26"><rect x="2" y="2" width="28" height="28" rx="7" fill="#4262ff"/><rect x="8" y="8" width="9" height="9" rx="1.5" fill="#fff9b1"/><rect x="15" y="15" width="9" height="9" rx="1.5" fill="#ffcee0"/></svg>' }),
     nameInput, status,
@@ -1365,6 +1384,52 @@ function buildTopbar() {
     setInterval(refreshBell, 60000);
   }
   app.emit('buildCollabTools', tools);
+}
+
+// Speicherstatus: zeigt, ob alle eigenen Änderungen auf dem Server gespeichert sind.
+// „Wird gespeichert …“ erscheint erst nach kurzer Verzögerung, damit die Anzeige bei schnellen Antworten nicht flackert;
+// Bildschirmleser bekommen nur die wichtigen Wechsel (offline, Fehler, wieder gespeichert) angesagt.
+function saveIndicator() {
+  const dot = h('span', { class: 'save-dot', 'aria-hidden': 'true' });
+  const text = h('span', { class: 'save-text' });
+  const chip = h('span', { id: 'conn-status', class: 'save-chip connecting', tabindex: '0' }, dot, text);
+  const live = h('span', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+  chip.append(live);
+  let shown = null, prev = null, delay = null;
+  const clock = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const LABEL = {
+    connecting: ['Verbinde …', 'Verbindung zum Server wird aufgebaut …'],
+    offline: ['Offline', 'Keine Verbindung zum Server – wird automatisch wiederhergestellt. Änderungen werden gesendet, sobald die Verbindung steht.'],
+    saving: ['Wird gespeichert …', 'Deine Änderungen werden gerade gespeichert.'],
+    error: ['Speichern verzögert', 'Die letzten Änderungen sind noch nicht gespeichert – es wird automatisch erneut versucht. Bitte die Seite noch nicht schließen.'],
+    saved: ['Gespeichert', 'Alle Änderungen sind auf dem Server gespeichert.'],
+    live: ['Verbunden', 'Verbunden – du siehst Änderungen anderer live.'],
+  };
+  const paint = (st) => {
+    let kind = st.state;
+    if (kind === 'saved' && app.viewOnly && !app.canComment) kind = 'live';
+    shown = kind;
+    chip.className = 'save-chip ' + kind;
+    let [label, title] = LABEL[kind];
+    if (kind === 'offline' && st.pending) label = `Offline – ${st.pending} ausstehend`;
+    if (kind === 'saved' && st.at) title += ` Zuletzt gespeichert um ${clock(st.at)} Uhr.`;
+    text.textContent = label;
+    chip.title = title;
+    chip.setAttribute('aria-label', title);
+    // Ansage nur bei wichtigen Wechseln: Verbindung/Speichern gestört und wieder in Ordnung
+    const bad = kind === 'offline' || kind === 'error';
+    if (kind !== prev && (bad || ((kind === 'saved' || kind === 'live') && (prev === 'offline' || prev === 'error')))) {
+      live.textContent = bad ? title : 'Alle Änderungen gespeichert.';
+    }
+    if (kind !== 'saving') prev = kind;
+  };
+  app.on('saveState', (st) => {
+    clearTimeout(delay);
+    if (st.state === 'saving' && shown === 'saved') delay = setTimeout(() => paint(app.sync.saveState()), 400);
+    else paint(st);
+  });
+  paint({ state: 'connecting' });
+  return chip;
 }
 
 function buildBottomLeft() {

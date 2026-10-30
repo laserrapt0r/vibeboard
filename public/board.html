@@ -8,7 +8,16 @@
   <link rel="stylesheet" href="/css/app.css">
 </head>
 <body class="board-page">
-  <div id="stage">
+  <!-- Ladeanzeige: steht schon im HTML, damit sie auch bei langsamer Verbindung sofort bereitsteht.
+       Sichtbar erst nach kurzer Verzögerung (CSS), damit schnelle Ladevorgänge nicht flackern. -->
+  <div id="board-loader" class="page-loader" role="status" aria-live="polite">
+    <div class="page-loader-box">
+      <span class="spinner" aria-hidden="true"></span>
+      <p class="page-loader-text">Board wird geladen …</p>
+      <p class="page-loader-hint muted small">Das dauert länger als üblich. Vermutlich hält ein Proxy die Echtzeit-Verbindung zurück – vibeboard wechselt dann automatisch auf ein kompatibles Verfahren.</p>
+    </div>
+  </div>
+  <div id="stage" aria-busy="true">
     <svg id="svg" xmlns="http://www.w3.org/2000/svg">
       <defs id="defs"></defs>
       <g id="world">

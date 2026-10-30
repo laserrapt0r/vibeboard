@@ -205,7 +205,36 @@ export function relTime(ts) {
 /* ---------------- Server-API ---------------- */
 
 // Alle Anfragen tragen den CSRF-Header; Fehler werden als Exception mit Meldung geworfen
-export async function api(url, { method = 'GET', body, raw } = {}) {
+// Fortschrittsbalken oben: nur bei Anfragen, die länger als 400 ms dauern (kein Flackern bei schnellen Antworten)
+let busy = 0, busyTimer = null;
+function progress(delta) {
+  busy += delta;
+  if (busy > 0 && !busyTimer && !document.querySelector('.top-progress')) {
+    busyTimer = setTimeout(() => {
+      busyTimer = null;
+      if (busy > 0) document.body.append(h('div', { class: 'top-progress', role: 'progressbar', 'aria-label': 'Wird geladen' }));
+    }, 400);
+  }
+  if (busy <= 0) {
+    busy = 0;
+    clearTimeout(busyTimer);
+    busyTimer = null;
+    document.querySelector('.top-progress')?.remove();
+  }
+}
+
+// quiet: Hintergrundabfragen (regelmäßige Aktualisierung) ohne Fortschrittsbalken
+export async function api(url, opts = {}) {
+  if (opts.quiet) return request(url, opts);
+  progress(1);
+  try {
+    return await request(url, opts);
+  } finally {
+    progress(-1);
+  }
+}
+
+async function request(url, { method = 'GET', body, raw } = {}) {
   const opts = { method, headers: { 'X-Vibeboard': '1' }, credentials: 'same-origin' };
   if (body !== undefined) {
     if (typeof body === 'string') opts.body = body;

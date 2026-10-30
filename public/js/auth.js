@@ -52,7 +52,7 @@ function renderLogin() {
   if (config.needsSetup) return location.replace('/register');
   const err = errorBox();
   const extra = h('div');
-  const login = field('Benutzername oder E-Mail', { type: 'text', autocomplete: 'username', required: true, autocapitalize: 'none' });
+  const login = field('E-Mail-Adresse', { type: 'text', inputmode: 'email', autocomplete: 'username', required: true, autocapitalize: 'none', spellcheck: 'false' });
   const pw = field('Kennwort', { type: 'password', autocomplete: 'current-password', required: true });
   const form = h('form', { class: 'form', onsubmit: async (e) => {
     e.preventDefault();
@@ -108,10 +108,9 @@ function renderRegister() {
   }
   const err = errorBox();
   const min = config.passwordMinLength;
-  const user = field('Benutzername', { type: 'text', autocomplete: 'username', required: true, autocapitalize: 'none', pattern: '[A-Za-z0-9][A-Za-z0-9._\\-]{2,31}', maxlength: 32 }, '3–32 Zeichen: Buchstaben, Ziffern, . _ -');
-  const display = field('Anzeigename (optional)', { type: 'text', autocomplete: 'name', maxlength: 60 }, 'So sehen dich andere auf den Boards.');
+  const user = field('Name', { type: 'text', autocomplete: 'name', required: true, maxlength: 60 }, 'So sehen dich andere auf den Boards – zum Beispiel Vor- und Nachname.');
   const email = field('E-Mail-Adresse', { type: 'email', autocomplete: 'email', required: true },
-    config.needsSetup ? 'Für „Kennwort vergessen“ und Benachrichtigungen.' : 'Du bekommst einen Bestätigungslink. Wegwerf-Adressen sind nicht möglich.');
+    config.needsSetup ? 'Damit meldest du dich an.' : 'Damit meldest du dich an. Du bekommst einen Bestätigungslink; Wegwerf-Adressen sind nicht möglich.');
   const pw = field('Kennwort', { type: 'password', autocomplete: 'new-password', required: true, minlength: min, maxlength: 256 });
   const pw2 = field('Kennwort wiederholen', { type: 'password', autocomplete: 'new-password', required: true });
   const form = h('form', { class: 'form', onsubmit: async (e) => {
@@ -119,7 +118,7 @@ function renderRegister() {
     err.hide();
     if (pw.input.value !== pw2.input.value) return err.show('Die Kennwörter stimmen nicht überein.');
     try {
-      const r = await api('/api/auth/register', { method: 'POST', body: { username: user.input.value, displayName: display.input.value, email: email.input.value, password: pw.input.value } });
+      const r = await api('/api/auth/register', { method: 'POST', body: { name: user.input.value, email: email.input.value, password: pw.input.value } });
       if (r.status === 'verify') {
         shell('Bitte E-Mail bestätigen', `Wir haben einen Bestätigungslink an ${email.input.value} geschickt. Bitte öffne ihn, um dein Konto zu aktivieren. Der Link ist 48 Stunden gültig.`,
           h('p', { class: 'muted small' }, 'Keine E-Mail erhalten? Prüfe den Spam-Ordner. Auf der Anmeldeseite kannst du die Bestätigungsmail erneut anfordern.'),
@@ -133,7 +132,7 @@ function renderRegister() {
   } },
   config.needsSetup ? h('div', { class: 'hint' }, h('b', {}, 'Ersteinrichtung'), 'Das erste Konto erhält automatisch Administratorrechte. Richte danach in der Administration den Mailserver ein, damit sich weitere Personen registrieren können.') : null,
   config.registration === 'approval' && !config.needsSetup ? h('div', { class: 'hint' }, 'Nach der Bestätigung deiner E-Mail-Adresse schaltet ein Administrator dein Konto frei.') : null,
-  user.el, display.el, email.el, pw.el, passwordMeter(pw.input, min), pw2.el,
+  user.el, email.el, pw.el, passwordMeter(pw.input, min), pw2.el,
   config.legal && config.legal.privacy ? h('p', { class: 'muted small' }, 'Informationen zur Verarbeitung deiner Daten findest du in der ',
     h('a', { href: '/datenschutz', target: '_blank', rel: 'noopener' }, 'Datenschutzerklärung'), '.') : null,
   err.el,
@@ -162,7 +161,7 @@ async function renderVerify() {
 
 function renderForgot() {
   const err = errorBox();
-  const login = field('Benutzername oder E-Mail', { type: 'text', autocomplete: 'username', required: true, autocapitalize: 'none' });
+  const login = field('E-Mail-Adresse', { type: 'email', autocomplete: 'email', required: true, autocapitalize: 'none' });
   const form = h('form', { class: 'form', onsubmit: async (e) => {
     e.preventDefault();
     err.hide();

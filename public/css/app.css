@@ -288,8 +288,16 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
 }
 #board-name:hover:not([readonly]) { border-color: var(--border); }
 #board-name:focus { outline: 2px solid var(--accent); }
-#conn-status { width: 8px; height: 8px; border-radius: 50%; background: #f59f00; flex-shrink: 0; margin: 0 6px 0 2px; }
-#conn-status.ok { background: #2f9e44; }
+/* Speicherstatus in der Kopfzeile */
+.save-chip { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; margin: 0 6px 0 2px; padding: 2px 8px; border-radius: 999px; font-size: 12px; color: var(--muted); white-space: nowrap; cursor: default; }
+.save-chip:focus-visible { outline: 2px solid var(--accent); }
+.save-dot { width: 8px; height: 8px; border-radius: 50%; background: #2f9e44; flex-shrink: 0; }
+.save-chip.connecting .save-dot, .save-chip.saving .save-dot { background: #f59f00; animation: save-pulse 1s ease-in-out infinite alternate; }
+.save-chip.offline, .save-chip.error { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.save-chip.offline .save-dot, .save-chip.error .save-dot { background: var(--danger); }
+@keyframes save-pulse { to { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .save-chip .save-dot { animation: none !important; } }
+@media (max-width: 720px) { .save-chip:not(.offline):not(.error) .save-text { display: none; } }
 .top-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
 
 #topright {
@@ -978,3 +986,48 @@ body.dark .due-hint.overdue { background: #3b1f22; border-color: #5c2a2f; color:
   .dash-nav-hint { display: none; }
   #moderation-banner, #private-banner { top: 64px; }
 }
+
+/* Teilen: Vorschläge aus den eigenen Teams */
+.share-candidates .label { margin-top: 10px; }
+.candidate-list { display: flex; flex-direction: column; gap: 2px; max-height: 180px; overflow-y: auto; }
+.candidate { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 6px 8px; border-radius: 8px; text-align: left; color: var(--text); }
+.candidate:hover { background: var(--panel-2); }
+.candidate-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.candidate-name .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Einladungen in Teams und Hinweise oben im Dashboard */
+.dash-invites:empty, #dash-account-hint:empty { display: none; }
+.dash-invites, #dash-account-hint { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.invite-card { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 10px; }
+.invite-card.warn { border-color: var(--warn, #d97706); background: color-mix(in srgb, var(--warn, #d97706) 12%, transparent); }
+.invite-card .nav-icon { color: var(--accent); flex-shrink: 0; }
+.invite-card .invite-text { flex: 1; min-width: 0; }
+@media (max-width: 640px) { .invite-card { flex-wrap: wrap; } }
+
+/* Ladeanzeige (Board): erscheint erst nach 250 ms, der Hinweis auf Proxys nach 4 s */
+.page-loader { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; background: var(--canvas); opacity: 0; animation: loader-in .2s ease .25s forwards; pointer-events: none; transition: opacity .25s; }
+.page-loader.done { opacity: 0 !important; animation: none; }
+.page-loader-box { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 420px; padding: 24px; text-align: center; }
+.page-loader-text { margin: 0; font-weight: 600; }
+.page-loader-hint { margin: 0; opacity: 0; animation: loader-in .3s ease 4s forwards; }
+.spinner { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+.spinner.sm { width: 16px; height: 16px; border-width: 2px; }
+@keyframes loader-in { to { opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+  .page-loader, .page-loader-hint { animation-duration: .01s; }
+}
+
+/* Platzhalter beim ersten Laden der Startseite */
+.skeleton-card { pointer-events: none; }
+.skeleton-card .board-thumb, .skeleton-line { background: linear-gradient(90deg, var(--panel-2) 0%, var(--border) 50%, var(--panel-2) 100%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skeleton-line { height: 12px; margin: 12px 12px 0; border-radius: 6px; }
+.skeleton-line.short { width: 40%; margin-bottom: 14px; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+/* Fortschrittsbalken für längere Anfragen */
+.top-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 2000; overflow: hidden; background: var(--accent-soft); }
+.top-progress::after { content: ''; position: absolute; inset: 0; width: 35%; background: var(--accent); animation: progress-run 1.1s ease-in-out infinite; }
+@keyframes progress-run { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@media (prefers-reduced-motion: reduce) { .skeleton-card .board-thumb, .skeleton-line, .top-progress::after { animation: none; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

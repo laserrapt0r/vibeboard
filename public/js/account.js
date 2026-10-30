@@ -33,7 +33,7 @@ function errorBox() {
 export function openProfileDialog(me, onSaved) {
   let color = me.color;
   const err = errorBox();
-  const display = h('input', { type: 'text', value: me.displayName || '', maxlength: 60, placeholder: me.username });
+  const display = h('input', { type: 'text', value: me.displayName || '', maxlength: 60, required: true, autocomplete: 'name' });
   const email = h('input', { type: 'email', value: me.email || '', placeholder: 'name@beispiel.de', autocomplete: 'email' });
   const status = me.pendingEmail
     ? h('span', { class: 'field-hint warn' }, `Änderung auf ${me.pendingEmail} wartet auf Bestätigung – bitte den Link in der E-Mail öffnen.`)
@@ -52,8 +52,8 @@ export function openProfileDialog(me, onSaved) {
     }
   } },
   h('div', { class: 'profile-head' }, h('span', { class: 'avatar lg', style: { background: me.color } }, initials(me.displayName)),
-    h('div', {}, h('b', {}, me.username), h('div', { class: 'muted small' }, me.role === 'admin' ? 'Administrator' : 'Benutzer'))),
-  h('label', {}, 'Anzeigename', display),
+    h('div', {}, h('b', {}, me.email || 'Keine E-Mail-Adresse hinterlegt'), h('div', { class: 'muted small' }, me.role === 'admin' ? 'Administrator' : 'Benutzer'))),
+  h('label', {}, 'Name', display, h('span', { class: 'field-hint' }, 'So sehen dich andere. Er muss nicht eindeutig sein.')),
   h('label', {}, 'E-Mail-Adresse', email, status),
   h('div', {}, h('div', { class: 'label' }, 'Farbe (Cursor & Avatar)'), colorPicker(color, (c) => (color = c))),
   h('label', { class: 'check' }, notifyEmail, 'E-Mail bei Erwähnungen, Antworten und zugewiesenen Kommentaren'),
@@ -246,7 +246,7 @@ export function accountMenuItems(me, onSaved) {
     ];
   }
   return [
-    { header: me.displayName + (me.displayName !== me.username ? ` (@${me.username})` : '') },
+    { header: me.displayName + (me.email ? ` · ${me.email}` : '') },
     { label: 'Profil bearbeiten', icon: 'users', onClick: () => openProfileDialog(me, onSaved) },
     { label: 'Sicherheit & Geräte', icon: 'lock', onClick: () => openSecurityDialog(me, onSaved) },
     { label: 'Alle Boards', icon: 'home', onClick: () => (location.href = '/') },

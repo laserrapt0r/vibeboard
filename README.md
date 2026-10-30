@@ -126,9 +126,20 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   aufgedeckt wird. Der Server gibt die Inhalte vorher an niemanden sonst heraus.
 - Fliegende Reaktionen (Emojis) und Laserpointer
 - Automatisches Wiederverbinden; ungesendete Änderungen gehen nicht verloren
+- **Speicherstatus** in der Kopfzeile: „Gespeichert“ erst, wenn alle eigenen Änderungen in der Datenbank angekommen
+  sind; sonst „Wird gespeichert …“, „Offline – n ausstehend“ oder „Speichern verzögert“. Solange Änderungen offline
+  feststecken, fragt der Browser vor dem Schließen der Seite nach.
+- **Ladeanzeige:** Beim Öffnen eines Boards erscheint nach kurzer Zeit eine Ladeanzeige, nach einigen Sekunden mit
+  Hinweis auf einen möglichen Proxy. Die Startseite zeigt Platzhalter, längere Anfragen einen Fortschrittsbalken.
 - **Funktioniert auch in restriktiven Netzen:** Es werden keine WebSockets benötigt. Die Echtzeit-Übertragung läuft über
   Server-Sent Events (normales HTTP). Werden auch diese blockiert oder von einem Proxy gepuffert, wechselt vibeboard
-  automatisch auf Long-Polling.
+  nach spätestens vier Sekunden auf Long-Polling und merkt sich das im Browser sieben Tage lang – das nächste Board
+  öffnet dann ohne Wartezeit. Mit `?transport=sse` bzw. `?transport=poll` lässt sich das Verfahren erzwingen.
+
+  *Warum kann es hinter einem Forward-Proxy dauern?* Server-Sent Events sind eine HTTP-Antwort, die nie endet. Manche
+  Proxys (und Virenscanner in Proxys) halten Antworten zurück, bis sie vollständig oder ein Puffer voll ist – beim
+  Board kommt dann zunächst gar nichts an. vibeboard schickt deshalb am Anfang 2 KB Füllzeichen (genügt für viele
+  Proxys) und erkennt einen hängenden Stream an einer fehlenden Startnachricht.
 
 ### Arbeiten im Team
 - **Benachrichtigungen:** Glocke auf der Startseite und im Board für @Erwähnungen, Antworten und zugewiesene
@@ -137,7 +148,8 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   Element. Beim Öffnen zeigt ein Hinweis die Änderungen anderer seit dem letzten Besuch und markiert sie auf der Leinwand.
 - **Rolle „Kommentieren“** zwischen Ansehen und Bearbeiten – für Fachbereiche, Kunden oder Reviews.
 - **Teams und Ordner:** Boards für ein ganzes Team freigeben (bearbeiten, kommentieren oder ansehen), persönliche
-  Ordner und Ordner im Team.
+  Ordner und Ordner im Team. Neue Mitglieder werden per E-Mail-Adresse **eingeladen** und müssen die Einladung
+  annehmen (Startseite oder Glocke); Team-Verwaltende sehen offene Einladungen und können sie zurückziehen.
 - **Gastlinks:** Personen ohne Konto sehen oder kommentieren ein einzelnes Board – befristet, jederzeit sperrbar,
   standardmäßig abgeschaltet.
 - **Rundgänge aufzeichnen:** Ansicht, Mauszeiger und Laserpointer, auf Wunsch mit Ton; andere spielen den Rundgang ab
@@ -226,7 +238,8 @@ So geht es weiter:
    erreichbar ist.
 4. Empfohlen: im Profil unter „Sicherheit & Geräte“ die Zwei-Faktor-Anmeldung einrichten.
 
-Alternativ legen `ADMIN_USERNAME`, `ADMIN_PASSWORD` und `ADMIN_EMAIL` in der `.env` den Administrator beim Start an.
+Alternativ legen `ADMIN_EMAIL`, `ADMIN_PASSWORD` und optional `ADMIN_NAME` in der `.env` den Administrator beim Start
+an (angemeldet wird mit der E-Mail-Adresse).
 
 ClamAV braucht etwa 1,5 GB Arbeitsspeicher. Beim ersten Start lädt es einige Minuten lang die Virensignaturen herunter;
 bis dahin werden Uploads mit einem Hinweis abgelehnt.
@@ -269,8 +282,8 @@ Umgebungsvariablen (bei Docker in der `.env`):
 | `POSTGRES_DB`, `POSTGRES_USER` | `vibeboard` | Name und Benutzer der Datenbank im Docker-Setup |
 | `DATABASE_URL` | `postgres://vibeboard:vibeboard@localhost:5432/vibeboard` | Datenbankverbindung ohne Docker (alternativ `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPORT`) |
 | `PUBLIC_URL` | – | Öffentliche Adresse für Links in E-Mails, z. B. `https://board.example.de` |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` | – | Legt diesen Administrator an, falls es ihn noch nicht gibt |
-| `TRUST_PROXY` | `0` | `1` hinter einem Reverse-Proxy (wertet `X-Forwarded-For` und `X-Forwarded-Proto` aus) |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | – | Legt bei der Ersteinrichtung diesen Administrator an – nur, wenn es noch keinen aktiven Administrator und kein Konto mit der Adresse gibt (`ADMIN_USERNAME` wird als Name weiter akzeptiert) |
+| `TRUST_PROXY` | `0` | Reverse-Proxy davor: `1` (ein Proxy), `2` … (mehrere hintereinander) oder eine Liste der Proxy-Adressen/Netze, z. B. `127.0.0.1, 172.16.0.0/12`. Wertet dann `X-Forwarded-For` und `X-Forwarded-Proto` aus – siehe „Echte IP-Adressen“ |
 | `CLAMAV_HOST`, `CLAMAV_PORT` | `clamav`, `3310` (Docker) | clamd-Dienst für den Virenscan; leer = kein Scanner |
 | `BACKUP_DIR` | `/backups` (Docker) | Verzeichnis für Sicherungen vor Datenbank-Upgrades; leer = keine Sicherung |
 | `BACKUP_KEEP` | `10` | Anzahl aufbewahrter Sicherungen |
@@ -286,7 +299,10 @@ Alle weiteren Einstellungen nimmst du in der Administration vor.
 
 ## Konten und Anmeldung
 
-- **Registrierung** mit Benutzername, E-Mail-Adresse und Kennwort.
+- **Anmeldung mit der E-Mail-Adresse.** Der Name ist nur ein Anzeigename: Er darf Leerzeichen enthalten, muss nicht
+  eindeutig sein und lässt sich im Profil jederzeit ändern. Ältere Konten ohne E-Mail-Adresse können sich übergangsweise
+  mit ihrem Namen anmelden (nur, wenn er eindeutig ist) und werden auf der Startseite gebeten, eine Adresse zu ergänzen.
+- **Registrierung** mit Name, E-Mail-Adresse und Kennwort.
   - Das Konto wird erst aktiv, wenn der **Bestätigungslink** aus der E-Mail geöffnet wurde (48 Stunden gültig).
   - Die Bestätigungsmail lässt sich auf der Anmeldeseite erneut anfordern.
   - Nie bestätigte Konten werden nach 14 Tagen automatisch entfernt.
@@ -300,7 +316,7 @@ Alle weiteren Einstellungen nimmst du in der Administration vor.
 - **Kennwortregeln** nach NIST SP 800-63B:
   - Mindestlänge 12 Zeichen (einstellbar)
   - Abgelehnt werden die 10.000 häufigsten Kennwörter, bekannte Wörter mit angehängten Ziffern, Tastaturreihen,
-    Wiederholungen und Kennwörter, die Benutzername oder E-Mail-Adresse enthalten.
+    Wiederholungen und Kennwörter, die Name oder E-Mail-Adresse enthalten.
   - Optional zusätzlich der Abgleich mit „Have I Been Pwned“ (k-Anonymität).
   - Eine Stärkeanzeige hilft bei der Wahl. Erzwungene Sonderzeichen gibt es bewusst nicht.
 - **Zwei-Faktor-Anmeldung (TOTP):**
@@ -320,7 +336,9 @@ Alle weiteren Einstellungen nimmst du in der Administration vor.
 ## Rechte auf Boards
 
 - Boards gehören der Person, die sie angelegt hat. Die Besitzerin oder der Besitzer kann
-  - Personen als *Bearbeiter*, *Kommentierende* oder *Betrachter* einladen, optional mit Einladungs-Mail,
+  - Personen als *Bearbeiter*, *Kommentierende* oder *Betrachter* einladen, optional mit Einladungs-Mail. Eingeladen
+    wird über die **genaue E-Mail-Adresse** oder aus der Liste der Personen, mit denen man in einem Team ist. Eine Suche
+    über alle Konten gibt es bewusst nicht – niemand kann so die Nutzenden der Installation abfragen.
   - den Link für alle angemeldeten Nutzer zum *Ansehen*, *Kommentieren* oder *Bearbeiten* freigeben,
   - das Board einem **Team** zuordnen – alle Mitglieder erhalten dann die gewählte Rolle,
   - **Gastlinks** für Personen ohne Konto erstellen (nur, wenn ein Admin den Gastzugang eingeschaltet hat),
@@ -508,6 +526,30 @@ Unter `/admin`, nur für Administratoren:
 - Ohne gesetztes Datenbank-Kennwort startet docker-compose nicht.
 - Für den Betrieb im Internet gehört ein Reverse-Proxy mit HTTPS davor (z. B. Caddy, nginx, Traefik). Setze dann
   `TRUST_PROXY=1` und `PUBLIC_URL`.
+
+### Echte IP-Adressen im Protokoll
+
+Steht im Protokoll bei allen Zugriffen dieselbe private Adresse wie `172.20.0.1`, sieht vibeboard nicht die Adresse
+der Nutzenden, sondern die des Docker-Netzes (Gateway). Das passiert, wenn
+
+- ein **Reverse-Proxy auf dem Host** (nginx, Caddy, Apache) an `localhost:3000` weiterleitet – Docker reicht die
+  Verbindung dann über seinen Hilfsprozess `docker-proxy` weiter, oder
+- Nutzende per **IPv6** oder vom Server selbst zugreifen – auch das läuft über `docker-proxy`.
+
+Abhilfe:
+
+1. **Mit Reverse-Proxy (empfohlen):** Der Proxy muss die Kopfzeile `X-Forwarded-For` setzen (Caddy und Traefik tun das
+   von selbst, bei nginx `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` und
+   `proxy_set_header X-Forwarded-Proto $scheme;`). In der `.env` dann `TRUST_PROXY=1`.
+   Wichtig: Der Port der Anwendung darf dann **nur für den Proxy** erreichbar sein, sonst könnten Aufrufer die
+   Kopfzeile selbst setzen und eine falsche Adresse vortäuschen. Dazu in der `.env` `PORT=127.0.0.1:3000` setzen –
+   docker-compose veröffentlicht den Port dann nur auf dem Host selbst.
+2. **Ohne Reverse-Proxy:** Für IPv4-Zugriffe von außen sieht vibeboard die echte Adresse, wenn Docker den
+   `docker-proxy` nicht benutzt: in `/etc/docker/daemon.json` `{ "userland-proxy": false }` eintragen und Docker neu
+   starten. Für IPv6 muss das Docker-Netz IPv6 unterstützen, sonst bleibt nur der Reverse-Proxy.
+
+Die Administration (Übersicht) zeigt einen Hinweis, wenn die eigene Anfrage mit einer Docker-Gateway-Adresse oder mit
+`X-Forwarded-For`, aber ohne `TRUST_PROXY` ankommt.
 
 ## Datenhaltung und Datenschutz
 
