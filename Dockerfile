@@ -7,7 +7,8 @@ RUN apk add --no-cache postgresql17-client
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+# Optionale Pakete (z. B. die Canvas-Anbindung von pdf.js für Node) werden im Server nicht gebraucht
+RUN npm ci --omit=dev --omit=optional && npm cache clean --force
 
 COPY server.js ./
 COPY lib ./lib

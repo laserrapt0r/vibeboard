@@ -91,5 +91,6 @@
 - **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Bereich „Zusammenarbeit“: E-Mails bei Erwähnungen/Antworten/Zuweisungen (Standard: an), Gastzugang (Standard: aus) mit längster Gültigkeit (Standard 30 Tage), wer Teams anlegen darf (Standard: alle), Aufzeichnungen erlauben (Standard: an) mit Höchstdauer (Standard 10 Minuten, höchstens 30).
+  - Geändert in 4.1.0: zusätzlich Dateianhänge erlauben (Standard: an) mit größter Datei (Standard 20 MB, höchstens 100), Aufbewahrung im Papierkorb (Standard 30 Tage), Webhooks erlauben (Standard: aus) und interne Webhook-Ziele zulassen (Standard: aus).
   - Abschalten des Gastzugangs erfordert eine Bestätigung und beendet sofort alle Gastzugänge.
   - Die Übersicht zeigt die Zahl der Teams und aktiven Gastzugänge; Gäste zählen nicht als Benutzer.

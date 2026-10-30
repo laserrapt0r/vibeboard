@@ -177,3 +177,12 @@
   - Sequenzdiagramme (`sequenceDiagram`): Teilnehmer und Akteure (mit `as`-Namen), synchrone/asynchrone Nachrichten, Antworten, Selbstnachrichten, Notizen, `autonumber`, Blöcke `alt/else`, `loop`, `opt`, `par`, `critical`, `break`.
   - Ergebnis sind normale, frei bearbeitbare Formen, Verbindungen und Texte; sie werden ohne Überlappung mit bestehenden Inhalten eingefügt und ausgewählt.
   - Eigene Umsetzung ohne fremde Bibliothek.
+
+### REQ-ELEM-017 Dateianhänge
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Hochladen über das Werkzeug „Bild oder Datei hochladen“, das Menü „Exportieren & Importieren“ oder per Ablegen auf dem Board. Erlaubt: PDF, Word, Excel, PowerPoint (auch ältere Formate), OpenDocument, Text, Markdown, CSV, JSON.
+  - Der Server erkennt den Typ am Inhalt (passend zur Endung), prüft Größe (Standard 20 MB, einstellbar) und Virenscan; höchstens 200 Dateien je Board. Hochladen dürfen Bearbeitende.
+  - Das Element zeigt Dateityp, Name und Größe, bei PDFs die erste Seite als Vorschau.
+  - Doppelklick öffnet den Betrachter – auch für Betrachter und Gäste: PDF-Seiten (bis 50), Text direkt, Office-Dateien mit Hinweis; jederzeit Download.
+  - Kopien eines Boards und Versionskopien übernehmen die Dateien. Dateien ohne Verweis aus Elementen oder Versionen werden nach sieben Tagen entfernt; mit dem Board werden sie gelöscht.

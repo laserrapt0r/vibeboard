@@ -116,6 +116,7 @@ Diese Pakete sind nicht im Repository enthalten. Sie werden bei der Installation
 | split2, pg-int8 | ISC |
 | [nodemailer](https://nodemailer.com) | MIT-0 |
 | [uqr](https://github.com/unjs/uqr) (QR-Codes für die Zwei-Faktor-Einrichtung) | MIT |
+| [pdfjs-dist](https://mozilla.github.io/pdf.js/) (Mozilla pdf.js – Vorschau von PDF-Anhängen im Browser; der Server liefert die Dateien `build/pdf.min.mjs` und `build/pdf.worker.min.mjs` unverändert unter `/vendor/pdfjs/` aus, der Lizenztext liegt im Paket) | Apache-2.0 |
 
 Die Docker-Konfiguration verwendet die öffentlichen Images `node` (Node.js, MIT), `postgres` (PostgreSQL License),
 `clamav/clamav` (ClamAV, GPL-2.0) und optional `axllent/mailpit` (MIT). Das Anwendungs-Image enthält zusätzlich die

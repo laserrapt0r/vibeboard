@@ -46,3 +46,45 @@
   - „Für Teilnehmende sperren“ an ausgewählten Elementen (z. B. Hintergründe einer Vorlage): nur Moderierende können diese Elemente ändern, verschieben oder löschen, auch nach Ende der Moderation; danach nur noch der Besitzer. Nur Moderierende können die Sperre setzen oder aufheben.
   - Die Sperren gelten auch für Umbenennen über die Übersicht und für das Wiederherstellen einer Version: Während der Bearbeitungssperre lehnt der Server beides für Nicht-Moderierende ab; enthält das Board für Teilnehmende gesperrte Elemente, dürfen nur Moderierende bzw. der Besitzer eine Version wiederherstellen. Gesperrte Kommentare können nur Moderierende ändern oder löschen.
   - Ein Banner zeigt die laufende Moderation, die Moderierenden und gesperrte Bereiche; abgelehnte Aktionen werden erklärt.
+
+### REQ-MOD-006 Retro-Ablauf
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Eine Leiste führt alle durch die Schritte einer Retrospektive und stellt je Schritt die passenden Werkzeuge ein.
+- **Akzeptanzkriterien:**
+  - Schritte (wählbar): Check-in, Rückblick, Sammeln, Aufdecken, Gruppieren, Abstimmen, Besprechen, Maßnahmen, Abschluss. Optionen: anonym sammeln, Minuten fürs Sammeln und Gruppieren, Stimmen pro Person, Minuten je Thema.
+  - Beim Wechsel richtet der Browser der steuernden Person ein: Check-in → Stimmungsumfrage; Sammeln → privater Modus (anonym) und Timer; Aufdecken → privater Modus aus; Gruppieren → Timer; Abstimmen → Abstimmung über Themengruppen (ohne Themen über Beiträge); Besprechen → Abstimmung beenden, Besprechung in der Reihenfolge der Stimmen; Maßnahmen/Rückblick → Maßnahmen-Panel bei allen; Abschluss → ROTI-Umfrage und Zusammenfassung.
+  - Steuern darf, wer moderiert – ohne laufende Moderation, wer bearbeiten darf. Der Server prüft das; Teilnehmende sehen die Leiste ohne Steuerknöpfe.
+  - Die Leiste zeigt Schritt, Fortschritt und einen Hinweis, was zu tun ist.
+
+### REQ-MOD-007 Themengruppen und Besprechungsmodus
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Ausgewählte Beiträge lassen sich zu einer Themengruppe zusammenfassen (Kontextleiste „Themengruppe bilden“): eine abgerundete Fläche mit Titel, die ihren Inhalt beim Verschieben mitnimmt. Themengruppen sind keine Folien.
+  - Abstimmung über Themen: Ein Klick irgendwo in die Gruppe zählt für das Thema; der Server nimmt Stimmen nur für Themengruppen an.
+  - Besprechung: Panel mit allen Themen (nach Stimmen), aktuelles Thema wird bei allen hervorgehoben und angezeigt, Timer je Thema, „Erledigt · nächstes“, zurück, beenden.
+  - Lean-Coffee-Abfrage „Weiter diskutieren?“ mit 👍 ✋ 👎 für alle (auch Betrachter), Ergebnis für alle sichtbar.
+
+### REQ-MOD-008 Schnellumfragen
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Arten: Stimmungsbarometer (1–5), Fist of Five (0–5), ROTI (1–5), Team-Health-Check (Ampel je Thema, Themen anpassbar), eigene Frage mit 2–8 Antworten.
+  - Alle stimmen ab (auch Betrachter) und können die Stimme ändern oder zurücknehmen. Bis zum Auflösen sieht jede Person nur die Zahl der Teilnehmenden und die eigene Stimme.
+  - Nach dem Auflösen gibt es nur das Ergebnis (Anzahl je Wert, Mittelwert); die Einzelstimmen verwirft der Server. Das Ergebnis wird je Board gespeichert.
+  - Der Verlauf zeigt die Ergebnisse dieses Boards und der vorherigen Retros einer Serie (auf die die Person Zugriff hat).
+
+### REQ-MOD-009 Zufallsauswahl und Redereihenfolge
+- **Seit:** 4.1.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Glücksrad (eine Person) und Redereihenfolge (alle gemischt) aus einer Namensliste (vorbelegt mit den Anwesenden). Der Zufall entsteht auf dem Server, alle sehen dasselbe Ergebnis.
+  - Bei „Bewegung reduzieren“ entfällt die Animation.
+
+### REQ-MOD-010 Verborgene Bereiche
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Vorbereitete Inhalte (z. B. Aufgaben im Workshop) bleiben verdeckt, bis die Moderation sie aufdeckt.
+- **Akzeptanzkriterien:**
+  - Moderierende (Besitzer, bei aktiver Moderation die Moderierenden) schalten einen Frame per Kontextleiste auf „verborgen“.
+  - Teilnehmende sehen nur eine Abdeckung mit Hinweis. Inhalte, deren Mittelpunkt im Bereich liegt (und Verbindungen dorthin), liefert der Server nicht aus – weder im Echtzeitkanal noch über Kopien, Versionskopien, Aufgabenlisten oder Vorschaubilder; im Aktivitätsverlauf erscheinen sie ohne Text.
+  - Teilnehmende können den Bereich nicht verändern und nichts hineinlegen. Beim Aufdecken, Verschieben oder Löschen des Bereichs erhalten sie die passenden Änderungen sofort.
+  - Ändert sich, wer moderiert, laden Teilnehmende den Stand neu.
+  - Solange ein Board verborgene Bereiche hat, startet nur der Besitzer die Moderation (sonst sähe, wer sie startet, die Inhalte), und Versionen stellen nur Moderierende wieder her.
+  - Kommentare in verborgenen Bereichen erreichen nur Moderierende, lösen keine Benachrichtigungen aus und erscheinen im Aktivitätsverlauf ohne Text. Schätzrunden und Besprechungen geben keine verborgenen Titel preis.

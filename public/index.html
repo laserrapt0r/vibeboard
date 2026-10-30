@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>vibeboard – Boards</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#4262ff">
   <link rel="stylesheet" href="/css/app.css">
 </head>
 <body class="dash-page">
@@ -44,6 +47,13 @@
         <div id="dash-recent" class="dash-boards"></div>
       </section>
       <!-- Meine Aufgaben -->
+      <section id="dash-trash-view" class="dash-view hidden">
+        <div class="dash-section-head">
+          <h2>Papierkorb</h2>
+        </div>
+        <p id="dash-trash-info" class="muted"></p>
+        <div id="dash-trash" class="dash-boards"></div>
+      </section>
       <section id="dash-tasks-view" class="dash-view hidden">
         <div class="dash-section-head">
           <h2>Meine Aufgaben</h2>
@@ -73,5 +83,6 @@
   </main>
   <footer class="site-footer" id="footer"></footer>
   <script type="module" src="/js/dashboard.js"></script>
+  <script type="module" src="/js/pwa.js"></script>
 </body>
 </html>

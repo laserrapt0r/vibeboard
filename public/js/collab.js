@@ -1,7 +1,7 @@
 // Zusammenarbeit: Teilnehmer, Cursor, Folgen, Timer, Abstimmung, Reaktionen, Laser, Präsentation
 import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util.js';
 import {
-  app, $, stage, getEl, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
+  app, $, stage, getEl, isAnonymous, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
   loadElements, applyRemoteOp, applyRemoteTableOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
 } from './core.js';
 import { throttle } from './util.js';
@@ -164,7 +164,8 @@ app.on('key', (e) => {
 document.addEventListener('visibilitychange', () => app.sync && app.sync.signal('presence', { away: document.hidden }));
 
 // Anzeige „… schreibt“ an Elementen, die gerade bearbeitet werden
-app.on('editing', (on) => app.sync && app.sync.signal('editing', on && app.editing ? app.editing.id : null));
+// Anonyme Beiträge: keine Anzeige „… schreibt“, sonst wäre die Autorschaft erkennbar
+app.on('editing', (on) => app.sync && app.sync.signal('editing', on && app.editing && !isAnonymous(getEl(app.editing.id)) ? app.editing.id : null));
 
 function removeCursor(id) {
   cursorEls.get(id)?.remove();
@@ -274,7 +275,7 @@ function timerRemaining(t) {
 // Nur anwenden, wenn die Änderung auch gesendet wird (sonst liefe z. B. ein Timer nur lokal)
 const mayChangeSession = () => !app.viewOnly || (toast('Das Bearbeiten ist gerade gesperrt'), false);
 
-function setTimer(t) {
+export function setTimer(t) {
   if (!mayChangeSession()) return;
   app.session.timer = t;
   app.sync.op({ op: 'timer', timer: t });
@@ -373,7 +374,7 @@ function myVotesUsed(v) {
   return Object.values(v.votes || {}).reduce((s, m) => s + (m[app.user.id] || 0), 0);
 }
 
-function setVoting(v) {
+export function setVoting(v) {
   if (!mayChangeSession()) return;
   app.session.voting = v;
   app.sync.op({ op: 'voting', voting: v });
@@ -665,6 +666,7 @@ export function initCollab() {
     }
     if (app.editing && !getEl(app.editing.id)) abortEdit();
     app.name = msg.board.name;
+    app.prevRetroId = msg.board.prevRetroId || null;
     app.session = msg.board.session || { timer: null, voting: null };
     app.peers.clear();
     cursorEls.forEach((c) => c.remove());
@@ -706,7 +708,7 @@ export function initCollab() {
           toast(`${op.voting.by || 'Jemand'} hat eine Abstimmung gestartet`);
         }
         renderVoting();
-      } else if (op.op === 'privateMode' || op.op === 'estimation' || op.op === 'moderation') {
+      } else if (['privateMode', 'estimation', 'moderation', 'retro', 'discussion', 'poll', 'picker'].includes(op.op)) {
         app.session[op.op] = op[op.op];
         app.emit('session', op.op);
       }
@@ -721,8 +723,8 @@ export function initCollab() {
     app.emit('peers');
     // Neu Hinzukommende kennen den eigenen Zustand noch nicht
     if (document.hidden) s.signal('presence', { away: true });
-    if (app.editing) s.signal('editing', app.editing.id);
-    if (app.sel.size) s.signal('sel', [...app.sel].slice(0, 200));
+    if (app.editing && !isAnonymous(getEl(app.editing.id))) s.signal('editing', app.editing.id);
+    if (app.sel.size) s.signal('sel', [...app.sel].filter((id) => !isAnonymous(getEl(id))).slice(0, 200));
     toast(`${msg.user.name} ist dem Board beigetreten`);
   });
   s.on('leave', (msg) => {
@@ -815,10 +817,17 @@ export function initCollab() {
   s.on('marks', (list) => {
     for (const m of list) {
       const el = getEl(m.id);
-      if (el) applyRemoteOp({ op: 'upsert', el: { ...el, priv: m.priv, privName: m.privName } });
+      if (!el) continue;
+      const next = { ...el, priv: m.priv, privName: m.privName };
+      if (m.anon) {
+        next.anon = true;
+        delete next.author;
+      }
+      applyRemoteOp({ op: 'upsert', el: next });
     }
   });
   s.on('saveState', (st) => app.emit('saveState', st));
+  s.on('actionsChanged', () => app.emit('actionsChanged'));
   s.on('status', async (ok) => {
     app.emit('status', ok);
     // Verbindung verloren: prüfen, ob Session oder Zugriff weggefallen sind

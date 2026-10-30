@@ -39,3 +39,18 @@
   - Die zuständige Person wird benachrichtigt ([REQ-COLLAB-010](04-zusammenarbeit.md)).
   - Erledigt ist die Aufgabe, wenn der Kommentar erledigt ist.
   - Zugewiesene Kommentare tragen am Kommentar-Symbol einen orangefarbenen Punkt, erscheinen im Aufgaben-Panel des Boards und unter „Meine Aufgaben“ auf der Startseite (mit Board, Fälligkeit und Person, die zugewiesen hat). Ein Klick öffnet den Kommentar.
+
+### REQ-PROJ-005 Maßnahmen und Retro-Serien
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Aus einer Sticky Note, einem Text oder einer Themengruppe wird per „Als Maßnahme festhalten“ eine Karte (grün, Schlagwort „Maßnahme“) mit Titel, verantwortlicher Person (Auswahl aus dem Board oder freier Name) und Fälligkeit.
+  - Karten speichern die verantwortliche Person auch als ID; „Meine Aufgaben“ zeigt sie dann genau dieser Person (sonst wie bisher per Name). Der Karten-Dialog bietet dieselbe Auswahl.
+  - Panel „Maßnahmen“: alle Maßnahmen des Boards mit Abhaken, Bearbeiten und Sprung zur Karte.
+  - „Nächste Retro anlegen“ erzeugt ein neues Board mit der Struktur dieses Boards (ohne Beiträge, Karten, Kommentare, Dateien, Themengruppen) und verknüpft es als Serie. Besitzer übernehmen dabei Team, Freigabe und Mitglieder.
+  - Im Rückblick zeigt das Panel die Maßnahmen der vorherigen Retro: abhaken (mit Bearbeitungsrecht dort) oder als offene Maßnahme übernehmen.
+
+### REQ-PROJ-006 Retro-Zusammenfassung
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Zusammenfassung aus Stimmung (Umfragen), Themen mit Stimmen und Beiträgen, Maßnahmen und den Maßnahmen der letzten Retro – als Markdown zum Kopieren, Herunterladen oder Drucken (PDF).
+  - Moderierende verschicken sie per E-Mail an die Beteiligten des Boards (höchstens 5-mal je Stunde und Board) oder an den Team-Webhook (REQ-COLLAB-017).

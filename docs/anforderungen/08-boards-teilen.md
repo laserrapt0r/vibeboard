@@ -81,3 +81,11 @@
   - Team-Verwaltende sehen offene Einladungen (Name, E-Mail-Adresse, Rolle, Zeitpunkt) und können sie zurückziehen; die Benachrichtigung der eingeladenen Person verschwindet dann. Doppelte Einladungen und Einladungen bereits vorhandener Mitglieder werden abgelehnt.
   - Mitglieder sehen die E-Mail-Adressen anderer Mitglieder nicht, Team-Verwaltende schon (zur Unterscheidung gleichnamiger Personen).
   - Wird ein Team oder ein Konto gelöscht, verschwinden auch die Einladungen.
+
+### REQ-BOARD-009 Papierkorb
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Löschen legt ein Board in den Papierkorb: Es ist sofort für alle unzugänglich (offene Verbindungen werden getrennt) und erscheint in keiner Liste mehr.
+  - Der Besitzer sieht seine gelöschten Boards unter „Papierkorb“ mit Restlaufzeit, kann sie wiederherstellen (auch per „Rückgängig“ direkt nach dem Löschen) oder endgültig löschen.
+  - Nach Ablauf der Frist (Standard 30 Tage, einstellbar 1–365) werden sie automatisch endgültig gelöscht.
+  - Löschen, Wiederherstellen und endgültiges Löschen erscheinen im Sicherheitsprotokoll.

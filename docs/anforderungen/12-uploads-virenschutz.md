@@ -8,6 +8,7 @@
     - Bilder, die per Upload, Drag & Drop oder Zwischenablage in ein Board gelangen
     - Bilder in importierten Boards (JSON) und beim einmaligen Import alter Daten
     - Vorschaubilder
+    - Geändert in 4.1.0: Dateianhänge (PDF, Office, Text), deren PDF-Vorschauen und Bilder in eigenen Vorlagen
   - Die Prüfung erfolgt mit ClamAV über das clamd-Protokoll (INSTREAM).
   - Infizierte Dateien werden abgelehnt:
     - Das Element wird nicht gespeichert und nicht an andere verteilt.

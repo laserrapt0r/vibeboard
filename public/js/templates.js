@@ -129,6 +129,147 @@ export const TEMPLATES = [
     },
   },
   {
+    id: 'retro-starfish', name: 'Retro: Seestern', category: 'Meetings & Retros', icon: '⭐',
+    description: 'Mehr, weniger, beibehalten, beginnen, aufhören – feiner als Start · Stop · Continue.',
+    build: () => {
+      const b = new B();
+      b.frame(0, 0, 1800, 1300, 'Retrospektive: Seestern');
+      b.heading(60, 40, 'Retrospektive: Seestern', 'Was sollten wir mehr, weniger, weiter, neu oder nicht mehr tun?', 1100);
+      b.emoji(810, 590, '⭐', 180);
+      const arms = [
+        [660, 190, 'Weiter so', '👍', C.blue, LIGHT.blue, 'Was läuft gut?'],
+        [1180, 470, 'Mehr davon', '⬆️', C.green, LIGHT.green, 'Was sollten wir verstärken?'],
+        [980, 900, 'Weniger davon', '⬇️', C.orange, LIGHT.orange, 'Was sollten wir reduzieren?'],
+        [340, 900, 'Aufhören', '🛑', C.red, LIGHT.red, 'Was sollten wir lassen?'],
+        [140, 470, 'Anfangen', '🚀', C.violet, LIGHT.violet, 'Was sollten wir ausprobieren?'],
+      ];
+      for (const [x, y, t, e, col, light, hint] of arms) {
+        b.zone(x, y, 480, 340, light);
+        b.shape(x, y, 480, 64, { shape: 'roundrect', fill: col, stroke: 'none', strokeWidth: 0, text: `${e}  ${t}`, fontSize: 20, bold: true, locked: true });
+        b.text(x + 16, y + 74, 448, hint, 14, { color: '#6b6b6b' });
+        b.sticky(x + 20, y + 140, '', col);
+      }
+      return b.els;
+    },
+  },
+  {
+    id: 'retro-daki', name: 'Retro: DAKI', category: 'Meetings & Retros', icon: '🧹',
+    description: 'Drop · Add · Keep · Improve – aufräumen und verbessern.',
+    build: () => columnsTemplate('Retrospektive: DAKI', 'Drop · Add · Keep · Improve', [
+      { title: 'Drop', emoji: '🗑️', color: C.red, light: LIGHT.red, hint: 'Was lassen wir weg?', sticky: C.red },
+      { title: 'Add', emoji: '➕', color: C.green, light: LIGHT.green, hint: 'Was nehmen wir neu auf?', sticky: C.green },
+      { title: 'Keep', emoji: '✅', color: C.blue, light: LIGHT.blue, hint: 'Was behalten wir bei?', sticky: C.blue },
+      { title: 'Improve', emoji: '🔧', color: C.orange, light: LIGHT.orange, hint: 'Was machen wir besser?', sticky: C.orange },
+    ], { colW: 340 }),
+  },
+  {
+    id: 'retro-timeline', name: 'Retro: Zeitstrahl', category: 'Meetings & Retros', icon: '📈',
+    description: 'Hochs und Tiefs des Sprints entlang der Zeit – gut nach längeren Phasen.',
+    build: () => {
+      const b = new B();
+      b.frame(0, 0, 2000, 1100, 'Retrospektive: Zeitstrahl');
+      b.heading(60, 40, 'Retrospektive: Zeitstrahl', 'Was ist wann passiert? Hochs oberhalb, Tiefs unterhalb der Linie.', 1300);
+      b.zone(60, 190, 1880, 380, LIGHT.green, { text: '😄 Hochs', fontSize: 20, bold: true, align: 'left', valign: 'top', textColor: '#2f9e44' });
+      b.zone(60, 610, 1880, 380, LIGHT.red, { text: '😞 Tiefs', fontSize: 20, bold: true, align: 'left', valign: 'bottom', textColor: '#e03131' });
+      b.line(60, 590, 1940, 590, { arrowEnd: true, strokeWidth: 4 });
+      ['Woche 1', 'Woche 2', 'Woche 3', 'Woche 4'].forEach((w, i) => {
+        const x = 300 + i * 420;
+        b.line(x, 575, x, 605, { strokeWidth: 3 });
+        b.text(x - 60, 545, 120, w, 14, { bold: true, align: 'center', color: '#495057' });
+      });
+      b.sticky(330, 300, '', C.green);
+      b.sticky(750, 680, '', C.red);
+      return b.els;
+    },
+  },
+  {
+    id: 'retro-balloon', name: 'Retro: Heißluftballon', category: 'Meetings & Retros', icon: '🎈',
+    description: 'Was trägt uns nach oben, was zieht uns runter, welches Wetter droht?',
+    build: () => {
+      const b = new B();
+      b.frame(0, 0, 1800, 1100, 'Retrospektive: Heißluftballon');
+      b.heading(60, 40, 'Retrospektive: Heißluftballon', 'Heiße Luft · Sandsäcke · Gewitter · Sonnenschein', 1100);
+      b.zone(0, 160, 1800, 940, '#eef6ff');
+      b.emoji(770, 300, '🎈', 260);
+      b.emoji(130, 230, '☀️', 120);
+      b.emoji(1490, 220, '⛈️', 130);
+      const areas = [
+        [60, 380, 520, 300, '🔥 Heiße Luft – Was bringt uns voran?', '#e8590c'],
+        [1220, 380, 520, 300, '⛈️ Gewitter – Welche Risiken sehen wir?', '#495057'],
+        [60, 740, 680, 320, '🪨 Sandsäcke – Was hält uns zurück?', '#6b7f99'],
+        [1060, 740, 680, 320, '☀️ Sonnenschein – Was gibt uns Rückenwind?', '#f08c00'],
+      ];
+      for (const [x, y, w, hh, t, col] of areas) {
+        b.shape(x, y, w, hh, { shape: 'roundrect', fill: 'transparent', stroke: col, strokeWidth: 2, dash: true, locked: true, text: t, fontSize: 20, bold: true, align: 'left', valign: 'top' });
+        b.sticky(x + 30, y + 70, '', C.yellow);
+      }
+      return b.els;
+    },
+  },
+  {
+    id: 'retro-speedcar', name: 'Retro: Speedcar', category: 'Meetings & Retros', icon: '🏎️',
+    description: 'Motor, Fallschirm, Abgrund und Brücke – was treibt, was bremst, was droht?',
+    build: () => {
+      const b = new B();
+      b.frame(0, 0, 1800, 1100, 'Retrospektive: Speedcar');
+      b.heading(60, 40, 'Retrospektive: Speedcar', 'Motor · Fallschirm · Abgrund · Brücke', 1100);
+      b.shape(0, 640, 1150, 460, { fill: '#d8c3a5', stroke: 'none', strokeWidth: 0, locked: true });
+      b.shape(1450, 640, 350, 460, { fill: '#d8c3a5', stroke: 'none', strokeWidth: 0, locked: true });
+      b.shape(1100, 600, 400, 40, { fill: '#8d6e63', stroke: 'none', strokeWidth: 0, locked: true, text: 'Brücke', fontSize: 16, bold: true, textColor: '#fff' });
+      b.emoji(620, 470, '🏎️', 180);
+      b.emoji(260, 450, '🪂', 140);
+      b.emoji(1240, 700, '🕳️', 120);
+      const areas = [
+        [700, 190, 520, 250, '⚙️ Motor – Was treibt uns an?', '#2f9e44'],
+        [60, 190, 560, 250, '🪂 Fallschirm – Was bremst uns?', '#1971c2'],
+        [1240, 190, 500, 250, '🕳️ Abgrund – Welche Gefahren liegen vor uns?', '#e03131'],
+        [1160, 840, 600, 240, '🌉 Brücke – Wie kommen wir sicher hinüber?', '#8d6e63'],
+      ];
+      for (const [x, y, w, hh, t, col] of areas) {
+        b.shape(x, y, w, hh, { shape: 'roundrect', fill: '#ffffff', stroke: col, strokeWidth: 2, dash: true, locked: true, text: t, fontSize: 18, bold: true, align: 'left', valign: 'top' });
+        b.sticky(x + 24, y + 60, '', C.yellow, 150, 150);
+      }
+      return b.els;
+    },
+  },
+  {
+    id: 'lean-coffee', name: 'Lean Coffee', category: 'Meetings & Retros', icon: '☕',
+    description: 'Themen sammeln, abstimmen, im Zeitfenster besprechen – mit Daumen-Abfrage zum Weitermachen.',
+    build: () => {
+      const els = columnsTemplate('Lean Coffee', 'Themen sammeln · abstimmen · im Zeitfenster besprechen', [
+        { title: 'Zu besprechen', emoji: '📝', color: C.blue, light: LIGHT.blue, hint: 'Ein Thema pro Sticky Note. Danach: Abstimmung mit 2–3 Stimmen pro Person.', sticky: C.yellow },
+        { title: 'Im Gespräch', emoji: '💬', color: C.orange, light: LIGHT.orange, hint: 'Das Thema mit den meisten Stimmen. Timer z. B. 5 Minuten, danach Daumen: weiter oder nächstes Thema?' },
+        { title: 'Besprochen', emoji: '✅', color: C.green, light: LIGHT.green, hint: 'Erkenntnisse und Maßnahmen notieren.' },
+      ], { colH: 700 });
+      return els;
+    },
+  },
+  {
+    id: 'team-radar', name: 'Team-Radar', category: 'Meetings & Retros', icon: '🎯',
+    description: 'Jede Person setzt je Thema einen Punkt von 1 (innen) bis 5 (außen) – Stärken und Baustellen auf einen Blick.',
+    build: () => {
+      const b = new B();
+      b.frame(0, 0, 1700, 1300, 'Team-Radar');
+      b.heading(60, 40, 'Team-Radar', 'Pro Thema einen Punkt setzen: innen = 1 (schwach), außen = 5 (stark)', 1100);
+      const cx = 850, cy = 720;
+      for (let r = 5; r >= 1; r--) {
+        const rad = r * 90;
+        b.shape(cx - rad, cy - rad, rad * 2, rad * 2, { shape: 'ellipse', fill: r % 2 ? '#f8f9fa' : '#ffffff', stroke: '#ced4da', strokeWidth: 1, locked: true });
+        b.text(cx + 4, cy - rad + 2, 30, String(r), 12, { color: '#868e96' });
+      }
+      const topics = ['Zusammenarbeit', 'Kommunikation', 'Qualität', 'Tempo', 'Spaß', 'Lernen'];
+      topics.forEach((t, i) => {
+        const a = (Math.PI * 2 * i) / topics.length - Math.PI / 2;
+        const ex = cx + Math.cos(a) * 460, ey = cy + Math.sin(a) * 460;
+        b.line(cx, cy, ex, ey, { stroke: '#adb5bd', strokeWidth: 1.5, locked: true });
+        b.text(cx + Math.cos(a) * 520 - 90, cy + Math.sin(a) * 520 - 14, 180, t, 18, { bold: true, align: 'center' });
+      });
+      b.emoji(60, 1150, '🔴', 40);
+      b.text(110, 1156, 500, '← Punkte (Sticker) auf die Achsen ziehen', 16, { color: '#6b6b6b' });
+      return b.els;
+    },
+  },
+  {
     id: 'standup', name: 'Daily Stand-up', category: 'Meetings & Retros', icon: '☕',
     description: 'Gestern · Heute · Hindernisse – kurz und knackig.',
     build: () => columnsTemplate('Daily Stand-up', new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }), [

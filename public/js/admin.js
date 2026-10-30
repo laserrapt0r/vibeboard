@@ -529,6 +529,11 @@ async function collab() {
   const teamCreation = h('select', {}, h('option', { value: 'all', selected: c.teamCreation === 'all' }, 'alle angemeldeten Benutzer'), h('option', { value: 'admins', selected: c.teamCreation === 'admins' }, 'nur Administratoren'));
   const recordings = h('input', { type: 'checkbox', checked: c.recordings });
   const recordingMax = h('input', { type: 'number', min: 1, max: 30, value: c.recordingMaxMinutes });
+  const files = h('input', { type: 'checkbox', checked: c.files });
+  const fileMax = h('input', { type: 'number', min: 1, max: 100, value: c.fileMaxMb });
+  const trashDays = h('input', { type: 'number', min: 1, max: 365, value: c.trashDays });
+  const webhooks = h('input', { type: 'checkbox', checked: c.webhooks });
+  const webhookPrivate = h('input', { type: 'checkbox', checked: c.webhookPrivate });
   const form = h('form', { class: 'form admin-form', onsubmit: async (e) => {
     e.preventDefault();
     err.hide();
@@ -537,6 +542,8 @@ async function collab() {
       await api('/api/admin/settings', { method: 'PUT', body: { collab: {
         mentionEmails: mentionEmails.checked, guestLinks: guestLinks.checked, guestMaxDays: Number(guestMaxDays.value),
         teamCreation: teamCreation.value, recordings: recordings.checked, recordingMaxMinutes: Number(recordingMax.value),
+        files: files.checked, fileMaxMb: Number(fileMax.value), trashDays: Number(trashDays.value),
+        webhooks: webhooks.checked, webhookPrivate: webhookPrivate.checked,
       } } });
       toast('Einstellungen gespeichert');
       collab();
@@ -557,6 +564,17 @@ async function collab() {
     h('label', { class: 'check' }, recordings, 'Aufzeichnungen erlauben (Ansicht, Zeiger, Laser – optional mit Ton)'),
     h('label', {}, 'Längste Aufzeichnung (Minuten)', recordingMax),
     h('p', { class: 'muted small' }, 'Tonspuren werden wie Uploads auf Schadsoftware geprüft und bis zum Löschen der Aufzeichnung gespeichert.')),
+  h('fieldset', {}, h('legend', {}, 'Dateianhänge'),
+    h('label', { class: 'check' }, files, 'Dateien auf Boards erlauben (PDF, Word, Excel, PowerPoint, OpenDocument, Text, CSV, JSON)'),
+    h('label', {}, 'Größte Datei (MB)', fileMax),
+    h('p', { class: 'muted small' }, 'Der Dateityp wird am Inhalt erkannt, jede Datei auf Schadsoftware geprüft und immer als Download ausgeliefert. Nicht mehr verwendete Dateien werden nach sieben Tagen entfernt.')),
+  h('fieldset', {}, h('legend', {}, 'Papierkorb'),
+    h('label', {}, 'Gelöschte Boards aufbewahren (Tage)', trashDays),
+    h('p', { class: 'muted small' }, 'Bis dahin können Besitzer gelöschte Boards wiederherstellen; danach werden sie endgültig entfernt.')),
+  h('fieldset', {}, h('legend', {}, 'Chat-Anbindung (Webhooks)'),
+    h('label', { class: 'check' }, webhooks, 'Webhooks erlauben (Microsoft Teams, Slack, Matrix oder JSON)'),
+    h('label', { class: 'check' }, webhookPrivate, 'Auch interne Adressen zulassen (Intranet, localhost) und http ohne Verschlüsselung'),
+    h('p', { class: 'muted small' }, 'Personen können Benachrichtigungen an einen eigenen Kanal schicken lassen, Team-Verwaltende neue Team-Boards und Retro-Zusammenfassungen. Der Server ruft dabei fremde Adressen auf; interne Netze sind gesperrt, solange die zweite Option aus ist. Die Weitergabe an den Chat-Dienst gehört in die Datenschutzerklärung.')),
   err.el,
   h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, 'Speichern')));
   section('Zusammenarbeit', form);

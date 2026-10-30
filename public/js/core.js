@@ -206,6 +206,9 @@ function renderEnv() {
     zoom: app.view.z,
     showAuthor: app.settings.showAuthor,
     placeholders: true,
+    me: app.user && app.user.id,
+    boardId,
+    seesConcealed: !!app.isFacilitator,
     editingCell: app.editing && app.editing.cell,
     labelBg: app.settings.dark ? '#2a2b31' : '#ffffff',
   };
@@ -252,6 +255,9 @@ function renderNode(id, env) {
   }
   let cls = 'el el-' + el.type;
   if (isLocked(el)) cls += ' locked';
+  // Filter (Schlagwörter, Farbe, Person …): nicht passende Elemente werden abgeblendet
+  if (app.filter && el.type !== 'frame' && el.type !== 'connector' && !app.filter(el)) cls += ' dimmed';
+  if (app.discussFocus && app.discussFocus === id) cls += ' discuss-current';
   if (app.editing && app.editing.id === id && !app.editing.cell) cls += ' editing';
   g.setAttribute('class', cls);
   try {
@@ -269,7 +275,8 @@ function reorder() {
   for (const el of sorted) {
     const g = nodes.get(el.id);
     if (!g) continue;
-    (el.type === 'frame' ? layerFrames : layerEls).appendChild(g);
+    // Themengruppen liegen über Vorlagen-Flächen, aber unter den Beiträgen (siehe sortForRender)
+    (el.type === 'frame' && el.kind !== 'topic' ? layerFrames : layerEls).appendChild(g);
   }
 }
 
@@ -672,7 +679,8 @@ export function frameChildren(frame) {
 }
 
 export function frames() {
-  return [...app.els.values()].filter((e) => e.type === 'frame').sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || a.y - b.y || a.x - b.x);
+  // Themengruppen (Retro) sind keine Folien
+  return [...app.els.values()].filter((e) => e.type === 'frame' && e.kind !== 'topic').sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || a.y - b.y || a.x - b.x);
 }
 
 function elementAt(wx, wy, exclude, pad = 0) {
@@ -703,7 +711,13 @@ export function selectionChanged() {
   if (app.sync) sendSel();
 }
 
-const sendSel = throttle(() => app.sync.signal('sel', [...app.sel].slice(0, 200)), 200);
+// Anonyme Beiträge: Auswahl und „… schreibt“ verrieten sonst, wer welche Notiz bearbeitet. Während des anonymen Sammelns
+// gilt das für alles Neue – das Kennzeichen des Servers kommt erst kurz nach dem Anlegen an
+export function isAnonymous(el) {
+  const pm = app.session && app.session.privateMode;
+  return !!el && (!!el.anon || !!(pm && pm.active && pm.anonymous));
+}
+const sendSel = throttle(() => app.sync.signal('sel', [...app.sel].filter((id) => !isAnonymous(app.els.get(id))).slice(0, 200)), 200);
 
 const escXml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
@@ -1271,7 +1285,15 @@ function onDown(e) {
 
   // Abstimmungsmodus
   const v = app.session.voting;
-  if (v && v.active && app.voteMode && app.tool === 'select' && hit && !['frame', 'connector', 'comment', 'pen'].includes(hit.el.type)) {
+  // Abstimmung über Themengruppen (Retro): ein Klick irgendwo in die Gruppe zählt für das Thema
+  if (v && v.active && app.voteMode && app.tool === 'select' && v.target === 'topics') {
+    const topic = [...app.els.values()].filter((f) => f.type === 'frame' && f.kind === 'topic' && w.x >= f.x && w.x <= f.x + f.w && w.y >= f.y && w.y <= f.y + f.h)
+      .sort((a, b) => a.w * a.h - b.w * b.h)[0];
+    if (topic) {
+      app.emit('vote', topic.id, e.altKey || e.shiftKey ? -1 : 1);
+      return;
+    }
+  } else if (v && v.active && app.voteMode && app.tool === 'select' && hit && !['frame', 'connector', 'comment', 'pen'].includes(hit.el.type)) {
     app.emit('vote', hit.el.id, e.altKey || e.shiftKey ? -1 : 1);
     return;
   }
@@ -2103,6 +2125,9 @@ function quickConnect(d, w, target) {
 
 /* Doppelklick: bearbeiten bzw. neue Notiz */
 stage.addEventListener('dblclick', (e) => {
+  // Dateianhänge öffnen auch Betrachter (Vorschau bzw. Download)
+  const fh = hitInfo(e.target);
+  if (fh && fh.el.type === 'file') return app.emit('openFile', fh.el.id);
   if (app.viewOnly || e.target === editor) return;
   // Doppelklick auf einen Knickpunkt entfernt ihn
   const wh = e.target.closest && e.target.closest('[data-handle^="wp-"]');
@@ -2896,6 +2921,7 @@ stage.addEventListener('drop', (e) => {
   files.forEach((f, i) => {
     if (f.type.startsWith('image/')) insertImageFile(f, { x: w.x + i * 40, y: w.y + i * 40 });
     else if (f.name.endsWith('.json')) app.emit('importFile', f);
+    else app.emit('dropFile', f, { x: w.x + i * 240, y: w.y });
   });
   if (!files.length) {
     const t = e.dataTransfer.getData('text/plain');

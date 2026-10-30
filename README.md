@@ -154,6 +154,14 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   standardmäßig abgeschaltet.
 - **Rundgänge aufzeichnen:** Ansicht, Mauszeiger und Laserpointer, auf Wunsch mit Ton; andere spielen den Rundgang ab
   und können dabei selbst navigieren.
+- **Reaktionen:** Emojis direkt an Sticky Notes, Karten & Co. – mit Anzahl und Namen, auch für Betrachter (Rechtsklick).
+- **Schlagwörter und Filter:** Sticky Notes, Karten und Formen verschlagworten; der Filter blendet alles andere ab
+  (nach Schlagwort, Farbe, Person, Reaktionen, Maßnahmen) – nur in der eigenen Ansicht.
+- **Dateianhänge:** PDF, Word, Excel, PowerPoint, OpenDocument, Text, CSV und JSON auf das Board legen; PDFs mit
+  Vorschau der ersten Seite und Betrachter (pdf.js), alles mit Virenscan und als Download.
+- **Chat-Anbindung (Webhooks):** Benachrichtigungen in den eigenen Chat (Microsoft Teams, Slack, Matrix oder JSON),
+  Team-Kanäle für neue Team-Boards und Retro-Zusammenfassungen. Standardmäßig abgeschaltet, mit Schutz vor Aufrufen
+  ins interne Netz.
 
 ### Moderation
 - **Moderationsrechte:** Bearbeiten für Teilnehmende sperren, Timer/Abstimmung/Schätzrunde/privaten Modus den
@@ -165,6 +173,24 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   bis aufgedeckt wird. Danach erscheinen Durchschnitt, Median und Spanne, und das Ergebnis lässt sich als Story Points
   übernehmen.
 - **Präsentationsmodus**: Frames werden zu Folien (Vollbild, Pfeil- und Leertaste, Umgebung ausgeblendet)
+- **Verborgene Bereiche:** Moderierende verdecken einen Frame; Teilnehmende sehen nur eine Abdeckung, bis aufgedeckt
+  wird. Der Server gibt den Inhalt vorher nicht heraus.
+
+### Retrospektiven
+- **Geführter Ablauf** (Knopf 🔁): Check-in → Rückblick → Sammeln → Aufdecken → Gruppieren → Abstimmen → Besprechen →
+  Maßnahmen → Abschluss. Bei jedem Schritt stellt vibeboard die passenden Werkzeuge ein (verdecktes, auf Wunsch
+  anonymes Sammeln, Timer, Abstimmung über Themen, Besprechung, Umfragen).
+- **Themengruppen:** Beiträge auswählen → „Themengruppe bilden“; abgestimmt wird dann über Themen.
+- **Besprechungsmodus:** Themen in der Reihenfolge der Stimmen, das aktuelle ist für alle hervorgehoben, Timer je Thema
+  und Lean-Coffee-Abfrage „Weiter diskutieren? 👍 ✋ 👎“.
+- **Anonyme Beiträge:** Auch nach dem Aufdecken ohne Namen – gespeichert wird keiner.
+- **Schnellumfragen:** Stimmungsbarometer, Fist of Five, ROTI, Team-Health-Check, eigene Frage – anonym, mit Verlauf
+  über die Retro-Serie.
+- **Maßnahmen mit Nachverfolgung:** Beitrag → „Als Maßnahme festhalten“ (Person, Fälligkeit) – erscheint unter
+  „Meine Aufgaben“. „Nächste Retro anlegen“ übernimmt die Struktur; dort zeigt der Rückblick die offenen Maßnahmen
+  der letzten Retro zum Abhaken oder Übernehmen.
+- **Zusammenfassung** als Markdown, PDF, per E-Mail an die Beteiligten oder in den Team-Kanal.
+- **Glücksrad und Redereihenfolge** – alle sehen dasselbe Ergebnis.
 
 ### Projektarbeit
 - **Aufgaben-Panel** je Board:
@@ -191,7 +217,10 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 - Start: einklappbare Vorlagenleiste, Hinweis auf fällige Aufgaben, zuletzt bearbeitete Boards
 - Eigene und geteilte Boards mit Vorschaubildern
 - Suche, Sortierung, Teilen, Umbenennen, Duplizieren, Löschen, Board verlassen
-- Neues Board direkt aus einer Vorlage
+- **Papierkorb:** Gelöschte Boards bleiben 30 Tage (einstellbar) wiederherstellbar, dann werden sie endgültig gelöscht.
+- Neues Board direkt aus einer Vorlage – auch aus **eigenen Vorlagen** (Board oder Auswahl als persönliche oder
+  Team-Vorlage speichern)
+- **Installierbare App (PWA):** im Browser über „App installieren“ (Kontomenü) als eigenes Fenster nutzbar
 - „Meine Aufgaben“ über alle Boards (Karten und zugewiesene Kommentare)
 - Glocke mit Benachrichtigungen
 
@@ -202,7 +231,7 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 | Kategorie | Vorlagen |
 |-----------|----------|
 | Brainstorming | Brainstorming, Mindmap, Sechs Perspektiven, Crazy 8s, Pro & Contra |
-| Meetings & Retros | Start · Stop · Continue, Mad · Sad · Glad, 4L, Segelboot, Daily Stand-up, Check-in / Icebreaker |
+| Meetings & Retros | Start · Stop · Continue, Mad · Sad · Glad, 4L, Segelboot, Seestern, DAKI, Zeitstrahl-Retro, Heißluftballon, Speedcar, Lean Coffee, Team-Radar, Daily Stand-up, Check-in / Icebreaker |
 | Agile & Projekte | Kanban, Eisenhower-Matrix, Impact/Aufwand-Matrix, Projekt-Canvas, Produkt-Roadmap, Zeitstrahl, Gantt-Diagramm, User Story Map, Wochenplaner |
 | Strategie | SWOT-Analyse, Stakeholder-Map, Business Model Canvas¹, Lean Canvas¹, Angebot & Kundenprofil, OKR-Planung, Entscheidungsmatrix |
 | Design & UX | Customer Journey Map, Empathy Map, User Persona, Moodboard, Wireframe |
@@ -381,7 +410,8 @@ Unter `/admin`, nur für Administratoren:
 - **Sicherheit:** Kennwort-Mindestlänge, Abgleich mit „Have I Been Pwned“, Wegwerf-Adressen, gesperrte bzw.
   erlaubte Domains, Zwei-Faktor-Pflicht für Admins
 - **Zusammenarbeit:** E-Mails bei Erwähnungen, Gastzugang (standardmäßig aus) und seine längste Gültigkeit, wer
-  Teams anlegen darf, Aufzeichnungen erlauben und ihre Höchstdauer
+  Teams anlegen darf, Aufzeichnungen erlauben und ihre Höchstdauer, Dateianhänge und größte Datei, Aufbewahrung im
+  Papierkorb, Webhooks (standardmäßig aus) und ob interne Webhook-Ziele erlaubt sind
 - **Mailserver:** SMTP-Host, Port, Verschlüsselung (STARTTLS, SSL/TLS, keine), Anmeldung, Absender,
   Zertifikatsprüfung; Testmail auch vor dem Speichern
 - **Rechtliches:** Impressum und Datenschutzerklärung bearbeiten und veröffentlichen (siehe unten)
@@ -570,9 +600,16 @@ Alle Daten liegen in der eigenen PostgreSQL-Datenbank:
 | `guest_links` | Gastlinks (nur als Hash) mit Rolle und Ablauf; Gastzugänge sind Konten mit der Rolle `guest` |
 | `teams`, `team_members`, `folders`, `folder_boards` | Teams, Mitgliedschaften, Ordner |
 | `board_recordings` | Aufgezeichnete Rundgänge mit Zeitspur und optionaler Tonspur |
+| `team_invitations` | Offene Einladungen in Teams |
+| `board_files` | Dateianhänge (Inhalt, Name, Typ, Größe, PDF-Vorschau); ohne Verweis nach 7 Tagen entfernt |
+| `board_polls` | Ergebnisse von Schnellumfragen (nur Anzahl je Antwort, keine Einzelstimmen) |
+| `user_templates` | Eigene und Team-Vorlagen |
+| `webhooks` | Chat-Anbindungen (Adresse, Format, Ereignisse, letzter Status) |
 
-- Ausgehende Verbindungen gibt es nur zum konfigurierten Mailserver und, falls aktiviert, zur Pwned-Passwords-API.
-- Im Browser speichert vibeboard nur Ansichtseinstellungen (Zoom, dunkles Design, Werkzeugoptionen) im `localStorage`.
+- Ausgehende Verbindungen gibt es nur zum konfigurierten Mailserver und, falls aktiviert, zur Pwned-Passwords-API und
+  zu den von Nutzenden eingerichteten Webhooks.
+- Im Browser speichert vibeboard nur Ansichtseinstellungen (Zoom, dunkles Design, Werkzeugoptionen) im `localStorage`;
+  der Service Worker der installierbaren App hält Oberfläche und Skripte für den Offline-Fall vor (keine Board-Daten).
 - Das Repository enthält keine Nutzerdaten: `data/`, `.env` und Datenbankdateien sind in `.gitignore` ausgeschlossen.
 
 ---

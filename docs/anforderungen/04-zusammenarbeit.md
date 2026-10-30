@@ -82,6 +82,11 @@
   - Per Rückgängig wiederhergestellte, zuvor öffentliche Elemente werden nicht privat.
   - Solange der Modus aktiv ist, werden keine Vorschaubilder hochgeladen. Startet jemand eine Schätzrunde für eine private Karte, bleibt deren Titel für andere verborgen.
   - „Aufdecken & beenden“ macht alle privaten Elemente sofort für alle sichtbar.
+  - Geändert in 4.1.0 – anonymes Sammeln: Beim Start lässt sich „anonym“ wählen (Retro-Ablauf: Standard).
+    - Der Platzhalter zeigt dann nur „🔒 Privat“ ohne Namen; der Server speichert zu den Beiträgen keinen Autornamen – auch nach dem Aufdecken und bei späteren Änderungen nicht (Kennzeichen „anonym“).
+    - Im Aktivitätsverlauf erscheinen Änderungen an anonymen Beiträgen als „Anonym“.
+    - Der eigene Browser meldet bei anonymen Beiträgen weder „… schreibt“ noch die Auswahl an andere.
+    - Verdeckte Platzhalter enthalten keine Benutzer-ID, Änderungen im Echtzeitkanal keinen Absender.
 
 ### REQ-COLLAB-010 Benachrichtigungen
 - **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -130,3 +135,28 @@
   - Board: Die Ladeanzeige steht bereits im HTML (sichtbar, bevor Skripte geladen sind), erscheint aber erst nach 250 ms; nach 4 s ergänzt sie einen Hinweis auf einen möglichen Proxy. Sie verschwindet, sobald der Stand des Boards da ist. Die Leinwand trägt bis dahin `aria-busy`, die Anzeige `role="status"`.
   - Startseite: Platzhalterkarten, bis die Boards geladen sind.
   - Anfragen über `api()`, die länger als 400 ms dauern, zeigen einen schmalen Fortschrittsbalken am oberen Rand; regelmäßige Hintergrundabfragen nicht.
+
+### REQ-COLLAB-015 Reaktionen auf Elemente
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Leichtgewichtige Rückmeldung zu einzelnen Beiträgen, ohne eine formelle Abstimmung zu starten.
+- **Akzeptanzkriterien:**
+  - Auf Sticky Notes, Karten, Formen, Texten, Bildern, Dateien, Code-Blöcken und Tabellen lassen sich Emojis vergeben (👍 ❤️ 😂 🎉 👏 🤔 🔥 😮 ➕ ✅): über die Kontextleiste, per Rechtsklick (auch als Betrachter) oder durch Klick auf eine vorhandene Reaktion (an/aus).
+  - Unter dem Element erscheint je Emoji die Anzahl; der Tooltip nennt die Namen; eigene Reaktionen sind hervorgehoben.
+  - Reaktionen ändert nur die eigene Reaktions-Operation auf dem Server (keine Änderung per Element-Update, keine fremden Namen); nur bekannte Emojis, höchstens 200 Personen je Emoji, Ratenbegrenzung.
+  - Kopien, Vorlagen und die nächste Retro übernehmen keine Reaktionen.
+
+### REQ-COLLAB-016 Schlagwörter und Filteransicht
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Sticky Notes, Karten und Formen erhalten bis zu acht Schlagwörter (Kontextleiste, Etikett-Symbol; Vorschläge aus dem Board). Auf Sticky Notes erscheinen sie oben links.
+  - Der Filter (Trichter-Symbol) blendet nicht passende Elemente ab – nur in der eigenen Ansicht: nach Schlagwort, Farbe, Person (nicht bei anonymen Beiträgen), „nur mit Reaktionen“, „nur Maßnahmen“. Innerhalb einer Gruppe genügt ein Treffer, zwischen Gruppen müssen alle passen.
+  - Ein Hinweis zeigt, wie viele Elemente passen, und hebt den Filter mit einem Klick auf.
+
+### REQ-COLLAB-017 Chat-Anbindung per Webhook
+- **Seit:** 4.1.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Standardmäßig aus; die Administration schaltet Webhooks ein (und optional interne Ziele).
+  - Personen richten im Kontomenü eigene Webhooks für Erwähnungen, Antworten, Zuweisungen und Team-Einladungen ein; Team-Verwaltende für „Board für das Team freigegeben“ und Retro-Zusammenfassungen. Höchstens zehn je Person bzw. Team.
+  - Formate: Microsoft Teams (Text und Adaptive Card), Slack/Mattermost/Rocket.Chat, Matrix (Hookshot), allgemeines JSON.
+  - Die Adresse wird nach dem Speichern nur gekürzt (Host) angezeigt und nie protokolliert. „Testen“ schickt eine Testnachricht. Nach 20 Fehlern in Folge pausiert ein Webhook, bis ein Test gelingt.
+  - Sicherheit: [REQ-SEC-012](11-sicherheit.md).

@@ -58,7 +58,11 @@ Zweck ist die Bereitstellung des Kontos und der Funktionen der Anwendung. Rechts
 
 # Inhalte auf Boards
 
-Inhalte, die du auf Boards erstellst (z. B. Notizen, Texte, Zeichnungen, Bilder, Kommentare), werden gespeichert und sind für alle Personen sichtbar, mit denen das jeweilige Board geteilt ist. Während der Zusammenarbeit sehen andere Teilnehmende deinen Anzeigenamen, deinen Mauszeiger und deine Auswahl in Echtzeit. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Die Inhalte bleiben gespeichert, bis sie oder das Board gelöscht werden.
+Inhalte, die du auf Boards erstellst (z. B. Notizen, Texte, Zeichnungen, Bilder, Kommentare), werden gespeichert und sind für alle Personen sichtbar, mit denen das jeweilige Board geteilt ist. Während der Zusammenarbeit sehen andere Teilnehmende deinen Anzeigenamen, deinen Mauszeiger und deine Auswahl in Echtzeit. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Die Inhalte bleiben gespeichert, bis sie oder das Board gelöscht werden. Gelöschte Boards liegen zunächst im Papierkorb ihrer Besitzerin bzw. ihres Besitzers und werden nach der dort angegebenen Frist endgültig gelöscht.
+
+Reaktionen (Emojis) auf Elemente speichern wir mit deinem Anzeigenamen; sie sind für alle mit Zugriff auf das Board sichtbar. Dateianhänge (z. B. PDF- oder Office-Dateien) werden mit Dateiname, Größe und hochladender Person gespeichert, auf Schadsoftware geprüft und mit dem Board gelöscht; nicht mehr verwendete Dateien entfernen wir nach sieben Tagen. Eigene Vorlagen speichern wir ohne Autorennamen, Kommentare und Dateien, bis sie gelöscht werden.
+
+Beim anonymen Sammeln (z. B. in Retrospektiven) speichern wir zu den Beiträgen keinen Namen – auch nicht nach dem Aufdecken. Bei Schnellumfragen (z. B. Stimmungsabfrage) kennt der Server deine Stimme nur, solange die Umfrage läuft, damit du sie ändern kannst; mit dem Auflösen werden die Einzelstimmen verworfen und nur das Gesamtergebnis (Anzahl je Antwort) gespeichert.
 
 Zum Schutz vor Datenverlust speichern wir frühere Stände eines Boards als Versionen (automatisch höchstens alle 30 Minuten während der Bearbeitung sowie auf Wunsch). Versionen enthalten die Inhalte des Boards zum jeweiligen Zeitpunkt und den Namen der Person, die sie angelegt hat. Ältere Versionen werden automatisch gelöscht (es bleiben höchstens 20 automatische, 30 gesicherte und 5 vor einer Wiederherstellung angelegte Versionen je Board); alle Versionen werden mit dem Board gelöscht. Nachrichten im Cursor-Chat sowie deine Abwesenheit (Wechsel in einen anderen Tab) werden nur in Echtzeit an die Teilnehmenden übertragen und nicht gespeichert.
 
@@ -67,6 +71,10 @@ Zu jedem Board führen wir einen Aktivitätsverlauf: Er zeigt allen mit Zugriff 
 # Kommentare, Erwähnungen und Benachrichtigungen
 
 Kommentare speichern wir mit deinem Anzeigenamen und dem Zeitpunkt. Erwähnst du jemanden mit @Name, antwortet jemand in einem Kommentar-Thread, an dem du beteiligt bist, oder wird dir ein Kommentar als Aufgabe zugewiesen, legen wir eine Benachrichtigung an (Board, auslösende Person, Ausschnitt des Kommentars). Sie erscheint in der Glocke und – sofern du das nicht im Profil abgeschaltet hast – per E-Mail. Benachrichtigungen werden nach 90 Tagen gelöscht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
+
+[Nur aufnehmen, wenn Webhooks in der Administration eingeschaltet sind:] # Chat-Anbindung (Webhooks)
+
+Auf eigenen Wunsch kannst du Benachrichtigungen an einen Chat-Kanal schicken lassen; Team-Verwaltende können neue Team-Boards und Retro-Zusammenfassungen an den Kanal des Teams senden. Dabei übertragen wir die Benachrichtigung (z. B. Name der auslösenden Person, Board-Name, Ausschnitt des Kommentars bzw. die Zusammenfassung) an den von dir angegebenen Dienst (z. B. Microsoft Teams, Slack, Matrix). Für die Verarbeitung dort gilt die Datenschutzerklärung dieses Dienstes. Die Webhook-Adresse speichern wir, bis du den Webhook löschst. Rechtsgrundlage ist Art. 6 Abs. 1 lit. a bzw. b DSGVO.
 
 # Teams und Ordner
 

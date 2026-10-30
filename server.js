@@ -36,6 +36,7 @@ const router = new Router();
 require('./lib/routes/auth').register(router);
 require('./lib/routes/boards').register(router);
 require('./lib/routes/collab').register(router);
+require('./lib/routes/files').register(router);
 require('./lib/routes/admin').register(router);
 require('./lib/routes/legal').register(router);
 
@@ -105,7 +106,14 @@ async function handlePage(req, res, url) {
     if (user.role !== 'admin') return redirect(res, '/');
     return serveFile(res, page('admin.html'), noStore);
   }
+  if (p === '/offline.html') return serveFile(res, page('offline.html'));
   if (p.endsWith('.html')) return redirect(res, '/');
+  // pdf.js (Vorschau von PDF-Anhängen) direkt aus dem npm-Paket
+  if (p === '/vendor/pdfjs/pdf.min.mjs' || p === '/vendor/pdfjs/pdf.worker.min.mjs') {
+    return serveFile(res, path.join(__dirname, 'node_modules', 'pdfjs-dist', 'build', path.basename(p)));
+  }
+  // Service Worker der installierbaren App: muss vom Wurzelpfad kommen und immer frisch geprüft werden
+  if (p === '/sw.js') return serveFile(res, page('sw.js'), { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' });
   return serveStatic(res, PUBLIC_DIR, p);
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "vibeboard",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "description": "Kollaboratives Online-Whiteboard mit Echtzeit-Zusammenarbeit, Vorlagen, Benutzerverwaltung und PostgreSQL",
   "main": "server.js",
   "scripts": {
@@ -15,6 +15,7 @@
   "private": true,
   "dependencies": {
     "nodemailer": "^10.2.1",
+    "pdfjs-dist": "^6.4.299",
     "pg": "^8.23.1",
     "uqr": "^0.1.3"
   }

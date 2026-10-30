@@ -9,6 +9,10 @@ import './diagram-text.js';
 import './moderation.js';
 import './activity.js';
 import './recording.js';
+import './retro.js';
+import './polls.js';
+import './files.js';
+import './board-extras.js';
 
 // Ladeanzeige ausblenden, sobald der Stand des Boards da ist
 export function hideLoader() {

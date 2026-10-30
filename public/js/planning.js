@@ -6,7 +6,7 @@ import { currentSidePanel, renderSidePanel, toggleSidePanel, placeElements } fro
 const renderSidePanelClose = () => toggleSidePanel(currentSidePanel());
 import { PRIORITIES, cardTags } from './render.js';
 
-export const DONE_RE = /^(fertig|erledigt|done|geschlossen|closed|abgeschlossen|resolved|gelöst)$/i;
+export const DONE_RE = /^(fertig|erledigt|done|geschlossen|closed|abgeschlossen|resolved|gelöst|übernommen)$/i;
 
 // Datum in lokaler Zeit (nicht UTC), damit „überfällig“ um Mitternacht stimmt
 const localDate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -49,7 +49,7 @@ function commentTasks() {
 let taskFilter = 'open';
 
 function matchesMe(c) {
-  if (c.type === 'comment') return c.assigneeId === String(app.user.id);
+  if (c.type === 'comment' || c.assigneeId) return c.assigneeId === String(app.user.id);
   const a = String(c.assignee || '').trim().toLowerCase();
   return !!a && [app.user.name, app.me && app.me.username].filter(Boolean).some((n) => n.toLowerCase() === a);
 }

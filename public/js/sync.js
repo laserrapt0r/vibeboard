@@ -209,7 +209,7 @@ export class Sync {
 
   op(o) {
     // Abstimmen und Schätzen dürfen auch Betrachter, Kommentieren ab der Rolle „Kommentieren“
-    if (this.viewOnly && o.op !== 'vote' && o.op !== 'estimate' && !(o.op === 'comment' && this.canComment)) return;
+    if (this.viewOnly && !['vote', 'estimate', 'pollVote', 'romanVote', 'react'].includes(o.op) && !(o.op === 'comment' && this.canComment)) return;
     if (o.op === 'vote') delete o.userId;
     this.extra.push(o);
     this.schedule();

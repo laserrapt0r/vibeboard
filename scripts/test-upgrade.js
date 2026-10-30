@@ -58,6 +58,16 @@ const SEEDS = {
     await c.query(`INSERT INTO team_invitations (team_id, user_id, role, invited_by) VALUES (1, 1, 'member', 1)`);
     await c.query(`INSERT INTO notifications (user_id, kind, actor_name, team_id, excerpt) VALUES (1, 'team_invite', 'alt', 1, 'Team A')`);
   },
+  7: async (c) => {
+    await c.query(`INSERT INTO boards (id, name, owner_id, prev_retro_id) VALUES ('b2', 'Retro 2', 1, 'b1')`);
+    await c.query(`UPDATE boards SET deleted_at = now(), deleted_by = 1 WHERE id = 'b2'`);
+    await c.query(`INSERT INTO user_templates (name, owner_id, data) VALUES ('Meine Vorlage', 1, '[]')`);
+    await c.query(`INSERT INTO user_templates (name, team_id, data) VALUES ('Team-Vorlage', 1, '[]')`);
+    await c.query(`INSERT INTO board_files (board_id, id, name, mime, size, sha256, data) VALUES ('b1', 'f1', 'a.pdf', 'application/pdf', 4, 'x', '\\x25504446')`);
+    await c.query(`INSERT INTO board_polls (board_id, kind, results, participants) VALUES ('b1', 'mood', '{"counts":{"4":2}}', 2)`);
+    await c.query(`INSERT INTO webhooks (user_id, url, format, events) VALUES (1, 'https://example.org/h', 'slack', '{mention}')`);
+    await c.query(`INSERT INTO webhooks (team_id, url) VALUES (1, 'https://example.org/t')`);
+  },
 };
 
 async function structure(c, schema) {

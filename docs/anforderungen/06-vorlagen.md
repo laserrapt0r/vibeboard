@@ -33,3 +33,16 @@
 - **Akzeptanzkriterien:**
   - Vorlagen nach Werken unter freien Lizenzen enthalten die erforderliche Namensnennung auf dem Board (Business Model Canvas, Lean Canvas: CC BY-SA 3.0).
   - Geschützte Marken werden nicht als Vorlagenname verwendet (z. B. „Sechs Perspektiven“ statt „Six Thinking Hats“).
+
+### REQ-TPL-005 Weitere Retro-Vorlagen
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Neu: Seestern, DAKI, Zeitstrahl, Heißluftballon, Speedcar, Lean Coffee, Team-Radar (Kategorie „Meetings & Retros“).
+
+### REQ-TPL-006 Eigene Vorlagen
+- **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Ein Board oder die Auswahl lässt sich als persönliche Vorlage oder als Vorlage eines eigenen Teams speichern (Name, Symbol, Beschreibung).
+  - Nicht übernommen werden Kommentare, Dateianhänge, Reaktionen, Autorennamen, Zuweisungen, Sperren und private Inhalte. Bilder werden geprüft. Höchstens 10 MB und 100 Vorlagen je Person bzw. Team.
+  - Die Galerie (Startseite und Board) zeigt sie unter „Eigene Vorlagen“ mit Vorschau. Team-Vorlagen sehen alle Mitglieder.
+  - Löschen dürfen, wer sie angelegt hat, und bei Team-Vorlagen die Team-Verwaltung.

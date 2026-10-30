@@ -93,3 +93,17 @@ BSI IT-Grundschutz.
   - Anwendung als nicht privilegierter Benutzer, schreibgeschütztes Dateisystem (außer Sicherungsverzeichnis und `/tmp`), keine Linux-Capabilities, `no-new-privileges`.
   - docker-compose startet nicht ohne gesetztes Datenbank-Kennwort.
   - Abhängigkeiten ohne bekannte Sicherheitslücken (`npm audit`).
+
+### REQ-SEC-012 Schutz bei ausgehenden Webhooks (SSRF)
+- **Seit:** 4.1.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Nur https; http nur, wenn interne Ziele erlaubt sind. Keine Zugangsdaten in der Adresse.
+  - Die Zieladresse wird aufgelöst; Loopback, private Netze, Link-Local, CGNAT, Multicast, reservierte und IPv4-gemappte IPv6-Adressen sind gesperrt, solange die Administration interne Ziele nicht freigibt.
+  - Die Verbindung geht genau an die geprüfte IP (kein erneutes Auflösen, kein DNS-Rebinding); keine Weiterleitungen, 5 s Zeitlimit, die Antwort wird verworfen.
+  - Protokolliert werden nur Hostname, Ereignis und Ergebnis.
+
+### REQ-SEC-013 Auslieferung von Dateianhängen
+- **Seit:** 4.1.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Dateien werden immer als Download (Content-Disposition: attachment, RFC 6266) mit `Content-Security-Policy: sandbox` ausgeliefert, nie im Kontext der Anwendung angezeigt.
+  - Vorschauen (PDF) rendert der Browser mit pdf.js (ohne eval) und lädt sie als PNG hoch; sie werden wie Bilder geprüft.

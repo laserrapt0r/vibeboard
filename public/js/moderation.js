@@ -108,6 +108,7 @@ export function facilitatorItems(p) {
 }
 
 const REASONS = {
+  concealed: 'Dieser Bereich ist verborgen. Nur der Besitzer oder die Moderation kann hier etwas ändern.',
   editLock: 'Die Moderation hat das Bearbeiten gerade gesperrt.',
   modLock: 'Dieses Element hat die Moderation für Teilnehmende gesperrt.',
   reserved: 'Das ist während der Moderation den Moderierenden vorbehalten.',

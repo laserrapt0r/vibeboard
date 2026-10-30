@@ -249,6 +249,9 @@ export function accountMenuItems(me, onSaved) {
     { header: me.displayName + (me.email ? ` · ${me.email}` : '') },
     { label: 'Profil bearbeiten', icon: 'users', onClick: () => openProfileDialog(me, onSaved) },
     { label: 'Sicherheit & Geräte', icon: 'lock', onClick: () => openSecurityDialog(me, onSaved) },
+    { label: 'Chat-Anbindung (Webhooks)', icon: 'bell', onClick: () => import('./webhooks-ui.js').then((m) => m.openWebhooks()) },
+    // nur, wenn der Browser die Installation anbietet (siehe pwa.js)
+    globalThis.vibeboardInstall ? { label: 'App installieren', icon: 'install', onClick: () => globalThis.vibeboardInstall() } : null,
     { label: 'Alle Boards', icon: 'home', onClick: () => (location.href = '/') },
     me.role === 'admin' ? { label: 'Administration', icon: 'settings', onClick: () => (location.href = '/admin') } : null,
     '-',

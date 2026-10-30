@@ -4,6 +4,45 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.1.0] – 2026-10-30
+
+Schemaversion 7. Neue Abhängigkeit: pdfjs-dist (Apache-2.0).
+
+### Hinzugefügt
+- **Retro-Ablauf** (REQ-MOD-006): geführte Schritte von Check-in bis Abschluss; je Schritt stellt vibeboard die Werkzeuge
+  ein (verdecktes Sammeln, Timer, Abstimmung, Besprechung, Umfragen).
+- **Themengruppen und Besprechungsmodus** (REQ-MOD-007): Abstimmung über Themen, Themen der Reihe nach besprechen, Timer
+  je Thema, Lean-Coffee-Abfrage „Weiter diskutieren?“.
+- **Schnellumfragen** (REQ-MOD-008): Stimmungsbarometer, Fist of Five, ROTI, Team-Health-Check, eigene Frage – anonym,
+  mit Verlauf über Retro-Serien.
+- **Zufallsauswahl und Redereihenfolge** (REQ-MOD-009).
+- **Verborgene Bereiche** (REQ-MOD-010): Frames, deren Inhalt der Server bis zum Aufdecken nur Moderierenden gibt.
+- **Maßnahmen und Retro-Serien** (REQ-PROJ-005): Beitrag → Maßnahme mit Person und Fälligkeit, „Nächste Retro anlegen“,
+  Rückblick auf offene Maßnahmen.
+- **Retro-Zusammenfassung** (REQ-PROJ-006): Markdown, Druck/PDF, E-Mail an Beteiligte, Team-Kanal.
+- **Reaktionen** auf Elemente (REQ-COLLAB-015), **Schlagwörter und Filteransicht** (REQ-COLLAB-016).
+- **Chat-Anbindung per Webhook** (REQ-COLLAB-017): Microsoft Teams, Slack, Matrix, JSON; standardmäßig aus.
+- **Dateianhänge** mit PDF-Vorschau und Betrachter (REQ-ELEM-017).
+- **Papierkorb** für Boards (REQ-BOARD-009), **eigene Vorlagen** (REQ-TPL-006).
+- Sieben Retro-Vorlagen: Seestern, DAKI, Zeitstrahl, Heißluftballon, Speedcar, Lean Coffee, Team-Radar (REQ-TPL-005).
+- **Installierbare App (PWA)** mit Offline-Seite (REQ-NFR-007).
+
+### Geändert
+- Privater Modus: optional anonym – keine Namen, auch nicht nach dem Aufdecken (REQ-COLLAB-009).
+- Karten speichern die zuständige Person auch als ID; „Meine Aufgaben“ unterscheidet so gleichnamige Personen.
+- Löschen legt Boards in den Papierkorb, statt sie sofort zu entfernen.
+- Das Werkzeug „Bild hochladen“ nimmt jetzt auch Dokumente an.
+- Fehlerhafte JSON-Eingaben wie `null` liefern 400 statt 500.
+
+### Behoben
+- Private Beiträge, die während des Sammelns gelöscht und per Rückgängig wiederhergestellt wurden, wurden öffentlich.
+- Schriftgrößen- und Kontextleiste auf schmalen Bildschirmen: Alle Knöpfe bleiben erreichbar (seitlich scrollbar).
+
+### Sicherheit
+- Webhooks: nur https, Sperre interner Ziele (auch in IPv6 eingebettete IPv4-Adressen), Verbindung nur an die geprüfte IP,
+  keine Weiterleitungen, Adressen werden nicht protokolliert (REQ-SEC-012).
+- Dateianhänge: Typprüfung am Inhalt, Virenscan, Auslieferung nur als Download mit Sandbox-CSP (REQ-SEC-013).
+
 ## [4.0.2] – 2026-10-30
 
 ### Behoben

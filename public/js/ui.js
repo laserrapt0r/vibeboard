@@ -43,7 +43,7 @@ const TOOLS = [
   ['sticky', 'Sticky Note (N)'], ['text', 'Text (T)'], ['shape', 'Formen (S, R, O)'], ['connector', 'Verbindungslinie (L)'],
   ['pen', 'Stift (P)'], ['highlighter', 'Textmarker'], ['eraser', 'Radierer (E)'], '|',
   ['frame', 'Frame (F)'], ['card', 'Karte / Aufgabe (K)'], ['table', 'Tabelle'], ['code', 'Code-Block'], ['mindmap', 'Mindmap (M)'],
-  ['comment', 'Kommentar (C)'], ['emoji', 'Sticker & Emojis'], ['image', 'Bild hochladen'], ['laser', 'Laserpointer (X)'], '|',
+  ['comment', 'Kommentar (C)'], ['emoji', 'Sticker & Emojis'], ['image', 'Bild oder Datei hochladen (Bilder, PDF, Office, Text)'], ['laser', 'Laserpointer (X)'], '|',
   ['template', 'Vorlagen'], ['diagram', 'Diagramm aus Text (Mermaid-Syntax)'],
 ];
 
@@ -51,11 +51,15 @@ const EMOJIS = ['👍', '👎', '❤️', '⭐', '✅', '❌', '❓', '❗', '�
 const PEN_COLORS = ['#1a1a1a', '#e03131', '#f08c00', '#2f9e44', '#1971c2', '#7048e8', '#e64980', '#ffffff'];
 const HL_COLORS = ['#f5d128', '#93d275', '#6cd8fa', '#ffcee0', '#ff9d48', '#c9b2e8'];
 
-const fileInput = h('input', { type: 'file', accept: 'image/*', multiple: true, style: { display: 'none' } });
+// Bilder werden Bild-Elemente, Dokumente (PDF, Office, Text) Dateianhänge
+const fileInput = h('input', { type: 'file', accept: 'image/*,.pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp,.doc,.xls,.ppt,.txt,.md,.csv,.json', multiple: true, style: { display: 'none' } });
 document.body.append(fileInput);
 fileInput.addEventListener('change', () => {
   const c = viewCenter();
-  [...fileInput.files].forEach((f, i) => insertImageFile(f, { x: c.x + i * 40, y: c.y + i * 40 }));
+  [...fileInput.files].forEach((f, i) => {
+    if (f.type.startsWith('image/')) insertImageFile(f, { x: c.x + i * 40, y: c.y + i * 40 });
+    else app.emit('dropFile', f, { x: c.x + i * 240, y: c.y });
+  });
   fileInput.value = '';
 });
 
@@ -396,6 +400,8 @@ export function buildCtx() {
   if (app.isFacilitator && sel.some((e) => e.type !== 'comment')) {
     items.push(toggleBtn('shield', modLocked, modLocked ? 'Für Teilnehmende freigeben' : 'Für Teilnehmende sperren (nur Moderierende können ändern)', toggleModLock));
   }
+  // Erweiterungen anderer Module (Retro, Dateien, Schlagwörter, verborgene Bereiche)
+  app.emit('ctxItems', items, sel, { locked, one, only, actBtn, toggleBtn, sep });
   if (!locked) {
     items.push(actBtn('comment', 'Kommentieren', () => {
       const b = selectionBounds();
@@ -507,7 +513,8 @@ function positionCtx() {
   let y = sr.top + p1.y - ch - 40;
   if (y < 64) y = sr.top + p2.y + 40;
   if (y + ch > innerHeight - 8) y = Math.max(64, sr.top + p1.y + 8);
-  x = Math.max(8, Math.min(innerWidth - cw - 8, x));
+  // nicht über die Werkzeugleiste links legen (auf schmalen Bildschirmen liegt sie unten)
+  x = Math.max(innerWidth > 760 ? 72 : 8, Math.min(innerWidth - cw - 8, x));
   ctxbar.style.left = x + 'px';
   ctxbar.style.top = y + 'px';
 }
@@ -541,6 +548,20 @@ app.on('editCard', (id) => {
   const title = h('input', { type: 'text', value: el.title || '' });
   const desc = h('textarea', { rows: 4 }, el.description || '');
   const assignee = h('input', { type: 'text', value: el.assignee || '', placeholder: 'Name', list: 'assignee-list' });
+  // Zuständige Person aus dem Board wählen (eindeutig per ID – Namen können doppelt vorkommen)
+  let assigneeId = el.assigneeId || '';
+  const who = h('select', { 'aria-label': 'Person auswählen' }, h('option', { value: '' }, '– Person wählen –'));
+  boardPeople().then((people) => {
+    for (const p of people.filter((x) => !x.guest)) who.append(h('option', { value: p.id, selected: p.id === assigneeId }, p.displayName + (p.id === myId() ? ' (du)' : '')));
+  });
+  who.addEventListener('change', () => {
+    assigneeId = who.value;
+    if (who.value) assignee.value = who.selectedOptions[0].textContent.replace(/ \(du\)$/, '');
+  });
+  assignee.addEventListener('input', () => {
+    assigneeId = '';
+    who.value = '';
+  });
   const due = h('input', { type: 'date', value: el.due || '' });
   const status = h('input', { type: 'text', value: el.status || '', placeholder: 'z. B. In Arbeit', list: 'status-list' });
   const key = h('input', { type: 'text', value: el.key || '', placeholder: 'z. B. VB-42', maxlength: 40 });
@@ -555,7 +576,7 @@ app.on('editCard', (id) => {
   const form = h('form', { class: 'form', onsubmit: (e) => {
     e.preventDefault();
     act(() => updateEl(id, {
-      title: title.value, description: desc.value, assignee: assignee.value.trim(), due: due.value, status: status.value.trim(), color,
+      title: title.value, description: desc.value, assignee: assignee.value.trim(), assigneeId: assigneeId || undefined, due: due.value, status: status.value.trim(), color,
       key: key.value.trim() || undefined, priority: prio.value || undefined, points: points.value.trim() || undefined,
       tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 8),
     }));
@@ -564,7 +585,7 @@ app.on('editCard', (id) => {
   } },
   h('label', {}, 'Titel', title),
   h('label', {}, 'Beschreibung', desc),
-  h('div', { class: 'form-row' }, h('label', {}, 'Zuständig', assignee), h('label', {}, 'Fällig am', due)),
+  h('div', { class: 'form-row' }, h('label', {}, 'Zuständig', who, assignee), h('label', {}, 'Fällig am', due)),
   h('div', { class: 'form-row' }, h('label', {}, 'Status', status), h('label', {}, 'Priorität', prio)),
   h('div', { class: 'form-row' }, h('label', {}, 'Schlüssel / Ticket', key), h('label', {}, 'Story Points', points)),
   h('label', {}, 'Labels (durch Komma getrennt)', tags),
@@ -1037,7 +1058,8 @@ async function importFile(file) {
   try {
     const data = JSON.parse(await file.text());
     const list = Array.isArray(data) ? data : Array.isArray(data.elements) ? data.elements : Object.values(data.elements || {});
-    if (!list.length) return toast('Keine Elemente gefunden');
+    // Eine JSON-Datei ohne Board-Elemente ist kein Export, sondern ein Dokument – als Dateianhang ablegen
+    if (!list.length || !list.every((e) => e && typeof e === 'object' && typeof e.type === 'string')) return app.emit('dropFile', file, viewCenter());
     const n = list.filter((e) => e && e.type !== 'comment').length;
     if (!n) return toast('Keine Elemente gefunden (Kommentare werden nicht importiert)');
     pasteElements(list, viewCenter());
@@ -1063,6 +1085,11 @@ function openExportMenu(anchor) {
     { label: 'Karten aus CSV / Jira-Export …', icon: 'card', disabled: app.viewOnly, onClick: () => app.emit('openCsvImport') },
     { label: 'Diagramm aus Text (Mermaid) …', icon: 'diagram', disabled: app.viewOnly, onClick: () => app.emit('openDiagramText') },
     { label: 'Bild hochladen', icon: 'image', disabled: app.viewOnly, onClick: () => fileInput.click() },
+    { label: 'Datei anhängen (PDF, Office, Text)', icon: 'file', disabled: app.viewOnly, onClick: () => app.emit('pickFile') },
+    '-',
+    { header: 'Vorlagen' },
+    { label: 'Board als Vorlage speichern …', icon: 'template', disabled: app.guest, onClick: () => app.emit('saveTemplate', false) },
+    { label: 'Auswahl als Vorlage speichern …', icon: 'template', disabled: app.guest || !app.sel.size, onClick: () => app.emit('saveTemplate', true) },
   ]);
 }
 
@@ -1103,6 +1130,8 @@ function openSettings(anchor) {
     t('showAuthor', 'Autor auf Sticky Notes'),
     t('hideResolved', 'Erledigte Kommentare ausblenden'),
     t('hideCursors', 'Mauszeiger anderer ausblenden'),
+    { label: 'Filter …', icon: 'filter', onClick: () => showSidePanel('filter') },
+    { label: 'Retro & Umfragen …', icon: 'vote', onClick: () => app.emit('retroMenu', anchor) },
     { header: 'Bearbeitung' },
     t('snap', 'Am Raster einrasten'),
     { label: `Rastergröße: ${gridSize()} px`, icon: 'grid', keep: true, onClick: () => {
@@ -1198,11 +1227,15 @@ function closeContextMenu() {
 
 stage.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  if (app.viewOnly) return;
-  closeContextMenu();
-  const w = toWorld(e.clientX, e.clientY);
   const g = e.target.closest && e.target.closest('g[data-id]');
   const el = g && getEl(g.dataset.id);
+  // Betrachter: nur Reaktionen auf Elemente
+  if (app.viewOnly) {
+    if (el && !el.hidden) app.emit('reactMenu', el, e);
+    return;
+  }
+  closeContextMenu();
+  const w = toWorld(e.clientX, e.clientY);
   if (el && !app.sel.has(el.id)) setSelection([el.id]);
   const has = app.sel.size > 0;
   const items = has ? [
@@ -1215,6 +1248,7 @@ stage.addEventListener('contextmenu', (e) => {
     app.sel.size > 1 ? { label: 'Gruppieren', hint: 'Strg+G', onClick: groupSel } : null,
     selectedEls().some((x) => x.groupId) ? { label: 'Gruppierung aufheben', onClick: ungroupSel } : null,
     { label: 'Kommentar hinzufügen', onClick: () => newComment(w) },
+    el && app.sel.size === 1 ? { label: 'Reagieren …', onClick: () => app.emit('reactMenu', el, e) } : null,
     '-',
     { label: 'Löschen', hint: 'Entf', danger: true, onClick: () => deleteEls([...app.sel]) },
   ] : [

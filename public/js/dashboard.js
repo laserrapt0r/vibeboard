@@ -26,7 +26,7 @@ async function load(quiet) {
 }
 
 /* Meine Aufgaben: Karten aller zugänglichen Boards, die mir zugewiesen sind */
-const DONE_RE = /^(fertig|erledigt|done|geschlossen|closed|abgeschlossen|resolved|gelöst)$/i;
+const DONE_RE = /^(fertig|erledigt|done|geschlossen|closed|abgeschlossen|resolved|gelöst|übernommen)$/i;
 const PRIO = { critical: ['⏫', 'Kritisch', '#e03131'], high: ['▲', 'Hoch', '#f08c00'], medium: ['■', 'Mittel', '#1971c2'], low: ['▼', 'Niedrig', '#868e96'] };
 let tasks = [];
 
@@ -251,9 +251,65 @@ function render() {
   document.getElementById('dash-start').classList.toggle('hidden', kind !== 'start');
   document.getElementById('dash-tasks-view').classList.toggle('hidden', kind !== 'tasks');
   document.getElementById('dash-boards-view').classList.toggle('hidden', !BOARD_VIEWS.has(kind));
+  document.getElementById('dash-trash-view').classList.toggle('hidden', kind !== 'trash');
   if (kind === 'start') renderStart();
   if (kind === 'tasks') renderTasks();
+  if (kind === 'trash') renderTrash();
   renderBoards();
+}
+
+/* ---------------- Papierkorb ---------------- */
+
+let trash = { days: 30, boards: [] };
+
+async function loadTrash(quiet) {
+  try {
+    trash = await api('/api/trash', { quiet });
+  } catch {
+    trash = { days: 30, boards: [] };
+  }
+  renderNav();
+  if (view.kind === 'trash') renderTrash();
+}
+
+function renderTrash() {
+  const box = document.getElementById('dash-trash');
+  document.getElementById('dash-trash-info').textContent = `Gelöschte Boards bleiben ${trash.days} Tage im Papierkorb und werden danach endgültig entfernt. Nur du siehst deine gelöschten Boards.`;
+  box.innerHTML = '';
+  if (!trash.boards.length) {
+    box.append(h('div', { class: 'dash-empty' }, 'Der Papierkorb ist leer.'));
+    return;
+  }
+  for (const b of trash.boards) {
+    const days = Math.max(0, Math.ceil((b.purgeAt - Date.now()) / 86400000));
+    const thumb = h('div', { class: 'board-thumb' });
+    thumb.append(h('div', { class: 'board-thumb-empty' }, '🗑️'));
+    box.append(h('div', { class: 'board-card trashed' }, thumb,
+      h('div', { class: 'board-info' },
+        h('div', { class: 'board-name' }, b.name),
+        h('div', { class: 'board-meta' }, `gelöscht ${relTime(b.deletedAt)} · ${b.elementCount} Elemente · noch ${days} Tag${days === 1 ? '' : 'e'}`),
+        h('div', { class: 'row', style: { marginTop: '8px' } },
+          h('button', { class: 'btn small primary', onclick: async () => {
+            try {
+              await api(`/api/trash/${b.id}/restore`, { method: 'POST' });
+              toast(`„${b.name}“ wiederhergestellt`);
+              await loadTrash();
+              load();
+            } catch (e) {
+              toast(e.message);
+            }
+          } }, h('span', { html: ICONS.restore }), 'Wiederherstellen'),
+          h('button', { class: 'btn small danger', onclick: async () => {
+            if (!(await confirmDialog('Endgültig löschen', `„${b.name}“ wird mit allen Inhalten, Versionen, Dateien und Aufzeichnungen endgültig gelöscht. Das lässt sich nicht rückgängig machen.`, 'Endgültig löschen', true))) return;
+            try {
+              await api(`/api/trash/${b.id}`, { method: 'DELETE' });
+              toast('Endgültig gelöscht');
+              loadTrash();
+            } catch (e) {
+              toast(e.message);
+            }
+          } }, 'Endgültig löschen')))));
+  }
 }
 
 // Start: einklappbare Vorlagenleiste, Hinweis auf fällige Aufgaben, zuletzt bearbeitete Boards
@@ -303,6 +359,7 @@ function renderNav() {
   if (invitations.length) nav.append(h('button', { class: 'dash-nav-item invite-link', onclick: () => setView({ kind: 'start' }) }, h('span', { class: 'nav-icon', html: ICONS.bell }), h('span', { class: 'nav-label' }, 'Einladungen'), h('span', { class: 'nav-count alert' }, invitations.length)));
   if (!data.teams.length) nav.append(h('div', { class: 'dash-nav-hint' }, 'Teams teilen Boards mit allen Mitgliedern auf einmal.'));
   for (const t of data.teams) nav.append(item(t.name, { kind: 'team', id: t.id }, allBoards().filter((b) => inTeam(b, t.id)).length, 'team'));
+  nav.append(h('div', { class: 'dash-nav-sep' }), item('Papierkorb', { kind: 'trash' }, trash.boards.length || null, 'trash'));
 }
 
 function renderBoards() {
@@ -538,7 +595,7 @@ async function openTeamDialog(id) {
     body.append(h('div', {}, h('div', { class: 'label' }, `Mitglieder (${t.members.length})`), list));
     body.append(h('p', { class: 'muted small' }, 'Boards ordnest du über „Teilen“ → „Team“ zu. Dort legst du auch fest, ob das Team bearbeiten, kommentieren oder nur ansehen darf.'));
     if (admin) {
-      body.append(h('div', { class: 'form-actions' }, h('button', { class: 'btn danger', onclick: async () => {
+      body.append(h('div', { class: 'form-actions' }, h('button', { class: 'btn', onclick: () => import('./webhooks-ui.js').then((mod) => mod.openWebhooks({ teamId: id, teamName: t.name })) }, 'Chat-Anbindung …'), h('span', { class: 'spacer' }), h('button', { class: 'btn danger', onclick: async () => {
         if (!(await confirmDialog('Team löschen', `Das Team „${t.name}“ wird gelöscht. Die Boards bleiben bei ihren Besitzern erhalten, sind aber nicht mehr für das Team freigegeben.`, 'Löschen', true))) return;
         try {
           await api('/api/teams/' + id, { method: 'DELETE' });
@@ -585,12 +642,17 @@ function boardMenu(anchor, b) {
       }
     } },
     '-',
-    owner ? { label: 'Löschen', icon: 'trash', danger: true, onClick: async () => {
-      if (await confirmDialog('Board löschen', `„${b.name}“ wird für alle Mitglieder unwiderruflich gelöscht.`, 'Löschen', true)) {
+    owner ? { label: 'In den Papierkorb', icon: 'trash', danger: true, onClick: async () => {
+      if (await confirmDialog('Board löschen', `„${b.name}“ kommt in den Papierkorb und ist für alle Mitglieder nicht mehr erreichbar. Du kannst es dort wiederherstellen, bis es nach Ablauf der Frist endgültig gelöscht wird.`, 'In den Papierkorb', true)) {
         try {
           await api('/api/boards/' + b.id, { method: 'DELETE' });
-          toast('Board gelöscht');
+          toast('Board liegt im Papierkorb', 5000, { label: 'Rückgängig', onClick: async () => {
+            await api(`/api/trash/${b.id}/restore`, { method: 'POST' }).catch((e) => toast(e.message));
+            load();
+            loadTrash(true);
+          } });
           load();
+          loadTrash(true);
         } catch (e) {
           toast(e.message);
         }
@@ -696,6 +758,7 @@ importInput.addEventListener('change', async () => {
   load();
   loadTasks();
   loadInvitations();
+  loadTrash(true);
   legalFooter().then((f) => document.getElementById('footer').append(f));
   setInterval(() => {
     load(true);

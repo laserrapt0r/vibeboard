@@ -59,7 +59,8 @@ export const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation 
 
 export function defsMarkup() {
   return `<filter id="shadow" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.16"/></filter>
-<filter id="shadow-sm" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.18"/></filter>`;
+<filter id="shadow-sm" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.18"/></filter>
+<pattern id="conceal-pattern" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="24" height="24" fill="#e9ecef"/><rect width="12" height="24" fill="#dee2e6"/></pattern>`;
 }
 
 /* ---------------- Text ---------------- */
@@ -1016,7 +1017,59 @@ export function renderElement(el, env = {}) {
   // Vorschaubildern und Exporten ebenfalls verdeckt
   if (el.hidden || (el.priv && env.redactPrivate)) return hiddenMarkup(el);
   const own = el.priv ? privateBadge(el) : '';
-  return renderBody(el, env) + (el.link ? linkBadge(el) : '') + own;
+  return renderBody(el, env) + (el.link ? linkBadge(el) : '') + own + (el.type === 'sticky' || el.type === 'shape' ? stickyTags(el) : '') + reactionsMarkup(el, env);
+}
+
+// Schlagwörter auf Sticky Notes und Formen: kleine Etiketten oben links (zu lange werden gekürzt)
+function stickyTags(el) {
+  const tags = cardTags(el);
+  if (!tags.length) return '';
+  const fs = Math.max(9, Math.min(13, el.w * 0.06));
+  let tx = el.x + 6, out = '';
+  for (let t of tags) {
+    const room = el.x + el.w - 4 - tx - fs;
+    while (t.length > 2 && measure(t, fs) > room) t = t.slice(0, -2) + '…';
+    const tw = measure(t, fs) + fs;
+    if (tx + tw > el.x + el.w - 4) break;
+    out += `<rect x="${tx}" y="${el.y + 5}" width="${tw}" height="${fs * 1.5}" rx="${fs * 0.4}" fill="#ffffff" fill-opacity="0.75"/><text x="${tx + fs / 2}" y="${el.y + 5 + fs * 1.1}" font-family="${esc(FONT)}" font-size="${fs}" fill="#495057">${esc(t)}</text>`;
+    tx += tw + 4;
+  }
+  return `<g class="tags">${out}</g>`;
+}
+
+// Reaktionen: Emoji mit Anzahl unter dem Element (eigene hervorgehoben)
+export const REACTIONS = ['👍', '❤️', '😂', '🎉', '👏', '🤔', '🔥', '😮', '➕', '✅'];
+function reactionsMarkup(el, env) {
+  const r = el.reactions;
+  if (!r || typeof r !== 'object') return '';
+  const me = env.me ? String(env.me) : null;
+  let tx = el.x, out = '';
+  const y = el.y + el.h + 6;
+  for (const emoji of REACTIONS) {
+    const who = r[emoji];
+    if (!who || typeof who !== 'object') continue;
+    const names = Object.values(who).map(String);
+    if (!names.length) continue;
+    const mine = me && Object.hasOwn(who, me);
+    const label = `${emoji} ${names.length}`;
+    const w = measure(String(names.length), 12, true) + 34;
+    out += `<g class="reaction-chip" data-emoji="${esc(emoji)}"><title>${esc(names.slice(0, 20).join(', ') + (names.length > 20 ? ' …' : ''))}</title>` +
+      `<rect x="${tx}" y="${y}" width="${w}" height="22" rx="11" fill="${mine ? '#e7ecff' : '#ffffff'}" stroke="${mine ? '#4262ff' : '#dee2e6'}"/>` +
+      `<text x="${tx + 8}" y="${y + 15.5}" font-family="${esc(FONT)}" font-size="12" font-weight="bold" fill="#343a40">${esc(label)}</text></g>`;
+    tx += w + 4;
+  }
+  return out ? `<g class="reactions">${out}</g>` : '';
+}
+
+// Dateianhänge: Symbol nach Dateityp
+const FILE_KINDS = { pdf: ['PDF', '#e03131'], doc: ['DOC', '#1c7ed6'], docx: ['DOC', '#1c7ed6'], odt: ['ODT', '#1c7ed6'], xls: ['XLS', '#2f9e44'], xlsx: ['XLS', '#2f9e44'], ods: ['ODS', '#2f9e44'], csv: ['CSV', '#2f9e44'], ppt: ['PPT', '#e8590c'], pptx: ['PPT', '#e8590c'], odp: ['ODP', '#e8590c'], txt: ['TXT', '#495057'], md: ['MD', '#495057'], json: ['JSON', '#7048e8'] };
+export function fileKind(name) {
+  const ext = (/\.([a-z0-9]{1,5})$/i.exec(String(name || '')) || [])[1];
+  return own(FILE_KINDS, ext && ext.toLowerCase()) || ['DATEI', '#868e96'];
+}
+export function fileSize(n) {
+  n = Number(n) || 0;
+  return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1).replace('.', ',')} MB`;
 }
 
 function hiddenMarkup(el) {
@@ -1031,6 +1084,20 @@ function hiddenMarkup(el) {
 function privateBadge(el) {
   const s = Math.max(14, Math.min(24, Math.min(el.w, el.h) * 0.12));
   return `<g><title>Privat – nur für dich sichtbar, bis der private Modus beendet wird</title><circle cx="${el.x + s * 0.2}" cy="${el.y + s * 0.2}" r="${s / 2 + 2}" fill="#212529"/><text x="${el.x + s * 0.2}" y="${el.y + s * 0.2 + s * 0.3}" font-size="${s * 0.75}" text-anchor="middle">🔒</text></g>`;
+}
+
+// Verborgener Bereich: Teilnehmende sehen eine Abdeckung, Moderierende einen Hinweis am Rand
+function concealMarkup(el, env) {
+  if (!el.concealed) return '';
+  const { x, y, w, h } = el;
+  if (env.seesConcealed && !env.redactPrivate) {
+    return `<g class="conceal-badge"><title>Verborgen – nur Moderierende sehen den Inhalt</title><rect x="${x + w - 132}" y="${y + 8}" width="124" height="24" rx="12" fill="#212529" fill-opacity="0.8"/>` +
+      `<text x="${x + w - 70}" y="${y + 24}" font-family="${esc(FONT)}" font-size="12" text-anchor="middle" fill="#fff">🙈 Verborgen</text></g>`;
+  }
+  const fs = Math.max(14, Math.min(40, Math.min(w, h) / 12));
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#conceal-pattern)" stroke="#adb5bd" stroke-dasharray="10 6"/>` +
+    `<text x="${x + w / 2}" y="${y + h / 2}" font-family="${esc(FONT)}" font-size="${fs * 1.6}" text-anchor="middle">🙈</text>` +
+    `<text x="${x + w / 2}" y="${y + h / 2 + fs * 1.4}" font-family="${esc(FONT)}" font-size="${fs * 0.6}" text-anchor="middle" fill="#495057">Verborgen – die Moderation deckt diesen Bereich auf</text>`;
 }
 
 // Höhe eines Code-Blocks aus der Zeilenzahl
@@ -1082,12 +1149,20 @@ function renderBody(el, env) {
       return bg + textSvg(box, lay, { color: el.color || '#1a1a1a', align: el.align || 'left', valign: 'top', underline: el.underline, strike: el.strike }) + ph;
     }
     case 'frame': {
+      // Themengruppe (Retro): abgerundete, getönte Fläche mit Titel innen
+      if (el.kind === 'topic') {
+        const ts = Math.max(14, Math.min(30, w / 18));
+        const fill = el.fill && el.fill !== '#ffffff' ? el.fill : '#eef2ff';
+        return `<rect class="frame-body" x="${x}" y="${y}" width="${w}" height="${h}" rx="16" fill="${fill}" fill-opacity="0.7" stroke="#748ffc" stroke-width="2" stroke-dasharray="8 5"/>` +
+          `<rect class="frame-title" x="${x}" y="${y}" width="${w}" height="${ts * 2}" fill="transparent"/>` +
+          `<text class="frame-title-text" x="${x + 14}" y="${y + ts * 1.4}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#364fc7">🗂 ${esc(el.title || 'Thema')}</text>` + concealMarkup(el, env);
+      }
       const ts = Math.max(14, Math.min(48, Math.min(w, h) / 45));
       const title = el.title || 'Frame';
       const tw = measure(title, ts, true) + 8;
       return `<rect class="frame-body" x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#ffffff'}" stroke="${el.stroke || '#d6d6d6'}" stroke-width="1"/>` +
         `<rect class="frame-title" x="${x}" y="${y - ts * 1.6}" width="${tw}" height="${ts * 1.5}" fill="transparent"/>` +
-        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#6b6b6b">${esc(title)}</text>`;
+        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#6b6b6b">${esc(title)}</text>` + concealMarkup(el, env);
     }
     case 'connector': {
       const g = connectorGeom(el, get);
@@ -1115,6 +1190,26 @@ function renderBody(el, env) {
       const d = penPath(el.points);
       return `<g transform="translate(${r1(x)},${r1(y)})"><path class="hit" d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(12, (el.strokeWidth || 3) + 8)}" stroke-linecap="round"/>` +
         `<path d="${d}" fill="none" stroke="${el.stroke || '#1a1a1a'}" stroke-width="${el.strokeWidth || 3}" stroke-linecap="round" stroke-linejoin="round"${el.opacity && el.opacity < 1 ? ` stroke-opacity="${el.opacity}"` : ''}/></g>`;
+    }
+    case 'file': {
+      const [label, color] = fileKind(el.name);
+      const head = 44;
+      let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#ffffff" stroke="#dee2e6" filter="url(#shadow-sm)"/>`;
+      // Vorschau (erste Seite) – nur im Board, nicht in Exporten (dort lädt der Browser keine Adressen nach)
+      const pv = el.preview && el.fileId && env.boardId && !env.noExternal;
+      if (pv) {
+        out += `<image href="/api/boards/${encodeURIComponent(env.boardId)}/files/${encodeURIComponent(el.fileId)}/preview" x="${x + 6}" y="${y + 6}" width="${Math.max(0, w - 12)}" height="${Math.max(0, h - head - 12)}" preserveAspectRatio="xMidYMin meet"/>`;
+      } else {
+        const s = Math.min(w, h - head) * 0.45;
+        const cx = x + w / 2, cy = y + (h - head) / 2;
+        out += `<path d="M${cx - s * 0.38},${cy - s / 2} h${s * 0.52} l${s * 0.24},${s * 0.24} v${s * 0.76} h${-s * 0.76} Z" fill="#f8f9fa" stroke="${color}" stroke-width="2"/>`;
+        out += `<rect x="${cx - s * 0.46}" y="${cy + s * 0.05}" width="${s * 0.92}" height="${s * 0.3}" rx="3" fill="${color}"/><text x="${cx}" y="${cy + s * 0.27}" font-family="${esc(FONT)}" font-size="${s * 0.2}" font-weight="bold" text-anchor="middle" fill="#fff">${label}</text>`;
+      }
+      const nl = wrap(el.name || 'Datei', w - 20, 13, true).slice(0, 1);
+      out += `<line x1="${x}" y1="${y + h - head}" x2="${x + w}" y2="${y + h - head}" stroke="#f1f3f5"/>`;
+      out += `<text x="${x + 10}" y="${y + h - head + 18}" font-family="${esc(FONT)}" font-size="13" font-weight="bold" fill="#1a1a1a">${esc(nl[0] || '')}</text>`;
+      out += `<text x="${x + 10}" y="${y + h - head + 35}" font-family="${esc(FONT)}" font-size="11" fill="#868e96">${esc(label + ' · ' + fileSize(el.size) + (el.fileId ? '' : ' · nicht verfügbar'))}</text>`;
+      return out;
     }
     case 'image': {
       if (!el.src) return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#eee" stroke="#ccc"/>`;
@@ -1274,7 +1369,7 @@ export function cardTags(el) {
 }
 
 /* Vollständiges SVG für eine Menge von Elementen (Vorschau, Export) */
-export function renderSvgDocument(elements, { padding = 40, background = '#ffffff', width, height, bounds, redactPrivate = false } = {}) {
+export function renderSvgDocument(elements, { padding = 40, background = '#ffffff', width, height, bounds, redactPrivate = false, seesConcealed = true } = {}) {
   const map = new Map(elements.map((e) => [e.id, e]));
   const get = (id) => map.get(id);
   const list = sortForRender(elements.filter((e) => e.type !== 'comment' && !isOrphan(e, get)));
@@ -1287,7 +1382,7 @@ export function renderSvgDocument(elements, { padding = 40, background = '#fffff
     vb.y -= 40;
     vb.h += 40;
   }
-  const body = list.map((e) => `<g>${renderElement(e, { get, redactPrivate })}</g>`).join('');
+  const body = list.map((e) => `<g>${renderElement(e, { get, redactPrivate, seesConcealed, noExternal: true })}</g>`).join('');
   return {
     svg: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" width="${width || vb.w}" height="${height || vb.h}"><defs>${defsMarkup()}</defs>` +
       (background ? `<rect x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="${esc(background)}"/>` : '') + body + '</svg>',
@@ -1296,6 +1391,7 @@ export function renderSvgDocument(elements, { padding = 40, background = '#fffff
 }
 
 export function sortForRender(list) {
-  const rank = (e) => (e.type === 'frame' ? 0 : e.type === 'comment' ? 2 : 1);
+  // Frames ganz unten, dann gesperrte Hintergründe (Vorlagen-Flächen), Themengruppen, Inhalte, Kommentare
+  const rank = (e) => (e.type === 'frame' ? (e.kind === 'topic' ? 2 : 0) : e.type === 'comment' ? 4 : e.locked ? 1 : 3);
   return [...list].sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0));
 }

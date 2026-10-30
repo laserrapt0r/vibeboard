@@ -36,3 +36,9 @@
 - **Akzeptanzkriterien:**
   - `npm run test:upgrade` prüft die Datenbank-Migrationen ([REQ-OPS-004](14-betrieb-versionierung.md)).
   - `?transport=poll` erzwingt den Rückfall-Transport für Tests.
+
+### REQ-NFR-007 Installierbare App (PWA)
+- **Seit:** 4.1.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Web-App-Manifest mit Symbolen (auch „maskable“) und Designfarbe; die App lässt sich über den Browser installieren (Kontomenü „App installieren“, sobald der Browser es anbietet) und läuft im eigenen Fenster.
+  - Ein Service Worker hält nur statische Dateien (Oberfläche, Skripte, Symbole) für den Offline-Fall vor – immer „Netz zuerst“, damit Updates sofort gelten. Schnittstellen, Echtzeitkanal, Dateien und Seiten mit Anmeldestatus werden nie zwischengespeichert; ohne Verbindung erscheint eine Offline-Seite.
