@@ -25,6 +25,7 @@
 - **Akzeptanzkriterien:**
   - Einige Sekunden nach einer Änderung erzeugt der Browser ein Vorschaubild für die Board-Übersicht und lädt es hoch (Prüfung wie ein Upload).
   - Geändert in 4.0.0: Hat ein Board Inhalt, aber noch kein Vorschaubild (z. B. aus einer Vorlage erstellt, importiert oder kopiert), erzeugt es der Browser einer bearbeitenden Person einige Sekunden nach dem Öffnen – ohne dass erst etwas geändert werden muss.
+  - Geändert in 4.0.2: Boards aus Vorlagen erhalten ihr Vorschaubild bereits beim Anlegen auf der Startseite; andere Boards ohne Vorschaubild erzeugen es direkt nach dem Laden (nicht erst nach der Wartezeit für Änderungen).
 
 ### REQ-IO-005 Karten aus CSV importieren
 - **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt

@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.0.2] – 2026-10-30
+
+### Behoben
+- Vorschaubilder für Boards aus Vorlagen (REQ-IO-004): Sie entstanden erst vier Sekunden nach dem Öffnen des Boards –
+  wer sofort zur Übersicht zurückging, sah keine Vorschau. Jetzt erzeugt die Startseite das Vorschaubild schon beim
+  Anlegen; Boards ohne Vorschau (z. B. Importe) erzeugen es direkt nach dem Laden.
+
 ## [4.0.1] – 2026-10-30
 
 ### Behoben

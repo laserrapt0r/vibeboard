@@ -87,11 +87,26 @@ function renderTasks() {
   for (const t of list.slice(0, 200)) box.append(taskItem(t));
 }
 
+// Vorschaubild gleich beim Anlegen erzeugen – sonst entstünde es erst im Board (und nicht, wenn man sofort zurückgeht).
+// Höchstens drei Sekunden warten, damit das Öffnen des Boards nicht spürbar verzögert wird.
+async function uploadThumb(id, elements) {
+  if (!elements.length) return;
+  try {
+    const { thumbnail } = await import('./exporter.js');
+    const url = await Promise.race([thumbnail(elements), new Promise((r) => setTimeout(() => r(null), 3000))]);
+    if (url) await api(`/api/boards/${id}/thumb`, { method: 'PUT', body: url, quiet: true });
+  } catch {
+    /* ohne Vorschaubild weiter – das Board erzeugt es beim Öffnen */
+  }
+}
+
 async function createFromTemplate(t) {
   const name = await promptDialog('Neues Board', 'Name des Boards', t.id === 'blank' ? 'Unbenanntes Board' : t.name);
   if (name === null) return;
   try {
-    const b = await api('/api/boards', { method: 'POST', body: { name: name.trim() || t.name, elements: t.build() } });
+    const elements = t.build();
+    const b = await api('/api/boards', { method: 'POST', body: { name: name.trim() || t.name, elements } });
+    await uploadThumb(b.id, elements);
     location.href = '/board/' + b.id;
   } catch (e) {
     toast(e.message);

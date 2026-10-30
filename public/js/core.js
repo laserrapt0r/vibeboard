@@ -526,7 +526,7 @@ export function loadElements(obj) {
 }
 
 /* Vorschaubild für die Board-Übersicht */
-const scheduleSaveThumb = debounce(async () => {
+async function saveThumb() {
   if (app.viewOnly || app.session.privateMode?.active) return;
   try {
     const { thumbnail } = await import('./exporter.js');
@@ -534,11 +534,13 @@ const scheduleSaveThumb = debounce(async () => {
     if (url) await api(`/api/boards/${boardId}/thumb`, { method: 'PUT', body: url, quiet: true });
     if (url && app.boardMeta) app.boardMeta.hasThumb = true;
   } catch {}
-}, 4000);
+}
+const scheduleSaveThumb = debounce(saveThumb, 4000);
 
-// Boards aus Vorlagen, Importen oder Kopien haben anfangs Inhalt, aber noch kein Vorschaubild – nach dem Laden erzeugen
+// Boards mit Inhalt, aber ohne Vorschaubild (z. B. Importe): sofort nach dem Laden erzeugen – nicht erst nach
+// der Wartezeit für Änderungen, sonst fehlt es, wenn man gleich wieder zur Übersicht geht
 export function ensureThumb() {
-  if (app.boardMeta && !app.boardMeta.hasThumb && app.els.size) scheduleSaveThumb();
+  if (app.boardMeta && !app.boardMeta.hasThumb && app.els.size) setTimeout(saveThumb, 300);
 }
 
 /* ================================================================== */
