@@ -1,5 +1,6 @@
 // Geführte Aufzeichnungen: Ansicht, Mauszeiger und Laserpointer als Zeitspur aufnehmen, optional mit Ton,
 // und später abspielen – das Board bleibt dabei bedienbar
+import { T } from './i18n.js';
 import { h, api, ICONS, toast, modal, relTime, confirmDialog, throttle } from './util.js';
 import { app, $, stage, toWorld, toScreen, visibleRect, viewFor, applyView } from './core.js';
 import { menu, currentSidePanel, renderSidePanel, showSidePanel } from './ui.js';
@@ -25,20 +26,20 @@ function pickMime() {
 
 function openRecordDialog() {
   if (rec) return;
-  const title = h('input', { type: 'text', maxlength: 120, placeholder: 'z. B. Rundgang durch die Architektur', value: '' });
+  const title = h('input', { type: 'text', maxlength: 120, placeholder: T('z. B. Rundgang durch die Architektur'), value: '' });
   const mic = h('input', { type: 'checkbox', checked: !!pickMime() && !!navigator.mediaDevices, disabled: !pickMime() || !navigator.mediaDevices });
   const max = (app.features && app.features.recordingMaxMinutes) || 10;
   const form = h('form', { class: 'form', onsubmit: (e) => {
     e.preventDefault();
     m.close();
-    start(title.value.trim() || 'Rundgang', mic.checked);
+    start(title.value.trim() || T('Rundgang'), mic.checked);
   } },
-  h('p', { class: 'muted' }, `Aufgezeichnet werden deine Ansicht, dein Mauszeiger und der Laserpointer – höchstens ${max} Minuten. Andere können den Rundgang später abspielen und dabei selbst im Board navigieren.`),
-  h('label', {}, 'Titel', title),
-  h('label', { class: 'check' }, mic, 'Mit Ton aufnehmen (Mikrofon)'),
-  h('p', { class: 'muted small' }, 'Mit Ton wird deine Stimme zusammen mit der Aufzeichnung gespeichert, bis du oder die Besitzerin bzw. der Besitzer des Boards sie löschen. Alle mit Zugriff auf das Board können sie abspielen.'),
-  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, 'Abbrechen'), h('button', { type: 'submit', class: 'btn primary' }, h('span', { html: ICONS.record }), 'Aufnahme starten')));
-  const m = modal('Rundgang aufzeichnen', form);
+  h('p', { class: 'muted' }, T`Aufgezeichnet werden deine Ansicht, dein Mauszeiger und der Laserpointer – höchstens ${max} Minuten. Andere können den Rundgang später abspielen und dabei selbst im Board navigieren.`),
+  h('label', {}, T('Titel'), title),
+  h('label', { class: 'check' }, mic, T('Mit Ton aufnehmen (Mikrofon)')),
+  h('p', { class: 'muted small' }, T('Mit Ton wird deine Stimme zusammen mit der Aufzeichnung gespeichert, bis du oder die Besitzerin bzw. der Besitzer des Boards sie löschen. Alle mit Zugriff auf das Board können sie abspielen.')),
+  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, T('Abbrechen')), h('button', { type: 'submit', class: 'btn primary' }, h('span', { html: ICONS.record }), T('Aufnahme starten'))));
+  const m = modal(T('Rundgang aufzeichnen'), form);
   setTimeout(() => title.focus(), 0);
 }
 
@@ -52,7 +53,7 @@ async function start(title, withMic) {
       recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
       recorder.start(1000);
     } catch {
-      toast('Kein Zugriff auf das Mikrofon – es wird ohne Ton aufgezeichnet', 5000);
+      toast(T('Kein Zugriff auf das Mikrofon – es wird ohne Ton aufgezeichnet'), 5000);
       stream = null;
       recorder = null;
     }
@@ -78,12 +79,12 @@ async function start(title, withMic) {
   stage.addEventListener('pointermove', onMove);
   stage.addEventListener('pointerleave', onLeave);
   const bar = h('div', { id: 'rec-bar', class: 'panel' },
-    h('span', { class: 'rec-dot' }), h('b', {}, 'Aufnahme'), h('span', { class: 'rec-time' }, '0:00'), h('span', { class: 'muted small' }, `/ ${fmt(max)}`),
-    stream ? h('span', { class: 'rec-mic', html: ICONS.mic, title: 'Mit Ton' }) : null,
-    h('button', { class: 'btn small primary', onclick: () => stop(true) }, 'Beenden & speichern'),
+    h('span', { class: 'rec-dot' }), h('b', {}, T('Aufnahme')), h('span', { class: 'rec-time' }, '0:00'), h('span', { class: 'muted small' }, `/ ${fmt(max)}`),
+    stream ? h('span', { class: 'rec-mic', html: ICONS.mic, title: T('Mit Ton') }) : null,
+    h('button', { class: 'btn small primary', onclick: () => stop(true) }, T('Beenden & speichern')),
     h('button', { class: 'btn small', onclick: async () => {
-      if (await confirmDialog('Aufnahme verwerfen', 'Die bisherige Aufnahme wird nicht gespeichert.', 'Verwerfen', true)) stop(false);
-    } }, 'Verwerfen'));
+      if (await confirmDialog(T('Aufnahme verwerfen'), T('Die bisherige Aufnahme wird nicht gespeichert.'), T('Verwerfen'), true)) stop(false);
+    } }, T('Verwerfen')));
   document.body.append(bar);
   const tick = setInterval(() => {
     bar.querySelector('.rec-time').textContent = fmt(t());
@@ -117,15 +118,15 @@ async function start(title, withMic) {
         });
       }
     }
-    if (!save) return toast('Aufnahme verworfen');
-    if (duration < 1500) return toast('Die Aufnahme war zu kurz und wurde nicht gespeichert');
+    if (!save) return toast(T('Aufnahme verworfen'));
+    if (duration < 1500) return toast(T('Die Aufnahme war zu kurz und wurde nicht gespeichert'));
     try {
       await api(`/api/boards/${app.boardId}/recordings`, { method: 'POST', body: { title, durationMs: duration, track, audio } });
-      toast('Rundgang gespeichert – alle mit Zugriff können ihn unter „Aufzeichnungen“ abspielen', 5000);
+      toast(T('Rundgang gespeichert – alle mit Zugriff können ihn unter „Aufzeichnungen“ abspielen'), 5000);
       list = null;
       showSidePanel('recordings');
     } catch (e) {
-      toast('Speichern fehlgeschlagen: ' + e.message, 6000);
+      toast(T('Speichern fehlgeschlagen: ') + e.message, 6000);
     }
   }
 }
@@ -146,24 +147,24 @@ async function loadList() {
 }
 
 async function renderPanel(side, close) {
-  side.append(h('div', { class: 'side-head' }, h('h3', {}, 'Aufzeichnungen'), h('span', { class: 'spacer' }), close));
-  if (canRecord()) side.append(h('div', { class: 'side-actions' }, h('button', { class: 'btn small primary', onclick: openRecordDialog }, h('span', { html: ICONS.record }), 'Rundgang aufzeichnen')));
+  side.append(h('div', { class: 'side-head' }, h('h3', {}, T('Aufzeichnungen')), h('span', { class: 'spacer' }), close));
+  if (canRecord()) side.append(h('div', { class: 'side-actions' }, h('button', { class: 'btn small primary', onclick: openRecordDialog }, h('span', { html: ICONS.record }), T('Rundgang aufzeichnen'))));
   if (!list) {
     await loadList();
     if (currentSidePanel() === 'recordings') renderSidePanel();
     return;
   }
   if (!list.length) {
-    side.append(h('p', { class: 'muted pad' }, 'Noch keine Aufzeichnungen. Ein Rundgang erklärt das Board ohne Termin: Ansicht, Zeiger und Laserpointer werden aufgenommen – auf Wunsch mit deiner Stimme.'));
+    side.append(h('p', { class: 'muted pad' }, T('Noch keine Aufzeichnungen. Ein Rundgang erklärt das Board ohne Termin: Ansicht, Zeiger und Laserpointer werden aufgenommen – auf Wunsch mit deiner Stimme.')));
     return;
   }
   for (const r of list) {
     const mine = r.byId === String(app.user.id);
     side.append(h('div', { class: 'rec-item' },
-      h('button', { class: 'icon-btn', title: 'Abspielen', html: ICONS.play, onclick: () => play(r.id) }),
-      h('div', { class: 'rec-main' }, h('b', {}, r.title), h('span', { class: 'muted small' }, `${r.by} · ${fmt(r.durationMs)}${r.hasAudio ? ' · mit Ton' : ''} · ${relTime(r.createdAt)}`)),
-      mine || app.role === 'owner' ? h('button', { class: 'icon-btn small', title: 'Löschen', html: ICONS.trash, onclick: async () => {
-        if (!(await confirmDialog('Aufzeichnung löschen', `„${r.title}“ wird für alle gelöscht.`, 'Löschen', true))) return;
+      h('button', { class: 'icon-btn', title: T('Abspielen'), html: ICONS.play, onclick: () => play(r.id) }),
+      h('div', { class: 'rec-main' }, h('b', {}, r.title), h('span', { class: 'muted small' }, `${r.by} · ${fmt(r.durationMs)}${r.hasAudio ? T(' · mit Ton') : ''} · ${relTime(r.createdAt)}`)),
+      mine || app.role === 'owner' ? h('button', { class: 'icon-btn small', title: T('Löschen'), html: ICONS.trash, onclick: async () => {
+        if (!(await confirmDialog(T('Aufzeichnung löschen'), T`„${r.title}“ wird für alle gelöscht.`, T('Löschen'), true))) return;
         try {
           await api(`/api/boards/${app.boardId}/recordings/${r.id}`, { method: 'DELETE' });
           list = null;
@@ -204,7 +205,7 @@ async function play(id) {
       if (!r.ok) throw new Error();
       audio = new Audio(URL.createObjectURL(await r.blob()));
     } catch {
-      toast('Die Tonspur konnte nicht geladen werden – Wiedergabe ohne Ton', 4000);
+      toast(T('Die Tonspur konnte nicht geladen werden – Wiedergabe ohne Ton'), 4000);
     }
   }
   const cursor = h('div', { class: 'peer-cursor rec-cursor hidden' },
@@ -213,10 +214,10 @@ async function play(id) {
   $('#cursors').append(cursor);
   const range = h('input', { type: 'range', min: 0, max: data.durationMs, value: 0, step: 100 });
   const time = h('span', { class: 'rec-time' }, `0:00 / ${fmt(data.durationMs)}`);
-  const pp = h('button', { class: 'icon-btn', title: 'Pause', html: ICONS.pause });
-  const followBtn = h('button', { class: 'btn small active', title: 'Der Ansicht der Aufzeichnung folgen' }, 'Ansicht folgen');
+  const pp = h('button', { class: 'icon-btn', title: T('Pause'), html: ICONS.pause });
+  const followBtn = h('button', { class: 'btn small active', title: T('Der Ansicht der Aufzeichnung folgen') }, T('Ansicht folgen'));
   const bar = h('div', { id: 'play-bar', class: 'panel' }, pp, h('b', { class: 'play-title' }, data.title), range, time, followBtn,
-    h('button', { class: 'icon-btn', title: 'Schließen', html: ICONS.close, onclick: stopPlayer }));
+    h('button', { class: 'icon-btn', title: T('Schließen'), html: ICONS.close, onclick: stopPlayer }));
   document.body.append(bar);
   player = { data, audio, cursor, bar, playing: true, follow: true, base: performance.now(), offset: 0, idx: 0, lastT: 0, raf: 0, applying: false };
   const now = () => (audio && !audio.paused ? audio.currentTime * 1000 : player.playing ? player.offset + performance.now() - player.base : player.offset);
@@ -226,12 +227,12 @@ async function play(id) {
     player.playing = on;
     if (audio) on ? audio.play().catch(() => {}) : audio.pause();
     pp.innerHTML = on ? ICONS.pause : ICONS.play;
-    pp.title = on ? 'Pause' : 'Abspielen';
+    pp.title = on ? T('Pause') : T('Abspielen');
   };
   const setFollow = (on) => {
     player.follow = on;
     followBtn.classList.toggle('active', on);
-    followBtn.textContent = on ? 'Ansicht folgen' : 'Wieder folgen';
+    followBtn.textContent = on ? T('Ansicht folgen') : T('Wieder folgen');
   };
   pp.onclick = () => {
     if (!player.playing && now() >= data.durationMs) seek(0);
@@ -316,11 +317,11 @@ app.on('key', (e) => {
 
 app.on('buildCollabTools', (box) => {
   if (!enabled()) return;
-  const b = h('button', { class: 'icon-btn', id: 'btn-recordings', title: 'Aufzeichnungen (Rundgänge)', html: ICONS.record });
+  const b = h('button', { class: 'icon-btn', id: 'btn-recordings', title: T('Aufzeichnungen (Rundgänge)'), html: ICONS.record });
   b.onclick = () => menu(b, [
-    { header: 'Rundgänge' },
-    canRecord() ? { label: 'Neuen Rundgang aufzeichnen …', icon: 'record', onClick: openRecordDialog } : null,
-    { label: 'Aufzeichnungen ansehen', icon: 'play', onClick: () => showSidePanel('recordings') },
+    { header: T('Rundgänge') },
+    canRecord() ? { label: T('Neuen Rundgang aufzeichnen …'), icon: 'record', onClick: openRecordDialog } : null,
+    { label: T('Aufzeichnungen ansehen'), icon: 'play', onClick: () => showSidePanel('recordings') },
   ]);
   box.append(b);
 });

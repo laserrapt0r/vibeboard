@@ -68,6 +68,8 @@ Zum Schutz vor Datenverlust speichern wir frühere Stände eines Boards als Vers
 
 Zu jedem Board führen wir einen Aktivitätsverlauf: Er zeigt allen mit Zugriff auf das Board, wer wann Elemente erstellt, geändert, gelöscht oder kommentiert hat (Anzeigename, Zeitpunkt, Art des Elements und ein kurzer Ausschnitt seines Textes). Außerdem speichern wir den Zeitpunkt deines letzten Besuchs, damit wir dir Änderungen seither zeigen können. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Einträge werden nach 90 Tagen gelöscht, spätestens mit dem Board.
 
+Lädt dich jemand per E-Mail zu einem Board oder Team ein, ohne dass du ein Konto hast, speichern wir deine E-Mail-Adresse, die einladende Person, das Board bzw. Team und die Rolle höchstens 30 Tage lang und schicken dir einmalig eine Einladung. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Zusammenarbeit). Die Einladung wird gelöscht, sobald sie eingelöst, zurückgezogen oder abgelaufen ist.
+
 # Kommentare, Erwähnungen und Benachrichtigungen
 
 Kommentare speichern wir mit deinem Anzeigenamen und dem Zeitpunkt. Erwähnst du jemanden mit @Name, antwortet jemand in einem Kommentar-Thread, an dem du beteiligt bist, oder wird dir ein Kommentar als Aufgabe zugewiesen, legen wir eine Benachrichtigung an (Board, auslösende Person, Ausschnitt des Kommentars). Sie erscheint in der Glocke und – sofern du das nicht im Profil abgeschaltet hast – per E-Mail. Benachrichtigungen werden nach 90 Tagen gelöscht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.

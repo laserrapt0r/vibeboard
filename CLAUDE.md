@@ -20,3 +20,5 @@ aktualisieren → testen.
 - Board-Elemente werden in `lib/sanitize.js` (Server) und `safeEl()` in `public/js/render.js` (Darstellung) geprüft.
 - Uploads (Bilder als Data-URL) laufen durch `lib/uploads.js` (Dateityp + ClamAV).
 - Content-Security-Policy erlaubt keine Inline-Skripte und keine fremden Quellen.
+- Texte: Quellsprache Deutsch, im Browser mit `T` aus `public/js/i18n.js` markiert, Wörterbücher in `public/i18n/`
+  (`npm run check:i18n`). Server und E-Mails übersetzen beim Ausgeben über `lib/i18n.js`.

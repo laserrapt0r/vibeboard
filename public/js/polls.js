@@ -1,5 +1,6 @@
 // Schnellumfragen im Board: Stimmungsbarometer, Fist of Five, ROTI, Team-Health-Check und eigene Fragen.
 // Stimmen sind anonym – der Server schickt vor dem Auflösen nur die Zahl der Teilnehmenden und die eigene Stimme.
+import { T, LOCALE, DEC } from './i18n.js';
 import { h, append, api, ICONS, toast, modal } from './util.js';
 import { app } from './core.js';
 import { canSteer } from './retro.js';
@@ -7,22 +8,22 @@ import { canSteer } from './retro.js';
 const op = (o) => app.sync.op(o);
 
 export const KINDS = {
-  mood: { label: 'Stimmungsbarometer', question: 'Wie geht es dir heute?', values: [['1', '😫'], ['2', '🙁'], ['3', '😐'], ['4', '🙂'], ['5', '😄']] },
-  fist: { label: 'Fist of Five', question: 'Wie sehr stimmst du zu?', values: [['0', '✊'], ['1', '☝️'], ['2', '✌️'], ['3', '🤟'], ['4', '🖖'], ['5', '🖐️']] },
-  roti: { label: 'ROTI (Return on Time Invested)', question: 'Wie wertvoll war dieses Meeting für dich?', values: [['1', '1 · verschwendet'], ['2', '2'], ['3', '3 · ausgeglichen'], ['4', '4'], ['5', '5 · sehr wertvoll']] },
-  health: { label: 'Team-Health-Check', question: 'Wie steht es um unser Team?' },
-  custom: { label: 'Eigene Frage', question: '' },
+  mood: { label: T('Stimmungsbarometer'), question: T('Wie geht es dir heute?'), values: [['1', '😫'], ['2', '🙁'], ['3', '😐'], ['4', '🙂'], ['5', '😄']] },
+  fist: { label: T('Fist of Five'), question: T('Wie sehr stimmst du zu?'), values: [['0', '✊'], ['1', '☝️'], ['2', '✌️'], ['3', '🤟'], ['4', '🖖'], ['5', '🖐️']] },
+  roti: { label: T('ROTI (Return on Time Invested)'), question: T('Wie wertvoll war dieses Meeting für dich?'), values: [['1', T('1 · verschwendet')], ['2', '2'], ['3', T('3 · ausgeglichen')], ['4', '4'], ['5', T('5 · sehr wertvoll')]] },
+  health: { label: T('Team-Health-Check'), question: T('Wie steht es um unser Team?') },
+  custom: { label: T('Eigene Frage'), question: '' },
 };
-const HEALTH_DEFAULT = ['Spaß an der Arbeit', 'Lernen', 'Tempo', 'Klarer Auftrag', 'Teamwork', 'Unterstützung', 'Einfach auszuliefern', 'Qualität'];
-const LIGHTS = [['3', '🟢', 'gut'], ['2', '🟡', 'gemischt'], ['1', '🔴', 'schlecht']];
+const HEALTH_DEFAULT = [T('Spaß an der Arbeit'), T('Lernen'), T('Tempo'), T('Klarer Auftrag'), T('Teamwork'), T('Unterstützung'), T('Einfach auszuliefern'), T('Qualität')];
+const LIGHTS = [['3', '🟢', T('gut')], ['2', '🟡', T('gemischt')], ['1', '🔴', T('schlecht')]];
 
 app.on('openPollDialog', () => {
   const kind = h('select', {}, Object.entries(KINDS).map(([k, d]) => h('option', { value: k }, d.label)));
   const question = h('input', { type: 'text', maxlength: 200, value: KINDS.mood.question });
-  const options = h('textarea', { rows: 4, placeholder: 'Eine Antwort pro Zeile (2–8)' });
+  const options = h('textarea', { rows: 4, placeholder: T('Eine Antwort pro Zeile (2–8)') });
   const items = h('textarea', { rows: 8 }, HEALTH_DEFAULT.join('\n'));
-  const optBox = h('label', { class: 'hidden' }, 'Antworten (eine pro Zeile)', options);
-  const itemBox = h('label', { class: 'hidden' }, 'Themen (eines pro Zeile, je mit 🟢 🟡 🔴 zu bewerten)', items);
+  const optBox = h('label', { class: 'hidden' }, T('Antworten (eine pro Zeile)'), options);
+  const itemBox = h('label', { class: 'hidden' }, T('Themen (eines pro Zeile, je mit 🟢 🟡 🔴 zu bewerten)'), items);
   kind.addEventListener('change', () => {
     question.value = KINDS[kind.value].question;
     optBox.classList.toggle('hidden', kind.value !== 'custom');
@@ -31,20 +32,20 @@ app.on('openPollDialog', () => {
   const form = h('form', { class: 'form', onsubmit: (e) => {
     e.preventDefault();
     const lines = (t) => t.value.split('\n').map((s) => s.trim()).filter(Boolean);
-    if (kind.value === 'custom' && lines(options).length < 2) return toast('Bitte mindestens zwei Antworten angeben');
+    if (kind.value === 'custom' && lines(options).length < 2) return toast(T('Bitte mindestens zwei Antworten angeben'));
     op({ op: 'poll', action: 'start', kind: kind.value, question: question.value.trim(), options: lines(options), items: lines(items) });
     m.close();
   } },
-  h('p', { class: 'muted' }, 'Alle antworten anonym. Bis zum Auflösen sieht man nur, wie viele schon abgestimmt haben.'),
-  h('label', {}, 'Art', kind), h('label', {}, 'Frage', question), optBox, itemBox,
-  app.session.poll ? h('p', { class: 'muted small' }, 'Eine laufende Umfrage wird dabei ersetzt.') : null,
-  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, 'Abbrechen'), h('button', { type: 'submit', class: 'btn primary' }, 'Umfrage starten')));
-  const m = modal('Schnellumfrage', form);
+  h('p', { class: 'muted' }, T('Alle antworten anonym. Bis zum Auflösen sieht man nur, wie viele schon abgestimmt haben.')),
+  h('label', {}, T('Art'), kind), h('label', {}, T('Frage'), question), optBox, itemBox,
+  app.session.poll ? h('p', { class: 'muted small' }, T('Eine laufende Umfrage wird dabei ersetzt.')) : null,
+  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, T('Abbrechen')), h('button', { type: 'submit', class: 'btn primary' }, T('Umfrage starten'))));
+  const m = modal(T('Schnellumfrage'), form);
 });
 
 /* ---------------- Anzeige ---------------- */
 
-const panel = h('div', { id: 'poll-panel', class: 'panel hidden', role: 'region', 'aria-label': 'Umfrage' });
+const panel = h('div', { id: 'poll-panel', class: 'panel hidden', role: 'region', 'aria-label': T('Umfrage') });
 document.body.append(panel);
 let hiddenFor = null;
 let lastPollId = null;
@@ -69,15 +70,15 @@ function render() {
     lastPollId = p.id;
     hiddenFor = null;
     healthDraft = p.mine && typeof p.mine === 'object' ? { ...p.mine } : {};
-    if (!p.closed && !canSteer()) toast(`${p.by || 'Jemand'} hat eine Umfrage gestartet`);
+    if (!p.closed && !canSteer()) toast(T`${p.by || T('Jemand')} hat eine Umfrage gestartet`);
   }
   panel.classList.toggle('hidden', !p || hiddenFor === p.id);
   if (!p) return;
   const steer = canSteer();
   const d = KINDS[p.kind] || KINDS.mood;
   panel.innerHTML = '';
-  append(panel, h('div', { class: 'disc-head' }, h('span', { class: 'muted small' }, `${d.label}${p.closed ? ' · Ergebnis' : ''}`), h('span', { class: 'spacer' }),
-    h('button', { class: 'icon-btn small', title: steer ? 'Umfrage für alle schließen' : 'Ausblenden', html: ICONS.close, onclick: () => (steer ? op({ op: 'poll', action: 'clear' }) : (hiddenFor = p.id, render())) })),
+  append(panel, h('div', { class: 'disc-head' }, h('span', { class: 'muted small' }, `${d.label}${p.closed ? T(' · Ergebnis') : ''}`), h('span', { class: 'spacer' }),
+    h('button', { class: 'icon-btn small', title: steer ? T('Umfrage für alle schließen') : T('Ausblenden'), html: ICONS.close, onclick: () => (steer ? op({ op: 'poll', action: 'clear' }) : (hiddenFor = p.id, render())) })),
   h('div', { class: 'poll-question' }, p.question || d.question));
   const values = p.kind === 'custom' ? (p.options || []).map((o, i) => [String(i), o]) : d.values;
   if (!p.closed) {
@@ -94,8 +95,8 @@ function render() {
         onclick: () => op({ op: 'pollVote', value: p.mine === v ? null : v }),
       }, label))));
     }
-    panel.append(h('div', { class: 'est-actions' }, h('span', { class: 'muted small' }, `${p.participants || 0} ${p.participants === 1 ? 'Person hat' : 'Personen haben'} abgestimmt`), h('span', { class: 'spacer' }),
-      steer ? h('button', { class: 'btn small primary', disabled: !p.participants, onclick: () => op({ op: 'poll', action: 'close' }) }, 'Ergebnis zeigen') : null));
+    panel.append(h('div', { class: 'est-actions' }, h('span', { class: 'muted small' }, T`Abgestimmt: ${p.participants || 0}`), h('span', { class: 'spacer' }),
+      steer ? h('button', { class: 'btn small primary', disabled: !p.participants, onclick: () => op({ op: 'poll', action: 'close' }) }, T('Ergebnis zeigen')) : null));
     return;
   }
   const res = p.results || {};
@@ -104,16 +105,16 @@ function render() {
       const c = (res.items && res.items[it.id]) || {};
       const n = (c['1'] || 0) + (c['2'] || 0) + (c['3'] || 0);
       return h('div', { class: 'health-row' }, h('span', {}, it.label), h('span', { class: 'health-result' },
-        LIGHTS.map(([v, e]) => h('span', { title: `${c[v] || 0} von ${n}` }, `${e} ${c[v] || 0}`))));
+        LIGHTS.map(([v, e]) => h('span', { title: T`${c[v] || 0} von ${n}` }, `${e} ${c[v] || 0}`))));
     })));
   } else {
     const counts = res.counts || {};
     panel.append(bars(counts, values));
     const avg = p.kind !== 'custom' ? average(counts) : null;
-    if (avg !== null) panel.append(h('p', { class: 'poll-avg' }, `Ø ${avg.toFixed(1).replace('.', ',')}`));
+    if (avg !== null) panel.append(h('p', { class: 'poll-avg' }, `Ø ${avg.toFixed(1).replace('.', DEC)}`));
   }
-  panel.append(h('div', { class: 'est-actions' }, h('span', { class: 'muted small' }, `${p.participants || 0} Teilnehmende · anonym`), h('span', { class: 'spacer' }),
-    h('button', { class: 'btn small', onclick: () => app.emit('openPollHistory') }, 'Verlauf')));
+  panel.append(h('div', { class: 'est-actions' }, h('span', { class: 'muted small' }, T`${p.participants || 0} Teilnehmende · anonym`), h('span', { class: 'spacer' }),
+    h('button', { class: 'btn small', onclick: () => app.emit('openPollHistory') }, T('Verlauf'))));
 }
 
 app.on('session', (kind) => (kind === 'all' || kind === 'poll' || kind === 'moderation') && render());
@@ -128,14 +129,14 @@ app.on('openPollHistory', async () => {
     return toast(e.message);
   }
   const body = h('div', { class: 'poll-history' });
-  if (!polls.length) body.append(h('p', { class: 'muted' }, 'Noch keine abgeschlossenen Umfragen. Ergebnisse werden beim Auflösen gespeichert – bei einer Retro-Serie auch über mehrere Retros hinweg.'));
+  if (!polls.length) body.append(h('p', { class: 'muted' }, T('Noch keine abgeschlossenen Umfragen. Ergebnisse werden beim Auflösen gespeichert – bei einer Retro-Serie auch über mehrere Retros hinweg.')));
   for (const [kind, d] of Object.entries(KINDS)) {
     const list = polls.filter((p) => p.kind === kind);
     if (!list.length) continue;
     body.append(h('h4', {}, d.label));
     const rows = h('div', { class: 'trend' });
     for (const p of list) {
-      const date = new Date(p.createdAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+      const date = new Date(p.createdAt).toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit', year: '2-digit' });
       let value = '', pct = 0;
       if (kind === 'health') {
         // Mittelwert über alle Themen (grün = 3, gelb = 2, rot = 1)
@@ -145,7 +146,7 @@ app.on('openPollHistory', async () => {
         }).filter((x) => x !== null);
         const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
         pct = avg === null ? 0 : (avg - 1) / 2;
-        value = avg === null ? '–' : `Ø ${avg.toFixed(1).replace('.', ',')} von 3`;
+        value = avg === null ? '–' : T`Ø ${avg.toFixed(1).replace('.', DEC)} von 3`;
       } else if (kind === 'custom') {
         const counts = (p.results && p.results.counts) || {};
         const opts = (p.results && p.results.options) || [];
@@ -155,7 +156,7 @@ app.on('openPollHistory', async () => {
       } else {
         const avg = average((p.results && p.results.counts) || {});
         const max = 5, min = kind === 'fist' ? 0 : 1;
-        value = avg === null ? '–' : `Ø ${avg.toFixed(1).replace('.', ',')}`;
+        value = avg === null ? '–' : `Ø ${avg.toFixed(1).replace('.', DEC)}`;
         pct = avg === null ? 0 : (avg - min) / (max - min);
       }
       rows.append(h('div', { class: 'trend-row' + (p.boardId === app.boardId ? ' current' : '') },
@@ -165,5 +166,5 @@ app.on('openPollHistory', async () => {
     }
     body.append(rows);
   }
-  modal('Umfrage-Verlauf', body, { wide: true });
+  modal(T('Umfrage-Verlauf'), body, { wide: true });
 });

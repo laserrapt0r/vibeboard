@@ -1,3 +1,4 @@
+import { T } from './i18n.js';
 // Einfaches, sicheres Markdown für Rechtstexte: erzeugt DOM-Knoten (kein innerHTML).
 // Unterstützt: # Überschriften, Absätze, Zeilenumbrüche, - / * / 1. Listen, **fett**, *kursiv*,
 // [Linktext](https://…), automatische Links für http(s)-Adressen und E-Mail-Adressen, --- Trennlinie.
@@ -19,7 +20,7 @@ function inline(text) {
         a.append(...inline(m[1]));
         if (/^https?:/i.test(url)) {
           a.target = '_blank';
-          a.rel = 'noopener noreferrer';
+          a.rel = T('noopener noreferrer');
         }
         out.push(a);
       } else out.push(document.createTextNode(m[1]));
@@ -36,7 +37,7 @@ function inline(text) {
       a.href = m[5];
       a.textContent = m[5];
       a.target = '_blank';
-      a.rel = 'noopener noreferrer';
+      a.rel = T('noopener noreferrer');
       out.push(a);
     } else if (m[6] !== undefined) {
       const a = document.createElement('a');

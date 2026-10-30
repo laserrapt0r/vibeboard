@@ -26,7 +26,7 @@
 - **Akzeptanzkriterien:**
   - Einladen per Benutzername oder E-Mail mit Vorschlagsliste (nur aktive, bestätigte Konten; ohne Anzeige fremder E-Mail-Adressen).
   - Geändert in 4.0.0: Eine Suche über alle Konten gibt es nicht mehr (`/api/users/search` entfällt). Eingeladen wird
-    - über die vollständige E-Mail-Adresse (genauer Abgleich, höchstens 30 Versuche je Stunde und Person; gibt es kein Konto, wird das gemeldet) oder
+    - über die vollständige E-Mail-Adresse (genauer Abgleich, höchstens 30 Versuche je Stunde und Person; gibt es kein Konto, wird das gemeldet – seit 4.2.0 mit dem Angebot einer Einladung, [REQ-BOARD-010](#req-board-010-einladung-an-adressen-ohne-konto)) oder
     - aus der Liste der Personen, mit denen die einladende Person ein Team teilt (Name, Farbe und gemeinsame Teams; ohne E-Mail-Adressen). Der Server prüft das gemeinsame Team.
   - Geändert in 4.0.0: Die Mitgliederliste zeigt Namen; E-Mail-Adressen nur dem Besitzer (Namen sind nicht eindeutig) – außer bei Personen, die er aus einem Team kennt, in dem er nicht verwaltet (wie in der Team-Ansicht).
   - Optional Einladungs-Mail mit Link zum Board.
@@ -76,6 +76,7 @@
 - **Beschreibung:** Niemand wird ohne Zustimmung Mitglied eines Teams. Ersetzt das direkte Hinzufügen aus [REQ-BOARD-007](#req-board-007-teams-und-ordner).
 - **Akzeptanzkriterien:**
   - Team-Verwaltende laden über die vollständige E-Mail-Adresse ein und wählen die Rolle (Mitglied/Verwaltung). Ratenbegrenzung gegen das Ausprobieren von Adressen.
+  - Geändert in 4.2.0: Auch Adressen ohne Konto lassen sich einladen ([REQ-BOARD-010](#req-board-010-einladung-an-adressen-ohne-konto)).
   - Die eingeladene Person erhält eine Benachrichtigung (Glocke, live und – sofern nicht abgeschaltet – per E-Mail) und sieht die Einladung auf der Startseite mit „Annehmen“ und „Ablehnen“; in der Navigation zählt ein Eintrag „Einladungen“ die offenen Einladungen.
   - Erst mit der Annahme wird die Person Mitglied mit der eingeladenen Rolle; Ablehnen entfernt die Einladung. Die zugehörige Benachrichtigung gilt danach als gelesen.
   - Team-Verwaltende sehen offene Einladungen (Name, E-Mail-Adresse, Rolle, Zeitpunkt) und können sie zurückziehen; die Benachrichtigung der eingeladenen Person verschwindet dann. Doppelte Einladungen und Einladungen bereits vorhandener Mitglieder werden abgelehnt.
@@ -89,3 +90,14 @@
   - Der Besitzer sieht seine gelöschten Boards unter „Papierkorb“ mit Restlaufzeit, kann sie wiederherstellen (auch per „Rückgängig“ direkt nach dem Löschen) oder endgültig löschen.
   - Nach Ablauf der Frist (Standard 30 Tage, einstellbar 1–365) werden sie automatisch endgültig gelöscht.
   - Löschen, Wiederherstellen und endgültiges Löschen erscheinen im Sicherheitsprotokoll.
+
+### REQ-BOARD-010 Einladung an Adressen ohne Konto
+- **Seit:** 4.2.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Boards und Teams lassen sich auch mit Personen teilen, die noch kein Konto haben.
+- **Akzeptanzkriterien:**
+  - Gibt es zur eingegebenen Adresse kein Konto, erscheint zuerst ein Hinweis mit der Frage, ob eine Einladung verschickt werden soll. Ohne Bestätigung geht keine E-Mail hinaus.
+  - Die Einladungsmail nennt, wer das Board „xy“ teilen möchte (bzw. in welches Team eingeladen wird), und führt über einen Link zur Registrierung; Sprache: die der einladenden Person. Die Einladung gilt 30 Tage.
+  - Die Registrierung über den Link zeigt die Einladung, füllt die Adresse vor und braucht keine zweite Bestätigung (der Link beweist den Zugriff auf das Postfach). Danach ist die Person angemeldet und das Board mit der gewählten Rolle geteilt bzw. sie ist Mitglied des Teams. Nur der Link gilt als Annahme einer Team-Einladung.
+  - Registriert sich die Person ohne den Link oder wird die Adresse später bestätigt (auch bei geänderter Adresse oder vom Admin angelegtem Konto, spätestens bei der Anmeldung), wird die Einladung ebenfalls eingelöst: Boards sind geteilt, Teams erscheinen als normale Einladung zum Annehmen.
+  - Die Regeln der Registrierung gelten: Keine Einladung, wenn sie geschlossen ist oder der Mailversand fehlt; gesperrte und Wegwerf-Adressen werden abgelehnt; bei „mit Freigabe“ muss ein Admin das Konto danach freischalten.
+  - Besitzer bzw. Team-Verwaltende sehen offene Einladungen und können sie zurückziehen. Erneutes Einladen erzeugt einen neuen Link. Grenzen: 20 Einladungen je Stunde und Person, 5 je Tag und Adresse.

@@ -18,6 +18,7 @@ const { Router } = require('./lib/router');
 const { HttpError, json, redirect, serveFile, serveStatic, isHttps } = require('./lib/http');
 const pkg = require('./package.json');
 const settings = require('./lib/settings');
+const i18n = require('./lib/i18n');
 
 const httpLog = log.child('http');
 const SLOW_MS = 2000;
@@ -126,7 +127,8 @@ function requestId(req) {
 const server = http.createServer((req, res) => {
   const reqId = requestId(req);
   res.setHeader('X-Request-Id', reqId);
-  log.withContext({ reqId }, () => handle(req, res, reqId));
+  // Sprache der Antwort folgt dem Browser (ohne unterstützte Sprache: Englisch)
+  i18n.run(i18n.negotiate(req.headers['accept-language']), () => log.withContext({ reqId }, () => handle(req, res, reqId)));
 });
 
 async function handle(req, res, reqId) {
@@ -161,7 +163,7 @@ async function handle(req, res, reqId) {
     if (e.status && e.status < 500) httpLog.debug('Anfrage abgelehnt', { method: req.method, path: pathname, status: e.status, reason: e.message });
     else httpLog.error('Unerwarteter Fehler bei der Anfrage', { method: req.method, path: pathname, err: e });
     // Die Request-ID hilft, eine Fehlermeldung im Protokoll wiederzufinden
-    if (!res.headersSent) json(res, e.status || 500, e.status && e.status < 500 ? { error: e.message, ...(e.code ? { code: e.code } : {}) } : { error: 'Interner Serverfehler', requestId: reqId });
+    if (!res.headersSent) json(res, e.status || 500, e.status && e.status < 500 ? { error: i18n.tr(e.message), ...(e.code ? { code: e.code } : {}) } : { error: i18n.tr('Interner Serverfehler'), requestId: reqId });
     else res.end();
   }
 }

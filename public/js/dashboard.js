@@ -1,4 +1,5 @@
 // Board-Übersicht (Startseite)
+import { T, LOCALE } from './i18n.js';
 import { h, api, ICONS, toast, modal, promptDialog, confirmDialog, initials, relTime, loadPref, savePref } from './util.js';
 import { TEMPLATES } from './templates.js';
 import { templateGallery, templatePreview } from './gallery.js';
@@ -20,14 +21,14 @@ async function load(quiet) {
   try {
     data = await api('/api/boards', { quiet });
   } catch (e) {
-    toast('Boards konnten nicht geladen werden: ' + e.message);
+    toast(T('Boards konnten nicht geladen werden: ') + e.message);
   }
   render();
 }
 
 /* Meine Aufgaben: Karten aller zugänglichen Boards, die mir zugewiesen sind */
-const DONE_RE = /^(fertig|erledigt|done|geschlossen|closed|abgeschlossen|resolved|gelöst|übernommen)$/i;
-const PRIO = { critical: ['⏫', 'Kritisch', '#e03131'], high: ['▲', 'Hoch', '#f08c00'], medium: ['■', 'Mittel', '#1971c2'], low: ['▼', 'Niedrig', '#868e96'] };
+const DONE_RE = /^(fertig|erledigt|done|geschlossen|closed|abgeschlossen|resolved|gelöst|übernommen|completed|finished|hecho|terminado|completado|cerrado|resuelto|transferido|terminé|fait|fermé|résolu|reporté|carried over|terminée|terminada|hecha|fermée|cerrada|completada|resuelta|résolue|reportée|transferida)$/i;
+const PRIO = { critical: ['⏫', T('Kritisch'), '#e03131'], high: ['▲', T('Hoch'), '#f08c00'], medium: ['■', T('Mittel'), '#1971c2'], low: ['▼', T('Niedrig'), '#868e96'] };
 let tasks = [];
 
 async function loadTasks(quiet) {
@@ -53,22 +54,22 @@ function taskItem(t) {
   return h('a', { class: 'my-task', href: `/board/${encodeURIComponent(t.boardId)}#el=${encodeURIComponent(t.id)}` },
     h('span', { class: 'task-color', style: { background: t.color } }),
     h('span', { class: 'task-main' },
-      h('span', { class: 'task-title' }, t.comment ? '💬 ' : '', t.key ? h('span', { class: 'muted' }, t.key + ' ') : null, t.title || 'Ohne Titel'),
+      h('span', { class: 'task-title' }, t.comment ? '💬 ' : '', t.key ? h('span', { class: 'muted' }, t.key + ' ') : null, t.title || T('Ohne Titel')),
       h('span', { class: 'task-meta' },
         h('span', {}, '🗂 ' + t.boardName),
-        t.comment ? h('span', {}, `Kommentar${t.by ? ' · zugewiesen von ' + t.by : ''}`) : null,
+        t.comment ? h('span', {}, T`Kommentar${t.by ? T(' · zugewiesen von ') + t.by : ''}`) : null,
         t.status ? h('span', {}, t.status) : null,
         p ? h('span', { style: { color: p[2] } }, `${p[0]} ${p[1]}`) : null,
-        t.due ? h('span', { class: overdue ? 'overdue' : '' }, '📅 ' + new Date(t.due + 'T00:00').toLocaleDateString('de-DE')) : null,
-        t.points !== '' ? h('span', {}, `${t.points} SP`) : null)));
+        t.due ? h('span', { class: overdue ? 'overdue' : '' }, '📅 ' + new Date(t.due + 'T00:00').toLocaleDateString(LOCALE)) : null,
+        t.points !== '' ? h('span', {}, T`${t.points} SP`) : null)));
 }
 
 function renderTasks() {
   const open = openTasks(), overdue = overdueTasks();
-  document.getElementById('dash-tasks-count').textContent = `${open.length} offen${overdue.length ? ` · ${overdue.length} überfällig` : ''}`;
+  document.getElementById('dash-tasks-count').textContent = T`${open.length} offen${overdue.length ? T` · ${overdue.length} überfällig` : ''}`;
   const seg = document.getElementById('dash-tasks-filter');
   seg.innerHTML = '';
-  for (const [k, l] of [['open', 'Offen'], ['overdue', 'Überfällig'], ['done', 'Erledigt'], ['all', 'Alle']]) {
+  for (const [k, l] of [['open', T('Offen')], ['overdue', T('Überfällig')], ['done', T('Erledigt')], ['all', T('Alle')]]) {
     seg.append(h('button', { class: 'btn small' + (taskFilter === k ? ' active' : ''), onclick: () => {
       taskFilter = k;
       savePref('dashTaskFilter', k);
@@ -81,8 +82,8 @@ function renderTasks() {
   box.innerHTML = '';
   if (!list.length) {
     box.append(h('div', { class: 'dash-empty' }, !tasks.length
-      ? 'Dir ist noch nichts zugewiesen. Hier erscheinen Karten mit deinem Namen als Zuständigkeit und Kommentare, die dir zugewiesen wurden – aus allen Boards.'
-      : taskFilter === 'open' ? 'Keine offenen Aufgaben – alles erledigt. 🎉' : 'Keine Aufgaben für diesen Filter.'));
+      ? T('Dir ist noch nichts zugewiesen. Hier erscheinen Karten mit deinem Namen als Zuständigkeit und Kommentare, die dir zugewiesen wurden – aus allen Boards.')
+      : taskFilter === 'open' ? T('Keine offenen Aufgaben – alles erledigt. 🎉') : T('Keine Aufgaben für diesen Filter.')));
   }
   for (const t of list.slice(0, 200)) box.append(taskItem(t));
 }
@@ -101,7 +102,7 @@ async function uploadThumb(id, elements) {
 }
 
 async function createFromTemplate(t) {
-  const name = await promptDialog('Neues Board', 'Name des Boards', t.id === 'blank' ? 'Unbenanntes Board' : t.name);
+  const name = await promptDialog(T('Neues Board'), T('Name des Boards'), t.id === 'blank' ? T('Unbenanntes Board') : t.name);
   if (name === null) return;
   try {
     const elements = t.build();
@@ -116,7 +117,7 @@ async function createFromTemplate(t) {
 const QUICK_TEMPLATES = ['blank', 'brainstorm', 'kanban', 'retro-ssc', 'mindmap', 'bmc', 'swot', 'flowchart', 'journey'];
 
 function openAllTemplates() {
-  const m = modal('Neues Board aus Vorlage', templateGallery((t) => {
+  const m = modal(T('Neues Board aus Vorlage'), templateGallery((t) => {
     m.close();
     createFromTemplate(t);
   }), { wide: true });
@@ -125,10 +126,10 @@ function openAllTemplates() {
 // „+ Neues Board“: leeres Board, häufige Vorlagen, alle Vorlagen
 function newBoardMenu(anchor) {
   menu(anchor, [
-    { header: 'Neues Board' },
+    { header: T('Neues Board') },
     ...QUICK_TEMPLATES.map((id) => TEMPLATES.find((x) => x.id === id)).filter(Boolean).map((t) => ({ label: `${t.icon}  ${t.name}`, onClick: () => createFromTemplate(t) })),
     '-',
-    { label: 'Alle Vorlagen …', icon: 'template', onClick: openAllTemplates },
+    { label: T('Alle Vorlagen …'), icon: 'template', onClick: openAllTemplates },
   ], { placement: 'bottom' });
 }
 
@@ -154,7 +155,7 @@ function renderInvitations() {
     const answer = async (accept) => {
       try {
         await api(`/api/team-invitations/${i.teamId}/${accept ? 'accept' : 'decline'}`, { method: 'POST' });
-        toast(accept ? `Du bist jetzt im Team „${i.teamName}“` : 'Einladung abgelehnt');
+        toast(accept ? T`Du bist jetzt im Team „${i.teamName}“` : T('Einladung abgelehnt'));
         await loadInvitations();
         await load();
         refreshBell();
@@ -164,18 +165,18 @@ function renderInvitations() {
         loadInvitations();
       }
     };
-    box.append(h('div', { class: 'invite-card', role: 'group', 'aria-label': `Einladung in ${i.teamName}` },
+    box.append(h('div', { class: 'invite-card', role: 'group', 'aria-label': T`Einladung in ${i.teamName}` },
       h('span', { class: 'nav-icon', html: ICONS.team }),
-      h('span', { class: 'invite-text' }, h('b', {}, i.by || 'Jemand'), ` lädt dich in das Team „${i.teamName}“ ein`, h('span', { class: 'muted small' }, ` · als ${i.role === 'admin' ? 'Verwaltung' : 'Mitglied'} · ${relTime(i.createdAt)}`)),
-      h('button', { class: 'btn small primary', onclick: () => answer(true) }, 'Annehmen'),
-      h('button', { class: 'btn small', onclick: () => answer(false) }, 'Ablehnen')));
+      h('span', { class: 'invite-text' }, h('b', {}, i.by || T('Jemand')), T` lädt dich in das Team „${i.teamName}“ ein`, h('span', { class: 'muted small' }, T` · als ${i.role === 'admin' ? T('Verwaltung') : T('Mitglied')} · ${relTime(i.createdAt)}`)),
+      h('button', { class: 'btn small primary', onclick: () => answer(true) }, T('Annehmen')),
+      h('button', { class: 'btn small', onclick: () => answer(false) }, T('Ablehnen'))));
   }
 }
 
 function renderTemplates() {
   const box = document.getElementById('dash-templates');
   const toggle = document.getElementById('dash-tpl-toggle');
-  toggle.textContent = tplCollapsed ? 'Ausklappen' : 'Einklappen';
+  toggle.textContent = tplCollapsed ? T('Ausklappen') : T('Einklappen');
   box.classList.toggle('hidden', tplCollapsed);
   box.innerHTML = '';
   if (tplCollapsed) return;
@@ -187,7 +188,7 @@ function renderTemplates() {
   }
 }
 
-const ROLE_LABEL = { owner: 'Besitzer', editor: 'Bearbeiten', commenter: 'Kommentieren', viewer: 'Ansehen' };
+const ROLE_LABEL = { owner: T('Besitzer'), editor: T('Bearbeiten'), commenter: T('Kommentieren'), viewer: T('Ansehen') };
 
 const allBoards = () => [...data.owned, ...data.shared];
 const inTeam = (b, id) => b.team && b.team.id === id && (b.team.member || b.role === 'owner');
@@ -199,7 +200,7 @@ function sortList(list) {
   const sort = document.getElementById('dash-sort').value;
   return list
     .filter((b) => !q || b.name.toLowerCase().includes(q) || (b.owner && b.owner.displayName.toLowerCase().includes(q)))
-    .sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name, 'de') : sort === 'created' ? b.createdAt - a.createdAt : b.updatedAt - a.updatedAt));
+    .sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name, LOCALE) : sort === 'created' ? b.createdAt - a.createdAt : b.updatedAt - a.updatedAt));
 }
 
 function card(b) {
@@ -207,7 +208,7 @@ function card(b) {
   const thumb = h('div', { class: 'board-thumb' });
   if (b.hasThumb) thumb.append(h('img', { src: `/api/boards/${b.id}/thumb?t=${b.updatedAt}`, alt: '', loading: 'lazy' }));
   else thumb.append(h('div', { class: 'board-thumb-empty' }, '🗒️'));
-  const more = h('button', { class: 'icon-btn small', title: 'Aktionen', html: ICONS.more });
+  const more = h('button', { class: 'icon-btn small', title: T('Aktionen'), html: ICONS.more });
   more.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -215,20 +216,20 @@ function card(b) {
   };
   const badges = [];
   // Team nur anzeigen, wenn man selbst dazugehört (oder das Board besitzt)
-  if (b.team && (b.team.member || b.role === 'owner')) badges.push(h('span', { class: 'tag', title: `Team „${b.team.name}“ (${ROLE_LABEL[b.team.role]})` }, '👥 ' + b.team.name));
-  if (b.linkAccess !== 'private') badges.push(h('span', { class: 'tag', title: 'Per Link freigegeben' }, '🔗'));
-  if (b.memberCount) badges.push(h('span', { class: 'tag', title: `${b.memberCount} Mitglied(er)` }, '👤 ' + b.memberCount));
+  if (b.team && (b.team.member || b.role === 'owner')) badges.push(h('span', { class: 'tag', title: T`Team „${b.team.name}“ (${ROLE_LABEL[b.team.role]})` }, '👥 ' + b.team.name));
+  if (b.linkAccess !== 'private') badges.push(h('span', { class: 'tag', title: T('Per Link freigegeben') }, '🔗'));
+  if (b.memberCount) badges.push(h('span', { class: 'tag', title: T`${b.memberCount} Mitglied(er)` }, '👤 ' + b.memberCount));
   for (const fid of b.folders || []) {
     const f = folderById(fid);
-    if (f && !(view.kind === 'folder' && view.id === fid)) badges.push(h('span', { class: 'tag', title: 'Ordner' }, '📁 ' + f.name));
+    if (f && !(view.kind === 'folder' && view.id === fid)) badges.push(h('span', { class: 'tag', title: T('Ordner') }, '📁 ' + f.name));
   }
   return h('a', { class: 'board-card', href: '/board/' + b.id }, thumb,
     h('div', { class: 'board-info' },
       h('div', { class: 'board-name' }, b.name),
       h('div', { class: 'board-meta' },
-        shared && b.owner ? `von ${b.owner.displayName} · ${ROLE_LABEL[b.role]} · ` : '',
-        `${relTime(b.updatedAt)} · ${b.elementCount} Elemente`,
-        b.online ? h('span', { class: 'online' }, ` · ${b.online} online`) : null),
+        shared && b.owner ? T`von ${b.owner.displayName} · ${ROLE_LABEL[b.role]} · ` : '',
+        T`${relTime(b.updatedAt)} · ${b.elementCount} Elemente`,
+        b.online ? h('span', { class: 'online' }, T` · ${b.online} online`) : null),
       badges.length ? h('div', { class: 'board-tags' }, badges) : null),
     more);
 }
@@ -274,10 +275,10 @@ async function loadTrash(quiet) {
 
 function renderTrash() {
   const box = document.getElementById('dash-trash');
-  document.getElementById('dash-trash-info').textContent = `Gelöschte Boards bleiben ${trash.days} Tage im Papierkorb und werden danach endgültig entfernt. Nur du siehst deine gelöschten Boards.`;
+  document.getElementById('dash-trash-info').textContent = T`Gelöschte Boards bleiben ${trash.days} Tage im Papierkorb und werden danach endgültig entfernt. Nur du siehst deine gelöschten Boards.`;
   box.innerHTML = '';
   if (!trash.boards.length) {
-    box.append(h('div', { class: 'dash-empty' }, 'Der Papierkorb ist leer.'));
+    box.append(h('div', { class: 'dash-empty' }, T('Der Papierkorb ist leer.')));
     return;
   }
   for (const b of trash.boards) {
@@ -287,28 +288,28 @@ function renderTrash() {
     box.append(h('div', { class: 'board-card trashed' }, thumb,
       h('div', { class: 'board-info' },
         h('div', { class: 'board-name' }, b.name),
-        h('div', { class: 'board-meta' }, `gelöscht ${relTime(b.deletedAt)} · ${b.elementCount} Elemente · noch ${days} Tag${days === 1 ? '' : 'e'}`),
+        h('div', { class: 'board-meta' }, T`gelöscht ${relTime(b.deletedAt)} · ${b.elementCount} Elemente · Tage übrig: ${days}`),
         h('div', { class: 'row', style: { marginTop: '8px' } },
           h('button', { class: 'btn small primary', onclick: async () => {
             try {
               await api(`/api/trash/${b.id}/restore`, { method: 'POST' });
-              toast(`„${b.name}“ wiederhergestellt`);
+              toast(T`„${b.name}“ wiederhergestellt`);
               await loadTrash();
               load();
             } catch (e) {
               toast(e.message);
             }
-          } }, h('span', { html: ICONS.restore }), 'Wiederherstellen'),
+          } }, h('span', { html: ICONS.restore }), T('Wiederherstellen')),
           h('button', { class: 'btn small danger', onclick: async () => {
-            if (!(await confirmDialog('Endgültig löschen', `„${b.name}“ wird mit allen Inhalten, Versionen, Dateien und Aufzeichnungen endgültig gelöscht. Das lässt sich nicht rückgängig machen.`, 'Endgültig löschen', true))) return;
+            if (!(await confirmDialog(T('Endgültig löschen'), T`„${b.name}“ wird mit allen Inhalten, Versionen, Dateien und Aufzeichnungen endgültig gelöscht. Das lässt sich nicht rückgängig machen.`, T('Endgültig löschen'), true))) return;
             try {
               await api(`/api/trash/${b.id}`, { method: 'DELETE' });
-              toast('Endgültig gelöscht');
+              toast(T('Endgültig gelöscht'));
               loadTrash();
             } catch (e) {
               toast(e.message);
             }
-          } }, 'Endgültig löschen')))));
+          } }, T('Endgültig löschen'))))));
   }
 }
 
@@ -323,14 +324,14 @@ function renderStart() {
   if (overdue || soon) {
     due.append(h('button', { class: 'due-hint' + (overdue ? ' overdue' : ''), onclick: () => setView({ kind: 'tasks' }) },
       h('span', { class: 'nav-icon', html: ICONS.tasks }),
-      h('span', {}, [overdue ? `${overdue} überfällige Aufgabe${overdue === 1 ? '' : 'n'}` : '', soon ? `${soon} in den nächsten 7 Tagen fällig` : ''].filter(Boolean).join(' · ')),
-      h('span', { class: 'muted' }, 'Meine Aufgaben →')));
+      h('span', {}, [overdue === 1 ? T('1 überfällige Aufgabe') : overdue ? T`${overdue} überfällige Aufgaben` : '', soon ? T`${soon} in den nächsten 7 Tagen fällig` : ''].filter(Boolean).join(' · ')),
+      h('span', { class: 'muted' }, T('Meine Aufgaben →'))));
   }
   const recent = document.getElementById('dash-recent');
   recent.innerHTML = '';
   const list = [...allBoards()].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8);
   if (list.length) list.forEach((b) => recent.append(card(b)));
-  else recent.append(h('div', { class: 'dash-empty' }, 'Noch keine Boards – wähle oben eine Vorlage oder links „Neues Board“.'));
+  else recent.append(h('div', { class: 'dash-empty' }, T('Noch keine Boards – wähle oben eine Vorlage oder links „Neues Board“.')));
 }
 
 
@@ -340,26 +341,26 @@ function renderNav() {
   const item = (label, v, count, icon, cls = '') => h('button', {
     class: 'dash-nav-item' + (view.kind === v.kind && view.id === v.id ? ' active' : ''), onclick: () => setView(v),
   }, icon ? h('span', { class: 'nav-icon', html: ICONS[icon] }) : null, h('span', { class: 'nav-label' }, label), count != null ? h('span', { class: 'nav-count ' + cls }, count) : null);
-  const add = h('button', { class: 'btn primary dash-new' }, h('span', { html: ICONS.plus }), 'Neues Board');
+  const add = h('button', { class: 'btn primary dash-new' }, h('span', { html: ICONS.plus }), T('Neues Board'));
   add.onclick = () => newBoardMenu(add);
   const overdue = overdueTasks().length;
   nav.append(
     add,
-    item('Start', { kind: 'start' }, null, 'home'),
-    item('Meine Aufgaben', { kind: 'tasks' }, overdue || openTasks().length || null, 'tasks', overdue ? 'alert' : ''),
-    h('div', { class: 'dash-nav-head' }, h('span', {}, 'Boards')),
-    item('Alle Boards', { kind: 'all' }, allBoards().length, 'template'),
-    item('Meine Boards', { kind: 'mine' }, data.owned.length, 'users'),
-    item('Mit mir geteilt', { kind: 'shared' }, data.shared.length, 'share'));
+    item(T('Startseite'), { kind: 'start' }, null, 'home'),
+    item(T('Meine Aufgaben'), { kind: 'tasks' }, overdue || openTasks().length || null, 'tasks', overdue ? 'alert' : ''),
+    h('div', { class: 'dash-nav-head' }, h('span', {}, T('Boards'))),
+    item(T('Alle Boards'), { kind: 'all' }, allBoards().length, 'template'),
+    item(T('Meine Boards'), { kind: 'mine' }, data.owned.length, 'users'),
+    item(T('Mit mir geteilt'), { kind: 'shared' }, data.shared.length, 'share'));
   const personal = data.folderList.filter((f) => !f.teamId);
-  nav.append(h('div', { class: 'dash-nav-head' }, h('span', {}, 'Ordner'), h('button', { class: 'icon-btn small', title: 'Neuer Ordner', html: ICONS.plus, onclick: () => newFolder(null) })));
-  if (!personal.length) nav.append(h('div', { class: 'dash-nav-hint' }, 'Eigene Ordner – nur für dich sichtbar.'));
+  nav.append(h('div', { class: 'dash-nav-head' }, h('span', {}, T('Ordner')), h('button', { class: 'icon-btn small', title: T('Neuer Ordner'), html: ICONS.plus, onclick: () => newFolder(null) })));
+  if (!personal.length) nav.append(h('div', { class: 'dash-nav-hint' }, T('Eigene Ordner – nur für dich sichtbar.')));
   for (const f of personal) nav.append(item(f.name, { kind: 'folder', id: f.id }, allBoards().filter((b) => b.folders.includes(f.id)).length, 'folder'));
-  nav.append(h('div', { class: 'dash-nav-head' }, h('span', {}, 'Teams'), h('button', { class: 'icon-btn small', title: 'Team erstellen', html: ICONS.plus, onclick: newTeam })));
-  if (invitations.length) nav.append(h('button', { class: 'dash-nav-item invite-link', onclick: () => setView({ kind: 'start' }) }, h('span', { class: 'nav-icon', html: ICONS.bell }), h('span', { class: 'nav-label' }, 'Einladungen'), h('span', { class: 'nav-count alert' }, invitations.length)));
-  if (!data.teams.length) nav.append(h('div', { class: 'dash-nav-hint' }, 'Teams teilen Boards mit allen Mitgliedern auf einmal.'));
+  nav.append(h('div', { class: 'dash-nav-head' }, h('span', {}, T('Teams')), h('button', { class: 'icon-btn small', title: T('Team erstellen'), html: ICONS.plus, onclick: newTeam })));
+  if (invitations.length) nav.append(h('button', { class: 'dash-nav-item invite-link', onclick: () => setView({ kind: 'start' }) }, h('span', { class: 'nav-icon', html: ICONS.bell }), h('span', { class: 'nav-label' }, T('Einladungen')), h('span', { class: 'nav-count alert' }, invitations.length)));
+  if (!data.teams.length) nav.append(h('div', { class: 'dash-nav-hint' }, T('Teams teilen Boards mit allen Mitgliedern auf einmal.')));
   for (const t of data.teams) nav.append(item(t.name, { kind: 'team', id: t.id }, allBoards().filter((b) => inTeam(b, t.id)).length, 'team'));
-  nav.append(h('div', { class: 'dash-nav-sep' }), item('Papierkorb', { kind: 'trash' }, trash.boards.length || null, 'trash'));
+  nav.append(h('div', { class: 'dash-nav-sep' }), item(T('Papierkorb'), { kind: 'trash' }, trash.boards.length || null, 'trash'));
 }
 
 function renderBoards() {
@@ -378,34 +379,34 @@ function renderBoards() {
   fbar.innerHTML = '';
   fbar.classList.add('hidden');
   let list = allBoards();
-  let empty = 'Noch keine Boards – lege links über „Neues Board“ eines an.';
+  let empty = T('Noch keine Boards – lege links über „Neues Board“ eines an.');
   if (view.kind === 'mine') {
-    title.textContent = 'Meine Boards';
+    title.textContent = T('Meine Boards');
     list = data.owned;
   } else if (view.kind === 'shared') {
-    title.textContent = 'Mit mir geteilt';
+    title.textContent = T('Mit mir geteilt');
     list = data.shared;
-    empty = 'Noch keine geteilten Boards. Boards, zu denen du eingeladen wirst oder die ein Team mit dir teilt, erscheinen hier.';
+    empty = T('Noch keine geteilten Boards. Boards, zu denen du eingeladen wirst oder die ein Team mit dir teilt, erscheinen hier.');
   } else if (view.kind === 'folder') {
     const f = folderById(view.id);
     title.textContent = '📁 ' + f.name;
     list = list.filter((b) => b.folders.includes(f.id));
-    empty = 'Dieser Ordner ist leer. Über „…“ an einem Board → „In Ordner verschieben“ legst du Boards hinein.';
+    empty = T('Dieser Ordner ist leer. Über „…“ an einem Board → „In Ordner verschieben“ legst du Boards hinein.');
     actions.append(folderActions(f));
   } else if (view.kind === 'team') {
     const t = teamById(view.id);
     title.textContent = '👥 ' + t.name;
     list = list.filter((b) => inTeam(b, t.id));
-    empty = 'Noch keine Boards in diesem Team. Ordne ein Board über „Teilen“ → „Team“ zu.';
+    empty = T('Noch keine Boards in diesem Team. Ordne ein Board über „Teilen“ → „Team“ zu.');
     actions.append(
-      h('button', { class: 'btn small', onclick: () => openTeamDialog(t.id) }, h('span', { html: ICONS.team }), 'Mitglieder'),
-      h('button', { class: 'btn small', onclick: () => newFolder(t.id) }, h('span', { html: ICONS.folder }), 'Ordner anlegen'));
+      h('button', { class: 'btn small', onclick: () => openTeamDialog(t.id) }, h('span', { html: ICONS.team }), T('Mitglieder')),
+      h('button', { class: 'btn small', onclick: () => newFolder(t.id) }, h('span', { html: ICONS.folder }), T('Ordner anlegen')));
     // Ordner im Team als Filter
     const tf = data.folderList.filter((f) => f.teamId === t.id);
     if (tf.length) {
       fbar.classList.remove('hidden');
       const chip = (label, fid, n) => h('button', { class: 'chip' + ((view.folder || null) === fid ? ' active' : ''), onclick: () => setView({ ...view, folder: fid }) }, label, h('span', { class: 'muted' }, ` ${n}`));
-      fbar.append(chip('Alle', null, list.length));
+      fbar.append(chip(T('Alle'), null, list.length));
       for (const f of tf) {
         const c = chip('📁 ' + f.name, f.id, list.filter((b) => b.folders.includes(f.id)).length);
         c.oncontextmenu = (e) => {
@@ -414,35 +415,35 @@ function renderBoards() {
         };
         fbar.append(c);
       }
-      fbar.append(chip('Ohne Ordner', '-', list.filter((b) => !b.folders.some((x) => tf.some((f) => f.id === x))).length));
+      fbar.append(chip(T('Ohne Ordner'), '-', list.filter((b) => !b.folders.some((x) => tf.some((f) => f.id === x))).length));
       if (view.folder === '-') {
         list = list.filter((b) => !b.folders.some((x) => tf.some((f) => f.id === x)));
-        empty = 'Alle Boards dieses Teams liegen in Ordnern.';
+        empty = T('Alle Boards dieses Teams liegen in Ordnern.');
       } else if (view.folder) {
         list = list.filter((b) => b.folders.includes(view.folder));
-        empty = 'Dieser Ordner ist leer. Über „…“ an einem Board → „In Ordner verschieben“ legst du Boards hinein.';
+        empty = T('Dieser Ordner ist leer. Über „…“ an einem Board → „In Ordner verschieben“ legst du Boards hinein.');
       }
       const cur = view.folder && view.folder !== '-' && folderById(view.folder);
       if (cur) actions.append(folderActions(cur));
     }
-  } else title.textContent = BOARD_VIEWS.has(view.kind) ? 'Alle Boards' : 'Suchergebnisse';
+  } else title.textContent = BOARD_VIEWS.has(view.kind) ? T('Alle Boards') : T('Suchergebnisse');
   const box = document.getElementById('dash-boards');
   box.innerHTML = '';
   const sorted = sortList(list);
   if (sorted.length) sorted.forEach((b) => box.append(card(b)));
-  else box.append(h('div', { class: 'dash-empty' }, list.length ? 'Keine passenden Boards.' : empty));
+  else box.append(h('div', { class: 'dash-empty' }, list.length ? T('Keine passenden Boards.') : empty));
 }
 
 function folderMenuItems(f) {
   return [
     { header: f.name },
-    { label: 'Umbenennen', icon: 'edit', onClick: async () => {
-      const n = await promptDialog('Ordner umbenennen', 'Name', f.name);
+    { label: T('Umbenennen'), icon: 'edit', onClick: async () => {
+      const n = await promptDialog(T('Ordner umbenennen'), T('Name'), f.name);
       if (n && n.trim()) await api(`/api/folders/${f.id}`, { method: 'PATCH', body: { name: n.trim() } }).catch((e) => toast(e.message));
       load();
     } },
-    { label: 'Ordner löschen', icon: 'trash', danger: true, onClick: async () => {
-      if (!(await confirmDialog('Ordner löschen', `Der Ordner „${f.name}“ wird gelöscht. Die Boards darin bleiben erhalten.`, 'Löschen', true))) return;
+    { label: T('Ordner löschen'), icon: 'trash', danger: true, onClick: async () => {
+      if (!(await confirmDialog(T('Ordner löschen'), T`Der Ordner „${f.name}“ wird gelöscht. Die Boards darin bleiben erhalten.`, T('Löschen'), true))) return;
       await api(`/api/folders/${f.id}`, { method: 'DELETE' }).catch((e) => toast(e.message));
       load();
     } },
@@ -450,13 +451,13 @@ function folderMenuItems(f) {
 }
 
 function folderActions(f) {
-  const b = h('button', { class: 'btn small', title: 'Ordner bearbeiten' }, h('span', { html: ICONS.more }), 'Ordner');
+  const b = h('button', { class: 'btn small', title: T('Ordner bearbeiten') }, h('span', { html: ICONS.more }), T('Ordner'));
   b.onclick = () => menu(b, folderMenuItems(f), { placement: 'bottom' });
   return b;
 }
 
 async function newFolder(teamId) {
-  const n = await promptDialog(teamId ? 'Ordner im Team anlegen' : 'Neuer Ordner', teamId ? 'Name (für alle im Team sichtbar)' : 'Name (nur für dich sichtbar)', '');
+  const n = await promptDialog(teamId ? T('Ordner im Team anlegen') : T('Neuer Ordner'), teamId ? T('Name (für alle im Team sichtbar)') : T('Name (nur für dich sichtbar)'), '');
   if (!n || !n.trim()) return;
   try {
     const r = await api('/api/folders', { method: 'POST', body: { name: n.trim(), teamId } });
@@ -468,7 +469,7 @@ async function newFolder(teamId) {
 }
 
 async function newTeam() {
-  const n = await promptDialog('Team erstellen', 'Name des Teams', '');
+  const n = await promptDialog(T('Team erstellen'), T('Name des Teams'), '');
   if (!n || !n.trim()) return;
   try {
     const r = await api('/api/teams', { method: 'POST', body: { name: n.trim() } });
@@ -484,9 +485,9 @@ async function newTeam() {
 function moveToFolder(b) {
   const options = data.folderList.filter((f) => !f.teamId || (b.team && f.teamId === b.team.id));
   const body = h('div', { class: 'form' });
-  const m = modal(`„${b.name}“ in Ordner verschieben`, body);
-  if (!options.length) body.append(h('p', { class: 'muted' }, 'Noch keine Ordner. Lege links unter „Ordner“ einen an.'));
-  const groups = [[null, 'Meine Ordner'], ...(b.team ? [[b.team.id, `Team „${b.team.name}“`]] : [])];
+  const m = modal(T`„${b.name}“ in Ordner verschieben`, body);
+  if (!options.length) body.append(h('p', { class: 'muted' }, T('Noch keine Ordner. Lege links unter „Ordner“ einen an.')));
+  const groups = [[null, T('Meine Ordner')], ...(b.team ? [[b.team.id, T`Team „${b.team.name}“`]] : [])];
   for (const [tid, label] of groups) {
     const fl = options.filter((f) => (f.teamId || null) === tid);
     if (!fl.length) continue;
@@ -498,12 +499,12 @@ function moveToFolder(b) {
           if (inIt) await api(`/api/folders/${f.id}/boards/${b.id}`, { method: 'DELETE' });
           else await api(`/api/folders/${f.id}/boards/${b.id}`, { method: 'PUT' });
           m.close();
-          toast(inIt ? 'Aus dem Ordner entfernt' : `In „${f.name}“ verschoben`);
+          toast(inIt ? T('Aus dem Ordner entfernt') : T`In „${f.name}“ verschoben`);
           load();
         } catch (e) {
           toast(e.message);
         }
-      } }, h('span', { html: ICONS.folder }), f.name, inIt ? h('span', { class: 'muted small' }, ' – enthalten, Klick entfernt') : null));
+      } }, h('span', { html: ICONS.folder }), f.name, inIt ? h('span', { class: 'muted small' }, T(' – enthalten, Klick entfernt')) : null));
     }
   }
 }
@@ -512,7 +513,7 @@ function moveToFolder(b) {
 
 async function openTeamDialog(id) {
   const body = h('div', { class: 'form share' });
-  const m = modal('Team', body);
+  const m = modal(T('Team'), body);
   const render = async () => {
     let t;
     try {
@@ -521,41 +522,58 @@ async function openTeamDialog(id) {
       body.textContent = e.message;
       return;
     }
-    body.closest('.modal')?.querySelector('h2')?.replaceChildren('Team „' + t.name + '“');
+    body.closest('.modal')?.querySelector('h2')?.replaceChildren(T`Team „${t.name}“`);
     const admin = t.myRole === 'admin';
     body.innerHTML = '';
     if (admin) {
       const name = h('input', { type: 'text', value: t.name, maxlength: 80 });
-      body.append(h('label', {}, 'Name', h('div', { class: 'copy-row' }, name, h('button', { class: 'btn', onclick: async () => {
-        await api('/api/teams/' + id, { method: 'PATCH', body: { name: name.value } }).then(() => toast('Gespeichert')).catch((e) => toast(e.message));
+      body.append(h('label', {}, T('Name'), h('div', { class: 'copy-row' }, name, h('button', { class: 'btn', onclick: async () => {
+        await api('/api/teams/' + id, { method: 'PATCH', body: { name: name.value } }).then(() => toast(T('Gespeichert'))).catch((e) => toast(e.message));
         load();
-      } }, 'Speichern'))));
+      } }, T('Speichern')))));
       // Einladen über die E-Mail-Adresse – Mitglied wird die Person erst, wenn sie annimmt
-      const input = h('input', { type: 'email', placeholder: 'E-Mail-Adresse', autocomplete: 'off', inputmode: 'email', required: true });
-      const role = h('select', {}, h('option', { value: 'member' }, 'Mitglied'), h('option', { value: 'admin' }, 'Verwaltung'));
+      const input = h('input', { type: 'email', placeholder: T('E-Mail-Adresse'), autocomplete: 'off', inputmode: 'email', required: true });
+      const role = h('select', {}, h('option', { value: 'member' }, T('Mitglied')), h('option', { value: 'admin' }, T('Verwaltung')));
       body.append(h('form', { class: 'invite', onsubmit: async (e) => {
         e.preventDefault();
-        try {
-          await api(`/api/teams/${id}/invitations`, { method: 'POST', body: { email: input.value.trim(), role: role.value } });
-          toast('Einladung verschickt – die Person muss sie noch annehmen', 4000);
-          render();
-        } catch (ex) {
-          toast(ex.message, 5000);
-        }
-      } }, h('div', { class: 'label' }, 'Person einladen'), h('div', { class: 'invite-row' }, input, role, h('button', { type: 'submit', class: 'btn primary' }, 'Einladen')),
-      h('p', { class: 'muted small' }, 'Die Person bekommt eine Benachrichtigung und tritt dem Team erst bei, wenn sie die Einladung annimmt.')));
-      if (t.invitations.length) {
+        const send = async (inviteUnregistered) => {
+          const email = input.value.trim();
+          try {
+            const r = await api(`/api/teams/${id}/invitations`, { method: 'POST', body: { email, role: role.value, inviteUnregistered } });
+            toast(r.invited ? T('Einladung verschickt – nach der Registrierung gehört die Person zum Team') : T('Einladung verschickt – die Person muss sie noch annehmen'), 4000);
+            render();
+          } catch (ex) {
+            if (ex.code === 'not_registered' && !inviteUnregistered) {
+              if (await confirmDialog(T('Keine registrierte Adresse'), T`${email} ist nicht registriert. Soll eine Einladung per E-Mail verschickt werden? Nach der Registrierung gehört die Person zum Team.`, T('Einladung verschicken'))) send(true);
+              return;
+            }
+            toast(ex.message, 5000);
+          }
+        };
+        send(false);
+      } }, h('div', { class: 'label' }, T('Person einladen')), h('div', { class: 'invite-row' }, input, role, h('button', { type: 'submit', class: 'btn primary' }, T('Einladen'))),
+      h('p', { class: 'muted small' }, T('Die Person bekommt eine Benachrichtigung und tritt dem Team erst bei, wenn sie die Einladung annimmt.'))));
+      if (t.invitations.length || t.pending.length) {
         const inv = h('div', { class: 'members' });
+        for (const p of t.pending) {
+          inv.append(h('div', { class: 'member' },
+            h('span', { class: 'avatar sm' }, '✉'),
+            h('div', { class: 'member-name' }, h('b', {}, p.email), h('span', { class: 'muted small' }, T`noch nicht registriert · eingeladen ${relTime(p.createdAt)}`)),
+            h('button', { class: 'btn small', onclick: async () => {
+              await api(`/api/teams/${id}/pending/${p.id}`, { method: 'DELETE' }).catch((e) => toast(e.message));
+              render();
+            } }, T('Zurückziehen'))));
+        }
         for (const u of t.invitations) {
           inv.append(h('div', { class: 'member' },
             h('span', { class: 'avatar sm', style: { background: u.color } }, initials(u.displayName)),
-            h('div', { class: 'member-name' }, h('b', {}, u.displayName), h('span', { class: 'muted small' }, `${u.email} · eingeladen ${relTime(u.createdAt)} als ${u.role === 'admin' ? 'Verwaltung' : 'Mitglied'}`)),
+            h('div', { class: 'member-name' }, h('b', {}, u.displayName), h('span', { class: 'muted small' }, T`${u.email} · eingeladen ${relTime(u.createdAt)} als ${u.role === 'admin' ? T('Verwaltung') : T('Mitglied')}`)),
             h('button', { class: 'btn small', onclick: async () => {
               await api(`/api/teams/${id}/invitations/${u.id}`, { method: 'DELETE' }).catch((e) => toast(e.message));
               render();
-            } }, 'Zurückziehen')));
+            } }, T('Zurückziehen'))));
         }
-        body.append(h('div', {}, h('div', { class: 'label' }, `Offene Einladungen (${t.invitations.length})`), inv));
+        body.append(h('div', {}, h('div', { class: 'label' }, T`Offene Einladungen (${t.invitations.length + t.pending.length})`), inv));
       }
     }
     const list = h('div', { class: 'members' });
@@ -565,17 +583,17 @@ async function openTeamDialog(id) {
         admin ? h('select', { onchange: async (e) => {
           try {
             await api(`/api/teams/${id}/members/${u.id}`, { method: 'PATCH', body: { role: e.target.value } });
-            toast('Rolle geändert');
+            toast(T('Rolle geändert'));
             render();
             load();
           } catch (ex) {
             toast(ex.message);
             render();
           }
-        } }, h('option', { value: 'member', selected: u.role === 'member' }, 'Mitglied'), h('option', { value: 'admin', selected: u.role === 'admin' }, 'Verwaltung'))
-          : h('span', { class: 'muted small' }, u.role === 'admin' ? 'Verwaltung' : 'Mitglied'),
+        } }, h('option', { value: 'member', selected: u.role === 'member' }, T('Mitglied')), h('option', { value: 'admin', selected: u.role === 'admin' }, T('Verwaltung')))
+          : h('span', { class: 'muted small' }, u.role === 'admin' ? T('Verwaltung') : T('Mitglied')),
         admin || self ? h('button', { class: 'btn small' + (self ? ' danger' : ''), onclick: async () => {
-          if (self && !(await confirmDialog('Team verlassen', `Du verlierst den Zugriff auf die Boards des Teams „${t.name}“.`, 'Verlassen', true))) return;
+          if (self && !(await confirmDialog(T('Team verlassen'), T`Du verlierst den Zugriff auf die Boards des Teams „${t.name}“.`, T('Verlassen'), true))) return;
           try {
             await api(`/api/teams/${id}/members/${u.id}`, { method: 'DELETE' });
             if (self) {
@@ -586,17 +604,17 @@ async function openTeamDialog(id) {
           } catch (ex) {
             toast(ex.message);
           }
-        } }, self ? 'Verlassen' : 'Entfernen') : null);
+        } }, self ? T('Verlassen') : T('Entfernen')) : null);
       list.append(h('div', { class: 'member' },
         h('span', { class: 'avatar sm', style: { background: u.color } }, initials(u.displayName)),
-        h('div', { class: 'member-name' }, h('b', {}, u.displayName + (self ? ' (du)' : '')), u.email ? h('span', { class: 'muted small' }, u.email) : null),
+        h('div', { class: 'member-name' }, h('b', {}, u.displayName + (self ? T(' (du)') : '')), u.email ? h('span', { class: 'muted small' }, u.email) : null),
         controls));
     }
-    body.append(h('div', {}, h('div', { class: 'label' }, `Mitglieder (${t.members.length})`), list));
-    body.append(h('p', { class: 'muted small' }, 'Boards ordnest du über „Teilen“ → „Team“ zu. Dort legst du auch fest, ob das Team bearbeiten, kommentieren oder nur ansehen darf.'));
+    body.append(h('div', {}, h('div', { class: 'label' }, T`Mitglieder (${t.members.length})`), list));
+    body.append(h('p', { class: 'muted small' }, T('Boards ordnest du über „Teilen“ → „Team“ zu. Dort legst du auch fest, ob das Team bearbeiten, kommentieren oder nur ansehen darf.')));
     if (admin) {
-      body.append(h('div', { class: 'form-actions' }, h('button', { class: 'btn', onclick: () => import('./webhooks-ui.js').then((mod) => mod.openWebhooks({ teamId: id, teamName: t.name })) }, 'Chat-Anbindung …'), h('span', { class: 'spacer' }), h('button', { class: 'btn danger', onclick: async () => {
-        if (!(await confirmDialog('Team löschen', `Das Team „${t.name}“ wird gelöscht. Die Boards bleiben bei ihren Besitzern erhalten, sind aber nicht mehr für das Team freigegeben.`, 'Löschen', true))) return;
+      body.append(h('div', { class: 'form-actions' }, h('button', { class: 'btn', onclick: () => import('./webhooks-ui.js').then((mod) => mod.openWebhooks({ teamId: id, teamName: t.name })) }, T('Chat-Anbindung …')), h('span', { class: 'spacer' }), h('button', { class: 'btn danger', onclick: async () => {
+        if (!(await confirmDialog(T('Team löschen'), T`Das Team „${t.name}“ wird gelöscht. Die Boards bleiben bei ihren Besitzern erhalten, sind aber nicht mehr für das Team freigegeben.`, T('Löschen'), true))) return;
         try {
           await api('/api/teams/' + id, { method: 'DELETE' });
           m.close();
@@ -605,7 +623,7 @@ async function openTeamDialog(id) {
         } catch (ex) {
           toast(ex.message);
         }
-      } }, 'Team löschen')));
+      } }, T('Team löschen'))));
     }
   };
   await render();
@@ -614,39 +632,39 @@ async function openTeamDialog(id) {
 function boardMenu(anchor, b) {
   const owner = b.role === 'owner';
   menu(anchor, [
-    { label: 'Öffnen', icon: 'fit', onClick: () => (location.href = '/board/' + b.id) },
-    { label: owner ? 'Teilen & Team …' : 'Teilen …', icon: 'share', onClick: () => openShareDialog(b.id, { me, onLeave: load, onClose: load }) },
-    { label: 'In Ordner verschieben …', icon: 'folder', onClick: () => moveToFolder(b) },
-    ['owner', 'editor'].includes(b.role) ? { label: 'Umbenennen', icon: 'edit', onClick: async () => {
-      const n = await promptDialog('Board umbenennen', 'Name', b.name);
+    { label: T('Öffnen'), icon: 'fit', onClick: () => (location.href = '/board/' + b.id) },
+    { label: owner ? T('Teilen & Team …') : T('Teilen …'), icon: 'share', onClick: () => openShareDialog(b.id, { me, onLeave: load, onClose: load }) },
+    { label: T('In Ordner verschieben …'), icon: 'folder', onClick: () => moveToFolder(b) },
+    ['owner', 'editor'].includes(b.role) ? { label: T('Umbenennen'), icon: 'edit', onClick: async () => {
+      const n = await promptDialog(T('Board umbenennen'), T('Name'), b.name);
       if (n && n.trim()) {
         await api('/api/boards/' + b.id, { method: 'PATCH', body: { name: n.trim() } }).catch((e) => toast(e.message));
         load();
       }
     } } : null,
-    { label: 'Duplizieren', icon: 'copy', onClick: async () => {
+    { label: T('Duplizieren'), icon: 'copy', onClick: async () => {
       try {
         await api(`/api/boards/${b.id}/duplicate`, { method: 'POST' });
-        toast('Board dupliziert – die Kopie gehört dir');
+        toast(T('Board dupliziert – die Kopie gehört dir'));
         load();
       } catch (e) {
         toast(e.message);
       }
     } },
-    { label: 'Link kopieren', icon: 'link', onClick: async () => {
+    { label: T('Link kopieren'), icon: 'link', onClick: async () => {
       try {
         await navigator.clipboard.writeText(location.origin + '/board/' + b.id);
-        toast('Link kopiert');
+        toast(T('Link kopiert'));
       } catch {
         toast(location.origin + '/board/' + b.id, 5000);
       }
     } },
     '-',
-    owner ? { label: 'In den Papierkorb', icon: 'trash', danger: true, onClick: async () => {
-      if (await confirmDialog('Board löschen', `„${b.name}“ kommt in den Papierkorb und ist für alle Mitglieder nicht mehr erreichbar. Du kannst es dort wiederherstellen, bis es nach Ablauf der Frist endgültig gelöscht wird.`, 'In den Papierkorb', true)) {
+    owner ? { label: T('In den Papierkorb'), icon: 'trash', danger: true, onClick: async () => {
+      if (await confirmDialog(T('Board löschen'), T`„${b.name}“ kommt in den Papierkorb und ist für alle Mitglieder nicht mehr erreichbar. Du kannst es dort wiederherstellen, bis es nach Ablauf der Frist endgültig gelöscht wird.`, T('In den Papierkorb'), true)) {
         try {
           await api('/api/boards/' + b.id, { method: 'DELETE' });
-          toast('Board liegt im Papierkorb', 5000, { label: 'Rückgängig', onClick: async () => {
+          toast(T('Board liegt im Papierkorb'), 5000, { label: T('Rückgängig'), onClick: async () => {
             await api(`/api/trash/${b.id}/restore`, { method: 'POST' }).catch((e) => toast(e.message));
             load();
             loadTrash(true);
@@ -657,9 +675,9 @@ function boardMenu(anchor, b) {
           toast(e.message);
         }
       }
-    } } : b.member || !(b.team && b.team.member) ? { label: b.member ? 'Board verlassen …' : 'Aus meiner Liste entfernen', icon: 'close', danger: true, onClick: async () => {
+    } } : b.member || !(b.team && b.team.member) ? { label: b.member ? T('Board verlassen …') : T('Aus meiner Liste entfernen'), icon: 'close', danger: true, onClick: async () => {
       // Mitglieder verlieren dabei den Zugriff – nur nach Rückfrage
-      if (b.member && !(await confirmDialog('Board verlassen', `Du verlierst den Zugriff auf „${b.name}“, bis du erneut eingeladen wirst.`, 'Verlassen', true))) return;
+      if (b.member && !(await confirmDialog(T('Board verlassen'), T`Du verlierst den Zugriff auf „${b.name}“, bis du erneut eingeladen wirst.`, T('Verlassen'), true))) return;
       try {
         await api(`/api/boards/${b.id}/members/${me.id}`, { method: 'DELETE' });
         load();
@@ -674,18 +692,18 @@ function renderUser() {
   const b = document.getElementById('dash-user');
   b.textContent = initials(me.displayName);
   b.style.background = me.color;
-  b.title = me.displayName + ' – Konto';
+  b.title = me.displayName + T(' – Konto');
   document.getElementById('dash-admin').classList.toggle('hidden', me.role !== 'admin');
   // Ältere Konten ohne E-Mail-Adresse: Anmeldung künftig nur noch per E-Mail
   const hint = document.getElementById('dash-account-hint');
   hint.innerHTML = '';
   if (!me.email && !me.pendingEmail) {
     hint.append(h('div', { class: 'invite-card warn', role: 'status' },
-      h('span', { class: 'invite-text' }, h('b', {}, 'Bitte hinterlege eine E-Mail-Adresse. '), 'Die Anmeldung ist künftig nur noch mit E-Mail-Adresse möglich; ohne Adresse kannst du außerdem nicht zu Teams oder Boards eingeladen werden.'),
+      h('span', { class: 'invite-text' }, h('b', {}, T('Bitte hinterlege eine E-Mail-Adresse. ')), T('Die Anmeldung ist künftig nur noch mit E-Mail-Adresse möglich; ohne Adresse kannst du außerdem nicht zu Teams oder Boards eingeladen werden.')),
       h('button', { class: 'btn small primary', onclick: () => openProfileDialog(me, (u) => {
         me = u;
         renderUser();
-      }) }, 'Jetzt ergänzen')));
+      }) }, T('Jetzt ergänzen'))));
   }
 }
 
@@ -733,13 +751,13 @@ importInput.addEventListener('change', async () => {
     const elements = Array.isArray(d) ? d : Array.isArray(d.elements) ? d.elements : Object.values(d.elements || {});
     const b = await api('/api/boards', { method: 'POST', body: { name: d.name || f.name.replace(/\.((dlz|vibe)board\.)?json$/, ''), elements } });
     if (b.rejected && b.rejected.length) {
-      toast(`${b.rejected.length} Bild(er) wurden nicht übernommen: ${b.rejected[0].reason}`, 6000);
+      toast(T`${b.rejected.length} Bild(er) wurden nicht übernommen: ${b.rejected[0].reason}`, 6000);
       setTimeout(() => (location.href = '/board/' + b.id), 4000);
       return;
     }
     location.href = '/board/' + b.id;
   } catch (e) {
-    toast('Import fehlgeschlagen: ' + e.message);
+    toast(T('Import fehlgeschlagen: ') + e.message);
   }
 });
 

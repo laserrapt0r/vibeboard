@@ -1,4 +1,5 @@
 // Dialog „Diagramm aus Text“ (Mermaid-Schreibweise) mit Live-Vorschau
+import { T } from './i18n.js';
 import { h, toast, modal, debounce } from './util.js';
 import { renderSvgDocument } from './render.js';
 import { app } from './core.js';
@@ -39,18 +40,18 @@ app.on('openDiagramText', () => {
     update();
     if (!els.length) return;
     placeElements(els.map((x) => (x.type === 'shape' ? { ...x, author: app.user.name || '' } : x)), { select: true });
-    toast(`Diagramm mit ${els.filter((x) => x.type !== 'connector').length} Elementen eingefügt`);
+    toast(T`Diagramm mit ${els.filter((x) => x.type !== 'connector').length} Elementen eingefügt`);
     m.close();
   } },
-  h('p', { class: 'muted' }, 'Beschreibe ein Fluss- oder Sequenzdiagramm in Textform (Mermaid-Schreibweise). Daraus entstehen normale Formen und Verbindungen, die du danach frei bearbeiten kannst.'),
+  h('p', { class: 'muted' }, T('Beschreibe ein Fluss- oder Sequenzdiagramm in Textform (Mermaid-Schreibweise). Daraus entstehen normale Formen und Verbindungen, die du danach frei bearbeiten kannst.')),
   h('div', { class: 'row' },
-    h('button', { type: 'button', class: 'btn small', onclick: () => { ta.value = EXAMPLES.flow; update(); } }, 'Beispiel: Flussdiagramm'),
-    h('button', { type: 'button', class: 'btn small', onclick: () => { ta.value = EXAMPLES.seq; update(); } }, 'Beispiel: Sequenzdiagramm')),
+    h('button', { type: 'button', class: 'btn small', onclick: () => { ta.value = EXAMPLES.flow; update(); } }, T('Beispiel: Flussdiagramm')),
+    h('button', { type: 'button', class: 'btn small', onclick: () => { ta.value = EXAMPLES.seq; update(); } }, T('Beispiel: Sequenzdiagramm'))),
   h('div', { class: 'diagram-split' }, ta, preview),
   err,
-  h('details', { class: 'md-help' }, h('summary', {}, 'Kurzreferenz'), h('pre', {},
-    'flowchart TD | LR | BT | RL\n  A[Rechteck]  B(abgerundet)  C{Entscheidung}  D((Kreis))\n  E([Start/Ende])  F[(Datenbank)]  G[[Unterprozess]]  H{{Sechseck}}\n  A --> B   A --- B   A -.-> B   A ==> B   A -->|Text| B   A -- Text --> B\n  A & B --> C      subgraph Titel … end\n\nsequenceDiagram\n  participant A as Name   actor B\n  A->>B: Nachricht   A-->>B: Antwort   A->>A: an sich selbst\n  Note over A,B: Notiz   autonumber\n  alt … else … end   loop … end   opt … end')),
-  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, 'Abbrechen'), h('button', { type: 'submit', class: 'btn primary' }, 'Einfügen')));
-  const m = modal('Diagramm aus Text', form, { wide: true });
+  h('details', { class: 'md-help' }, h('summary', {}, T('Kurzreferenz')), h('pre', {},
+    T('flowchart TD | LR | BT | RL\n  A[Rechteck]  B(abgerundet)  C{Entscheidung}  D((Kreis))\n  E([Start/Ende])  F[(Datenbank)]  G[[Unterprozess]]  H{{Sechseck}}\n  A --> B   A --- B   A -.-> B   A ==> B   A -->|Text| B   A -- Text --> B\n  A & B --> C      subgraph Titel … end\n\nsequenceDiagram\n  participant A as Name   actor B\n  A->>B: Nachricht   A-->>B: Antwort   A->>A: an sich selbst\n  Note over A,B: Notiz   autonumber\n  alt … else … end   loop … end   opt … end'))),
+  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, T('Abbrechen')), h('button', { type: 'submit', class: 'btn primary' }, T('Einfügen'))));
+  const m = modal(T('Diagramm aus Text'), form, { wide: true });
   update();
 });

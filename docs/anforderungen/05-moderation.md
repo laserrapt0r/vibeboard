@@ -62,7 +62,7 @@
   - Ausgewählte Beiträge lassen sich zu einer Themengruppe zusammenfassen (Kontextleiste „Themengruppe bilden“): eine abgerundete Fläche mit Titel, die ihren Inhalt beim Verschieben mitnimmt. Themengruppen sind keine Folien.
   - Abstimmung über Themen: Ein Klick irgendwo in die Gruppe zählt für das Thema; der Server nimmt Stimmen nur für Themengruppen an.
   - Besprechung: Panel mit allen Themen (nach Stimmen), aktuelles Thema wird bei allen hervorgehoben und angezeigt, Timer je Thema, „Erledigt · nächstes“, zurück, beenden.
-  - Lean-Coffee-Abfrage „Weiter diskutieren?“ mit 👍 ✋ 👎 für alle (auch Betrachter), Ergebnis für alle sichtbar.
+  - Abfrage „Weiter diskutieren?“ mit 👍 ✋ 👎 für alle (auch Betrachter), Ergebnis für alle sichtbar.
 
 ### REQ-MOD-008 Schnellumfragen
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt

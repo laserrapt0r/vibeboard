@@ -1,10 +1,11 @@
 // Diagramme aus Text: Flussdiagramme und Sequenzdiagramme in der verbreiteten Mermaid-Schreibweise
 // werden in normale, bearbeitbare Board-Elemente (Formen, Verbindungen, Texte) umgewandelt.
 // Eigene Umsetzung ohne Fremdbibliothek; reine Funktionen (auch für Vorlagen nutzbar).
+import { T } from './i18n.js';
 import { uid, measure, wrap } from './util.js';
 
 export const EXAMPLES = {
-  flow: `flowchart TD
+  flow: T`flowchart TD
   start([Ticket eingegangen]) --> triage{Störung oder Anfrage?}
   triage -->|Störung| prio[Priorität bestimmen]
   triage -->|Anfrage| katalog[Service-Katalog prüfen]
@@ -14,7 +15,7 @@ export const EXAMPLES = {
   katalog --> loesung
   loesung --> db[(Wissensdatenbank)]
   loesung --> ende([Ticket schließen])`,
-  seq: `sequenceDiagram
+  seq: T`sequenceDiagram
   autonumber
   actor U as Nutzer
   participant W as Web-App
@@ -69,7 +70,7 @@ function findClose(s, from, close) {
 function parseNode(s, i, nodes, order) {
   // IDs dürfen Bindestriche enthalten (user-service), aber nicht direkt vor einer Kante
   const m = /^[A-Za-z0-9_\u00C0-\u024F]+(?:-(?![-.>=])[A-Za-z0-9_\u00C0-\u024F]+)*/.exec(s.slice(i));
-  if (!m) throw new Error(`Knoten erwartet bei „${s.slice(i, i + 20)}“`);
+  if (!m) throw new Error(T`Knoten erwartet bei „${s.slice(i, i + 20)}“`);
   const id = m[0];
   i += id.length;
   let label = null, shape = null;
@@ -91,7 +92,7 @@ function parseNode(s, i, nodes, order) {
   // Klassenzuweisung A:::klasse ignorieren
   const cls = /^:::[\w-]+/.exec(s.slice(i));
   if (cls) i += cls[0].length;
-  if (!nodes.has(id) && nodes.size >= MAX_NODES) throw new Error(`Höchstens ${MAX_NODES} Knoten je Diagramm`);
+  if (!nodes.has(id) && nodes.size >= MAX_NODES) throw new Error(T`Höchstens ${MAX_NODES} Knoten je Diagramm`);
   if (!nodes.has(id)) {
     nodes.set(id, { id, label: label ?? id, shape: shape || 'rect' });
     order.push(id);
@@ -145,7 +146,7 @@ export function parseFlowchart(text) {
   // Kopfzeile darf mit „;“ weitergehen: „graph TD; A-->B“
   const [first, ...tail] = lines.shift().split(';');
   if (tail.length) lines.unshift(tail.join(';'));
-  const dir = (/^(?:flowchart|graph)\s+(TD|TB|BT|LR|RL)/i.exec(first.trim()) || [])[1]?.toUpperCase() || 'TD';
+  const dir = (/^(?:flowchart|graph)\s+(TD|TB|BT|LR|RL)/i.exec(first.trim()) || [])[1]?.toUpperCase() || T('TD');
   const nodes = new Map(), order = [], edges = [], groups = [];
   const stack = [];
   for (const raw of lines.flatMap(splitStatements)) {
@@ -177,9 +178,9 @@ export function parseFlowchart(text) {
       for (const a of prev) for (const b of next) edges.push({ from: a, to: b, ...e });
       prev = next;
     }
-    if (line.slice(i).trim()) throw new Error(`Unverständlich: „${line.slice(i).trim().slice(0, 40)}“`);
+    if (line.slice(i).trim()) throw new Error(T`Unverständlich: „${line.slice(i).trim().slice(0, 40)}“`);
   }
-  if (!nodes.size) throw new Error('Keine Knoten gefunden');
+  if (!nodes.size) throw new Error(T('Keine Knoten gefunden'));
   return { dir, nodes, order, edges, groups };
 }
 
@@ -340,9 +341,9 @@ export function parseSequence(text) {
     else if ((m = /^([^-<>+:]+?)\s*(<<-->>|<<->>|-->>|->>|-->|->|--x|-x|--\)|-\))\s*[+-]?\s*([^:]+?)\s*(?::\s*(.*))?$/.exec(line))) {
       // ->> und -x mit Pfeilspitze, -> und --> als einfache Linie (wie in Mermaid)
       steps.push({ kind: 'msg', from: part(m[1]), to: part(m[3]), dashed: m[2].includes('--'), cross: /x$/.test(m[2]), both: m[2].startsWith('<<'), arrow: !/^-{1,2}>$/.test(m[2]), text: cleanLabel(m[4] || '') });
-    } else throw new Error(`Unverständlich: „${line.slice(0, 40)}“`);
+    } else throw new Error(T`Unverständlich: „${line.slice(0, 40)}“`);
   }
-  if (!parts.size) throw new Error('Keine Teilnehmer gefunden');
+  if (!parts.size) throw new Error(T('Keine Teilnehmer gefunden'));
   return { parts: [...parts.values()], steps, auto };
 }
 
@@ -429,9 +430,9 @@ export function textToElements(text) {
     .replace(/^\s*%%\{[\s\S]*?\}%%\s*\n/, '') // %%{init: …}%%
     .replace(/^(\s*%%.*\n)+/, '')
     .trim();
-  if (!t) throw new Error('Bitte einen Diagrammtext eingeben');
+  if (!t) throw new Error(T('Bitte einen Diagrammtext eingeben'));
   const first = t.split('\n', 1)[0].trim();
   if (/^sequenceDiagram\b/i.test(first)) return layoutSequence(parseSequence(t));
   if (/^(flowchart|graph)\b/i.test(first)) return layoutFlowchart(parseFlowchart(t));
-  throw new Error('Die erste Zeile muss „flowchart TD“, „flowchart LR“ oder „sequenceDiagram“ lauten');
+  throw new Error(T('Die erste Zeile muss „flowchart TD“, „flowchart LR“ oder „sequenceDiagram“ lauten'));
 }

@@ -91,15 +91,16 @@ SOFTWARE.
 ## Vorlagen
 
 Die Vorlagen geben bekannte Arbeitsmethoden wieder (z. B. SWOT, Kanban, Eisenhower-Matrix, Ishikawa-Diagramm).
-Die Methoden selbst sind frei nutzbar. Text, Gestaltung und Umsetzung der Vorlagen sind eigene Arbeit.
+Methoden sind nach unserer Kenntnis frei nutzbar; ihre Namen können Marken ihrer Inhaber sein. Text, Gestaltung und
+Umsetzung der Vorlagen sind, soweit nicht anders angegeben, eigene Arbeit.
 
 Zwei Vorlagen sind Adaptionen von Werken unter **Creative Commons Namensnennung – Weitergabe unter gleichen
-Bedingungen 3.0** (CC BY-SA 3.0, https://creativecommons.org/licenses/by-sa/3.0/):
+Bedingungen 3.0 Unported** (CC BY-SA 3.0, https://creativecommons.org/licenses/by-sa/3.0/):
 
 | Vorlage | Original | Änderungen |
 |---------|----------|------------|
-| Business Model Canvas | „Business Model Canvas“ von Strategyzer AG, https://www.strategyzer.com | Übersetzung ins Deutsche, eigene Leitfragen, digitales Layout |
-| Lean Canvas | „Lean Canvas“ von Ash Maurya, https://leanstack.com (Abwandlung des Business Model Canvas) | Übersetzung ins Deutsche, eigene Leitfragen, digitales Layout |
+| Business Model Canvas | „Business Model Canvas“, Designed by: Strategyzer AG, https://www.strategyzer.com | Übersetzungen, an das Original angelehnte Leitfragen, digitales Layout |
+| Lean Canvas | „Lean Canvas“ von Ash Maurya, https://leanstack.com (Abwandlung des Business Model Canvas von Strategyzer AG) | Übersetzungen, an das Original angelehnte Leitfragen, digitales Layout |
 
 Diese beiden Vorlagen (die Funktionen `bmc` und `lean` in `public/js/templates.js` und die daraus erzeugten
 Board-Inhalte) stehen deshalb ebenfalls unter CC BY-SA 3.0. Die Namensnennung erscheint auch auf dem Board.
@@ -116,7 +117,9 @@ Diese Pakete sind nicht im Repository enthalten. Sie werden bei der Installation
 | split2, pg-int8 | ISC |
 | [nodemailer](https://nodemailer.com) | MIT-0 |
 | [uqr](https://github.com/unjs/uqr) (QR-Codes für die Zwei-Faktor-Einrichtung) | MIT |
-| [pdfjs-dist](https://mozilla.github.io/pdf.js/) (Mozilla pdf.js – Vorschau von PDF-Anhängen im Browser; der Server liefert die Dateien `build/pdf.min.mjs` und `build/pdf.worker.min.mjs` unverändert unter `/vendor/pdfjs/` aus, der Lizenztext liegt im Paket) | Apache-2.0 |
+| [acorn](https://github.com/acornjs/acorn), acorn-walk (nur Entwicklung: Prüfung der Übersetzungen) | MIT |
+| `@napi-rs/canvas` (optional von pdfjs-dist; wird im Docker-Image nicht installiert) | MIT |
+| [pdfjs-dist](https://mozilla.github.io/pdf.js/) (Mozilla pdf.js – Vorschau von PDF-Anhängen im Browser; der Server liefert die Dateien `build/pdf.min.mjs` und `build/pdf.worker.min.mjs` unverändert unter `/vendor/pdfjs/` aus, der Lizenztext liegt im Paket; Copyright Mozilla Foundation, https://www.apache.org/licenses/LICENSE-2.0) | Apache-2.0 |
 
 Die Docker-Konfiguration verwendet die öffentlichen Images `node` (Node.js, MIT), `postgres` (PostgreSQL License),
 `clamav/clamav` (ClamAV, GPL-2.0) und optional `axllent/mailpit` (MIT). Das Anwendungs-Image enthält zusätzlich die
@@ -140,7 +143,7 @@ Browsers dargestellt.
 - **Diagramm aus Text** versteht die Schreibweise der Diagrammsprache von [Mermaid](https://mermaid.js.org/)
   (Open-Source-Projekt, MIT-Lizenz). vibeboard enthält keinen Code von Mermaid; Parser und Layout sind eine eigene
   Umsetzung. Der Name wird nur genannt, um die unterstützte Schreibweise zu beschreiben.
-- Die Vorlagen bilden allgemein bekannte Methoden nach, die keinem Schutzrecht unterliegen (z. B. Schätzrunden mit
+- Die Vorlagen bilden allgemein bekannte Methoden nach, die nach unserer Kenntnis frei nutzbar sind (z. B. Schätzrunden mit
   verdeckten Karten, RACI, SIPOC, Event Storming, C4-Kontextdiagramm, Service Blueprint, Ist/Ist-nicht-Analyse). Inhalte, Texte und
   Gestaltung sind eigene Werke. Die Begriffe der Prozesse (z. B. Incident-, Problem- und Change-Management) folgen dem
   allgemeinen Sprachgebrauch; es werden keine Inhalte aus lizenzpflichtigen Rahmenwerken übernommen.

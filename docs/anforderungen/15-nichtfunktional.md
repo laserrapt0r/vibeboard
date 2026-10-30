@@ -4,6 +4,7 @@
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Oberfläche, E-Mails, Fehlermeldungen und Dokumentation sind auf Deutsch, in verständlicher Sprache ohne Fachjargon, wo möglich.
+  - Geändert in 4.2.0: siehe [REQ-NFR-008](#req-nfr-008-mehrsprachigkeit).
 
 ### REQ-NFR-002 Browser und Geräte
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -42,3 +43,14 @@
 - **Akzeptanzkriterien:**
   - Web-App-Manifest mit Symbolen (auch „maskable“) und Designfarbe; die App lässt sich über den Browser installieren (Kontomenü „App installieren“, sobald der Browser es anbietet) und läuft im eigenen Fenster.
   - Ein Service Worker hält nur statische Dateien (Oberfläche, Skripte, Symbole) für den Offline-Fall vor – immer „Netz zuerst“, damit Updates sofort gelten. Schnittstellen, Echtzeitkanal, Dateien und Seiten mit Anmeldestatus werden nie zwischengespeichert; ohne Verbindung erscheint eine Offline-Seite.
+
+### REQ-NFR-008 Mehrsprachigkeit
+- **Seit:** 4.2.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Die Anwendung gibt es auf Englisch, Deutsch, Spanisch und Französisch.
+- **Akzeptanzkriterien:**
+  - Die Sprache folgt den Spracheinstellungen des Browsers (erste unterstützte Sprache). Wird keine unterstützt, gilt Englisch. Datum und Zahlen folgen der Browsersprache.
+  - Übersetzt sind Oberfläche, Administration, Vorlagen, Fehlermeldungen und E-Mails.
+  - E-Mails gehen in der Sprache der empfangenden Person (zuletzt beim Anmelden verwendet); bei Einladungen an Adressen ohne Konto in der Sprache der einladenden Person.
+  - Inhalte der Boards werden nicht übersetzt; Vorlagen entstehen in der Sprache der Person, die sie einfügt.
+  - Die Vorlagen für Impressum und Datenschutzerklärung bleiben deutsch: Sie beziehen sich auf deutsches Recht und werden vom Betreiber verantwortet.
+  - Wörterbücher: `public/i18n/*.json`, Quellsprache Deutsch; `npm run check:i18n` prüft Vollständigkeit und Platzhalter.

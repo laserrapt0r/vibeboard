@@ -35,7 +35,11 @@ Eine Änderung ist erst fertig, wenn alle Punkte erfüllt sind:
      - keine Kennwörter, Tokens, Inhalte von Boards, E-Mail- oder IP-Adressen protokollieren.
 7. **Dokumentation:** README aktualisieren. Bei neuer Verarbeitung personenbezogener Daten zusätzlich die
    Datenschutz-Vorlage in `public/js/legal-templates.js` anpassen.
-8. **Getestet:** Neue Funktion im Browser und, falls betroffen, mit mehreren Personen gleichzeitig sowie im Rückfall-Transport
+8. **Mehrsprachig:** Neue Texte der Oberfläche im Code auf Deutsch mit `T('…')` bzw. ``T`… ${wert}` `` markieren und in
+   allen Wörterbüchern ergänzen (`public/i18n/en.json`, `es.json`, `fr.json`). Mehrzahl als zwei vollständige Texte
+   schreiben, nicht aus Endungen zusammensetzen. Meldungen des Servers und E-Mails bleiben im Code deutsch und werden
+   beim Ausgeben übersetzt (`lib/i18n.js`) – auch sie gehören in die Wörterbücher. `npm run check:i18n` muss bestehen.
+9. **Getestet:** Neue Funktion im Browser und, falls betroffen, mit mehreren Personen gleichzeitig sowie im Rückfall-Transport
    (`?transport=poll`) geprüft.
 
 ## Upgrade-Test ausführen
@@ -47,6 +51,8 @@ DATABASE_URL=postgres://benutzer:kennwort@localhost:5432/vibeboard_test npm run 
 
 ## Konventionen
 
-- Sprache der Oberfläche, Meldungen, Kommentare und Dokumentation: Deutsch.
+- Quellsprache der Oberfläche und Meldungen sowie Sprache von Kommentaren und Anforderungen: Deutsch. Die Oberfläche
+  gibt es auf Englisch, Deutsch, Spanisch und Französisch; die Sprache folgt dem Browser, Standard ist Englisch.
+- `README.md` ist die englische Hauptfassung; `README.de.md`, `README.es.md` und `README.fr.md` werden mitgepflegt.
 - Code-Stil wie im bestehenden Code (2 Leerzeichen, einfache Anführungszeichen, Semikolons).
 - Commit-Nachrichten auf Deutsch, erste Zeile als knappe Zusammenfassung.

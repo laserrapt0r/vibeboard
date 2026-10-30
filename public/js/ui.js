@@ -1,4 +1,5 @@
 // Benutzeroberfläche des Board-Editors
+import { T, LOCALE, guestName } from './i18n.js';
 import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
   initials, relTime, rectsIntersect, throttle, uid, api,
@@ -39,12 +40,12 @@ const iconBtn = (icon, title, onclick, extra = {}) => h('button', { class: 'icon
 /* ================================================================== */
 
 const TOOLS = [
-  ['select', 'Auswählen (V)'], ['hand', 'Verschieben (H / Leertaste)'], '|',
-  ['sticky', 'Sticky Note (N)'], ['text', 'Text (T)'], ['shape', 'Formen (S, R, O)'], ['connector', 'Verbindungslinie (L)'],
-  ['pen', 'Stift (P)'], ['highlighter', 'Textmarker'], ['eraser', 'Radierer (E)'], '|',
-  ['frame', 'Frame (F)'], ['card', 'Karte / Aufgabe (K)'], ['table', 'Tabelle'], ['code', 'Code-Block'], ['mindmap', 'Mindmap (M)'],
-  ['comment', 'Kommentar (C)'], ['emoji', 'Sticker & Emojis'], ['image', 'Bild oder Datei hochladen (Bilder, PDF, Office, Text)'], ['laser', 'Laserpointer (X)'], '|',
-  ['template', 'Vorlagen'], ['diagram', 'Diagramm aus Text (Mermaid-Syntax)'],
+  ['select', T('Auswählen (V)')], ['hand', T('Verschieben (H / Leertaste)')], '|',
+  ['sticky', T('Sticky Note (N)')], ['text', T('Text (T)')], ['shape', T('Formen (S, R, O)')], ['connector', T('Verbindungslinie (L)')],
+  ['pen', T('Stift (P)')], ['highlighter', T('Textmarker')], ['eraser', T('Radierer (E)')], '|',
+  ['frame', T('Frame (F)')], ['card', T('Karte / Aufgabe (K)')], ['table', T('Tabelle')], ['code', T('Code-Block')], ['mindmap', T('Mindmap (M)')],
+  ['comment', T('Kommentar (C)')], ['emoji', T('Sticker & Emojis')], ['image', T('Bild oder Datei hochladen (Bilder, PDF, Office, Text)')], ['laser', T('Laserpointer (X)')], '|',
+  ['template', T('Vorlagen')], ['diagram', T('Diagramm aus Text (Mermaid-Syntax)')],
 ];
 
 const EMOJIS = ['👍', '👎', '❤️', '⭐', '✅', '❌', '❓', '❗', '💡', '🔥', '🎉', '🚀', '😀', '😂', '😍', '🤔', '😢', '😡', '👏', '🙌', '💪', '👀', '🎯', '📌', '⚠️', '🏆', '💰', '📅', '🔒', '🧩', '☕', '🍕'];
@@ -100,7 +101,7 @@ function swatchGrid(colors, current, onPick, cls = '') {
   return h('div', { class: 'swatches ' + cls }, colors.map((c) => h('button', {
     class: 'swatch' + (c === current ? ' active' : '') + (c === 'transparent' ? ' transparent' : ''),
     style: { background: c === 'transparent' ? '' : c },
-    title: c === 'transparent' ? 'Keine Füllung' : c,
+    title: c === 'transparent' ? T('Keine Füllung') : c,
     onclick: () => onPick(c),
   })));
 }
@@ -115,7 +116,7 @@ function showFlyout(id, anchor) {
   let content;
   switch (id) {
     case 'sticky':
-      content = h('div', {}, h('div', { class: 'pop-title' }, 'Farbe der Sticky Note'), swatchGrid(STICKY_COLORS, o.stickyColor, (c) => { o.stickyColor = c; done(); }));
+      content = h('div', {}, h('div', { class: 'pop-title' }, T('Farbe der Sticky Note')), swatchGrid(STICKY_COLORS, o.stickyColor, (c) => { o.stickyColor = c; done(); }));
       break;
     case 'shape':
       content = h('div', { class: 'shape-pop' }, SHAPE_GROUPS.flatMap(([group, keys]) => [
@@ -128,26 +129,26 @@ function showFlyout(id, anchor) {
       ]));
       break;
     case 'code':
-      content = h('div', {}, h('div', { class: 'pop-title' }, 'Sprache für neue Code-Blöcke'), h('div', { class: 'lang-list' }, LANGUAGES.map(([k, l]) =>
+      content = h('div', {}, h('div', { class: 'pop-title' }, T('Sprache für neue Code-Blöcke')), h('div', { class: 'lang-list' }, LANGUAGES.map(([k, l]) =>
         h('button', { class: 'btn small' + ((o.codeLang || 'js') === k ? ' primary' : ''), onclick: () => { o.codeLang = k; done(); } }, l))));
       break;
     case 'connector':
-      content = h('div', {}, h('div', { class: 'pop-title' }, 'Linienart'), h('div', { class: 'row' }, [['curve', 'Kurve'], ['elbow', 'Gewinkelt'], ['straight', 'Gerade']].map(([k, l]) =>
+      content = h('div', {}, h('div', { class: 'pop-title' }, T('Linienart')), h('div', { class: 'row' }, [['curve', T('Kurve')], ['elbow', T('Gewinkelt')], ['straight', T('Gerade')]].map(([k, l]) =>
         h('button', { class: 'btn small' + (o.routing === k ? ' primary' : ''), onclick: () => { o.routing = k; done(); } }, l))));
       break;
     case 'pen':
     case 'highlighter': {
       const hl = id === 'highlighter';
-      content = h('div', {}, h('div', { class: 'pop-title' }, hl ? 'Textmarker' : 'Stift'),
+      content = h('div', {}, h('div', { class: 'pop-title' }, hl ? T('Textmarker') : T('Stift')),
         swatchGrid(hl ? HL_COLORS : PEN_COLORS, hl ? o.hlColor : o.penColor, (c) => { if (hl) o.hlColor = c; else o.penColor = c; done(); }),
         hl ? null : h('div', { class: 'row', style: { marginTop: '8px' } }, [2, 3, 5, 8, 12].map((wd) => h('button', {
-          class: 'width-btn' + (o.penWidth === wd ? ' active' : ''), title: wd + ' px',
+          class: 'width-btn' + (o.penWidth === wd ? ' active' : ''), title: wd + T(' px'),
           html: `<span style="width:${wd + 2}px;height:${wd + 2}px"></span>`, onclick: () => { o.penWidth = wd; done(); },
         }))));
       break;
     }
     case 'emoji':
-      content = h('div', {}, h('div', { class: 'pop-title' }, 'Sticker'), h('div', { class: 'emoji-grid' }, EMOJIS.map((em) => h('button', { class: 'emoji-btn' + (o.emoji === em ? ' active' : ''), onclick: () => { o.emoji = em; done(); } }, em))));
+      content = h('div', {}, h('div', { class: 'pop-title' }, T('Sticker')), h('div', { class: 'emoji-grid' }, EMOJIS.map((em) => h('button', { class: 'emoji-btn' + (o.emoji === em ? ' active' : ''), onclick: () => { o.emoji = em; done(); } }, em))));
       break;
   }
   popover(anchor, content, { placement: 'right' });
@@ -193,7 +194,7 @@ function colorBtn(color, title, palette, onPick, { ring = false } = {}) {
   b.onclick = () => {
     const custom = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(color) ? color : '#000000', oninput: (e) => onPick(e.target.value) });
     popover(b, h('div', {}, h('div', { class: 'pop-title' }, title), swatchGrid(palette, color, (c) => { onPick(c); closePop(); }),
-      h('label', { class: 'custom-color' }, 'Eigene Farbe ', custom)), { placement: 'top' });
+      h('label', { class: 'custom-color' }, T('Eigene Farbe '), custom)), { placement: 'top' });
   };
   return b;
 }
@@ -202,7 +203,7 @@ function colorBtn(color, title, palette, onPick, { ring = false } = {}) {
 function colorBtnMenu(anchor, color, title, onPick) {
   const custom = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(color) ? color : '#000000', oninput: (e) => onPick(e.target.value) });
   setTimeout(() => popover(anchor, h('div', {}, h('div', { class: 'pop-title' }, title), swatchGrid(PALETTE, color, (c) => { onPick(c); closePop(); }),
-    h('label', { class: 'custom-color' }, 'Eigene Farbe ', custom)), { placement: 'top' }), 0);
+    h('label', { class: 'custom-color' }, T('Eigene Farbe '), custom)), { placement: 'top' }), 0);
 }
 
 function selectBtn(value, options, title, onPick, width = 64) {
@@ -220,7 +221,7 @@ const actBtn = (icon, title, onClick, cls = '') => h('button', { class: 'ctx-btn
 const sep = () => h('span', { class: 'ctx-sep' });
 
 const FONT_SIZES = [[10, '10'], [12, '12'], [14, '14'], [16, '16'], [18, '18'], [20, '20'], [24, '24'], [28, '28'], [32, '32'], [40, '40'], [48, '48'], [64, '64'], [80, '80'], [96, '96'], [128, '128']];
-const STROKE_W = [[0, 'Ohne'], [1, '1 px'], [2, '2 px'], [3, '3 px'], [4, '4 px'], [6, '6 px'], [8, '8 px'], [12, '12 px']];
+const STROKE_W = [[0, T('Ohne')], [1, T('1 px')], [2, T('2 px')], [3, T('3 px')], [4, T('4 px')], [6, T('6 px')], [8, T('8 px')], [12, T('12 px')]];
 
 export function buildCtx() {
   ctxbar.innerHTML = '';
@@ -238,190 +239,190 @@ export function buildCtx() {
 
   if (!locked) {
     if (only === 'sticky') {
-      items.push(colorBtn(f.fill, 'Farbe', STICKY_COLORS, (c) => applySel({ fill: c })));
-      items.push(selectBtn(f.fontSize ?? 'auto', [['auto', 'Auto'], ...FONT_SIZES], 'Schriftgröße', (v) => applySel({ fontSize: v })));
+      items.push(colorBtn(f.fill, T('Farbe'), STICKY_COLORS, (c) => applySel({ fill: c })));
+      items.push(selectBtn(f.fontSize ?? 'auto', [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
       items.push(...textStyleBtns(f));
       items.push(alignBtn(f.align || 'center'));
       items.push(valignBtn(f.valign || 'middle'));
     } else if (only === 'shape') {
-      items.push(selectBtn(f.shape, SHAPES, 'Form', (v) => applySel({ shape: v }), 110));
-      items.push(colorBtn(f.fill, 'Füllfarbe', PALETTE, (c) => applySel({ fill: c })));
-      items.push(colorBtn(f.stroke === 'none' ? 'transparent' : f.stroke, 'Rahmenfarbe', PALETTE, (c) => applySel({ stroke: c === 'transparent' ? 'none' : c, strokeWidth: c === 'transparent' ? 0 : f.strokeWidth || 2 }), { ring: true }));
-      items.push(selectBtn(f.strokeWidth ?? 2, STROKE_W, 'Rahmenstärke', (v) => applySel({ strokeWidth: v, stroke: v && f.stroke === 'none' ? '#1a1a1a' : f.stroke }), 60));
-      items.push(selectBtn(f.dash || false, [[false, '──── Durchgezogen'], [true, '- - - Gestrichelt'], ['dotted', '····· Gepunktet']], 'Linienstil', (v) => applySel({ dash: v }), 46));
+      items.push(selectBtn(f.shape, SHAPES, T('Form'), (v) => applySel({ shape: v }), 110));
+      items.push(colorBtn(f.fill, T('Füllfarbe'), PALETTE, (c) => applySel({ fill: c })));
+      items.push(colorBtn(f.stroke === 'none' ? 'transparent' : f.stroke, T('Rahmenfarbe'), PALETTE, (c) => applySel({ stroke: c === 'transparent' ? 'none' : c, strokeWidth: c === 'transparent' ? 0 : f.strokeWidth || 2 }), { ring: true }));
+      items.push(selectBtn(f.strokeWidth ?? 2, STROKE_W, T('Rahmenstärke'), (v) => applySel({ strokeWidth: v, stroke: v && f.stroke === 'none' ? '#1a1a1a' : f.stroke }), 60));
+      items.push(selectBtn(f.dash || false, [[false, T('──── Durchgezogen')], [true, T('- - - Gestrichelt')], ['dotted', T('····· Gepunktet')]], T('Linienstil'), (v) => applySel({ dash: v }), 46));
       items.push(sep());
-      items.push(colorBtn(f.textColor || '#1a1a1a', 'Textfarbe', PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
-      items.push(selectBtn(f.fontSize ?? 18, [['auto', 'Auto'], ...FONT_SIZES], 'Schriftgröße', (v) => applySel({ fontSize: v })));
+      items.push(colorBtn(f.textColor || '#1a1a1a', T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
+      items.push(selectBtn(f.fontSize ?? 18, [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
       items.push(...textStyleBtns(f));
       items.push(alignBtn(f.align || 'center'));
       items.push(valignBtn(f.valign || 'middle'));
     } else if (only === 'text') {
-      items.push(selectBtn(f.fontSize ?? 24, FONT_SIZES, 'Schriftgröße', (v) => applySel({ fontSize: v })));
-      items.push(colorBtn(f.color || '#1a1a1a', 'Textfarbe', PALETTE.slice(1), (c) => applySel({ color: c })));
+      items.push(selectBtn(f.fontSize ?? 24, FONT_SIZES, T('Schriftgröße'), (v) => applySel({ fontSize: v })));
+      items.push(colorBtn(f.color || '#1a1a1a', T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ color: c })));
       items.push(...textStyleBtns(f));
       items.push(alignBtn(f.align || 'left'));
-      items.push(colorBtn(f.fill || 'transparent', 'Hintergrund', PALETTE, (c) => applySel({ fill: c })));
+      items.push(colorBtn(f.fill || 'transparent', T('Hintergrund'), PALETTE, (c) => applySel({ fill: c })));
     } else if (only === 'connector') {
-      items.push(colorBtn(f.stroke, 'Linienfarbe', PALETTE.slice(1), (c) => applySel({ stroke: c })));
-      items.push(selectBtn(f.strokeWidth || 2, STROKE_W.slice(1), 'Linienstärke', (v) => applySel({ strokeWidth: v }), 60));
-      items.push(selectBtn(f.dash || false, [[false, '──── Durchgezogen'], [true, '- - - Gestrichelt'], ['dotted', '····· Gepunktet']], 'Linienstil', (v) => applySel({ dash: v }), 46));
-      items.push(selectBtn(f.routing || 'curve', [['curve', '⤴ Kurve'], ['elbow', '⌐ Gewinkelt'], ['straight', '／ Gerade']], 'Linienführung', (v) => applySel({ routing: v }), 100));
-      items.push(selectBtn(headType(f.arrowStart, 'none'), ARROW_HEADS, 'Linienende am Anfang', (v) => applySel({ arrowStart: v }), 70));
-      items.push(selectBtn(headType(f.arrowEnd, 'arrow'), ARROW_HEADS, 'Linienende am Ende', (v) => applySel({ arrowEnd: v }), 70));
-      if (one) items.push(actBtn('text', 'Beschriftung (Doppelklick auf die Linie)', () => startEdit(one.id)));
+      items.push(colorBtn(f.stroke, T('Linienfarbe'), PALETTE.slice(1), (c) => applySel({ stroke: c })));
+      items.push(selectBtn(f.strokeWidth || 2, STROKE_W.slice(1), T('Linienstärke'), (v) => applySel({ strokeWidth: v }), 60));
+      items.push(selectBtn(f.dash || false, [[false, T('──── Durchgezogen')], [true, T('- - - Gestrichelt')], ['dotted', T('····· Gepunktet')]], T('Linienstil'), (v) => applySel({ dash: v }), 46));
+      items.push(selectBtn(f.routing || 'curve', [['curve', T('⤴ Kurve')], ['elbow', T('⌐ Gewinkelt')], ['straight', T('／ Gerade')]], T('Linienführung'), (v) => applySel({ routing: v }), 100));
+      items.push(selectBtn(headType(f.arrowStart, 'none'), ARROW_HEADS, T('Linienende am Anfang'), (v) => applySel({ arrowStart: v }), 70));
+      items.push(selectBtn(headType(f.arrowEnd, 'arrow'), ARROW_HEADS, T('Linienende am Ende'), (v) => applySel({ arrowEnd: v }), 70));
+      if (one) items.push(actBtn('text', T('Beschriftung (Doppelklick auf die Linie)'), () => startEdit(one.id)));
       if (one) {
-        const routeBtn = actBtn('more', 'Verlauf & Andocken', () => menu(routeBtn, [
-          { header: 'Verlauf' },
-          { label: 'Knickpunkte entfernen (Pfad zurücksetzen)', icon: 'undo', disabled: !waypointsOf(one).length, onClick: () => applySel({ waypoints: [] }) },
-          { label: 'Beschriftung in die Mitte', icon: 'text', disabled: one.labelPos == null || one.labelPos === 0.5, onClick: () => applySel({ labelPos: 0.5 }) },
-          { label: 'Richtung umkehren', icon: 'arrowEnd', onClick: () => applySel((c) => ({ from: c.to, to: c.from, arrowStart: headType(c.arrowEnd, 'arrow'), arrowEnd: headType(c.arrowStart, 'none'), waypoints: waypointsOf(c).reverse(), labelPos: c.labelPos == null ? undefined : 1 - Number(c.labelPos) })) },
+        const routeBtn = actBtn('more', T('Verlauf & Andocken'), () => menu(routeBtn, [
+          { header: T('Verlauf') },
+          { label: T('Knickpunkte entfernen (Pfad zurücksetzen)'), icon: 'undo', disabled: !waypointsOf(one).length, onClick: () => applySel({ waypoints: [] }) },
+          { label: T('Beschriftung in die Mitte'), icon: 'text', disabled: one.labelPos == null || one.labelPos === 0.5, onClick: () => applySel({ labelPos: 0.5 }) },
+          { label: T('Richtung umkehren'), icon: 'arrowEnd', onClick: () => applySel((c) => ({ from: c.to, to: c.from, arrowStart: headType(c.arrowEnd, 'arrow'), arrowEnd: headType(c.arrowStart, 'none'), waypoints: waypointsOf(c).reverse(), labelPos: c.labelPos == null ? undefined : 1 - Number(c.labelPos) })) },
           '-',
-          { header: 'Andocken' },
-          { label: 'Beide Enden automatisch andocken', icon: 'fit', disabled: !(one.from.id || one.to.id), onClick: () => applySel((c) => ({ from: c.from.id ? { id: c.from.id } : c.from, to: c.to.id ? { id: c.to.id } : c.to })) },
+          { header: T('Andocken') },
+          { label: T('Beide Enden automatisch andocken'), icon: 'fit', disabled: !(one.from.id || one.to.id), onClick: () => applySel((c) => ({ from: c.from.id ? { id: c.from.id } : c.from, to: c.to.id ? { id: c.to.id } : c.to })) },
         ], { placement: 'top' }));
         items.push(routeBtn);
       }
     } else if (only === 'pen') {
-      items.push(colorBtn(f.stroke, 'Farbe', PALETTE.slice(1), (c) => applySel({ stroke: c })));
-      items.push(selectBtn(f.strokeWidth, [[1, '1 px'], [2, '2 px'], [3, '3 px'], [5, '5 px'], [8, '8 px'], [12, '12 px'], [20, '20 px'], [32, '32 px']], 'Stärke', (v) => applySel({ strokeWidth: v }), 60));
+      items.push(colorBtn(f.stroke, T('Farbe'), PALETTE.slice(1), (c) => applySel({ stroke: c })));
+      items.push(selectBtn(f.strokeWidth, [[1, T('1 px')], [2, T('2 px')], [3, T('3 px')], [5, T('5 px')], [8, T('8 px')], [12, T('12 px')], [20, T('20 px')], [32, T('32 px')]], T('Stärke'), (v) => applySel({ strokeWidth: v }), 60));
     } else if (only === 'frame') {
-      items.push(colorBtn(f.fill || '#ffffff', 'Hintergrund', PALETTE, (c) => applySel({ fill: c })));
+      items.push(colorBtn(f.fill || '#ffffff', T('Hintergrund'), PALETTE, (c) => applySel({ fill: c })));
       if (one) {
-        items.push(actBtn('edit', 'Umbenennen', () => startEdit(one.id)));
-        items.push(selectBtn('', [['16:9', 'Präsentation 16:9'], ['4:3', 'Präsentation 4:3'], ['a4', 'A4 Hochformat'], ['a4l', 'A4 Querformat'], ['1:1', 'Quadrat'], ['phone', 'Smartphone']], 'Format', (v) => {
+        items.push(actBtn('edit', T('Umbenennen'), () => startEdit(one.id)));
+        items.push(selectBtn('', [['16:9', T('Präsentation 16:9')], ['4:3', T('Präsentation 4:3')], ['a4', T('A4 Hochformat')], ['a4l', T('A4 Querformat')], ['1:1', T('Quadrat')], ['phone', T('Smartphone')]], T('Format'), (v) => {
           const sizes = { '16:9': [1280, 720], '4:3': [1024, 768], a4: [794, 1123], a4l: [1123, 794], '1:1': [1000, 1000], phone: [390, 844] };
           const [w, hh] = sizes[v];
           applySel({ w, h: hh });
         }, 80));
-        items.push(actBtn('present', 'Ab hier präsentieren', () => app.emit('present', one.id)));
+        items.push(actBtn('present', T('Ab hier präsentieren'), () => app.emit('present', one.id)));
       }
     } else if (only === 'card') {
-      items.push(colorBtn(f.color || '#4262ff', 'Farbe', PALETTE.slice(2), (c) => applySel({ color: c })));
-      items.push(selectBtn(f.priority || '', [['', 'Ohne Priorität'], ...Object.entries(PRIORITIES).map(([k, p]) => [k, `${p.icon} ${p.label}`])], 'Priorität', (v) => applySel({ priority: v || undefined }), 90));
-      if (one) items.push(actBtn('edit', 'Karte bearbeiten', () => app.emit('editCard', one.id)));
-      if (one) items.push(actBtn('poker', 'Schätzrunde starten', () => app.emit('startEstimation', one.id)));
+      items.push(colorBtn(f.color || '#4262ff', T('Farbe'), PALETTE.slice(2), (c) => applySel({ color: c })));
+      items.push(selectBtn(f.priority || '', [['', T('Ohne Priorität')], ...Object.entries(PRIORITIES).map(([k, p]) => [k, `${p.icon} ${p.label}`])], T('Priorität'), (v) => applySel({ priority: v || undefined }), 90));
+      if (one) items.push(actBtn('edit', T('Karte bearbeiten'), () => app.emit('editCard', one.id)));
+      if (one) items.push(actBtn('poker', T('Schätzrunde starten'), () => app.emit('startEstimation', one.id)));
     } else if (only === 'code') {
-      items.push(selectBtn(f.lang || 'plain', LANGUAGES, 'Sprache', (v) => applySel({ lang: v }), 120));
-      items.push(toggleBtn('moon', f.theme !== 'light', 'Dunkles Farbschema', () => applySel({ theme: f.theme === 'light' ? 'dark' : 'light' })));
-      items.push(selectBtn(f.fontSize || 14, FONT_SIZES.slice(1, 8), 'Schriftgröße', (v) => applySel({ fontSize: v })));
-      items.push(toggleBtn('<b style="font-size:11px">1 2</b>', f.lineNumbers !== false, 'Zeilennummern', () => applySel({ lineNumbers: f.lineNumbers === false })));
-      if (one) items.push(actBtn('edit', 'Code bearbeiten (Enter)', () => startEdit(one.id, { selectAll: false })));
-      if (one) items.push(actBtn('copy', 'Code kopieren', () => navigator.clipboard.writeText(one.text || '').then(() => toast('Code kopiert'), () => toast('Kopieren nicht möglich'))));
+      items.push(selectBtn(f.lang || 'plain', LANGUAGES, T('Sprache'), (v) => applySel({ lang: v }), 120));
+      items.push(toggleBtn('moon', f.theme !== 'light', T('Dunkles Farbschema'), () => applySel({ theme: f.theme === 'light' ? 'dark' : 'light' })));
+      items.push(selectBtn(f.fontSize || 14, FONT_SIZES.slice(1, 8), T('Schriftgröße'), (v) => applySel({ fontSize: v })));
+      items.push(toggleBtn('<b style="font-size:11px">1 2</b>', f.lineNumbers !== false, T('Zeilennummern'), () => applySel({ lineNumbers: f.lineNumbers === false })));
+      if (one) items.push(actBtn('edit', T('Code bearbeiten (Enter)'), () => startEdit(one.id, { selectAll: false })));
+      if (one) items.push(actBtn('copy', T('Code kopieren'), () => navigator.clipboard.writeText(one.text || '').then(() => toast(T('Code kopiert')), () => toast(T('Kopieren nicht möglich')))));
     } else if (only === 'table' && one) {
       // Formatierung gilt für die ausgewählten Zellen – ohne Zellauswahl für die ganze Tabelle
       const rg = tableRange();
       const st = cellStyle(one, rg.r0, rg.c0);
       const colName = (c) => { let n = ''; c += 1; while (c > 0) { const m = (c - 1) % 26; n = String.fromCharCode(65 + m) + n; c = Math.floor((c - 1) / 26); } return n; };
-      const where = rg.whole ? 'Ganze Tabelle' : rg.r0 === rg.r1 && rg.c0 === rg.c1 ? `Zelle ${colName(rg.c0)}${rg.r0 + 1}` : `${colName(rg.c0)}${rg.r0 + 1}:${colName(rg.c1)}${rg.r1 + 1}`;
-      items.push(h('span', { class: 'ctx-label', title: 'Klick in die ausgewählte Tabelle wählt eine Zelle, Umschalt-Klick oder Umschalt+Pfeil einen Bereich' }, where));
-      items.push(toggleBtn('bold', st.bold, 'Fett', () => formatCells({ b: !st.bold })));
-      items.push(toggleBtn('italic', st.italic, 'Kursiv', () => formatCells({ i: !st.italic })));
-      items.push(toggleBtn('underline', st.underline, 'Unterstrichen', () => formatCells({ u: !st.underline })));
-      items.push(toggleBtn('strike', st.strike, 'Durchgestrichen', () => formatCells({ s: !st.strike })));
-      items.push(selectBtn(st.align, [['left', '⯇ Links'], ['center', '≡ Mitte'], ['right', '⯈ Rechts']], 'Ausrichtung waagerecht', (v) => formatCells({ al: v }), 74));
-      items.push(selectBtn(st.valign, [['top', '⯅ Oben'], ['middle', '≡ Mitte'], ['bottom', '⯆ Unten']], 'Ausrichtung senkrecht', (v) => formatCells({ va: v }), 74));
-      items.push(selectBtn(st.size, FONT_SIZES.slice(0, 10), 'Schriftgröße', (v) => formatCells({ fs: v })));
-      items.push(colorBtn(st.color, 'Textfarbe', PALETTE.slice(1), (c) => formatCells({ c })));
-      items.push(colorBtn(st.bg || 'transparent', 'Zellenfarbe', PALETTE, (c) => formatCells({ bg: c === 'transparent' ? undefined : c })));
-      const tb = actBtn('table', 'Zeilen & Spalten', () => menu(tb, [
-        { header: rg.whole ? 'Am Ende der Tabelle' : 'An der Auswahl' },
-        { label: 'Zeile oberhalb einfügen', icon: 'plus', disabled: rg.whole, onClick: () => tableAction('rowAbove') },
-        { label: rg.whole ? 'Zeile anhängen' : 'Zeile unterhalb einfügen', icon: 'plus', onClick: () => tableAction('rowBelow') },
-        { label: 'Spalte links einfügen', icon: 'plus', disabled: rg.whole, onClick: () => tableAction('colLeft') },
-        { label: rg.whole ? 'Spalte anhängen' : 'Spalte rechts einfügen', icon: 'plus', onClick: () => tableAction('colRight') },
+      const where = rg.whole ? T('Ganze Tabelle') : rg.r0 === rg.r1 && rg.c0 === rg.c1 ? T`Zelle ${colName(rg.c0)}${rg.r0 + 1}` : `${colName(rg.c0)}${rg.r0 + 1}:${colName(rg.c1)}${rg.r1 + 1}`;
+      items.push(h('span', { class: 'ctx-label', title: T('Klick in die ausgewählte Tabelle wählt eine Zelle, Umschalt-Klick oder Umschalt+Pfeil einen Bereich') }, where));
+      items.push(toggleBtn('bold', st.bold, T('Fett'), () => formatCells({ b: !st.bold })));
+      items.push(toggleBtn('italic', st.italic, T('Kursiv'), () => formatCells({ i: !st.italic })));
+      items.push(toggleBtn('underline', st.underline, T('Unterstrichen'), () => formatCells({ u: !st.underline })));
+      items.push(toggleBtn('strike', st.strike, T('Durchgestrichen'), () => formatCells({ s: !st.strike })));
+      items.push(selectBtn(st.align, [['left', T('⯇ Links')], ['center', T('≡ Mitte')], ['right', T('⯈ Rechts')]], T('Ausrichtung waagerecht'), (v) => formatCells({ al: v }), 74));
+      items.push(selectBtn(st.valign, [['top', T('⯅ Oben')], ['middle', T('≡ Mitte')], ['bottom', T('⯆ Unten')]], T('Ausrichtung senkrecht'), (v) => formatCells({ va: v }), 74));
+      items.push(selectBtn(st.size, FONT_SIZES.slice(0, 10), T('Schriftgröße'), (v) => formatCells({ fs: v })));
+      items.push(colorBtn(st.color, T('Textfarbe'), PALETTE.slice(1), (c) => formatCells({ c })));
+      items.push(colorBtn(st.bg || 'transparent', T('Zellenfarbe'), PALETTE, (c) => formatCells({ bg: c === 'transparent' ? undefined : c })));
+      const tb = actBtn('table', T('Zeilen & Spalten'), () => menu(tb, [
+        { header: rg.whole ? T('Am Ende der Tabelle') : T('An der Auswahl') },
+        { label: T('Zeile oberhalb einfügen'), icon: 'plus', disabled: rg.whole, onClick: () => tableAction('rowAbove') },
+        { label: rg.whole ? T('Zeile anhängen') : T('Zeile unterhalb einfügen'), icon: 'plus', onClick: () => tableAction('rowBelow') },
+        { label: T('Spalte links einfügen'), icon: 'plus', disabled: rg.whole, onClick: () => tableAction('colLeft') },
+        { label: rg.whole ? T('Spalte anhängen') : T('Spalte rechts einfügen'), icon: 'plus', onClick: () => tableAction('colRight') },
         '-',
-        { label: rg.r0 === rg.r1 ? 'Zeile löschen' : `${rg.r1 - rg.r0 + 1} Zeilen löschen`, icon: 'trash', danger: true, disabled: rg.whole, onClick: () => tableAction('deleteRows') },
-        { label: rg.c0 === rg.c1 ? 'Spalte löschen' : `${rg.c1 - rg.c0 + 1} Spalten löschen`, icon: 'trash', danger: true, disabled: rg.whole, onClick: () => tableAction('deleteCols') },
-        { label: 'Inhalt leeren', icon: 'close', onClick: () => tableAction('clear') },
-        { label: 'Formatierung entfernen', icon: 'undo', onClick: () => tableAction('clearFormat') },
+        { label: rg.r0 === rg.r1 ? T('Zeile löschen') : T`${rg.r1 - rg.r0 + 1} Zeilen löschen`, icon: 'trash', danger: true, disabled: rg.whole, onClick: () => tableAction('deleteRows') },
+        { label: rg.c0 === rg.c1 ? T('Spalte löschen') : T`${rg.c1 - rg.c0 + 1} Spalten löschen`, icon: 'trash', danger: true, disabled: rg.whole, onClick: () => tableAction('deleteCols') },
+        { label: T('Inhalt leeren'), icon: 'close', onClick: () => tableAction('clear') },
+        { label: T('Formatierung entfernen'), icon: 'undo', onClick: () => tableAction('clearFormat') },
         '-',
-        { label: 'Spaltenbreiten angleichen', icon: 'distH', onClick: () => tableAction('equalCols') },
-        { label: 'Zeilenhöhen angleichen', icon: 'distV', onClick: () => tableAction('equalRows') },
-        { label: one.header !== false ? 'Kopfzeile ausschalten' : 'Kopfzeile einschalten', icon: 'table', onClick: () => applySel({ header: one.header === false }) },
-        { label: 'Farbe der Kopfzeile …', icon: 'table', onClick: () => colorBtnMenu(tb, one.headerFill || '#eef1ff', 'Kopfzeile', (c) => applySel({ headerFill: c === 'transparent' ? '#ffffff' : c })) },
-        { label: 'Farbe der Linien …', icon: 'table', onClick: () => colorBtnMenu(tb, one.stroke || '#b9b9b9', 'Linien', (c) => applySel({ stroke: c === 'transparent' ? '#ffffff' : c })) },
+        { label: T('Spaltenbreiten angleichen'), icon: 'distH', onClick: () => tableAction('equalCols') },
+        { label: T('Zeilenhöhen angleichen'), icon: 'distV', onClick: () => tableAction('equalRows') },
+        { label: one.header !== false ? T('Kopfzeile ausschalten') : T('Kopfzeile einschalten'), icon: 'table', onClick: () => applySel({ header: one.header === false }) },
+        { label: T('Farbe der Kopfzeile …'), icon: 'table', onClick: () => colorBtnMenu(tb, one.headerFill || '#eef1ff', T('Kopfzeile'), (c) => applySel({ headerFill: c === 'transparent' ? '#ffffff' : c })) },
+        { label: T('Farbe der Linien …'), icon: 'table', onClick: () => colorBtnMenu(tb, one.stroke || '#b9b9b9', T('Linien'), (c) => applySel({ stroke: c === 'transparent' ? '#ffffff' : c })) },
       ], { placement: 'top' }));
       items.push(tb);
     } else if (only === 'emoji') {
-      items.push(actBtn('<span style="font-size:18px">' + esc(f.char) + '</span>', 'Sticker ändern', (e) => {
+      items.push(actBtn('<span style="font-size:18px">' + esc(f.char) + '</span>', T('Sticker ändern'), (e) => {
         const b = e.currentTarget;
         popover(b, h('div', { class: 'emoji-grid' }, EMOJIS.map((em) => h('button', { class: 'emoji-btn', onclick: () => { applySel({ char: em }); closePop(); } }, em))), { placement: 'top' });
       }));
     } else if (only === 'image' && one) {
-      items.push(actBtn('download', 'Bild herunterladen', () => download(one.name || 'bild.png', one.src)));
+      items.push(actBtn('download', T('Bild herunterladen'), () => download(one.name || T('bild') + '.png', one.src)));
     }
-    if (types.has('sticky') && sel.length > 1) items.push(actBtn('cluster', 'Nach Farbe clustern', clusterByColor));
+    if (types.has('sticky') && sel.length > 1) items.push(actBtn('cluster', T('Nach Farbe clustern'), clusterByColor));
     if (sel.length > 1) {
-      const ab = actBtn('alignLeft', 'Ausrichten & Verteilen', () => menu(ab, [
-        { label: 'Links ausrichten', icon: 'alignLeft', onClick: () => alignSel('left') },
-        { label: 'Horizontal zentrieren', icon: 'alignCenterH', onClick: () => alignSel('centerH') },
-        { label: 'Rechts ausrichten', icon: 'alignRight', onClick: () => alignSel('right') },
-        { label: 'Oben ausrichten', icon: 'alignTop', onClick: () => alignSel('top') },
-        { label: 'Vertikal zentrieren', icon: 'alignMiddle', onClick: () => alignSel('middle') },
-        { label: 'Unten ausrichten', icon: 'alignBottom', onClick: () => alignSel('bottom') },
+      const ab = actBtn('alignLeft', T('Ausrichten & Verteilen'), () => menu(ab, [
+        { label: T('Links ausrichten'), icon: 'alignLeft', onClick: () => alignSel('left') },
+        { label: T('Horizontal zentrieren'), icon: 'alignCenterH', onClick: () => alignSel('centerH') },
+        { label: T('Rechts ausrichten'), icon: 'alignRight', onClick: () => alignSel('right') },
+        { label: T('Oben ausrichten'), icon: 'alignTop', onClick: () => alignSel('top') },
+        { label: T('Vertikal zentrieren'), icon: 'alignMiddle', onClick: () => alignSel('middle') },
+        { label: T('Unten ausrichten'), icon: 'alignBottom', onClick: () => alignSel('bottom') },
         '-',
-        { label: 'Horizontal verteilen (gleiche Abstände)', icon: 'distH', onClick: () => distributeSel('h') },
-        { label: 'Vertikal verteilen (gleiche Abstände)', icon: 'distV', onClick: () => distributeSel('v') },
-        { label: 'Lückenlos nebeneinander', icon: 'distH', onClick: () => packSel('h', 0) },
-        { label: 'Lückenlos untereinander', icon: 'distV', onClick: () => packSel('v', 0) },
-        { label: 'Mit festem Abstand anordnen …', icon: 'distH', onClick: () => packWithGap() },
-        { label: 'Als Raster anordnen', icon: 'grid', onClick: () => arrangeGrid() },
+        { label: T('Horizontal verteilen (gleiche Abstände)'), icon: 'distH', onClick: () => distributeSel('h') },
+        { label: T('Vertikal verteilen (gleiche Abstände)'), icon: 'distV', onClick: () => distributeSel('v') },
+        { label: T('Lückenlos nebeneinander'), icon: 'distH', onClick: () => packSel('h', 0) },
+        { label: T('Lückenlos untereinander'), icon: 'distV', onClick: () => packSel('v', 0) },
+        { label: T('Mit festem Abstand anordnen …'), icon: 'distH', onClick: () => packWithGap() },
+        { label: T('Als Raster anordnen'), icon: 'grid', onClick: () => arrangeGrid() },
         '-',
-        { header: 'Größe angleichen (an das zuerst ausgewählte Element)' },
-        { label: 'Gleiche Breite', icon: 'alignCenterH', onClick: () => matchSize('w') },
-        { label: 'Gleiche Höhe', icon: 'alignMiddle', onClick: () => matchSize('h') },
-        { label: 'Gleiche Größe', icon: 'fit', onClick: () => matchSize('both') },
-        { label: `Position & Größe am Raster (${gridSize()} px) ausrichten`, icon: 'grid', onClick: () => snapSelToGrid() },
+        { header: T('Größe angleichen (an das zuerst ausgewählte Element)') },
+        { label: T('Gleiche Breite'), icon: 'alignCenterH', onClick: () => matchSize('w') },
+        { label: T('Gleiche Höhe'), icon: 'alignMiddle', onClick: () => matchSize('h') },
+        { label: T('Gleiche Größe'), icon: 'fit', onClick: () => matchSize('both') },
+        { label: T`Position & Größe am Raster (${gridSize()} px) ausrichten`, icon: 'grid', onClick: () => snapSelToGrid() },
       ], { placement: 'top' }));
       items.push(ab);
     }
     if (items.length) items.push(sep());
   }
   if (one && !locked && ['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame', 'code'].includes(one.type)) {
-    items.push(toggleBtn('link', !!one.link, one.link ? 'Link: ' + one.link : 'Link hinzufügen', async () => {
-      const v = await promptDialog('Link', 'Adresse (leer lassen zum Entfernen)', one.link || 'https://');
+    items.push(toggleBtn('link', !!one.link, one.link ? T('Link: ') + one.link : T('Link hinzufügen'), async () => {
+      const v = await promptDialog(T('Link'), T('Adresse (leer lassen zum Entfernen)'), one.link || 'https://');
       if (v === null) return;
       const href = safeLink(v);
-      if (v.trim() && v.trim() !== 'https://' && !href) return toast('Bitte eine gültige http(s)-Adresse angeben');
+      if (v.trim() && v.trim() !== 'https://' && !href) return toast(T('Bitte eine gültige http(s)-Adresse angeben'));
       applySel({ link: href || undefined });
     }));
   }
   if (!locked && sel.some((e) => e.type !== 'connector' && e.type !== 'comment')) {
-    const gb = actBtn('<b style="font-size:11px">B×H</b>', 'Position & Größe (exakte Werte)', () => openGeometry(gb));
+    const gb = actBtn(`<b style="font-size:11px">${T('B×H')}</b>`, T('Position & Größe (exakte Werte)'), () => openGeometry(gb));
     items.push(gb);
   }
   const grouped = sel.some((e) => e.groupId);
-  if (sel.length > 1 && !locked) items.push(actBtn('group', grouped ? 'Gruppierung aufheben (Strg+Umschalt+G)' : 'Gruppieren (Strg+G)', grouped ? ungroupSel : groupSel));
+  if (sel.length > 1 && !locked) items.push(actBtn('group', grouped ? T('Gruppierung aufheben (Strg+Umschalt+G)') : T('Gruppieren (Strg+G)'), grouped ? ungroupSel : groupSel));
   const modLocked = sel.every((e) => e.modLock);
   if (!(modLocked && !app.isFacilitator)) {
     const own = sel.every((e) => e.locked);
-    items.push(toggleBtn(own ? 'lock' : 'unlock', own, own ? 'Entsperren (Strg+L)' : 'Sperren (Strg+L)', toggleLock));
+    items.push(toggleBtn(own ? 'lock' : 'unlock', own, own ? T('Entsperren (Strg+L)') : T('Sperren (Strg+L)'), toggleLock));
   }
   if (app.isFacilitator && sel.some((e) => e.type !== 'comment')) {
-    items.push(toggleBtn('shield', modLocked, modLocked ? 'Für Teilnehmende freigeben' : 'Für Teilnehmende sperren (nur Moderierende können ändern)', toggleModLock));
+    items.push(toggleBtn('shield', modLocked, modLocked ? T('Für Teilnehmende freigeben') : T('Für Teilnehmende sperren (nur Moderierende können ändern)'), toggleModLock));
   }
   // Erweiterungen anderer Module (Retro, Dateien, Schlagwörter, verborgene Bereiche)
   app.emit('ctxItems', items, sel, { locked, one, only, actBtn, toggleBtn, sep });
   if (!locked) {
-    items.push(actBtn('comment', 'Kommentieren', () => {
+    items.push(actBtn('comment', T('Kommentieren'), () => {
       const b = selectionBounds();
       newComment({ x: b.x + b.w, y: b.y });
     }));
-    const more = actBtn('more', 'Mehr', () => menu(more, [
-      { label: 'Duplizieren', icon: 'copy', hint: 'Strg+D', onClick: () => duplicateEls(collectForCopy([...app.sel])) },
-      { label: 'In den Vordergrund', icon: 'front', hint: 'Strg+]', onClick: bringToFront },
-      { label: 'In den Hintergrund', icon: 'back', hint: 'Strg+[', onClick: sendToBack },
-      { label: 'Auswahl einpassen', icon: 'fit', hint: 'Umschalt+2', onClick: () => fitTo(selectionBounds(), { maxZ: 2 }) },
-      { label: 'Größe kopieren', icon: 'copy', onClick: copySize },
-      { label: 'Größe übernehmen', icon: 'fit', disabled: !hasCopiedSize(), onClick: () => pasteSize('both') },
-      { label: 'Nur Breite übernehmen', icon: 'alignCenterH', disabled: !hasCopiedSize(), onClick: () => pasteSize('w') },
-      { label: 'Nur Höhe übernehmen', icon: 'alignMiddle', disabled: !hasCopiedSize(), onClick: () => pasteSize('h') },
-      { label: 'Als PNG exportieren', icon: 'download', onClick: () => exportPng(true) },
+    const more = actBtn('more', T('Mehr'), () => menu(more, [
+      { label: T('Duplizieren'), icon: 'copy', hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) },
+      { label: T('In den Vordergrund'), icon: 'front', hint: T('Strg+]'), onClick: bringToFront },
+      { label: T('In den Hintergrund'), icon: 'back', hint: T('Strg+['), onClick: sendToBack },
+      { label: T('Auswahl einpassen'), icon: 'fit', hint: T('Umschalt+2'), onClick: () => fitTo(selectionBounds(), { maxZ: 2 }) },
+      { label: T('Größe kopieren'), icon: 'copy', onClick: copySize },
+      { label: T('Größe übernehmen'), icon: 'fit', disabled: !hasCopiedSize(), onClick: () => pasteSize('both') },
+      { label: T('Nur Breite übernehmen'), icon: 'alignCenterH', disabled: !hasCopiedSize(), onClick: () => pasteSize('w') },
+      { label: T('Nur Höhe übernehmen'), icon: 'alignMiddle', disabled: !hasCopiedSize(), onClick: () => pasteSize('h') },
+      { label: T('Als PNG exportieren'), icon: 'download', onClick: () => exportPng(true) },
       '-',
-      { label: 'Löschen', icon: 'trash', danger: true, hint: 'Entf', onClick: () => deleteEls([...app.sel]) },
+      { label: T('Löschen'), icon: 'trash', danger: true, hint: T('Entf'), onClick: () => deleteEls([...app.sel]) },
     ], { placement: 'top' }));
     items.push(more);
-    items.push(actBtn('trash', 'Löschen (Entf)', () => deleteEls([...app.sel])));
+    items.push(actBtn('trash', T('Löschen (Entf)'), () => deleteEls([...app.sel])));
   }
   ctxbar.append(...items);
   ctxbar.classList.remove('hidden');
@@ -450,19 +451,19 @@ function openGeometry(anchor) {
     const vals = { x: val(ix), y: val(iy), w: val(iw), h: val(ih) };
     for (const [k, v] of Object.entries(vals)) {
       if (Number.isNaN(v)) continue;
-      if (!Number.isFinite(v) || Math.abs(v) > MAX) return toast('Bitte Werte bis ' + MAX.toLocaleString('de-DE') + ' eingeben'), false;
-      if ((k === 'w' || k === 'h') && v < 1) return toast('Breite und Höhe müssen mindestens 1 sein'), false;
+      if (!Number.isFinite(v) || Math.abs(v) > MAX) return toast(T('Bitte Werte bis ') + MAX.toLocaleString(LOCALE) + T(' eingeben')), false;
+      if ((k === 'w' || k === 'h') && v < 1) return toast(T('Breite und Höhe müssen mindestens 1 sein')), false;
     }
     setGeometry({ ...vals, keepRatio: ratio.checked });
     buildCtx();
     return true;
   };
   const form = h('form', { class: 'geo-form', onsubmit: (e) => { e.preventDefault(); if (apply()) closePop(); } },
-    h('div', { class: 'pop-title' }, multi ? `Position & Größe (${sel.length} Elemente)` : 'Position & Größe'),
-    h('div', { class: 'geo-grid' }, h('label', {}, 'X', ix), h('label', {}, 'Y', iy), h('label', {}, 'Breite', iw), h('label', {}, 'Höhe', ih)),
-    h('label', { class: 'check' }, ratio, 'Seitenverhältnis beibehalten'),
-    multi ? h('p', { class: 'muted small' }, 'X/Y verschieben die ganze Auswahl; Breite/Höhe gelten für jedes Element.') : null,
-    h('div', { class: 'row' }, h('button', { type: 'submit', class: 'btn primary small' }, 'Übernehmen')));
+    h('div', { class: 'pop-title' }, multi ? T`Position & Größe (${sel.length} Elemente)` : T('Position & Größe')),
+    h('div', { class: 'geo-grid' }, h('label', {}, 'X', ix), h('label', {}, 'Y', iy), h('label', {}, T('Breite'), iw), h('label', {}, T('Höhe'), ih)),
+    h('label', { class: 'check' }, ratio, T('Seitenverhältnis beibehalten')),
+    multi ? h('p', { class: 'muted small' }, T('X/Y verschieben die ganze Auswahl; Breite/Höhe gelten für jedes Element.')) : null,
+    h('div', { class: 'row' }, h('button', { type: 'submit', class: 'btn primary small' }, T('Übernehmen'))));
   form.addEventListener('keydown', (e) => {
     e.stopPropagation();
     if (e.key === 'Escape') closePop();
@@ -472,7 +473,7 @@ function openGeometry(anchor) {
 }
 
 async function packWithGap() {
-  const v = await promptDialog('Mit festem Abstand anordnen', 'Abstand in Pixeln (Richtung wird aus der Anordnung erkannt)', '20');
+  const v = await promptDialog(T('Mit festem Abstand anordnen'), T('Abstand in Pixeln (Richtung wird aus der Anordnung erkannt)'), '20');
   if (v === null) return;
   const gap = Number(String(v).replace(',', '.')) || 0; // negativ = überlappend
   const b = selectionBounds();
@@ -481,21 +482,21 @@ async function packWithGap() {
 
 function textStyleBtns(f) {
   return [
-    toggleBtn('bold', f.bold, 'Fett', () => applySel({ bold: !f.bold })),
-    toggleBtn('italic', f.italic, 'Kursiv', () => applySel({ italic: !f.italic })),
-    toggleBtn('underline', f.underline, 'Unterstrichen', () => applySel({ underline: !f.underline })),
-    toggleBtn('strike', f.strike, 'Durchgestrichen', () => applySel({ strike: !f.strike })),
+    toggleBtn('bold', f.bold, T('Fett'), () => applySel({ bold: !f.bold })),
+    toggleBtn('italic', f.italic, T('Kursiv'), () => applySel({ italic: !f.italic })),
+    toggleBtn('underline', f.underline, T('Unterstrichen'), () => applySel({ underline: !f.underline })),
+    toggleBtn('strike', f.strike, T('Durchgestrichen'), () => applySel({ strike: !f.strike })),
   ];
 }
 
 function valignBtn(cur) {
-  return selectBtn(cur, [['top', '⯅ Oben'], ['middle', '≡ Mitte'], ['bottom', '⯆ Unten']], 'Ausrichtung senkrecht', (v) => applySel({ valign: v }), 70);
+  return selectBtn(cur, [['top', T('⯅ Oben')], ['middle', T('≡ Mitte')], ['bottom', T('⯆ Unten')]], T('Ausrichtung senkrecht'), (v) => applySel({ valign: v }), 70);
 }
 
 function alignBtn(cur) {
   const icons = { left: 'tAlignLeft', center: 'tAlignCenter', right: 'tAlignRight' };
   const next = { left: 'center', center: 'right', right: 'left' };
-  return actBtn(icons[cur], 'Textausrichtung', () => applySel({ align: next[cur] }));
+  return actBtn(icons[cur], T('Textausrichtung'), () => applySel({ align: next[cur] }));
 }
 
 function positionCtx() {
@@ -547,27 +548,27 @@ app.on('editCard', (id) => {
   let color = el.color || '#4262ff';
   const title = h('input', { type: 'text', value: el.title || '' });
   const desc = h('textarea', { rows: 4 }, el.description || '');
-  const assignee = h('input', { type: 'text', value: el.assignee || '', placeholder: 'Name', list: 'assignee-list' });
+  const assignee = h('input', { type: 'text', value: el.assignee || '', placeholder: T('Name'), list: 'assignee-list' });
   // Zuständige Person aus dem Board wählen (eindeutig per ID – Namen können doppelt vorkommen)
   let assigneeId = el.assigneeId || '';
-  const who = h('select', { 'aria-label': 'Person auswählen' }, h('option', { value: '' }, '– Person wählen –'));
+  const who = h('select', { 'aria-label': T('Person auswählen') }, h('option', { value: '' }, T('– Person wählen –')));
   boardPeople().then((people) => {
-    for (const p of people.filter((x) => !x.guest)) who.append(h('option', { value: p.id, selected: p.id === assigneeId }, p.displayName + (p.id === myId() ? ' (du)' : '')));
+    for (const p of people.filter((x) => !x.guest)) who.append(h('option', { value: p.id, selected: p.id === assigneeId }, p.displayName + (p.id === myId() ? T(' (du)') : '')));
   });
   who.addEventListener('change', () => {
     assigneeId = who.value;
-    if (who.value) assignee.value = who.selectedOptions[0].textContent.replace(/ \(du\)$/, '');
+    if (who.value) boardPeople().then((list) => (assignee.value = list.find((p) => p.id === who.value)?.displayName || ''));
   });
   assignee.addEventListener('input', () => {
     assigneeId = '';
     who.value = '';
   });
   const due = h('input', { type: 'date', value: el.due || '' });
-  const status = h('input', { type: 'text', value: el.status || '', placeholder: 'z. B. In Arbeit', list: 'status-list' });
-  const key = h('input', { type: 'text', value: el.key || '', placeholder: 'z. B. VB-42', maxlength: 40 });
-  const prio = h('select', {}, h('option', { value: '' }, 'Ohne'), Object.entries(PRIORITIES).map(([k, p]) => h('option', { value: k, selected: el.priority === k }, `${p.icon} ${p.label}`)));
-  const points = h('input', { type: 'text', value: el.points ?? '', placeholder: 'z. B. 5', maxlength: 5 });
-  const tags = h('input', { type: 'text', value: cardTags(el).join(', '), placeholder: 'z. B. Backend, Bug' });
+  const status = h('input', { type: 'text', value: el.status || '', placeholder: T('z. B. In Arbeit'), list: 'status-list' });
+  const key = h('input', { type: 'text', value: el.key || '', placeholder: T('z. B. VB-42'), maxlength: 40 });
+  const prio = h('select', {}, h('option', { value: '' }, T('Ohne')), Object.entries(PRIORITIES).map(([k, p]) => h('option', { value: k, selected: el.priority === k }, `${p.icon} ${p.label}`)));
+  const points = h('input', { type: 'text', value: el.points ?? '', placeholder: T('z. B. 5'), maxlength: 5 });
+  const tags = h('input', { type: 'text', value: cardTags(el).join(', '), placeholder: T('z. B. Backend, Bug') });
   const names = [...new Set([app.user.name, ...[...app.peers.values()].map((p) => p.name), ...[...app.els.values()].filter((e) => e.assignee).map((e) => e.assignee)].filter(Boolean))];
   const sw = swatchGrid(PALETTE.slice(6), color, (c) => {
     color = c;
@@ -583,17 +584,17 @@ app.on('editCard', (id) => {
     m.close();
     buildCtx();
   } },
-  h('label', {}, 'Titel', title),
-  h('label', {}, 'Beschreibung', desc),
-  h('div', { class: 'form-row' }, h('label', {}, 'Zuständig', who, assignee), h('label', {}, 'Fällig am', due)),
-  h('div', { class: 'form-row' }, h('label', {}, 'Status', status), h('label', {}, 'Priorität', prio)),
-  h('div', { class: 'form-row' }, h('label', {}, 'Schlüssel / Ticket', key), h('label', {}, 'Story Points', points)),
-  h('label', {}, 'Labels (durch Komma getrennt)', tags),
+  h('label', {}, T('Titel'), title),
+  h('label', {}, T('Beschreibung'), desc),
+  h('div', { class: 'form-row' }, h('label', {}, T('Zuständig'), who, assignee), h('label', {}, T('Fällig am'), due)),
+  h('div', { class: 'form-row' }, h('label', {}, T('Status'), status), h('label', {}, T('Priorität'), prio)),
+  h('div', { class: 'form-row' }, h('label', {}, T('Schlüssel / Ticket'), key), h('label', {}, T('Story Points'), points)),
+  h('label', {}, T('Labels (durch Komma getrennt)'), tags),
   h('datalist', { id: 'assignee-list' }, names.map((n) => h('option', { value: n }))),
-  h('datalist', { id: 'status-list' }, ['Offen', 'In Arbeit', 'Review', 'Test', 'Blockiert', 'Fertig'].map((n) => h('option', { value: n }))),
-  h('div', {}, h('div', { class: 'label' }, 'Farbe'), sw),
-  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, 'Abbrechen'), h('button', { type: 'submit', class: 'btn primary' }, 'Speichern')));
-  const m = modal('Karte bearbeiten', form);
+  h('datalist', { id: 'status-list' }, [T('Offen'), T('In Arbeit'), T('Review'), T('Test'), T('Blockiert'), T('Fertig')].map((n) => h('option', { value: n }))),
+  h('div', {}, h('div', { class: 'label' }, T('Farbe')), sw),
+  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, T('Abbrechen')), h('button', { type: 'submit', class: 'btn primary' }, T('Speichern'))));
+  const m = modal(T('Karte bearbeiten'), form);
   setTimeout(() => title.focus(), 0);
 });
 
@@ -620,7 +621,7 @@ export async function boardPeople() {
 
 const commentOp = (action, id, extra = {}) => app.sync.op({ op: 'comment', action, id, ...extra });
 const myId = () => String(app.user.id);
-const fmtDate = (d) => (d ? new Date(d + 'T00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
+const fmtDate = (d) => (d ? new Date(d + 'T00:00').toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
 
 function openComment(id, isNew) {
   closeComment();
@@ -673,7 +674,7 @@ function mentionInput(input, picked = new Map()) {
     list.innerHTML = '';
     items.forEach((p, i) => list.append(h('button', {
       type: 'button', class: 'mention-item' + (i === active ? ' active' : ''), onmousedown: (e) => { e.preventDefault(); pick(p); },
-    }, h('span', { class: 'avatar xs', style: { background: p.color } }, initials(p.displayName)), h('span', {}, p.displayName), p.guest ? h('span', { class: 'muted small' }, 'Gast') : null)));
+    }, h('span', { class: 'avatar xs', style: { background: p.color } }, initials(p.displayName)), h('span', {}, p.displayName), p.guest ? h('span', { class: 'muted small' }, T('Gast')) : null)));
     list.classList.remove('hidden');
   };
   input.addEventListener('input', show);
@@ -710,14 +711,14 @@ function commentHtml(m) {
   if (!Array.isArray(m.mentions) || !m.mentions.length) {
     // ältere Kommentare: „@Wort“ hervorheben
     const self = String(app.user.name).replace(/\s+/g, '').toLowerCase();
-    return esc(m.text).replace(/@([\p{L}\p{N}._-]+)/gu, (all, n) => `<span class="mention${n.toLowerCase() === self ? ' me' : ''}">@${n}</span>`);
+    return esc(m.text).replace(/@([\p{L}\p{N}._-]+)/gu, (all, n) => `<span class="mention${n.toLowerCase() === self ? T(' me') : ''}">@${n}</span>`);
   }
   const names = [...m.mentions].sort((a, b) => b.name.length - a.name.length);
   const re = new RegExp('@(' + names.map((x) => x.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'giu');
   let out = '', last = 0;
   for (const hit of String(m.text).matchAll(re)) {
     const who = names.find((x) => x.name.toLowerCase() === hit[1].toLowerCase());
-    out += esc(m.text.slice(last, hit.index)) + `<span class="mention${who && who.id === me ? ' me' : ''}">${esc(hit[0])}</span>`;
+    out += esc(m.text.slice(last, hit.index)) + `<span class="mention${who && who.id === me ? T(' me') : ''}">${esc(hit[0])}</span>`;
     last = hit.index + hit[0].length;
   }
   return out + esc(m.text.slice(last));
@@ -737,7 +738,7 @@ function renderCommentPop() {
   const draft = old?.value || '';
   const focused = old && document.activeElement === old ? [old.selectionStart, old.selectionEnd] : null;
   box.innerHTML = '';
-  const input = h('textarea', { rows: 2, placeholder: thread.length ? 'Antworten … (@ erwähnt jemanden)' : 'Kommentar schreiben … (@ erwähnt jemanden)' }, draft);
+  const input = h('textarea', { rows: 2, placeholder: thread.length ? T('Antworten … (@ erwähnt jemanden)') : T('Kommentar schreiben … (@ erwähnt jemanden)') }, draft);
   const mention = mentionInput(input, (commentPop.picked ||= new Map()));
   const send = () => {
     const t = input.value.trim();
@@ -764,24 +765,24 @@ function renderCommentPop() {
   const setLocal = (patch) => applyRemoteOp({ op: 'upsert', el: { ...getEl(el.id), ...patch } });
   append(box,
     h('div', { class: 'comment-head' },
-      h('strong', {}, el.resolved ? 'Erledigt' : 'Kommentar'),
+      h('strong', {}, el.resolved ? T('Erledigt') : T('Kommentar')),
       h('span', { class: 'spacer' }),
-      app.canComment && !el.draft ? iconBtn(el.resolved ? 'undo' : 'check', el.resolved ? 'Wieder öffnen' : 'Als erledigt markieren', () => {
+      app.canComment && !el.draft ? iconBtn(el.resolved ? 'undo' : 'check', el.resolved ? T('Wieder öffnen') : T('Als erledigt markieren'), () => {
         setLocal({ resolved: !el.resolved });
         commentOp('resolve', el.id, { resolved: !el.resolved });
         renderCommentPop();
       }) : null,
-      canDelete ? iconBtn('trash', 'Kommentar löschen', () => {
+      canDelete ? iconBtn('trash', T('Kommentar löschen'), () => {
         commentOp('delete', el.id);
         applyRemoteOp({ op: 'delete', id: el.id });
         closeComment();
       }) : null,
-      iconBtn('close', 'Schließen', closeComment)),
+      iconBtn('close', T('Schließen'), closeComment)),
     taskRow(el),
     h('div', { class: 'comment-list' }, thread.map((m) => h('div', { class: 'comment-msg' + (m.pending ? ' pending' : '') },
-      h('div', { class: 'comment-meta' }, h('span', { class: 'avatar xs', style: { background: m.color || '#888' } }, initials(m.author)), h('b', {}, m.author), h('span', { class: 'muted' }, m.pending ? 'wird gesendet …' : relTime(m.ts))),
+      h('div', { class: 'comment-meta' }, h('span', { class: 'avatar xs', style: { background: m.color || '#888' } }, initials(m.author)), h('b', {}, guestName(m.author)), h('span', { class: 'muted' }, m.pending ? T('wird gesendet …') : relTime(m.ts))),
       h('div', { class: 'comment-text', html: commentHtml(m) })))),
-    app.canComment ? h('div', { class: 'comment-input' }, h('div', { class: 'mention-wrap' }, input, mention.list), h('button', { class: 'btn primary small', onclick: send }, 'Senden')) : null,
+    app.canComment ? h('div', { class: 'comment-input' }, h('div', { class: 'mention-wrap' }, input, mention.list), h('button', { class: 'btn primary small', onclick: send }, T('Senden'))) : null,
   );
   const list = box.querySelector('.comment-list');
   list.scrollTop = list.scrollHeight;
@@ -796,29 +797,29 @@ function taskRow(el) {
   if (el.draft) return null;
   const t = el.task;
   if (!commentPop.taskForm) {
-    if (!t) return app.canComment && (el.thread || []).length ? h('div', { class: 'comment-task-row' }, h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, h('span', { html: ICONS.tasks }), 'Als Aufgabe zuweisen')) : null;
+    if (!t) return app.canComment && (el.thread || []).length ? h('div', { class: 'comment-task-row' }, h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, h('span', { html: ICONS.tasks }), T('Als Aufgabe zuweisen'))) : null;
     const overdue = t.due && !el.resolved && t.due < new Date().toISOString().slice(0, 10);
     return h('div', { class: 'comment-task' + (el.resolved ? ' done' : '') },
       h('span', { html: ICONS.tasks }),
-      h('span', {}, h('b', {}, t.assignee), t.due ? h('span', { class: overdue ? 'overdue' : 'muted' }, ` · fällig ${fmtDate(t.due)}`) : null, el.resolved ? h('span', { class: 'muted' }, ' · erledigt') : null),
+      h('span', {}, h('b', {}, t.assignee), t.due ? h('span', { class: overdue ? 'overdue' : 'muted' }, T` · fällig ${fmtDate(t.due)}`) : null, el.resolved ? h('span', { class: 'muted' }, T(' · erledigt')) : null),
       h('span', { class: 'spacer' }),
-      app.canComment ? h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, 'Ändern') : null);
+      app.canComment ? h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, T('Ändern')) : null);
   }
-  const who = h('select', {}, h('option', { value: '' }, 'Person wählen …'));
+  const who = h('select', {}, h('option', { value: '' }, T('Person wählen …')));
   const due = h('input', { type: 'date', value: t?.due || '' });
-  boardPeople().then((people) => people.forEach((p) => who.append(h('option', { value: p.id, selected: t && t.assigneeId === p.id }, p.displayName + (p.id === myId() ? ' (du)' : '') + (p.guest ? ' (Gast)' : '')))));
+  boardPeople().then((people) => people.forEach((p) => who.append(h('option', { value: p.id, selected: t && t.assigneeId === p.id }, p.displayName + (p.id === myId() ? T(' (du)') : '') + (p.guest ? T(' (Gast)') : '')))));
   return h('form', { class: 'comment-task-form', onsubmit: (e) => {
     e.preventDefault();
-    if (!who.value) return toast('Bitte eine Person wählen');
+    if (!who.value) return toast(T('Bitte eine Person wählen'));
     commentOp('task', el.id, { assigneeId: who.value, due: due.value });
     commentPop.taskForm = false;
     renderCommentPop();
   } },
   h('div', { class: 'row' }, who, due),
   h('div', { class: 'row' },
-    h('button', { type: 'submit', class: 'btn primary small' }, 'Zuweisen'),
-    t ? h('button', { type: 'button', class: 'btn small', onclick: () => { commentOp('task', el.id, { assigneeId: null }); commentPop.taskForm = false; renderCommentPop(); } }, 'Zuweisung entfernen') : null,
-    h('button', { type: 'button', class: 'btn small', onclick: () => { commentPop.taskForm = false; renderCommentPop(); } }, 'Abbrechen')));
+    h('button', { type: 'submit', class: 'btn primary small' }, T('Zuweisen')),
+    t ? h('button', { type: 'button', class: 'btn small', onclick: () => { commentOp('task', el.id, { assigneeId: null }); commentPop.taskForm = false; renderCommentPop(); } }, T('Zuweisung entfernen')) : null,
+    h('button', { type: 'button', class: 'btn small', onclick: () => { commentPop.taskForm = false; renderCommentPop(); } }, T('Abbrechen'))));
 }
 
 function positionComment() {
@@ -885,19 +886,19 @@ export function renderSidePanel() {
   const ae = document.activeElement;
   if (side.contains(ae) && ae.tagName === 'INPUT' && ae.type !== 'checkbox') return;
   side.innerHTML = '';
-  const close = iconBtn('close', 'Schließen', () => toggleSidePanel(sidePanel));
+  const close = iconBtn('close', T('Schließen'), () => toggleSidePanel(sidePanel));
   if (sidePanel === 'frames') {
     const list = frames();
-    side.append(h('div', { class: 'side-head' }, h('h3', {}, 'Frames'), h('span', { class: 'spacer' }), close));
+    side.append(h('div', { class: 'side-head' }, h('h3', {}, T('Frames')), h('span', { class: 'spacer' }), close));
     side.append(h('div', { class: 'side-actions' },
-      h('button', { class: 'btn primary small', disabled: !list.length, onclick: () => app.emit('present', null) }, h('span', { html: ICONS.present }), 'Präsentieren'),
+      h('button', { class: 'btn primary small', disabled: !list.length, onclick: () => app.emit('present', null) }, h('span', { html: ICONS.present }), T('Präsentieren')),
       app.viewOnly ? null : h('button', { class: 'btn small', onclick: () => {
         const c = viewCenter();
         const f = makeElement('frame', c.x, c.y);
         addElements([f]);
         fitTo({ x: f.x, y: f.y, w: f.w, h: f.h });
-      } }, h('span', { html: ICONS.plus }), 'Frame')));
-    if (!list.length) side.append(h('p', { class: 'muted pad' }, 'Noch keine Frames. Frames gliedern dein Board in Bereiche und dienen als Folien im Präsentationsmodus.'));
+      } }, h('span', { html: ICONS.plus }), T('Frame'))));
+    if (!list.length) side.append(h('p', { class: 'muted pad' }, T('Noch keine Frames. Frames gliedern dein Board in Bereiche und dienen als Folien im Präsentationsmodus.')));
     const ul = h('div', { class: 'frame-list' });
     list.forEach((f, i) => {
       const prev = h('div', { class: 'frame-thumb' });
@@ -910,18 +911,18 @@ export function renderSidePanel() {
         fitTo({ x: f.x, y: f.y, w: f.w, h: f.h }, { pad: 40, maxZ: 4 });
       } },
       h('span', { class: 'frame-no' }, i + 1), prev,
-      h('span', { class: 'frame-name' }, f.title || 'Frame'),
+      h('span', { class: 'frame-name' }, f.title || T('Frame')),
       app.viewOnly ? null : h('span', { class: 'frame-ord' },
-        iconBtn('chevUp', 'Nach oben', (e) => { e.stopPropagation(); moveFrame(list, i, -1); }, { disabled: i === 0 }),
-        iconBtn('chevDown', 'Nach unten', (e) => { e.stopPropagation(); moveFrame(list, i, 1); }, { disabled: i === list.length - 1 }))));
+        iconBtn('chevUp', T('Nach oben'), (e) => { e.stopPropagation(); moveFrame(list, i, -1); }, { disabled: i === 0 }),
+        iconBtn('chevDown', T('Nach unten'), (e) => { e.stopPropagation(); moveFrame(list, i, 1); }, { disabled: i === list.length - 1 }))));
     });
     side.append(ul);
   } else if (sidePanel === 'comments') {
     const all = [...app.els.values()].filter((e) => e.type === 'comment' && (e.thread || []).length);
     const open = all.filter((e) => !e.resolved);
     const mine = all.filter((e) => e.task && e.task.assigneeId === String(app.user.id) && !e.resolved);
-    side.append(h('div', { class: 'side-head' }, h('h3', {}, `Kommentare (${open.length} offen)`), h('span', { class: 'spacer' }), close));
-    const filters = [['open', 'Offen'], ['mine', `Mir zugewiesen${mine.length ? ` (${mine.length})` : ''}`], ['all', 'Alle']];
+    side.append(h('div', { class: 'side-head' }, h('h3', {}, T`Kommentare (${open.length} offen)`), h('span', { class: 'spacer' }), close));
+    const filters = [['open', T('Offen')], ['mine', T`Mir zugewiesen${mine.length ? ` (${mine.length})` : ''}`], ['all', T('Alle')]];
     const f = app.settings.commentFilter || (app.settings.hideResolved ? 'open' : 'all');
     side.append(h('div', { class: 'side-actions' }, h('div', { class: 'seg' }, filters.map(([k, l]) => h('button', { class: 'btn small' + (f === k ? ' active' : ''), onclick: () => {
       app.settings.commentFilter = k;
@@ -930,17 +931,17 @@ export function renderSidePanel() {
       renderSidePanel();
     } }, l)))));
     const list = (f === 'mine' ? mine : f === 'open' ? open : all).sort((a, b) => (b.thread.at(-1)?.ts || 0) - (a.thread.at(-1)?.ts || 0));
-    if (!list.length) side.append(h('p', { class: 'muted pad' }, f === 'mine' ? 'Dir sind keine offenen Kommentare zugewiesen.' : 'Keine Kommentare. Mit dem Kommentar-Werkzeug (C) kannst du überall auf dem Board Feedback hinterlassen und mit @Name jemanden erwähnen.'));
+    if (!list.length) side.append(h('p', { class: 'muted pad' }, f === 'mine' ? T('Dir sind keine offenen Kommentare zugewiesen.') : T('Keine Kommentare. Mit dem Kommentar-Werkzeug (C) kannst du überall auf dem Board Feedback hinterlassen und mit @Name jemanden erwähnen.')));
     for (const c of list) {
       const first = c.thread[0], last = c.thread.at(-1);
       side.append(h('div', { class: 'comment-card' + (c.resolved ? ' resolved' : ''), onclick: () => {
         fitTo({ x: c.x - 200, y: c.y - 200, w: 400, h: 400 }, { maxZ: 1.5 });
         setTimeout(() => openComment(c.id), 320);
       } },
-      h('div', { class: 'comment-meta' }, h('span', { class: 'avatar xs', style: { background: first.color || '#888' } }, initials(first.author)), h('b', {}, first.author), h('span', { class: 'muted' }, relTime(last.ts))),
+      h('div', { class: 'comment-meta' }, h('span', { class: 'avatar xs', style: { background: first.color || '#888' } }, initials(first.author)), h('b', {}, guestName(first.author)), h('span', { class: 'muted' }, relTime(last.ts))),
       h('div', { class: 'comment-text' }, first.text),
-      c.task ? h('div', { class: 'comment-task small' }, h('span', { html: ICONS.tasks }), h('span', {}, c.task.assignee + (c.task.due ? ` · fällig ${fmtDate(c.task.due)}` : ''))) : null,
-      c.thread.length > 1 ? h('div', { class: 'muted small' }, `${c.thread.length - 1} Antwort${c.thread.length > 2 ? 'en' : ''}`) : null));
+      c.task ? h('div', { class: 'comment-task small' }, h('span', { html: ICONS.tasks }), h('span', {}, c.task.assignee + (c.task.due ? T` · fällig ${fmtDate(c.task.due)}` : ''))) : null,
+      c.thread.length > 1 ? h('div', { class: 'muted small' }, T`Antworten: ${c.thread.length - 1}`) : null));
     }
   } else if (sidePanel === 'votes') {
     app.emit('renderVotesPanel', side, close);
@@ -963,14 +964,14 @@ function moveFrame(list, i, d) {
 
 export function openTemplates() {
   if (app.viewOnly) return;
-  const m = modal('Vorlage einfügen', templateGallery((t) => {
+  const m = modal(T('Vorlage einfügen'), templateGallery((t) => {
     m.close();
     insertTemplate(t);
   }, { showBlank: false }), { wide: true });
 }
 
 function insertTemplate(t) {
-  if (placeElements(t.build())) toast(`Vorlage „${t.name}“ eingefügt`);
+  if (placeElements(t.build())) toast(T`Vorlage „${t.name}“ eingefügt`);
 }
 
 // Fügt fertige Elemente (Vorlage, Diagramm, Import) in der Ansichtsmitte ein, ohne Bestehendes zu überdecken
@@ -1018,18 +1019,18 @@ export function placeElements(els, { select = false } = {}) {
 async function exportPng(selection = false) {
   try {
     const els = selection ? collectForCopy([...app.sel]) : [...app.els.values()];
-    if (!els.length) return toast('Nichts zu exportieren');
-    toast('PNG wird erstellt …');
+    if (!els.length) return toast(T('Nichts zu exportieren'));
+    toast(T('PNG wird erstellt …'));
     const url = await pngDataUrl(els, { scale: 2, background: app.settings.dark ? '#1e1f24' : '#ffffff' });
     download(safeName(app.name) + '.png', url);
   } catch (e) {
-    toast('Export fehlgeschlagen: ' + e.message);
+    toast(T('Export fehlgeschlagen: ') + e.message);
   }
 }
 
 function exportSvg() {
   const els = [...app.els.values()];
-  if (!els.length) return toast('Nichts zu exportieren');
+  if (!els.length) return toast(T('Nichts zu exportieren'));
   download(safeName(app.name) + '.svg', new Blob([svgString(els)], { type: 'image/svg+xml' }));
 }
 
@@ -1054,42 +1055,42 @@ importInput.addEventListener('change', () => {
 });
 
 async function importFile(file) {
-  if (app.viewOnly) return toast('Du darfst dieses Board nur ansehen.');
+  if (app.viewOnly) return toast(T('Du darfst dieses Board nur ansehen.'));
   try {
     const data = JSON.parse(await file.text());
     const list = Array.isArray(data) ? data : Array.isArray(data.elements) ? data.elements : Object.values(data.elements || {});
     // Eine JSON-Datei ohne Board-Elemente ist kein Export, sondern ein Dokument – als Dateianhang ablegen
     if (!list.length || !list.every((e) => e && typeof e === 'object' && typeof e.type === 'string')) return app.emit('dropFile', file, viewCenter());
     const n = list.filter((e) => e && e.type !== 'comment').length;
-    if (!n) return toast('Keine Elemente gefunden (Kommentare werden nicht importiert)');
+    if (!n) return toast(T('Keine Elemente gefunden (Kommentare werden nicht importiert)'));
     pasteElements(list, viewCenter());
     fitTo(selectionBounds(), { maxZ: 1 });
-    toast(`${n} Elemente importiert${n < list.length ? ' – Kommentare werden nicht übernommen' : ''}`);
+    toast(T`${n} Elemente importiert${n < list.length ? T(' – Kommentare werden nicht übernommen') : ''}`);
   } catch {
-    toast('Datei konnte nicht importiert werden');
+    toast(T('Datei konnte nicht importiert werden'));
   }
 }
 app.on('importFile', importFile);
 
 function openExportMenu(anchor) {
   menu(anchor, [
-    { header: 'Exportieren' },
-    { label: 'Als PNG-Bild', icon: 'image', onClick: () => exportPng(false) },
-    { label: 'Auswahl als PNG', icon: 'image', disabled: !app.sel.size, onClick: () => exportPng(true) },
-    { label: 'Als SVG-Vektorgrafik', icon: 'shape', onClick: exportSvg },
-    { label: 'Als PDF (Frames als Seiten)', icon: 'present', onClick: exportPdf },
-    { label: 'Als JSON-Datei (Backup)', icon: 'download', onClick: exportJson },
+    { header: T('Exportieren') },
+    { label: T('Als PNG-Bild'), icon: 'image', onClick: () => exportPng(false) },
+    { label: T('Auswahl als PNG'), icon: 'image', disabled: !app.sel.size, onClick: () => exportPng(true) },
+    { label: T('Als SVG-Vektorgrafik'), icon: 'shape', onClick: exportSvg },
+    { label: T('Als PDF (Frames als Seiten)'), icon: 'present', onClick: exportPdf },
+    { label: T('Als JSON-Datei (Backup)'), icon: 'download', onClick: exportJson },
     '-',
-    { header: 'Importieren' },
-    { label: 'JSON-Datei importieren', icon: 'upload', disabled: app.viewOnly, onClick: () => importInput.click() },
-    { label: 'Karten aus CSV / Jira-Export …', icon: 'card', disabled: app.viewOnly, onClick: () => app.emit('openCsvImport') },
-    { label: 'Diagramm aus Text (Mermaid) …', icon: 'diagram', disabled: app.viewOnly, onClick: () => app.emit('openDiagramText') },
-    { label: 'Bild hochladen', icon: 'image', disabled: app.viewOnly, onClick: () => fileInput.click() },
-    { label: 'Datei anhängen (PDF, Office, Text)', icon: 'file', disabled: app.viewOnly, onClick: () => app.emit('pickFile') },
+    { header: T('Importieren') },
+    { label: T('JSON-Datei importieren'), icon: 'upload', disabled: app.viewOnly, onClick: () => importInput.click() },
+    { label: T('Karten aus CSV / Jira-Export …'), icon: 'card', disabled: app.viewOnly, onClick: () => app.emit('openCsvImport') },
+    { label: T('Diagramm aus Text (Mermaid) …'), icon: 'diagram', disabled: app.viewOnly, onClick: () => app.emit('openDiagramText') },
+    { label: T('Bild hochladen'), icon: 'image', disabled: app.viewOnly, onClick: () => fileInput.click() },
+    { label: T('Datei anhängen (PDF, Office, Text)'), icon: 'file', disabled: app.viewOnly, onClick: () => app.emit('pickFile') },
     '-',
-    { header: 'Vorlagen' },
-    { label: 'Board als Vorlage speichern …', icon: 'template', disabled: app.guest, onClick: () => app.emit('saveTemplate', false) },
-    { label: 'Auswahl als Vorlage speichern …', icon: 'template', disabled: app.guest || !app.sel.size, onClick: () => app.emit('saveTemplate', true) },
+    { header: T('Vorlagen') },
+    { label: T('Board als Vorlage speichern …'), icon: 'template', disabled: app.guest, onClick: () => app.emit('saveTemplate', false) },
+    { label: T('Auswahl als Vorlage speichern …'), icon: 'template', disabled: app.guest || !app.sel.size, onClick: () => app.emit('saveTemplate', true) },
   ]);
 }
 
@@ -1124,46 +1125,46 @@ function openSettings(anchor) {
     openSettings(anchor);
   } });
   menu(anchor, [
-    { header: 'Ansicht' },
-    t('grid', 'Raster anzeigen'),
-    t('dark', 'Dunkles Design'),
-    t('showAuthor', 'Autor auf Sticky Notes'),
-    t('hideResolved', 'Erledigte Kommentare ausblenden'),
-    t('hideCursors', 'Mauszeiger anderer ausblenden'),
-    { label: 'Filter …', icon: 'filter', onClick: () => showSidePanel('filter') },
-    { label: 'Retro & Umfragen …', icon: 'vote', onClick: () => app.emit('retroMenu', anchor) },
-    { header: 'Bearbeitung' },
-    t('snap', 'Am Raster einrasten'),
-    { label: `Rastergröße: ${gridSize()} px`, icon: 'grid', keep: true, onClick: () => {
+    { header: T('Ansicht') },
+    t('grid', T('Raster anzeigen')),
+    t('dark', T('Dunkles Design')),
+    t('showAuthor', T('Autor auf Sticky Notes')),
+    t('hideResolved', T('Erledigte Kommentare ausblenden')),
+    t('hideCursors', T('Mauszeiger anderer ausblenden')),
+    { label: T('Filter …'), icon: 'filter', onClick: () => showSidePanel('filter') },
+    { label: T('Retro & Umfragen …'), icon: 'vote', onClick: () => app.emit('retroMenu', anchor) },
+    { header: T('Bearbeitung') },
+    t('snap', T('Am Raster einrasten')),
+    { label: T`Rastergröße: ${gridSize()} px`, icon: 'grid', keep: true, onClick: () => {
       const sizes = [10, 20, 40, 50];
       s.gridSize = sizes[(sizes.indexOf(gridSize()) + 1) % sizes.length];
       saveSettings();
       applyView(true);
       openSettings(anchor);
     } },
-    t('smartGuides', 'Intelligente Hilfslinien'),
-    t('wheelZoom', 'Mausrad zoomt (statt verschieben)'),
-    { label: 'Tastenkürzel', icon: 'keyboard', onClick: openShortcuts },
+    t('smartGuides', T('Intelligente Hilfslinien')),
+    t('wheelZoom', T('Mausrad zoomt (statt verschieben)')),
+    { label: T('Tastenkürzel'), icon: 'keyboard', onClick: openShortcuts },
     '-',
     ...accountMenuItems(app.me, profileSaved),
     ...(legal.imprint || legal.privacy ? ['-'] : []),
-    legal.imprint ? { label: 'Impressum', icon: 'link', onClick: () => window.open('/impressum', '_blank', 'noopener') } : null,
-    legal.privacy ? { label: 'Datenschutz', icon: 'link', onClick: () => window.open('/datenschutz', '_blank', 'noopener') } : null,
+    legal.imprint ? { label: T('Impressum'), icon: 'link', onClick: () => window.open('/impressum', '_blank', 'noopener') } : null,
+    legal.privacy ? { label: T('Datenschutz'), icon: 'link', onClick: () => window.open('/datenschutz', '_blank', 'noopener') } : null,
   ], { placement: 'bottom' });
 }
 
 export function openShortcuts() {
   const groups = [
-    ['Werkzeuge', [['V', 'Auswählen'], ['H / Leertaste', 'Verschieben'], ['N', 'Sticky Note'], ['T', 'Text'], ['S', 'Form'], ['R / O', 'Rechteck / Ellipse'], ['L', 'Verbindungslinie'], ['P', 'Stift'], ['E', 'Radierer'], ['F', 'Frame'], ['K', 'Karte'], ['M', 'Mindmap'], ['C', 'Kommentar'], ['X', 'Laserpointer']]],
-    ['Bearbeiten', [['Strg+Z / Strg+Y', 'Rückgängig / Wiederholen'], ['Strg+C / X / V', 'Kopieren / Ausschneiden / Einfügen'], ['Strg+D', 'Duplizieren'], ['Alt + Ziehen', 'Kopie ziehen'], ['Entf', 'Löschen'], ['Strg+A', 'Alles auswählen'], ['Strg+G', 'Gruppieren'], ['Strg+Umschalt+G', 'Gruppe auflösen'], ['Strg+L', 'Sperren'], ['Strg+] / [', 'Vorder-/Hintergrund'], ['Pfeiltasten', 'Verschieben (Umschalt: 10 px)'], ['Enter / Doppelklick', 'Text bearbeiten'], ['Esc / Strg+Enter', 'Bearbeitung beenden']]],
-    ['Tabellen', [['Klick in ausgewählte Tabelle', 'Zelle wählen'], ['Umschalt + Klick / Pfeil', 'Bereich wählen'], ['Pfeiltasten', 'Zellauswahl bewegen'], ['Enter / F2', 'Zelle bearbeiten'], ['Tippen', 'Zelle überschreiben'], ['Entf', 'Inhalt leeren'], ['Tab', 'Nächste Zelle (beim Bearbeiten)'], ['Linie ziehen', 'Spaltenbreite / Zeilenhöhe']]],
-    ['Verbinder', [['Linie ziehen', 'Biegen (Knickpunkt)'], ['◦ auf der Linie ziehen', 'Knickpunkt einfügen'], ['Doppelklick auf ▪', 'Knickpunkt entfernen'], ['Beschriftung ziehen', 'Entlang der Linie verschieben'], ['Ende an Rand ziehen', 'Fester Andockpunkt'], ['Ende in Formmitte', 'Automatisch andocken']]],
-    ['Mindmap', [['Tab', 'Unterknoten hinzufügen'], ['Enter (beim Tippen)', 'Geschwisterknoten'], ['Umschalt+Enter', 'Geschwisterknoten']]],
-    ['Zusammenarbeit', [['/', 'Cursor-Chat: Nachricht am Mauszeiger'], ['Esc', 'Cursor-Chat schließen']]],
-    ['Verschieben & Größe', [['Umschalt + Ziehen', 'Nur waagerecht/senkrecht verschieben'], ['Strg + Ziehen', 'Ohne Einrasten'], ['Seitengriff', 'Nur Breite bzw. Höhe ändern'], ['Umschalt + Griff', 'Seitenverhältnis beibehalten'], ['Alt + Griff', 'Größe von der Mitte aus'], ['Strg+D (wiederholt)', 'Kopie mit zuletzt verwendetem Versatz'], ['Klick in ausgewählte Gruppe', 'Einzelnes Element der Gruppe wählen'], ['Pfeiltasten', 'Um 1 px (Umschalt: 10 px, mit Raster: eine Rasterweite) verschieben'], ['Umschalt-/Strg-Klick', 'Zur Auswahl hinzufügen bzw. entfernen (Ziehen verschiebt)']]],
-    ['Ansicht', [['Strg + Mausrad', 'Zoomen'], ['Strg + / −', 'Zoomen'], ['Strg+0', 'Auf 100 %'], ['Umschalt+1', 'Alles anzeigen'], ['Umschalt+2', 'Auswahl anzeigen'], ['Strg+F', 'Suchen']]],
+    [T('Werkzeuge'), [['V', T('Auswählen')], [T('H / Leertaste'), T('Verschieben')], ['N', T('Sticky Note')], ['T', T('Text')], ['S', T('Form')], ['R / O', T('Rechteck / Ellipse')], ['L', T('Verbindungslinie')], ['P', T('Stift')], ['E', T('Radierer')], ['F', T('Frame')], ['K', T('Karte')], ['M', T('Mindmap')], ['C', T('Kommentar')], ['X', T('Laserpointer')]]],
+    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
+    [T('Tabellen'), [[T('Klick in ausgewählte Tabelle'), T('Zelle wählen')], [T('Umschalt + Klick / Pfeil'), T('Bereich wählen')], [T('Pfeiltasten'), T('Zellauswahl bewegen')], [T('Enter / F2'), T('Zelle bearbeiten')], [T('Tippen'), T('Zelle überschreiben')], [T('Entf'), T('Inhalt leeren')], ['Tab', T('Nächste Zelle (beim Bearbeiten)')], [T('Linie ziehen'), T('Spaltenbreite / Zeilenhöhe')]]],
+    [T('Verbinder'), [[T('Linie ziehen'), T('Biegen (Knickpunkt)')], [T('◦ auf der Linie ziehen'), T('Knickpunkt einfügen')], [T('Doppelklick auf ▪'), T('Knickpunkt entfernen')], [T('Beschriftung ziehen'), T('Entlang der Linie verschieben')], [T('Ende an Rand ziehen'), T('Fester Andockpunkt')], [T('Ende in Formmitte'), T('Automatisch andocken')]]],
+    [T('Mindmap'), [['Tab', T('Unterknoten hinzufügen')], [T('Enter (beim Tippen)'), T('Geschwisterknoten')], [T('Umschalt+Enter'), T('Geschwisterknoten')]]],
+    [T('Zusammenarbeit'), [['/', T('Cursor-Chat: Nachricht am Mauszeiger')], [T('Esc'), T('Cursor-Chat schließen')]]],
+    [T('Verschieben & Größe'), [[T('Umschalt + Ziehen'), T('Nur waagerecht/senkrecht verschieben')], [T('Strg + Ziehen'), T('Ohne Einrasten')], [T('Seitengriff'), T('Nur Breite bzw. Höhe ändern')], [T('Umschalt + Griff'), T('Seitenverhältnis beibehalten')], [T('Alt + Griff'), T('Größe von der Mitte aus')], [T('Strg+D (wiederholt)'), T('Kopie mit zuletzt verwendetem Versatz')], [T('Klick in ausgewählte Gruppe'), T('Einzelnes Element der Gruppe wählen')], [T('Pfeiltasten'), T('Um 1 px (Umschalt: 10 px, mit Raster: eine Rasterweite) verschieben')], [T('Umschalt-/Strg-Klick'), T('Zur Auswahl hinzufügen bzw. entfernen (Ziehen verschiebt)')]]],
+    [T('Ansicht'), [[T('Strg + Mausrad'), T('Zoomen')], [T('Strg + / −'), T('Zoomen')], [T('Strg+0'), T('Auf 100 %')], [T('Umschalt+1'), T('Alles anzeigen')], [T('Umschalt+2'), T('Auswahl anzeigen')], [T('Strg+F'), T('Suchen')]]],
   ];
-  modal('Tastenkürzel', h('div', { class: 'shortcuts' }, groups.map(([t, list]) => h('div', {}, h('h4', {}, t), h('table', {}, list.map(([k, d]) => h('tr', {}, h('td', {}, h('kbd', {}, k)), h('td', {}, d))))))), { wide: true });
+  modal(T('Tastenkürzel'), h('div', { class: 'shortcuts' }, groups.map(([t, list]) => h('div', {}, h('h4', {}, t), h('table', {}, list.map(([k, d]) => h('tr', {}, h('td', {}, h('kbd', {}, k)), h('td', {}, d))))))), { wide: true });
 }
 
 /* ================================================================== */
@@ -1180,7 +1181,7 @@ export function openSearch() {
   searchBox.classList.remove('hidden');
   searchBox.innerHTML = '';
   const count = h('span', { class: 'muted small' });
-  const input = h('input', { type: 'search', placeholder: 'Auf dem Board suchen …' });
+  const input = h('input', { type: 'search', placeholder: T('Auf dem Board suchen …') });
   const go = (d) => {
     if (!app.searchHits.length) return;
     app.searchIndex = (app.searchIndex + d + app.searchHits.length) % app.searchHits.length;
@@ -1193,7 +1194,7 @@ export function openSearch() {
     const q = input.value.trim().toLowerCase();
     app.searchHits = q ? [...app.els.values()].filter((e) => textOf(e).toLowerCase().includes(q)).map((e) => e.id) : [];
     app.searchIndex = -1;
-    count.textContent = q ? `${app.searchHits.length} Treffer` : '';
+    count.textContent = q ? T`${app.searchHits.length} Treffer` : '';
     scheduleRender(true);
     if (app.searchHits.length) go(1);
   });
@@ -1203,7 +1204,7 @@ export function openSearch() {
     if (e.key === 'Escape') closeSearch();
   });
   searchBox.append(h('span', { html: ICONS.search, class: 'muted' }), input, count,
-    iconBtn('chevUp', 'Vorheriger', () => go(-1)), iconBtn('chevDown', 'Nächster', () => go(1)), iconBtn('close', 'Schließen', closeSearch));
+    iconBtn('chevUp', T('Vorheriger'), () => go(-1)), iconBtn('chevDown', T('Nächster'), () => go(1)), iconBtn('close', T('Schließen'), closeSearch));
   input.focus();
 }
 
@@ -1239,26 +1240,26 @@ stage.addEventListener('contextmenu', (e) => {
   if (el && !app.sel.has(el.id)) setSelection([el.id]);
   const has = app.sel.size > 0;
   const items = has ? [
-    { label: 'Kopieren', hint: 'Strg+C', onClick: () => document.execCommand('copy') },
-    { label: 'Duplizieren', hint: 'Strg+D', onClick: () => duplicateEls(collectForCopy([...app.sel])) },
-    { label: 'In den Vordergrund', hint: 'Strg+]', onClick: bringToFront },
-    { label: 'In den Hintergrund', hint: 'Strg+[', onClick: sendToBack },
-    { label: selectedEls().every((x) => x.locked) ? 'Entsperren' : 'Sperren', hint: 'Strg+L', onClick: toggleLock },
-    app.isFacilitator ? { label: selectedEls().every((x) => x.modLock) ? 'Für Teilnehmende freigeben' : 'Für Teilnehmende sperren', onClick: toggleModLock } : null,
-    app.sel.size > 1 ? { label: 'Gruppieren', hint: 'Strg+G', onClick: groupSel } : null,
-    selectedEls().some((x) => x.groupId) ? { label: 'Gruppierung aufheben', onClick: ungroupSel } : null,
-    { label: 'Kommentar hinzufügen', onClick: () => newComment(w) },
-    el && app.sel.size === 1 ? { label: 'Reagieren …', onClick: () => app.emit('reactMenu', el, e) } : null,
+    { label: T('Kopieren'), hint: T('Strg+C'), onClick: () => document.execCommand('copy') },
+    { label: T('Duplizieren'), hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) },
+    { label: T('In den Vordergrund'), hint: T('Strg+]'), onClick: bringToFront },
+    { label: T('In den Hintergrund'), hint: T('Strg+['), onClick: sendToBack },
+    { label: selectedEls().every((x) => x.locked) ? T('Entsperren') : T('Sperren'), hint: T('Strg+L'), onClick: toggleLock },
+    app.isFacilitator ? { label: selectedEls().every((x) => x.modLock) ? T('Für Teilnehmende freigeben') : T('Für Teilnehmende sperren'), onClick: toggleModLock } : null,
+    app.sel.size > 1 ? { label: T('Gruppieren'), hint: T('Strg+G'), onClick: groupSel } : null,
+    selectedEls().some((x) => x.groupId) ? { label: T('Gruppierung aufheben'), onClick: ungroupSel } : null,
+    { label: T('Kommentar hinzufügen'), onClick: () => newComment(w) },
+    el && app.sel.size === 1 ? { label: T('Reagieren …'), onClick: () => app.emit('reactMenu', el, e) } : null,
     '-',
-    { label: 'Löschen', hint: 'Entf', danger: true, onClick: () => deleteEls([...app.sel]) },
+    { label: T('Löschen'), hint: T('Entf'), danger: true, onClick: () => deleteEls([...app.sel]) },
   ] : [
-    { label: 'Sticky Note hier', onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
-    { label: 'Text hier', onClick: () => { const s = makeElement('text', w.x, w.y); act(() => setEl(s)); startEdit(s.id, { isNew: true }); } },
-    { label: 'Kommentar hier', onClick: () => newComment(w) },
-    { label: 'Vorlage einfügen …', onClick: openTemplates },
+    { label: T('Sticky Note hier'), onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
+    { label: T('Text hier'), onClick: () => { const s = makeElement('text', w.x, w.y); act(() => setEl(s)); startEdit(s.id, { isNew: true }); } },
+    { label: T('Kommentar hier'), onClick: () => newComment(w) },
+    { label: T('Vorlage einfügen …'), onClick: openTemplates },
     '-',
-    { label: 'Alles auswählen', hint: 'Strg+A', onClick: () => setSelection([...app.els.keys()]) },
-    { label: 'Alles anzeigen', hint: 'Umschalt+1', onClick: () => fitAll() },
+    { label: T('Alles auswählen'), hint: T('Strg+A'), onClick: () => setSelection([...app.els.keys()]) },
+    { label: T('Alles anzeigen'), hint: T('Umschalt+1'), onClick: () => fitAll() },
   ];
   const list = h('div', { class: 'menu' }, items.filter(Boolean).map((it) => it === '-' ? h('div', { class: 'menu-sep' }) : h('button', { class: 'menu-item' + (it.danger ? ' danger' : ''), onclick: () => { closeContextMenu(); it.onClick(); } },
     h('span', { class: 'mi-label' }, it.label), it.hint ? h('span', { class: 'mi-hint' }, it.hint) : null)));
@@ -1352,13 +1353,13 @@ app.on('peers', drawMinimap);
 
 function buildZoom() {
   const z = $('#zoomctl');
-  const pct = h('button', { class: 'zoom-pct', title: 'Zoomstufe' }, '100 %');
+  const pct = h('button', { class: 'zoom-pct', title: T('Zoomstufe') }, '100 %');
   z.append(
-    iconBtn('minus', 'Verkleinern (Strg −)', () => zoomBy(1 / 1.25)),
+    iconBtn('minus', T('Verkleinern (Strg −)'), () => zoomBy(1 / 1.25)),
     pct,
-    iconBtn('plus', 'Vergrößern (Strg +)', () => zoomBy(1.25)),
-    iconBtn('fit', 'Alles anzeigen (Umschalt+1)', () => fitAll()),
-    iconBtn('layers', 'Minimap ein/aus', () => {
+    iconBtn('plus', T('Vergrößern (Strg +)'), () => zoomBy(1.25)),
+    iconBtn('fit', T('Alles anzeigen (Umschalt+1)'), () => fitAll()),
+    iconBtn('layers', T('Minimap ein/aus'), () => {
       $('#minimap').classList.toggle('hidden');
       drawMinimap();
     }),
@@ -1366,7 +1367,7 @@ function buildZoom() {
   pct.onclick = () => menu(pct, [25, 50, 100, 150, 200, 400].map((p) => ({ label: p + ' %', onClick: () => {
     const r = stage.getBoundingClientRect();
     zoomAt(r.left + r.width / 2, r.top + r.height / 2, p / 100);
-  } })).concat(['-', { label: 'Alles anzeigen', onClick: () => fitAll() }]), { placement: 'top' });
+  } })).concat(['-', { label: T('Alles anzeigen'), onClick: () => fitAll() }]), { placement: 'top' });
   app.on('view', () => (pct.textContent = Math.round(app.view.z * 100) + ' %'));
 }
 
@@ -1376,11 +1377,11 @@ function buildZoom() {
 
 function buildTopbar() {
   const top = $('#topbar');
-  const nameInput = h('input', { id: 'board-name', type: 'text', value: app.name, title: 'Board umbenennen', readonly: app.viewOnly });
+  const nameInput = h('input', { id: 'board-name', type: 'text', value: app.name, title: T('Board umbenennen'), readonly: app.viewOnly });
   nameInput.addEventListener('change', () => {
-    const n = nameInput.value.trim() || 'Unbenanntes Board';
+    const n = nameInput.value.trim() || T('Unbenanntes Board');
     app.name = n;
-    document.title = n + ' – vibeboard';
+    document.title = n + T(' – vibeboard');
     app.sync.op({ op: 'rename', name: n });
   });
   nameInput.addEventListener('keydown', (e) => {
@@ -1389,30 +1390,30 @@ function buildTopbar() {
   });
   app.on('name', () => {
     nameInput.value = app.name;
-    document.title = app.name + ' – vibeboard';
+    document.title = app.name + T(' – vibeboard');
   });
   const status = saveIndicator();
   append(top,
-    h('a', { href: '/', class: 'icon-btn brand', title: 'Alle Boards', html: '<svg viewBox="0 0 32 32" width="26" height="26"><rect x="2" y="2" width="28" height="28" rx="7" fill="#4262ff"/><rect x="8" y="8" width="9" height="9" rx="1.5" fill="#fff9b1"/><rect x="15" y="15" width="9" height="9" rx="1.5" fill="#ffcee0"/></svg>' }),
+    h('a', { href: '/', class: 'icon-btn brand', title: T('Alle Boards'), html: '<svg viewBox="0 0 32 32" width="26" height="26"><rect x="2" y="2" width="28" height="28" rx="7" fill="#4262ff"/><rect x="8" y="8" width="9" height="9" rx="1.5" fill="#fff9b1"/><rect x="15" y="15" width="9" height="9" rx="1.5" fill="#ffcee0"/></svg>' }),
     nameInput, status,
-    app.guest ? h('span', { class: 'badge guest', title: 'Du bist als Gast auf diesem Board' }, 'Gast') : null,
-    app.role === 'viewer' ? h('span', { class: 'badge' }, 'Nur ansehen') : app.role === 'commenter' ? h('span', { class: 'badge', title: 'Du kannst ansehen und kommentieren' }, 'Kommentieren') : null,
+    app.guest ? h('span', { class: 'badge guest', title: T('Du bist als Gast auf diesem Board') }, T('Gast')) : null,
+    app.role === 'viewer' ? h('span', { class: 'badge' }, T('Nur ansehen')) : app.role === 'commenter' ? h('span', { class: 'badge', title: T('Du kannst ansehen und kommentieren') }, T('Kommentieren')) : null,
     h('span', { class: 'top-sep' }),
-    app.viewOnly ? null : iconBtn('template', 'Vorlagen', openTemplates),
-    iconBtn('frame', 'Frames & Präsentation', () => toggleSidePanel('frames'), { 'data-panel': 'frames' }),
-    iconBtn('comment', 'Kommentare', () => toggleSidePanel('comments'), { 'data-panel': 'comments' }),
-    iconBtn('tasks', 'Aufgaben auf diesem Board', () => toggleSidePanel('tasks'), { 'data-panel': 'tasks' }),
-    iconBtn('activity', 'Aktivität – wer hat was geändert?', () => toggleSidePanel('activity'), { 'data-panel': 'activity' }),
-    app.viewOnly ? null : iconBtn('history', 'Versionsverlauf', () => toggleSidePanel('versions'), { 'data-panel': 'versions' }),
-    iconBtn('search', 'Suchen (Strg+F)', openSearch),
-    iconBtn('download', 'Exportieren & Importieren', (e) => openExportMenu(e.currentTarget)),
+    app.viewOnly ? null : iconBtn('template', T('Vorlagen'), openTemplates),
+    iconBtn('frame', T('Frames & Präsentation'), () => toggleSidePanel('frames'), { 'data-panel': 'frames' }),
+    iconBtn('comment', T('Kommentare'), () => toggleSidePanel('comments'), { 'data-panel': 'comments' }),
+    iconBtn('tasks', T('Aufgaben auf diesem Board'), () => toggleSidePanel('tasks'), { 'data-panel': 'tasks' }),
+    iconBtn('activity', T('Aktivität – wer hat was geändert?'), () => toggleSidePanel('activity'), { 'data-panel': 'activity' }),
+    app.viewOnly ? null : iconBtn('history', T('Versionsverlauf'), () => toggleSidePanel('versions'), { 'data-panel': 'versions' }),
+    iconBtn('search', T('Suchen (Strg+F)'), openSearch),
+    iconBtn('download', T('Exportieren & Importieren'), (e) => openExportMenu(e.currentTarget)),
   );
   const right = $('#topright');
   const tools = h('div', { class: 'collab-tools' });
   append(right, tools, h('div', { id: 'avatars' }),
     app.guest ? null : bellButton({ open: (n) => app.emit('openNotification', n) }),
-    app.guest ? null : h('button', { class: 'btn primary small share-btn', onclick: openShare }, h('span', { html: ICONS.share }), 'Teilen'),
-    iconBtn('settings', 'Einstellungen', (e) => openSettings(e.currentTarget)));
+    app.guest ? null : h('button', { class: 'btn primary small share-btn', onclick: openShare }, h('span', { html: ICONS.share }), T('Teilen')),
+    iconBtn('settings', T('Einstellungen'), (e) => openSettings(e.currentTarget)));
   if (!app.guest) {
     refreshBell();
     setInterval(refreshBell, 60000);
@@ -1430,14 +1431,14 @@ function saveIndicator() {
   const live = h('span', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
   chip.append(live);
   let shown = null, prev = null, delay = null;
-  const clock = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const clock = (t) => new Date(t).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
   const LABEL = {
-    connecting: ['Verbinde …', 'Verbindung zum Server wird aufgebaut …'],
-    offline: ['Offline', 'Keine Verbindung zum Server – wird automatisch wiederhergestellt. Änderungen werden gesendet, sobald die Verbindung steht.'],
-    saving: ['Wird gespeichert …', 'Deine Änderungen werden gerade gespeichert.'],
-    error: ['Speichern verzögert', 'Die letzten Änderungen sind noch nicht gespeichert – es wird automatisch erneut versucht. Bitte die Seite noch nicht schließen.'],
-    saved: ['Gespeichert', 'Alle Änderungen sind auf dem Server gespeichert.'],
-    live: ['Verbunden', 'Verbunden – du siehst Änderungen anderer live.'],
+    connecting: [T('Verbinde …'), T('Verbindung zum Server wird aufgebaut …')],
+    offline: [T('Offline'), T('Keine Verbindung zum Server – wird automatisch wiederhergestellt. Änderungen werden gesendet, sobald die Verbindung steht.')],
+    saving: [T('Wird gespeichert …'), T('Deine Änderungen werden gerade gespeichert.')],
+    error: [T('Speichern verzögert'), T('Die letzten Änderungen sind noch nicht gespeichert – es wird automatisch erneut versucht. Bitte die Seite noch nicht schließen.')],
+    saved: [T('Gespeichert'), T('Alle Änderungen sind auf dem Server gespeichert.')],
+    live: [T('Verbunden'), T('Verbunden – du siehst Änderungen anderer live.')],
   };
   const paint = (st) => {
     let kind = st.state;
@@ -1445,15 +1446,15 @@ function saveIndicator() {
     shown = kind;
     chip.className = 'save-chip ' + kind;
     let [label, title] = LABEL[kind];
-    if (kind === 'offline' && st.pending) label = `Offline – ${st.pending} ausstehend`;
-    if (kind === 'saved' && st.at) title += ` Zuletzt gespeichert um ${clock(st.at)} Uhr.`;
+    if (kind === 'offline' && st.pending) label = T`Offline – ${st.pending} ausstehend`;
+    if (kind === 'saved' && st.at) title += T` Zuletzt gespeichert um ${clock(st.at)} Uhr.`;
     text.textContent = label;
     chip.title = title;
     chip.setAttribute('aria-label', title);
     // Ansage nur bei wichtigen Wechseln: Verbindung/Speichern gestört und wieder in Ordnung
     const bad = kind === 'offline' || kind === 'error';
     if (kind !== prev && (bad || ((kind === 'saved' || kind === 'live') && (prev === 'offline' || prev === 'error')))) {
-      live.textContent = bad ? title : 'Alle Änderungen gespeichert.';
+      live.textContent = bad ? title : T('Alle Änderungen gespeichert.');
     }
     if (kind !== 'saving') prev = kind;
   };
@@ -1469,10 +1470,10 @@ function saveIndicator() {
 function buildBottomLeft() {
   const bl = $('#bottom-left');
   bl.append(
-    iconBtn('undo', 'Rückgängig (Strg+Z)', undo, { id: 'btn-undo', disabled: true }),
-    iconBtn('redo', 'Wiederholen (Strg+Y)', redo, { id: 'btn-redo', disabled: true }),
+    iconBtn('undo', T('Rückgängig (Strg+Z)'), undo, { id: 'btn-undo', disabled: true }),
+    iconBtn('redo', T('Wiederholen (Strg+Y)'), redo, { id: 'btn-redo', disabled: true }),
     h('span', { class: 'top-sep' }),
-    iconBtn('keyboard', 'Tastenkürzel', openShortcuts),
+    iconBtn('keyboard', T('Tastenkürzel'), openShortcuts),
   );
   if (app.viewOnly) bl.querySelectorAll('#btn-undo,#btn-redo').forEach((b) => b.remove());
 }

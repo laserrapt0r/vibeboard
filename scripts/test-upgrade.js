@@ -68,6 +68,11 @@ const SEEDS = {
     await c.query(`INSERT INTO webhooks (user_id, url, format, events) VALUES (1, 'https://example.org/h', 'slack', '{mention}')`);
     await c.query(`INSERT INTO webhooks (team_id, url) VALUES (1, 'https://example.org/t')`);
   },
+  8: async (c) => {
+    await c.query(`INSERT INTO pending_invites (email, board_id, role, invited_by, token_hash, expires_at) VALUES ('neu@example.org', 'b1', 'editor', 1, 'h1', now() + interval '30 days')`);
+    await c.query(`INSERT INTO pending_invites (email, team_id, role, invited_by, token_hash, expires_at) VALUES ('neu@example.org', 1, 'member', 1, 'h2', now() + interval '30 days')`);
+    await c.query(`UPDATE users SET locale = 'en' WHERE id = 1`);
+  },
 };
 
 async function structure(c, schema) {

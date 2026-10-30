@@ -1,4 +1,5 @@
 // Vorlagen-Galerie (wird im Board und im Dashboard verwendet)
+import { T } from './i18n.js';
 import { h, api, toast, confirmDialog } from './util.js';
 import { renderSvgDocument } from './render.js';
 import { TEMPLATES, CATEGORIES } from './templates.js';
@@ -19,7 +20,7 @@ async function loadCustom() {
   try {
     return (await api('/api/templates', { quiet: true })).templates.map((t) => ({
       id: 'u' + t.id, remoteId: t.id, name: t.name, icon: t.icon || '⭐', category: OWN, custom: true, canDelete: t.canDelete,
-      description: (t.description || (t.scope === 'team' ? `Team „${t.teamName}“` : 'Persönliche Vorlage')) + (t.by ? ` · von ${t.by}` : ''),
+      description: (t.description || (t.scope === 'team' ? T`Team „${t.teamName}“` : T('Persönliche Vorlage'))) + (t.by ? T` · von ${t.by}` : ''),
     }));
   } catch {
     return [];
@@ -38,7 +39,7 @@ export function templateGallery(onPick, { showBlank = true } = {}) {
   let custom = [];
   const grid = h('div', { class: 'tpl-grid' });
   const cats = h('div', { class: 'tpl-cats' });
-  const search = h('input', { type: 'search', placeholder: 'Vorlagen durchsuchen …', class: 'tpl-search', oninput: (e) => { q = e.target.value.toLowerCase(); render(); } });
+  const search = h('input', { type: 'search', placeholder: T('Vorlagen durchsuchen …'), class: 'tpl-search', oninput: (e) => { q = e.target.value.toLowerCase(); render(); } });
   const pick = async (t) => {
     if (!t.custom) return onPick(t);
     try {
@@ -51,7 +52,7 @@ export function templateGallery(onPick, { showBlank = true } = {}) {
   const render = () => {
     cats.innerHTML = '';
     const list = custom.length ? [CATEGORIES[0], OWN, ...CATEGORIES.slice(1)] : CATEGORIES;
-    list.forEach((c) => cats.append(h('button', { class: 'tpl-cat' + (c === cat ? ' active' : ''), onclick: () => { cat = c; render(); } }, c === OWN ? `⭐ ${c} (${custom.length})` : c)));
+    list.forEach((c) => cats.append(h('button', { class: 'tpl-cat' + (c === cat ? ' active' : ''), onclick: () => { cat = c; render(); } }, c === OWN ? `⭐ ${T(c)} (${custom.length})` : T(c))));
     grid.innerHTML = '';
     const all = [...custom, ...TEMPLATES];
     all.filter((t) => (showBlank || t.id !== 'blank') && (cat === 'Alle' || t.category === cat) && (!q || (t.name + ' ' + t.description).toLowerCase().includes(q))).forEach((t) => {
@@ -60,9 +61,9 @@ export function templateGallery(onPick, { showBlank = true } = {}) {
         prev.innerHTML = previewCache.get(t.id) || `<div class="tpl-blank">${t.icon}</div>`;
         if (!previewCache.has(t.id)) elementsOf(t).then((els) => (prev.innerHTML = templatePreview(t, els))).catch(() => {});
       } else prev.innerHTML = templatePreview(t);
-      const del = t.custom && t.canDelete ? h('button', { class: 'tpl-del icon-btn small', title: 'Vorlage löschen', 'aria-label': `Vorlage „${t.name}“ löschen`, onclick: async (e) => {
+      const del = t.custom && t.canDelete ? h('button', { class: 'tpl-del icon-btn small', title: T('Vorlage löschen'), 'aria-label': T`Vorlage „${t.name}“ löschen`, onclick: async (e) => {
         e.stopPropagation();
-        if (!(await confirmDialog('Vorlage löschen', `Die Vorlage „${t.name}“ wird gelöscht. Boards, die daraus entstanden sind, bleiben erhalten.`, 'Löschen', true))) return;
+        if (!(await confirmDialog(T('Vorlage löschen'), T`Die Vorlage „${t.name}“ wird gelöscht. Boards, die daraus entstanden sind, bleiben erhalten.`, T('Löschen'), true))) return;
         try {
           await api('/api/templates/' + t.remoteId, { method: 'DELETE' });
           custom = custom.filter((x) => x !== t);

@@ -1,4 +1,5 @@
 // Darstellung der Board-Elemente als SVG-Markup (für Board, Vorschau & Export)
+import { T, LOCALE, DEC } from './i18n.js';
 import { esc, FONT, wrap, fitText, measure, contrastText, initials, unionRect } from './util.js';
 import { tokenize, THEMES, MAX_LINES } from './highlight.js';
 
@@ -7,37 +8,37 @@ const own = (map, key) => (Object.hasOwn(map, key) ? map[key] : undefined);
 export const LH = 1.25;
 
 export const SHAPES = [
-  ['rect', 'Rechteck'], ['roundrect', 'Abgerundet'], ['ellipse', 'Ellipse'], ['diamond', 'Raute'],
-  ['triangle', 'Dreieck'], ['hexagon', 'Sechseck'], ['parallelogram', 'Parallelogramm'], ['trapezoid', 'Trapez'],
-  ['star', 'Stern'], ['pill', 'Pille'], ['cylinder', 'Zylinder / Datenbank'], ['arrow', 'Blockpfeil'],
-  ['callout', 'Sprechblase'], ['cross', 'Kreuz'], ['document', 'Dokument'], ['cloud', 'Wolke'],
-  ['subprocess', 'Unterprozess'], ['delay', 'Verzögerung'], ['note', 'Notiz'], ['package', 'Paket'],
-  ['actor', 'Akteur'], ['server', 'Server'], ['queue', 'Warteschlange'], ['container', 'Container'],
-  ['component', 'Komponente'], ['browser', 'Browser / UI'], ['laptop', 'Laptop'], ['firewall', 'Firewall'],
+  ['rect', T('Rechteck')], ['roundrect', T('Abgerundet')], ['ellipse', T('Ellipse')], ['diamond', T('Raute')],
+  ['triangle', T('Dreieck')], ['hexagon', T('Sechseck')], ['parallelogram', T('Parallelogramm')], ['trapezoid', T('Trapez')],
+  ['star', T('Stern')], ['pill', T('Pille')], ['cylinder', T('Zylinder / Datenbank')], ['arrow', T('Blockpfeil')],
+  ['callout', T('Sprechblase')], ['cross', T('Kreuz')], ['document', T('Dokument')], ['cloud', T('Wolke')],
+  ['subprocess', T('Unterprozess')], ['delay', T('Verzögerung')], ['note', T('Notiz')], ['package', T('Paket')],
+  ['actor', T('Akteur')], ['server', T('Server')], ['queue', T('Warteschlange')], ['container', T('Container')],
+  ['component', T('Komponente')], ['browser', T('Browser / UI')], ['laptop', T('Laptop')], ['firewall', T('Firewall')],
   // seit 3.6.0
-  ['multidoc', 'Mehrere Dokumente'], ['manualinput', 'Manuelle Eingabe'], ['manualop', 'Manuelle Tätigkeit'],
-  ['display', 'Anzeige'], ['offpage', 'Verweis auf andere Seite'], ['internalstorage', 'Interner Speicher'],
-  ['umlclass', 'Klasse'], ['umlnode', 'Knoten (Verteilung)'], ['initial', 'Startzustand'], ['final', 'Endzustand'],
-  ['forkbar', 'Gabelung / Vereinigung'], ['send', 'Signal senden'], ['receive', 'Signal empfangen'],
-  ['event', 'Startereignis'], ['eventinter', 'Zwischenereignis'], ['eventend', 'Endereignis'],
-  ['gatewayx', 'Exklusives Gateway (XOR)'], ['gatewayplus', 'Paralleles Gateway (AND)'], ['gatewayo', 'Inklusives Gateway (OR)'],
-  ['router', 'Router'], ['switch', 'Switch'], ['loadbalancer', 'Load Balancer'], ['accesspoint', 'WLAN-Access-Point'],
-  ['internet', 'Internet'], ['rack', 'Serverschrank (Rack)'], ['storage', 'Speichersystem (NAS/SAN)'],
-  ['desktop', 'Arbeitsplatz-PC'], ['mobile', 'Smartphone / Tablet'], ['users', 'Benutzergruppe'],
-  ['gear', 'Dienst / Konfiguration'], ['lock', 'Sicherheit / Zugriffsschutz'],
-  ['pod', 'Pod'], ['deployment', 'Deployment / ReplicaSet'], ['k8sservice', 'Service'], ['ingress', 'Ingress'],
-  ['k8snode', 'Knoten (Node)'], ['configmap', 'ConfigMap'], ['secret', 'Secret'], ['volume', 'Volume'],
+  ['multidoc', T('Mehrere Dokumente')], ['manualinput', T('Manuelle Eingabe')], ['manualop', T('Manuelle Tätigkeit')],
+  ['display', T('Anzeige')], ['offpage', T('Verweis auf andere Seite')], ['internalstorage', T('Interner Speicher')],
+  ['umlclass', T('Klasse')], ['umlnode', T('Knoten (Verteilung)')], ['initial', T('Startzustand')], ['final', T('Endzustand')],
+  ['forkbar', T('Gabelung / Vereinigung')], ['send', T('Signal senden')], ['receive', T('Signal empfangen')],
+  ['event', T('Startereignis')], ['eventinter', T('Zwischenereignis')], ['eventend', T('Endereignis')],
+  ['gatewayx', T('Exklusives Gateway (XOR)')], ['gatewayplus', T('Paralleles Gateway (AND)')], ['gatewayo', T('Inklusives Gateway (OR)')],
+  ['router', T('Router')], ['switch', T('Switch')], ['loadbalancer', T('Load Balancer')], ['accesspoint', T('WLAN-Access-Point')],
+  ['internet', T('Internet')], ['rack', T('Serverschrank (Rack)')], ['storage', T('Speichersystem (NAS/SAN)')],
+  ['desktop', T('Arbeitsplatz-PC')], ['mobile', T('Smartphone / Tablet')], ['users', T('Benutzergruppe')],
+  ['gear', T('Dienst / Konfiguration')], ['lock', T('Sicherheit / Zugriffsschutz')],
+  ['pod', T('Pod')], ['deployment', T('Deployment / ReplicaSet')], ['k8sservice', T('Service')], ['ingress', T('Ingress')],
+  ['k8snode', T('Knoten (Node)')], ['configmap', T('ConfigMap')], ['secret', T('Secret')], ['volume', T('Volume')],
 ];
 
 // Gruppierung für die Formenauswahl
 export const SHAPE_GROUPS = [
-  ['Grundformen', ['rect', 'roundrect', 'ellipse', 'diamond', 'triangle', 'hexagon', 'parallelogram', 'trapezoid', 'star', 'pill', 'arrow', 'callout', 'cross', 'cloud']],
-  ['Flussdiagramm', ['pill', 'rect', 'diamond', 'parallelogram', 'document', 'multidoc', 'subprocess', 'manualinput', 'manualop', 'display', 'delay', 'cylinder', 'internalstorage', 'offpage', 'note']],
-  ['UML', ['umlclass', 'actor', 'ellipse', 'package', 'component', 'umlnode', 'note', 'roundrect', 'initial', 'final', 'diamond', 'forkbar', 'send', 'receive']],
-  ['BPMN (Prozesse)', ['roundrect', 'event', 'eventinter', 'eventend', 'gatewayx', 'gatewayplus', 'gatewayo', 'note', 'cylinder']],
-  ['Netzwerk & Rechenzentrum', ['router', 'switch', 'firewall', 'loadbalancer', 'accesspoint', 'internet', 'cloud', 'server', 'rack', 'storage', 'desktop', 'laptop', 'mobile', 'users']],
-  ['Software & IT', ['server', 'cylinder', 'queue', 'container', 'browser', 'laptop', 'firewall', 'cloud', 'actor', 'component', 'gear', 'lock']],
-  ['Container-Plattform', ['pod', 'deployment', 'k8sservice', 'ingress', 'k8snode', 'configmap', 'secret', 'volume']],
+  [T('Grundformen'), ['rect', 'roundrect', 'ellipse', 'diamond', 'triangle', 'hexagon', 'parallelogram', 'trapezoid', 'star', 'pill', 'arrow', 'callout', 'cross', 'cloud']],
+  [T('Flussdiagramm'), ['pill', 'rect', 'diamond', 'parallelogram', 'document', 'multidoc', 'subprocess', 'manualinput', 'manualop', 'display', 'delay', 'cylinder', 'internalstorage', 'offpage', 'note']],
+  [T('UML'), ['umlclass', 'actor', 'ellipse', 'package', 'component', 'umlnode', 'note', 'roundrect', 'initial', 'final', 'diamond', 'forkbar', 'send', 'receive']],
+  [T('BPMN (Prozesse)'), ['roundrect', 'event', 'eventinter', 'eventend', 'gatewayx', 'gatewayplus', 'gatewayo', 'note', 'cylinder']],
+  [T('Netzwerk & Rechenzentrum'), ['router', 'switch', 'firewall', 'loadbalancer', 'accesspoint', 'internet', 'cloud', 'server', 'rack', 'storage', 'desktop', 'laptop', 'mobile', 'users']],
+  [T('Software & IT'), ['server', 'cylinder', 'queue', 'container', 'browser', 'laptop', 'firewall', 'cloud', 'actor', 'component', 'gear', 'lock']],
+  [T('Container-Plattform'), ['pod', 'deployment', 'k8sservice', 'ingress', 'k8snode', 'configmap', 'secret', 'volume']],
 ];
 
 // Standardgröße und -werte neuer Formen (sonst 200 × 140)
@@ -48,7 +49,7 @@ export const SHAPE_DEFAULTS = {
   ingress: ICON_DEFAULT, k8snode: ICON_DEFAULT, configmap: ICON_DEFAULT, secret: ICON_DEFAULT, volume: ICON_DEFAULT,
   switch: { w: 260, h: 80, fontSize: 15 }, storage: { w: 240, h: 110, fontSize: 15 }, rack: { w: 200, h: 360, fontSize: 15, bold: true },
   desktop: { w: 180, h: 150, fontSize: 15 }, mobile: { w: 100, h: 180, fontSize: 14 },
-  umlclass: { w: 240, h: 170, fontSize: 14, align: 'left', valign: 'top', text: 'Klasse\n--\n- attribut: Typ\n--\n+ methode(): Typ' },
+  umlclass: { w: 240, h: 170, fontSize: 14, align: 'left', valign: 'top', text: T('Klasse\n--\n- attribut: Typ\n--\n+ methode(): Typ') },
   initial: { w: 36, h: 36, fill: '#1a1a1a' }, final: { w: 40, h: 40 }, forkbar: { w: 220, h: 10, fill: '#1a1a1a' },
   send: { w: 200, h: 90 }, receive: { w: 200, h: 90 },
   event: { w: 56, h: 56, fontSize: 12 }, eventinter: { w: 56, h: 56, fontSize: 12 }, eventend: { w: 56, h: 56, fontSize: 12 },
@@ -89,7 +90,7 @@ export function textSvg(box, layout, { color = '#1a1a1a', align = 'center', vali
     if (l) spans += `<tspan x="${r1(tx)}" y="${r1(ty + i * size * LH + base)}">${esc(l)}</tspan>`;
   });
   const deco = [underline && 'underline', strike && 'line-through'].filter(Boolean).join(' ');
-  return `<text class="${cls}" font-family="${esc(FONT)}" font-size="${size}" fill="${color}" text-anchor="${anchor}"${bold ? ' font-weight="bold"' : ''}${italic ? ' font-style="italic"' : ''}${deco ? ` text-decoration="${deco}"` : ''} xml:space="preserve">${spans}</text>`;
+  return `<text class="${cls}" font-family="${esc(FONT)}" font-size="${size}" fill="${color}" text-anchor="${anchor}"${bold ? T(' font-weight="bold"') : ''}${italic ? T(' font-style="italic"') : ''}${deco ? T` text-decoration="${deco}"` : ''} xml:space="preserve">${spans}</text>`;
 }
 
 /* ---------------- Tabellen ---------------- */
@@ -424,8 +425,8 @@ function diamondD(x, y, w, h) {
 export function shapeDecor(kind, x, y, w, h, { fill, stroke, sw, dash, full = false, cls = '' }) {
   const f = Object.hasOwn(DRAW, kind) ? DRAW[kind](x, y, w, h, full) : null;
   if (!f) return { before: '', after: '' };
-  const c = cls ? ` class="${cls}"` : '';
-  const da = dash ? ` stroke-dasharray="${dash}"` : '';
+  const c = cls ? T` class="${cls}"` : '';
+  const da = dash ? T` stroke-dasharray="${dash}"` : '';
   let before = '', after = '';
   for (const d of f.under || []) before += `<path${c} d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${da} stroke-linejoin="round"/>`;
   if (f.lines) after += `<path d="${f.lines}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"/>`;
@@ -940,8 +941,8 @@ export function projectOnPath(pts, p) {
 /* ---------------- Linienenden ---------------- */
 
 export const ARROW_HEADS = [
-  ['none', 'Ohne'], ['arrow', 'Pfeil'], ['open', 'Pfeil offen'], ['triangle', 'Dreieck hohl'], ['diamond', 'Raute'],
-  ['diamondFilled', 'Raute gefüllt'], ['circle', 'Kreis'], ['bar', 'Querstrich'], ['crow', 'Krähenfuß (n)'],
+  ['none', T('Ohne')], ['arrow', T('Pfeil')], ['open', T('Pfeil offen')], ['triangle', T('Dreieck hohl')], ['diamond', T('Raute')],
+  ['diamondFilled', T('Raute gefüllt')], ['circle', T('Kreis')], ['bar', T('Querstrich')], ['crow', T('Krähenfuß (n)')],
 ];
 const HEAD_KEYS = new Set(ARROW_HEADS.map(([k]) => k));
 
@@ -1062,14 +1063,14 @@ function reactionsMarkup(el, env) {
 }
 
 // Dateianhänge: Symbol nach Dateityp
-const FILE_KINDS = { pdf: ['PDF', '#e03131'], doc: ['DOC', '#1c7ed6'], docx: ['DOC', '#1c7ed6'], odt: ['ODT', '#1c7ed6'], xls: ['XLS', '#2f9e44'], xlsx: ['XLS', '#2f9e44'], ods: ['ODS', '#2f9e44'], csv: ['CSV', '#2f9e44'], ppt: ['PPT', '#e8590c'], pptx: ['PPT', '#e8590c'], odp: ['ODP', '#e8590c'], txt: ['TXT', '#495057'], md: ['MD', '#495057'], json: ['JSON', '#7048e8'] };
+const FILE_KINDS = { pdf: [T('PDF'), '#e03131'], doc: [T('DOC'), '#1c7ed6'], docx: [T('DOC'), '#1c7ed6'], odt: [T('ODT'), '#1c7ed6'], xls: [T('XLS'), '#2f9e44'], xlsx: [T('XLS'), '#2f9e44'], ods: [T('ODS'), '#2f9e44'], csv: [T('CSV'), '#2f9e44'], ppt: [T('PPT'), '#e8590c'], pptx: [T('PPT'), '#e8590c'], odp: [T('ODP'), '#e8590c'], txt: [T('TXT'), '#495057'], md: [T('MD'), '#495057'], json: [T('JSON'), '#7048e8'] };
 export function fileKind(name) {
   const ext = (/\.([a-z0-9]{1,5})$/i.exec(String(name || '')) || [])[1];
-  return own(FILE_KINDS, ext && ext.toLowerCase()) || ['DATEI', '#868e96'];
+  return own(FILE_KINDS, ext && ext.toLowerCase()) || [T('DATEI'), '#868e96'];
 }
 export function fileSize(n) {
   n = Number(n) || 0;
-  return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1).replace('.', ',')} MB`;
+  return n < 1024 ? `${n} B` : n < 1048576 ? T`${(n / 1024).toFixed(0)} KB` : T`${(n / 1048576).toFixed(1).replace('.', DEC)} MB`;
 }
 
 function hiddenMarkup(el) {
@@ -1078,12 +1079,12 @@ function hiddenMarkup(el) {
   const fs = Math.max(10, Math.min(28, Math.min(w, h) * 0.1));
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}" fill-opacity="0.55" stroke="#868e96" stroke-width="1.5" stroke-dasharray="6 4"/>` +
     `<text x="${x + w / 2}" y="${y + h / 2}" font-family="${esc(FONT)}" font-size="${fs * 1.4}" text-anchor="middle">🔒</text>` +
-    `<text x="${x + w / 2}" y="${y + h / 2 + fs * 1.4}" font-family="${esc(FONT)}" font-size="${fs * 0.75}" text-anchor="middle" fill="#495057">${esc(el.privName ? 'Privat · ' + el.privName : 'Privat')}</text>`;
+    `<text x="${x + w / 2}" y="${y + h / 2 + fs * 1.4}" font-family="${esc(FONT)}" font-size="${fs * 0.75}" text-anchor="middle" fill="#495057">${esc(el.privName ? T('Privat · ') + el.privName : T('Privat'))}</text>`;
 }
 
 function privateBadge(el) {
   const s = Math.max(14, Math.min(24, Math.min(el.w, el.h) * 0.12));
-  return `<g><title>Privat – nur für dich sichtbar, bis der private Modus beendet wird</title><circle cx="${el.x + s * 0.2}" cy="${el.y + s * 0.2}" r="${s / 2 + 2}" fill="#212529"/><text x="${el.x + s * 0.2}" y="${el.y + s * 0.2 + s * 0.3}" font-size="${s * 0.75}" text-anchor="middle">🔒</text></g>`;
+  return `<g><title>${esc(T('Privat – nur für dich sichtbar, bis der private Modus beendet wird'))}</title><circle cx="${el.x + s * 0.2}" cy="${el.y + s * 0.2}" r="${s / 2 + 2}" fill="#212529"/><text x="${el.x + s * 0.2}" y="${el.y + s * 0.2 + s * 0.3}" font-size="${s * 0.75}" text-anchor="middle">🔒</text></g>`;
 }
 
 // Verborgener Bereich: Teilnehmende sehen eine Abdeckung, Moderierende einen Hinweis am Rand
@@ -1097,7 +1098,7 @@ function concealMarkup(el, env) {
   const fs = Math.max(14, Math.min(40, Math.min(w, h) / 12));
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#conceal-pattern)" stroke="#adb5bd" stroke-dasharray="10 6"/>` +
     `<text x="${x + w / 2}" y="${y + h / 2}" font-family="${esc(FONT)}" font-size="${fs * 1.6}" text-anchor="middle">🙈</text>` +
-    `<text x="${x + w / 2}" y="${y + h / 2 + fs * 1.4}" font-family="${esc(FONT)}" font-size="${fs * 0.6}" text-anchor="middle" fill="#495057">Verborgen – die Moderation deckt diesen Bereich auf</text>`;
+    `<text x="${x + w / 2}" y="${y + h / 2 + fs * 1.4}" font-family="${esc(FONT)}" font-size="${fs * 0.6}" text-anchor="middle" fill="#495057">${esc(T('Verborgen – die Moderation deckt diesen Bereich auf'))}</text>`;
 }
 
 // Höhe eines Code-Blocks aus der Zeilenzahl
@@ -1129,7 +1130,7 @@ function renderBody(el, env) {
       // 'none' = ohne Füllung und innen durchklickbar (z. B. Rahmen von Blöcken im Sequenzdiagramm)
       const fillAttr = fill === 'transparent' ? 'rgba(255,255,255,0.001)' : fill;
       const color = el.textColor || (labelOutside(kind) ? '#1a1a1a' : contrastText(fill === 'transparent' || fill === 'none' ? '#ffffff' : fill));
-      const outline = `fill="${fillAttr}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>`;
+      const outline = T`fill="${fillAttr}" stroke="${stroke}" stroke-width="${sw}"${dash ? T` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>`;
       if (kind === 'umlclass') return umlClassSvg(el, x, y, w, h, outline, stroke, sw, color);
       const geo = shapeGeom(kind, x, y, w, h);
       const deco = shapeDecor(kind, x, y, w, h, { fill: fillAttr, stroke, sw, dash });
@@ -1155,10 +1156,10 @@ function renderBody(el, env) {
         const fill = el.fill && el.fill !== '#ffffff' ? el.fill : '#eef2ff';
         return `<rect class="frame-body" x="${x}" y="${y}" width="${w}" height="${h}" rx="16" fill="${fill}" fill-opacity="0.7" stroke="#748ffc" stroke-width="2" stroke-dasharray="8 5"/>` +
           `<rect class="frame-title" x="${x}" y="${y}" width="${w}" height="${ts * 2}" fill="transparent"/>` +
-          `<text class="frame-title-text" x="${x + 14}" y="${y + ts * 1.4}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#364fc7">🗂 ${esc(el.title || 'Thema')}</text>` + concealMarkup(el, env);
+          `<text class="frame-title-text" x="${x + 14}" y="${y + ts * 1.4}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#364fc7">🗂 ${esc(el.title || T('Thema'))}</text>` + concealMarkup(el, env);
       }
       const ts = Math.max(14, Math.min(48, Math.min(w, h) / 45));
-      const title = el.title || 'Frame';
+      const title = el.title || T('Frame');
       const tw = measure(title, ts, true) + 8;
       return `<rect class="frame-body" x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#ffffff'}" stroke="${el.stroke || '#d6d6d6'}" stroke-width="1"/>` +
         `<rect class="frame-title" x="${x}" y="${y - ts * 1.6}" width="${tw}" height="${ts * 1.5}" fill="transparent"/>` +
@@ -1173,7 +1174,7 @@ function renderBody(el, env) {
       const ah = 7 + sw * 2.2;
       const bg = env.labelBg || '#ffffff';
       let out = `<path class="hit" d="${g.d}" fill="none" stroke="transparent" stroke-width="${Math.max(14, sw + 10)}"/>`;
-      out += `<path d="${g.d}" fill="none" stroke="${color}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ''} stroke-linecap="round" stroke-linejoin="round"/>`;
+      out += `<path d="${g.d}" fill="none" stroke="${color}" stroke-width="${sw}"${dash ? T` stroke-dasharray="${dash}"` : ''} stroke-linecap="round" stroke-linejoin="round"/>`;
       out += arrowHead(headType(el.arrowEnd, 'arrow'), g.p2, g.endDir, ah, color, bg, sw);
       out += arrowHead(headType(el.arrowStart, 'none'), g.p1, g.startDir, ah, color, bg, sw);
       if (el.label) {
@@ -1189,7 +1190,7 @@ function renderBody(el, env) {
     case 'pen': {
       const d = penPath(el.points);
       return `<g transform="translate(${r1(x)},${r1(y)})"><path class="hit" d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(12, (el.strokeWidth || 3) + 8)}" stroke-linecap="round"/>` +
-        `<path d="${d}" fill="none" stroke="${el.stroke || '#1a1a1a'}" stroke-width="${el.strokeWidth || 3}" stroke-linecap="round" stroke-linejoin="round"${el.opacity && el.opacity < 1 ? ` stroke-opacity="${el.opacity}"` : ''}/></g>`;
+        `<path d="${d}" fill="none" stroke="${el.stroke || '#1a1a1a'}" stroke-width="${el.strokeWidth || 3}" stroke-linecap="round" stroke-linejoin="round"${el.opacity && el.opacity < 1 ? T` stroke-opacity="${el.opacity}"` : ''}/></g>`;
     }
     case 'file': {
       const [label, color] = fileKind(el.name);
@@ -1205,10 +1206,10 @@ function renderBody(el, env) {
         out += `<path d="M${cx - s * 0.38},${cy - s / 2} h${s * 0.52} l${s * 0.24},${s * 0.24} v${s * 0.76} h${-s * 0.76} Z" fill="#f8f9fa" stroke="${color}" stroke-width="2"/>`;
         out += `<rect x="${cx - s * 0.46}" y="${cy + s * 0.05}" width="${s * 0.92}" height="${s * 0.3}" rx="3" fill="${color}"/><text x="${cx}" y="${cy + s * 0.27}" font-family="${esc(FONT)}" font-size="${s * 0.2}" font-weight="bold" text-anchor="middle" fill="#fff">${label}</text>`;
       }
-      const nl = wrap(el.name || 'Datei', w - 20, 13, true).slice(0, 1);
+      const nl = wrap(el.name || T('Datei'), w - 20, 13, true).slice(0, 1);
       out += `<line x1="${x}" y1="${y + h - head}" x2="${x + w}" y2="${y + h - head}" stroke="#f1f3f5"/>`;
       out += `<text x="${x + 10}" y="${y + h - head + 18}" font-family="${esc(FONT)}" font-size="13" font-weight="bold" fill="#1a1a1a">${esc(nl[0] || '')}</text>`;
-      out += `<text x="${x + 10}" y="${y + h - head + 35}" font-family="${esc(FONT)}" font-size="11" fill="#868e96">${esc(label + ' · ' + fileSize(el.size) + (el.fileId ? '' : ' · nicht verfügbar'))}</text>`;
+      out += `<text x="${x + 10}" y="${y + h - head + 35}" font-family="${esc(FONT)}" font-size="11" fill="#868e96">${esc(label + ' · ' + fileSize(el.size) + (el.fileId ? '' : T(' · nicht verfügbar')))}</text>`;
       return out;
     }
     case 'image': {
@@ -1239,7 +1240,7 @@ function renderBody(el, env) {
         txt += `<tspan x="${r1(x + m.gutter + m.pad)}" y="${ly}">` + toks.map((t) => `<tspan fill="${th[t.k] || th.text}">${esc(t.t)}</tspan>`).join('') + '</tspan>';
       });
       if (m.gutter) out += `<text font-family="${esc(MONO)}" font-size="${m.fs}" fill="${th.gutter}" text-anchor="end">${nums}</text>`;
-      if (!el.text && env.placeholders) txt = `<tspan x="${x + m.gutter + m.pad}" y="${r1(by + base)}" fill="${th.gutter}">Code hier einfügen …</tspan>`;
+      if (!el.text && env.placeholders) txt = `<tspan x="${x + m.gutter + m.pad}" y="${r1(by + base)}" fill="${th.gutter}">${esc(T('Code hier einfügen …'))}</tspan>`;
       out += `<text class="code-text" font-family="${esc(MONO)}" font-size="${m.fs}" fill="${th.text}" xml:space="preserve">${txt}</text></g>`;
       return out;
     }
@@ -1255,7 +1256,7 @@ function renderBody(el, env) {
       }
       const tags = cardTags(el);
       const footer = 28 + (tags.length ? 24 : 0);
-      const tlay = { size: 15, bold: true, italic: false, lines: wrap(el.title || 'Neue Karte', w - pad * 2, 15, true).slice(0, 3) };
+      const tlay = { size: 15, bold: true, italic: false, lines: wrap(el.title || T('Neue Karte'), w - pad * 2, 15, true).slice(0, 3) };
       out += textSvg({ x: x + pad, y: top, w: w - pad * 2, h: 60 }, tlay, { align: 'left', valign: 'top', color: '#1a1a1a' });
       const ty = top + tlay.lines.length * 15 * LH + 6;
       if (el.description) {
@@ -1299,10 +1300,10 @@ function renderBody(el, env) {
       }
       if (pt && fx + ptW <= right + 6) {
         const pw = ptW - 6;
-        out += `<rect x="${fx}" y="${fy}" width="${pw}" height="18" rx="9" fill="#495057"/><text x="${fx + pw / 2}" y="${fy + 13}" font-family="${esc(FONT)}" font-size="11" font-weight="bold" text-anchor="middle" fill="#ffffff">${esc(pt)}</text><title>Story Points / Schätzung</title>`;
+        out += `<rect x="${fx}" y="${fy}" width="${pw}" height="18" rx="9" fill="#495057"/><text x="${fx + pw / 2}" y="${fy + 13}" font-family="${esc(FONT)}" font-size="11" font-weight="bold" text-anchor="middle" fill="#ffffff">${esc(pt)}</text><title>${esc(T('Story Points / Schätzung'))}</title>`;
       }
       if (el.due) {
-        const ds = new Date(el.due + 'T00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+        const ds = new Date(el.due + 'T00:00').toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit' });
         const overdue = new Date(el.due + 'T23:59') < new Date();
         out += `<text x="${x + w - pad - (el.assignee ? 30 : 0)}" y="${fy + 13}" font-family="${esc(FONT)}" font-size="12" text-anchor="end" fill="${overdue ? '#e03131' : '#888888'}">📅 ${ds}</text>`;
       }
@@ -1343,7 +1344,7 @@ function renderBody(el, env) {
       const color = el.resolved ? '#9e9e9e' : el.color || '#4262ff';
       // Zugewiesene Kommentare (Aufgaben) tragen einen orangefarbenen Punkt
       const task = el.task && !el.resolved ? `<circle cx="36" cy="-36" r="6" fill="#f08c00" stroke="#fff" stroke-width="2"/>` : '';
-      return `<g transform="translate(${x},${y}) scale(${s})"${el.resolved ? ' opacity="0.6"' : ''}>` +
+      return `<g transform="translate(${x},${y}) scale(${s})"${el.resolved ? T(' opacity="0.6"') : ''}>` +
         `<path d="M0,0 L0,-26 Q0,-36 10,-36 L26,-36 Q36,-36 36,-26 L36,-14 Q36,-4 26,-4 L8,-4 Z" fill="${color}" stroke="#fff" stroke-width="2" filter="url(#shadow-sm)"/>` +
         `<text x="18" y="-15" font-family="${esc(FONT)}" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle">${n || '+'}</text>${task}</g>`;
     }
@@ -1352,15 +1353,15 @@ function renderBody(el, env) {
 }
 
 export const PRIORITIES = {
-  critical: { label: 'Kritisch', color: '#e03131', icon: '⏫' },
-  high: { label: 'Hoch', color: '#f08c00', icon: '▲' },
-  medium: { label: 'Mittel', color: '#1971c2', icon: '■' },
-  low: { label: 'Niedrig', color: '#868e96', icon: '▼' },
+  critical: { label: T('Kritisch'), color: '#e03131', icon: '⏫' },
+  high: { label: T('Hoch'), color: '#f08c00', icon: '▲' },
+  medium: { label: T('Mittel'), color: '#1971c2', icon: '■' },
+  low: { label: T('Niedrig'), color: '#868e96', icon: '▼' },
 };
 
 export const LANG_LABEL = {
-  plain: '', js: 'JavaScript', python: 'Python', java: 'Java', csharp: 'C#', go: 'Go', php: 'PHP', sql: 'SQL', bash: 'Shell',
-  json: 'JSON', yaml: 'YAML', html: 'HTML', css: 'CSS', dockerfile: 'Dockerfile',
+  plain: '', js: T('JavaScript'), python: T('Python'), java: T('Java'), csharp: 'C#', go: T('Go'), php: T('PHP'), sql: T('SQL'), bash: T('Shell'),
+  json: T('JSON'), yaml: T('YAML'), html: 'HTML', css: T('CSS'), dockerfile: T('Dockerfile'),
 };
 
 export function cardTags(el) {

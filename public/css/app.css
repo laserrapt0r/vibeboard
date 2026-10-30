@@ -578,6 +578,7 @@ body.dark .form-error { background: #3b1f22; color: #ffa8a8; border-color: #5c2a
 .share select { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--panel); font-weight: 400; }
 .invite { display: flex; flex-direction: column; gap: 8px; }
 .invite-row { display: flex; gap: 8px; }
+.invite-row input { flex: 1; min-width: 0; }
 .invite-row select { flex-shrink: 0; }
 .suggest-wrap { position: relative; flex: 1; min-width: 0; }
 .suggest-wrap input { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; background: var(--panel); }

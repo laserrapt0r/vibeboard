@@ -1,4 +1,5 @@
 // Kern des Board-Editors: Zustand, Ansicht, Rendering, Historie, Interaktion
+import { T } from './i18n.js';
 import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
   debounce, throttle, toast, contrastText, STICKY_COLORS, api,
@@ -253,12 +254,12 @@ function renderNode(id, env) {
     nodes.set(id, g);
     orderDirty = true;
   }
-  let cls = 'el el-' + el.type;
-  if (isLocked(el)) cls += ' locked';
+  let cls = T('el el-') + el.type;
+  if (isLocked(el)) cls += T(' locked');
   // Filter (Schlagwörter, Farbe, Person …): nicht passende Elemente werden abgeblendet
-  if (app.filter && el.type !== 'frame' && el.type !== 'connector' && !app.filter(el)) cls += ' dimmed';
-  if (app.discussFocus && app.discussFocus === id) cls += ' discuss-current';
-  if (app.editing && app.editing.id === id && !app.editing.cell) cls += ' editing';
+  if (app.filter && el.type !== 'frame' && el.type !== 'connector' && !app.filter(el)) cls += T(' dimmed');
+  if (app.discussFocus && app.discussFocus === id) cls += T(' discuss-current');
+  if (app.editing && app.editing.id === id && !app.editing.cell) cls += T(' editing');
   g.setAttribute('class', cls);
   try {
     g.innerHTML = renderElement(el, env);
@@ -584,14 +585,14 @@ export function makeElement(type, x, y, o = {}) {
       return autoHeight({ ...base, x: x - 4, y: y - 18, w: 260, h: 38, text: '', fontSize: 24, color: app.settings.dark ? '#f1f1f1' : '#1a1a1a', align: 'left', ...o });
     case 'frame': {
       const n = [...app.els.values()].filter((e) => e.type === 'frame').length + 1;
-      return { ...base, x: x - 640, y: y - 360, w: 1280, h: 720, title: 'Frame ' + n, fill: '#ffffff', order: n, ...o };
+      return { ...base, x: x - 640, y: y - 360, w: 1280, h: 720, title: T('Frame ') + n, fill: '#ffffff', order: n, ...o };
     }
     case 'card':
-      return { ...base, x: x - 150, y: y - 70, w: 300, h: 140, title: 'Neue Karte', description: '', color: '#4262ff', ...o };
+      return { ...base, x: x - 150, y: y - 70, w: 300, h: 140, title: T('Neue Karte'), description: '', color: '#4262ff', ...o };
     case 'code':
       return autoHeight({ ...base, x: x - 260, y: y - 80, w: 520, h: 160, text: '', lang: app.toolOpts.codeLang || 'js', theme: 'dark', fontSize: 14, ...o });
     case 'table': {
-      const cells = [['Spalte 1', 'Spalte 2', 'Spalte 3'], ['', '', ''], ['', '', ''], ['', '', '']];
+      const cells = [[T('Spalte 1'), T('Spalte 2'), T('Spalte 3')], ['', '', ''], ['', '', ''], ['', '', '']];
       return { ...base, x: x - 240, y: y - 100, w: 480, h: 200, rows: 4, cols: 3, cells, header: true, fontSize: 14, ...o };
     }
     case 'emoji':
@@ -781,7 +782,7 @@ function renderOverlay() {
     const ed = p.editing && getEl(p.editing);
     if (ed) labelAt = bounds(ed);
     if (labelAt) {
-      const label = (ed ? '✎ ' : '') + p.name + (ed ? ' schreibt …' : '');
+      const label = (ed ? '✎ ' : '') + p.name + (ed ? T(' schreibt …') : '');
       const fs = 11 / z, lw = (label.length * 6.4 + 14) / z, lh = 18 / z;
       out += `<g class="peer-tag"><rect x="${labelAt.x - 3 / z}" y="${labelAt.y - 3 / z - lh}" width="${lw}" height="${lh}" rx="${4 / z}" fill="${p.color}"/>` +
         `<text x="${labelAt.x + 4 / z}" y="${labelAt.y - 3 / z - lh * 0.3}" font-size="${fs}" font-weight="bold" fill="#fff" font-family="Helvetica, Arial, sans-serif">${escXml(label)}</text></g>`;
@@ -803,7 +804,7 @@ function renderOverlay() {
       continue;
     }
     const b = bounds(el);
-    out += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="none" stroke="${isLocked(el) ? '#868e96' : '#4262ff'}" stroke-width="${sw}"${isLocked(el) ? ` stroke-dasharray="${4 / z} ${3 / z}"` : ''}/>`;
+    out += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="none" stroke="${isLocked(el) ? '#868e96' : '#4262ff'}" stroke-width="${sw}"${isLocked(el) ? T` stroke-dasharray="${4 / z} ${3 / z}"` : ''}/>`;
   }
   const dragging = drag && (drag.mode === 'move' || drag.mode === 'marquee');
   if (!app.viewOnly && sel.length && !app.editing && !dragging) {
@@ -822,10 +823,10 @@ function renderOverlay() {
           const lp = Number.isFinite(Number(c.labelPos)) ? Number(c.labelPos) : 0.5;
           if (c.label && Math.abs(tm - lp) < 0.1) tm = tk[i] + (tk[i + 1] - tk[i]) * (tm < lp ? 0.25 : 0.75);
           const m = pointAlong(g.poly, tm);
-          out += `<g data-handle="add-${i}" class="wp-add"><title>Ziehen: Knickpunkt einfügen</title><circle cx="${m.x}" cy="${m.y}" r="${9 / z}" fill="#4262ff" fill-opacity="0.12"/><circle cx="${m.x}" cy="${m.y}" r="${4.5 / z}" fill="#fff" stroke="#4262ff" stroke-width="${1.5 / z}"/></g>`;
+          out += `<g data-handle="add-${i}" class="wp-add"><title>${T('Ziehen: Knickpunkt einfügen')}</title><circle cx="${m.x}" cy="${m.y}" r="${9 / z}" fill="#4262ff" fill-opacity="0.12"/><circle cx="${m.x}" cy="${m.y}" r="${4.5 / z}" fill="#fff" stroke="#4262ff" stroke-width="${1.5 / z}"/></g>`;
         }
         waypointsOf(c).forEach((p, i) => {
-          out += `<rect data-handle="wp-${i}" class="wp" x="${p.x - 5 / z}" y="${p.y - 5 / z}" width="${10 / z}" height="${10 / z}" rx="${2 / z}" fill="#4262ff" stroke="#fff" stroke-width="${1.5 / z}"><title>Knickpunkt – ziehen zum Verschieben, Doppelklick zum Entfernen</title></rect>`;
+          out += `<rect data-handle="wp-${i}" class="wp" x="${p.x - 5 / z}" y="${p.y - 5 / z}" width="${10 / z}" height="${10 / z}" rx="${2 / z}" fill="#4262ff" stroke="#fff" stroke-width="${1.5 / z}"><title>${T('Knickpunkt – ziehen zum Verschieben, Doppelklick zum Entfernen')}</title></rect>`;
         });
         for (const [k, p] of [['from', g.p1], ['to', g.p2]]) {
           out += `<circle data-handle="${k}" cx="${p.x}" cy="${p.y}" r="${6 / z}" fill="#fff" stroke="#4262ff" stroke-width="${2 / z}"/>`;
@@ -865,8 +866,8 @@ function renderOverlay() {
         }
         // Spaltenbreiten und Zeilenhöhen an den Linien ziehen
         const hw = 8 / z;
-        for (let c = 1; c < cols; c++) out += `<rect data-handle="col-${c - 1}" class="tab-col" x="${xs[c] - hw / 2}" y="${t.y}" width="${hw}" height="${t.h}" fill="transparent"><title>Ziehen: Spaltenbreite ändern</title></rect>`;
-        for (let r = 1; r < rows; r++) out += `<rect data-handle="row-${r - 1}" class="tab-row" x="${t.x}" y="${ys[r] - hw / 2}" width="${t.w}" height="${hw}" fill="transparent"><title>Ziehen: Zeilenhöhe ändern</title></rect>`;
+        for (let c = 1; c < cols; c++) out += `<rect data-handle="col-${c - 1}" class="tab-col" x="${xs[c] - hw / 2}" y="${t.y}" width="${hw}" height="${t.h}" fill="transparent"><title>${T('Ziehen: Spaltenbreite ändern')}</title></rect>`;
+        for (let r = 1; r < rows; r++) out += `<rect data-handle="row-${r - 1}" class="tab-row" x="${t.x}" y="${ys[r] - hw / 2}" width="${t.w}" height="${hw}" fill="transparent"><title>${T('Ziehen: Zeilenhöhe ändern')}</title></rect>`;
       }
       if (sel.length === 1 && ['sticky', 'shape', 'card', 'text', 'image'].includes(sel[0].type)) {
         const off = 24 / z;
@@ -1645,7 +1646,7 @@ function onMove(e) {
               a1 = a0 + size;
             } else if (moveHi) a1 = a0 + size;
             else a0 = a1 - size;
-            eqTags.push(axis === 'x' ? '= Breite' : '= Höhe');
+            eqTags.push(axis === 'x' ? T('= Breite') : T('= Höhe'));
           }
         }
         if (axis === 'x') {
@@ -1974,7 +1975,7 @@ function onUp(e) {
         // ohne Gruppenerweiterung: nur dieses Element
         app.sel = new Set([d.clickSelectSingle]);
         selectionChanged();
-        toast('Einzelnes Element der Gruppe ausgewählt – Klick daneben wählt wieder die ganze Gruppe', 2500);
+        toast(T('Einzelnes Element der Gruppe ausgewählt – Klick daneben wählt wieder die ganze Gruppe'), 2500);
       }
       app.emit('dragging', false);
       break;
@@ -2023,7 +2024,7 @@ function onUp(e) {
       commit();
       if (d.cycleTo) {
         setSelection([d.cycleTo]);
-        toast('Mehrere Linien liegen hier übereinander – jeder weitere Klick wählt die nächste', 2500);
+        toast(T('Mehrere Linien liegen hier übereinander – jeder weitere Klick wählt die nächste'), 2500);
       }
       break;
     case 'conn-end':
@@ -2096,7 +2097,7 @@ function quickConnect(d, w, target) {
     return;
   }
   // neues Element in Pfeilrichtung (Klick) oder am Ablagepunkt (Ziehen)
-  const copy = { ...clone(src), id: uid(), z: nextZ(), text: '', title: src.type === 'card' ? 'Neue Karte' : src.title, description: '', groupId: undefined, author: app.user.name || '' };
+  const copy = { ...clone(src), id: uid(), z: nextZ(), text: '', title: src.type === 'card' ? T('Neue Karte') : src.title, description: '', groupId: undefined, author: app.user.name || '' };
   delete copy.src;
   if (src.type === 'image') {
     Object.assign(copy, { type: 'shape', shape: 'roundrect', fill: '#ffffff', stroke: '#1a1a1a', strokeWidth: 2, fontSize: 18 });
@@ -2143,7 +2144,7 @@ stage.addEventListener('dblclick', (e) => {
   const hit = hitInfo(e.target);
   if (hit && isLocked(hit.el)) {
     setSelection([hit.el.id]);
-    toast(hit.el.locked ? 'Dieses Element ist gesperrt – zum Bearbeiten entsperren (Strg+L oder Schloss-Symbol)' : 'Dieses Element hat die Moderation für Teilnehmende gesperrt', 3500);
+    toast(hit.el.locked ? T('Dieses Element ist gesperrt – zum Bearbeiten entsperren (Strg+L oder Schloss-Symbol)') : T('Dieses Element hat die Moderation für Teilnehmende gesperrt'), 3500);
     return;
   }
   const w = toWorld(e.clientX, e.clientY);
@@ -2208,7 +2209,7 @@ export function duplicateEls(list, dx = 20, dy = 20, select = true) {
   // Kommentare gehören zu ihrem Ort und ihren Personen – sie werden nicht kopiert (wie beim Export)
   const comments = list.filter((e) => e.type === 'comment').length;
   list = list.filter((e) => !e.hidden && e.type !== 'comment');
-  if (comments) toast(`${comments} Kommentar${comments === 1 ? ' wird' : 'e werden'} nicht mitkopiert`, 3500);
+  if (comments) toast(T`Nicht mitkopierte Kommentare: ${comments}`, 3500);
   if (!list.length) return [];
   const idMap = new Map(list.map((e) => [e.id, uid()]));
   const groupMap = new Map();
@@ -2353,13 +2354,13 @@ export function tableAction(action) {
       }
       case 'deleteRows': {
         const n = rg.r1 - rg.r0 + 1;
-        if (n >= t.rows) return toast('Die letzte Zeile kann nicht gelöscht werden');
+        if (n >= t.rows) return toast(T('Die letzte Zeile kann nicht gelöscht werden'));
         if (tableStruct(t, { action: 'deleteRows', at: rg.r0, count: n })) sel = [Math.min(rg.r0, t.rows - n - 1), rg.c0];
         break;
       }
       case 'deleteCols': {
         const n = rg.c1 - rg.c0 + 1;
-        if (n >= t.cols) return toast('Die letzte Spalte kann nicht gelöscht werden');
+        if (n >= t.cols) return toast(T('Die letzte Spalte kann nicht gelöscht werden'));
         if (tableStruct(t, { action: 'deleteCols', at: rg.c0, count: n })) sel = [rg.r0, Math.min(rg.c0, t.cols - n - 1)];
         break;
       }
@@ -2415,19 +2416,19 @@ const sizable = () => selectedEls().filter((e) => e.type !== 'connector' && e.ty
 export function matchSize(kind) {
   // Auch ein gesperrtes Element darf Referenz sein; angepasst werden nur nicht gesperrte
   const all = selectedEls().filter((e) => e.type !== 'connector' && e.type !== 'comment' && !e.hidden);
-  if (all.length < 2) return toast('Bitte mindestens zwei Elemente auswählen');
+  if (all.length < 2) return toast(T('Bitte mindestens zwei Elemente auswählen'));
   const ref = all[0];
   const sel = [ref, ...all.slice(1).filter((e) => !isLocked(e))];
   act(() => {
     for (const el of sel.slice(1)) setEl(resized(el, kind !== 'h' ? ref.w : el.w, kind !== 'w' ? ref.h : el.h));
   });
-  toast(`${kind === 'w' ? 'Breite' : kind === 'h' ? 'Höhe' : 'Größe'} von „${String(ref.text || ref.title || 'erstem Element').slice(0, 30)}“ übernommen`);
+  toast(T`${kind === 'w' ? T('Breite') : kind === 'h' ? T('Höhe') : T('Größe')} von „${String(ref.text || ref.title || T('erstem Element')).slice(0, 30)}“ übernommen`);
 }
 
 // Lückenlos bzw. mit festem Abstand aneinanderreihen (Reihenfolge nach Lage)
 export function packSel(axis, gap = 0) {
   const sel = sizable();
-  if (sel.length < 2) return toast('Bitte mindestens zwei Elemente auswählen');
+  if (sel.length < 2) return toast(T('Bitte mindestens zwei Elemente auswählen'));
   const [p, s] = axis === 'h' ? ['x', 'w'] : ['y', 'h'];
   sel.sort((a, b) => a[p] - b[p]);
   let pos = sel[0][p] + sel[0][s] + gap;
@@ -2461,10 +2462,10 @@ export function copySize() {
   const el = sizable()[0];
   if (!el) return;
   copiedSize = { w: el.w, h: el.h };
-  toast(`Größe ${Math.round(el.w)} × ${Math.round(el.h)} kopiert`);
+  toast(T`Größe ${Math.round(el.w)} × ${Math.round(el.h)} kopiert`);
 }
 export function pasteSize(kind = 'both') {
-  if (!copiedSize) return toast('Zuerst eine Größe kopieren');
+  if (!copiedSize) return toast(T('Zuerst eine Größe kopieren'));
   act(() => sizable().forEach((el) => setEl(resized(el, kind !== 'h' ? copiedSize.w : el.w, kind !== 'w' ? copiedSize.h : el.h))));
 }
 export const hasCopiedSize = () => !!copiedSize;
@@ -2517,7 +2518,7 @@ function smartDuplicate() {
 
 export function clusterByColor() {
   const stickies = selectedEls().filter((e) => e.type === 'sticky' && !isLocked(e));
-  if (stickies.length < 2) return toast('Bitte mehrere Sticky Notes auswählen');
+  if (stickies.length < 2) return toast(T('Bitte mehrere Sticky Notes auswählen'));
   const groups = new Map();
   for (const s of stickies) {
     if (!groups.has(s.fill)) groups.set(s.fill, []);
@@ -2535,7 +2536,7 @@ export function clusterByColor() {
       x += cols * (sw + 15) + 80;
     }
   });
-  toast(`${groups.size} Farb-Cluster gebildet`);
+  toast(T`${groups.size} Farb-Cluster gebildet`);
 }
 
 export function bringToFront() {
@@ -2554,12 +2555,12 @@ export function groupSel() {
   if (sel.length < 2) return;
   const gid = uid();
   act(() => sel.forEach((el) => setEl({ ...el, groupId: gid })));
-  toast('Gruppiert');
+  toast(T('Gruppiert'));
 }
 
 export function ungroupSel() {
   act(() => selectedEls().forEach((el) => el.groupId && setEl({ ...el, groupId: undefined })));
-  toast('Gruppierung aufgehoben');
+  toast(T('Gruppierung aufgehoben'));
 }
 
 export function toggleLock() {
@@ -2585,7 +2586,7 @@ export function toggleModLock() {
     if (!lock) delete n.modLock;
     setEl(n);
   }));
-  toast(lock ? 'Für Teilnehmende gesperrt – nur Moderierende können diese Elemente ändern' : 'Für Teilnehmende freigegeben');
+  toast(lock ? T('Für Teilnehmende gesperrt – nur Moderierende können diese Elemente ändern') : T('Für Teilnehmende freigegeben'));
   scheduleRender(true);
   app.emit('selection');
 }
@@ -2842,7 +2843,7 @@ document.addEventListener('paste', (e) => {
     try {
       pasteElements(JSON.parse(text.slice(CLIP_PREFIX.length)), at);
     } catch {
-      toast('Einfügen fehlgeschlagen');
+      toast(T('Einfügen fehlgeschlagen'));
     }
     return;
   }
@@ -2871,7 +2872,7 @@ export function pasteText(text, at) {
   const ox = at.x - (cols * (size + gap)) / 2, oy = at.y - (Math.ceil(lines.length / cols) * (size + gap)) / 2;
   const list = lines.slice(0, 400).map((l, i) => makeElement('sticky', 0, 0, { x: ox + (i % cols) * (size + gap), y: oy + Math.floor(i / cols) * (size + gap), text: l }));
   addElements(list);
-  toast(`${list.length} Sticky Notes erstellt`);
+  toast(T`${list.length} Sticky Notes erstellt`);
 }
 
 /* ================================================================== */
@@ -2902,7 +2903,7 @@ export function insertImageFile(file, at) {
       const el = { id: uid(), type: 'image', z: nextZ(), x: p.x - dispW / 2, y: p.y - dispH / 2, w: dispW, h: dispH, src, name: file.name, author: app.user.name || '' };
       addElements([el]);
     };
-    img.onerror = () => toast('Bild konnte nicht gelesen werden');
+    img.onerror = () => toast(T('Bild konnte nicht gelesen werden'));
     img.src = reader.result;
   };
   reader.readAsDataURL(file);

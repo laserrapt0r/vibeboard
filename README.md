@@ -1,22 +1,24 @@
 # vibeboard
 
-Ein selbst gehostetes, kollaboratives Online-Whiteboard. Mehrere Personen arbeiten gleichzeitig auf einer
-unendlichen Leinwand: mit Sticky Notes, Formen, Verbindungen, Mindmaps, Kommentaren, Abstimmungen und über 75
-Vorlagen für Workshops, Retrospektiven, Strategiearbeit, Softwareentwicklung, Projektmanagement und
-IT-Service-Management. Für Entwicklungsteams gibt es Code-Blöcke, Diagramme aus Text (Mermaid-Schreibweise),
-Schätzrunden und einen Kartenimport aus Jira- oder Excel-Exporten. Für die Arbeit im Team gibt es Benachrichtigungen
-bei @Erwähnungen, einen Aktivitätsverlauf, Moderationsrechte, Teams und Ordner, befristete Gastlinks und
-aufgezeichnete Rundgänge. Dazu gibt es Benutzerkonten mit E-Mail-Bestätigung und optionaler Zwei-Faktor-Anmeldung,
-Rechte pro Board und eine Administrationsoberfläche. Die Daten liegen in PostgreSQL.
+**English** · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-- Läuft komplett auf dem eigenen Server: keine CDNs, kein Tracking, keine Pflicht-Abhängigkeit von externen Diensten.
-- Hochgeladene Dateien werden mit ClamAV auf Schadsoftware geprüft.
-- Automatische Upgrades mit Sicherung: Neue Versionen aktualisieren die Datenbank beim Start selbst.
-- Alle Funktionen sind als Anforderungen dokumentiert: [docs/anforderungen](docs/anforderungen/README.md).
-- Frontend in reinem JavaScript und SVG, ohne Build-Schritt.
-- Backend in Node.js mit nur drei Abhängigkeiten (`pg`, `nodemailer`, `uqr`).
+A self-hosted, collaborative online whiteboard. Several people work at the same time on an infinite canvas: with sticky
+notes, shapes, connectors, mind maps, comments, votes and more than 75 templates for workshops, retrospectives, strategy
+work, software development, project management and IT service management. For development teams there are code blocks,
+diagrams from text (Mermaid syntax), estimation rounds and a card import from Jira or Excel exports. For teamwork there
+are notifications for @mentions, an activity history, facilitation rights, teams and folders, time-limited guest links
+and recorded walkthroughs. In addition there are user accounts with email confirmation and optional two-factor sign-in,
+permissions per board and an administration interface. The data is stored in PostgreSQL.
 
-![Zusammenarbeit in Echtzeit: Mauszeiger mit Namen, Auswahl einer anderen Person und Cursor-Chat](docs/screenshots/zusammenarbeit.png)
+- Runs entirely on your own server: no CDNs, no tracking, no mandatory dependency on external services.
+- Uploaded files are scanned for malware with ClamAV.
+- Automatic upgrades with backup: new versions update the database themselves on startup.
+- All features are documented as requirements: [docs/anforderungen](docs/anforderungen/README.md) (the requirements documents are in German).
+- Frontend in plain JavaScript and SVG, without a build step.
+- Backend in Node.js with only four dependencies (`pg`, `nodemailer`, `uqr`, `pdfjs-dist`).
+- Interface in English, German, Spanish and French – the language follows the browser, the default is English.
+
+![Real-time collaboration: mouse pointers with names, another person's selection and cursor chat](docs/screenshots/zusammenarbeit.png)
 
 ---
 
@@ -24,270 +26,272 @@ Rechte pro Board und eine Administrationsoberfläche. Die Daten liegen in Postgr
 
 | | |
 |---|---|
-| ![Board-Übersicht mit „Meine Aufgaben“](docs/screenshots/uebersicht.png) | ![Sprint-Planung mit Aufgaben-Panel und Schätzrunde](docs/screenshots/sprint-schaetzrunde.png) |
-| **Übersicht:** eigene und geteilte Boards, „Meine Aufgaben“ über alle Boards | **Sprint-Planung:** Karten mit Priorität und Story Points, Aufgaben-Panel, Schätzrunde mit verdeckten Karten |
-| ![Architekturdiagramm mit gebogenem Verbinder und Knickpunkten](docs/screenshots/architektur-verbinder.png) | ![Dialog „Diagramm aus Text“ mit Live-Vorschau](docs/screenshots/diagramm-aus-text.png) |
-| **Verbinder:** frei andocken, biegen, Knickpunkte, Linienenden | **Diagramm aus Text:** Mermaid-Schreibweise wird zu bearbeitbaren Formen |
-| ![API-Design mit Tabelle und Code-Block](docs/screenshots/api-design-code.png) | ![Vorlage Incident-Postmortem](docs/screenshots/incident-postmortem.png) |
-| **Softwareentwicklung:** Tabellen und Code-Blöcke mit Syntaxhervorhebung | **IT-Service-Management:** z. B. Incident-Postmortem |
-| ![Vorlagen-Galerie, Kategorie IT-Service-Management](docs/screenshots/vorlagen.png) | ![Administration mit Systemmetriken](docs/screenshots/administration.png) |
-| **Über 75 Vorlagen** in 12 Kategorien | **Administration:** Übersicht mit CPU, Arbeitsspeicher, Speicherplatz und mehr |
+| ![Board overview with “My tasks”](docs/screenshots/uebersicht.png) | ![Sprint planning with task panel and estimation round](docs/screenshots/sprint-schaetzrunde.png) |
+| **Overview:** own and shared boards, “My tasks” across all boards | **Sprint planning:** cards with priority and story points, task panel, estimation round with hidden cards |
+| ![Architecture diagram with curved connector and bend points](docs/screenshots/architektur-verbinder.png) | ![“Diagram from text” dialog with live preview](docs/screenshots/diagramm-aus-text.png) |
+| **Connectors:** attach freely, curve, bend points, line ends | **Diagram from text:** Mermaid syntax becomes editable shapes |
+| ![API design with table and code block](docs/screenshots/api-design-code.png) | ![Incident postmortem template](docs/screenshots/incident-postmortem.png) |
+| **Software development:** tables and code blocks with syntax highlighting | **IT service management:** e.g. incident postmortem |
+| ![Template gallery, category IT service management](docs/screenshots/vorlagen.png) | ![Administration with system metrics](docs/screenshots/administration.png) |
+| **More than 75 templates** in 12 categories | **Administration:** overview with CPU, memory, disk space and more |
 
-Alle Inhalte in den Screenshots sind Beispieldaten.
+All content in the screenshots is sample data.
 
 ---
 
-## Inhalt
+## Contents
 
 - [Screenshots](#screenshots)
-- [Funktionen](#funktionen)
-- [Vorlagen](#vorlagen)
+- [Features](#features)
+- [Templates](#templates)
 - [Installation](#installation)
-- [Konfiguration](#konfiguration)
-- [Konten und Anmeldung](#konten-und-anmeldung)
-- [Rechte auf Boards](#rechte-auf-boards)
+- [Configuration](#configuration)
+- [Accounts and sign-in](#accounts-and-sign-in)
+- [Permissions on boards](#permissions-on-boards)
 - [Administration](#administration)
-- [Virenschutz für Uploads](#virenschutz-für-uploads)
-- [Versionen und Upgrades](#versionen-und-upgrades)
-- [Protokollierung](#protokollierung)
-- [Sicherheit](#sicherheit)
-- [Datenhaltung und Datenschutz](#datenhaltung-und-datenschutz)
-- [Architektur](#architektur)
-- [Lizenz](#lizenz)
+- [Languages](#languages)
+- [Virus protection for uploads](#virus-protection-for-uploads)
+- [Versions and upgrades](#versions-and-upgrades)
+- [Logging](#logging)
+- [Security](#security)
+- [Data storage and privacy](#data-storage-and-privacy)
+- [Architecture](#architecture)
+- [License](#license)
 
 ---
 
-## Funktionen
+## Features
 
-### Leinwand und Navigation
-- Unendliche Leinwand mit Zoom von 1 % bis 800 %
-- Verschieben mit Leertaste, Hand-Werkzeug, mittlerer Maustaste oder Trackpad; Pinch-Zoom auf Touch-Geräten
-- Minimap, „Alles anzeigen“, feste Zoomstufen
-- Punktraster, Einrasten am Raster, intelligente Hilfslinien beim Verschieben
-- Helles und dunkles Design; die Ansicht wird pro Board gemerkt
+### Canvas and navigation
+- Infinite canvas with zoom from 1 % to 800 %
+- Pan with the space bar, hand tool, middle mouse button or trackpad; pinch zoom on touch devices
+- Minimap, “Show all”, fixed zoom levels
+- Dot grid, snap to grid, smart guides when moving
+- Light and dark theme; the view is remembered per board
 
-### Inhalte
-| Element | Möglichkeiten |
-|---------|---------------|
-| **Sticky Notes** | 16 Farben, automatische Schriftgröße, optional mit Name der Autorin bzw. des Autors |
-| **Text** | Schriftgröße, Farbe, fett, kursiv, Ausrichtung, Hintergrund |
-| **Formen** | Über 60 Formen in sieben Gruppen: Grundformen, Flussdiagramm (Dokument, mehrere Dokumente, manuelle Eingabe, Anzeige u. a.), UML (Klasse mit Abschnitten, Akteur, Paket, Komponente, Knoten, Start/Ende, Gabelung, Signale), BPMN (Ereignisse, Gateways), Netzwerk & Rechenzentrum (Router, Switch, Firewall, Load Balancer, Access Point, Internet, Server, Serverschrank, Speichersystem, PC, Smartphone), Software & IT, Container-Plattform (Pod, Deployment, Service, Ingress, Node, ConfigMap, Secret, Volume) – alles eigene Zeichnungen, mit Füllung, Rahmen, Strichart und Text |
-| **Verbindungen** | gerade, gewinkelt oder als Kurve; docken an jeder Stelle des Umrisses an (oder automatisch); Linie ziehen biegt sie, Knickpunkte einfügen, verschieben und entfernen; verschiebbare Beschriftung; 9 Linienenden (Pfeil, Raute, Kreis, Krähenfuß u. a.), Strichart |
-| **Quick Connect** | Punkte an einem ausgewählten Element anklicken oder ziehen, um verbundene Elemente zu erzeugen |
-| **Freihand** | Stift, Textmarker, Radierer |
-| **Frames** | Bereiche bzw. Folien mit Formaten (16:9, 4:3, A4, Quadrat, Smartphone); der Inhalt wandert beim Verschieben mit |
-| **Karten** | Aufgaben mit Beschreibung, Zuständigkeit, Fälligkeitsdatum, Status, Priorität, Story Points, Ticketnummer, Labels und Farbe |
-| **Code-Blöcke** | Quelltext mit Syntaxhervorhebung für 13 Sprachen, Zeilennummern, hellem oder dunklem Schema, Kopieren-Knopf |
-| **Diagramm aus Text** | Fluss- und Sequenzdiagramme in Mermaid-Schreibweise eingeben, mit Live-Vorschau; es entstehen normale, bearbeitbare Formen und Verbindungen |
-| **Tabellen** | Zellen und Bereiche auswählen; je Zelle fett, kursiv, unterstrichen, durchgestrichen, Ausrichtung, Schriftgröße, Text- und Zellenfarbe; Zeilen/Spalten an beliebiger Stelle einfügen und löschen; Spaltenbreiten und Zeilenhöhen ziehen; Tastaturbedienung wie in einer Tabellenkalkulation |
-| **Mindmaps** | Knoten auswählen, dann **Tab** für einen Unterknoten und **Enter** für einen Geschwisterknoten |
-| **Bilder** | per Upload, Drag & Drop oder aus der Zwischenablage; große Bilder werden automatisch verkleinert |
-| **Sticker** | Emojis als frei platzierbare Elemente |
-| **Links** | URL an Elemente hängen; ein Link-Symbol öffnet sie |
-| **Kommentare** | Threads an beliebiger Stelle, @Erwähnungen mit Vorschlagsliste und Benachrichtigung, „Erledigt“-Status, als Aufgabe zuweisen (mit Fälligkeit), Kommentarübersicht mit Filter „Mir zugewiesen“ |
+### Content
+| Element | Options |
+|---------|---------|
+| **Sticky notes** | 16 colors, automatic font size, optionally with the author's name |
+| **Text** | Font size, color, bold, italic, alignment, background |
+| **Shapes** | More than 60 shapes in seven groups: basic shapes, flowchart (document, multiple documents, manual input, display, etc.), UML (class with compartments, actor, package, component, node, start/end, fork, signals), BPMN (events, gateways), network & data center (router, switch, firewall, load balancer, access point, internet, server, server rack, storage system, PC, smartphone), software & IT, container platform (pod, deployment, service, ingress, node, ConfigMap, secret, volume) – all custom drawings, with fill, border, line style and text |
+| **Connectors** | straight, angled or curved; attach at any point of the outline (or automatically); dragging the line curves it, bend points can be inserted, moved and removed; movable label; 9 line ends (arrow, diamond, circle, crow's foot, etc.), line style |
+| **Quick connect** | Click or drag the dots on a selected element to create connected elements |
+| **Freehand** | Pen, highlighter, eraser |
+| **Frames** | Areas or slides with formats (16:9, 4:3, A4, square, smartphone); the content moves along when the frame is moved |
+| **Cards** | Tasks with description, assignee, due date, status, priority, story points, ticket number, labels and color |
+| **Code blocks** | Source code with syntax highlighting for 13 languages, line numbers, light or dark scheme, copy button |
+| **Diagram from text** | Enter flowcharts and sequence diagrams in Mermaid syntax, with live preview; the result is normal, editable shapes and connectors |
+| **Tables** | Select cells and ranges; per cell bold, italic, underline, strikethrough, alignment, font size, text and cell color; insert and delete rows/columns anywhere; drag column widths and row heights; keyboard control like a spreadsheet |
+| **Mind maps** | Select a node, then **Tab** for a child node and **Enter** for a sibling node |
+| **Images** | by upload, drag & drop or from the clipboard; large images are scaled down automatically |
+| **Stickers** | Emojis as freely placeable elements |
+| **Links** | Attach a URL to elements; a link icon opens it |
+| **Comments** | Threads anywhere, @mentions with suggestion list and notification, “Done” status, assign as a task (with due date), comment overview with the “Assigned to me” filter |
 
-Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pro Zeile.
+Pasting multi-line text into the board automatically creates one sticky note per line.
 
-### Bearbeiten
-- Mehrfachauswahl per Auswahlrahmen oder Umschalt-Klick
-- **Größe ändern:**
-  - Seitengriffe ändern nur Breite oder Höhe, auch bei flachen Elementen wie Gantt-Balken.
-  - Umschalt behält das Seitenverhältnis, Alt ändert von der Mitte aus.
-  - Die Größe wird beim Ziehen angezeigt.
-- **Einrasten:**
-  - an Kanten, Mitten und Tabellenlinien anderer Elemente
-  - an gleicher Breite/Höhe und an gleichen Abständen (mit Abstandsmarken)
-  - am Raster (10–50 px wählbar)
-  - Umschalt verschiebt nur waagerecht oder senkrecht.
-- **Exakte Werte:** X, Y, Breite und Höhe eingeben, auch für mehrere Elemente gleichzeitig.
-- **Mehrfachauswahl:**
-  - Ausrichten (links, mittig, rechts, oben, unten), gleichmäßig verteilen, lückenlos oder mit festem Abstand
-    aneinanderreihen, als Raster anordnen.
-  - Gleiche Breite, Höhe oder Größe; Größe kopieren und übernehmen; am Raster ausrichten.
-- **Intelligentes Duplizieren:** Strg+D wiederholt den zuletzt verwendeten Versatz.
-- Sticky Notes nach Farbe clustern
-- Gruppieren, Sperren, Ebenen (Vorder- und Hintergrund), Duplizieren (auch per Alt-Ziehen); ein zweiter Klick in eine
-  Gruppe wählt ein einzelnes Element zum Bearbeiten
-- Kopieren und Einfügen, auch zwischen Boards
-- Rückgängig und Wiederholen, Kontextmenü, Suche (Strg+F)
-- Umfangreiche Tastenkürzel (Übersicht mit `?`)
+### Editing
+- Multi-select with a selection rectangle or Shift-click
+- **Resize:**
+  - Side handles change only the width or height, also for flat elements such as Gantt bars.
+  - Shift keeps the aspect ratio, Alt resizes from the center.
+  - The size is displayed while dragging.
+- **Snapping:**
+  - to edges, centers and table lines of other elements
+  - to equal width/height and to equal spacing (with distance markers)
+  - to the grid (10–50 px selectable)
+  - Shift moves only horizontally or vertically.
+- **Exact values:** enter X, Y, width and height, also for several elements at once.
+- **Multi-selection:**
+  - Align (left, center, right, top, bottom), distribute evenly, line up seamlessly or with a fixed gap,
+    arrange as a grid.
+  - Same width, height or size; copy and apply size; align to grid.
+- **Smart duplicate:** Ctrl+D repeats the most recently used offset.
+- Cluster sticky notes by color
+- Group, lock, layers (front and back), duplicate (also by Alt-dragging); a second click in a group selects a single
+  element for editing
+- Copy and paste, also between boards
+- Undo and redo, context menu, search (Ctrl+F)
+- Extensive keyboard shortcuts (overview with `?`)
 
-### Zusammenarbeit in Echtzeit
-- Änderungen erscheinen sofort bei allen Teilnehmenden
-- **Live-Cursor mit Namen:**
-  - Die Auswahl der anderen ist farbig markiert und mit Namen beschriftet; wer gerade tippt, wird mit
-    „✎ Name schreibt …“ angezeigt.
-  - Personen außerhalb der eigenen Ansicht erscheinen als Pfeil am Bildschirmrand; ein Klick springt hin.
-  - Abwesende (anderer Tab) werden ausgegraut; die Ansichten aller stehen als Rahmen in der Minimap.
-  - Fremde Mauszeiger lassen sich in den Einstellungen ausblenden.
-- **Cursor-Chat:** Mit `/` eine kurze Nachricht direkt am eigenen Mauszeiger zeigen, ohne einen Kommentar anzulegen
-- Teilnehmerliste mit „Folgen“ (der Ansicht einer Person folgen), „Alle zu mir holen“ und „Alle folgen mir“
-- **Privater Modus:** Alle sammeln zunächst verdeckt – neue Inhalte sieht nur, wer sie erstellt hat, bis gemeinsam
-  aufgedeckt wird. Der Server gibt die Inhalte vorher an niemanden sonst heraus.
-- Fliegende Reaktionen (Emojis) und Laserpointer
-- Automatisches Wiederverbinden; ungesendete Änderungen gehen nicht verloren
-- **Speicherstatus** in der Kopfzeile: „Gespeichert“ erst, wenn alle eigenen Änderungen in der Datenbank angekommen
-  sind; sonst „Wird gespeichert …“, „Offline – n ausstehend“ oder „Speichern verzögert“. Solange Änderungen offline
-  feststecken, fragt der Browser vor dem Schließen der Seite nach.
-- **Ladeanzeige:** Beim Öffnen eines Boards erscheint nach kurzer Zeit eine Ladeanzeige, nach einigen Sekunden mit
-  Hinweis auf einen möglichen Proxy. Die Startseite zeigt Platzhalter, längere Anfragen einen Fortschrittsbalken.
-- **Funktioniert auch in restriktiven Netzen:** Es werden keine WebSockets benötigt. Die Echtzeit-Übertragung läuft über
-  Server-Sent Events (normales HTTP). Werden auch diese blockiert oder von einem Proxy gepuffert, wechselt vibeboard
-  nach spätestens vier Sekunden auf Long-Polling und merkt sich das im Browser sieben Tage lang – das nächste Board
-  öffnet dann ohne Wartezeit. Mit `?transport=sse` bzw. `?transport=poll` lässt sich das Verfahren erzwingen.
+### Real-time collaboration
+- Changes appear immediately for all participants
+- **Live cursors with names:**
+  - The selection of others is marked in color and labeled with their name; anyone who is currently typing is shown as
+    “✎ Name is writing …”.
+  - People outside your own view appear as an arrow at the edge of the screen; a click jumps to them.
+  - Absent people (other tab) are grayed out; everyone's views are shown as frames in the minimap.
+  - Other people's mouse pointers can be hidden in the settings.
+- **Cursor chat:** Press `/` to show a short message right at your own mouse pointer, without creating a comment
+- Participant list with “Follow” (follow a person's view), “Bring everyone to me” and “Everyone follows me”
+- **Private mode:** Everyone collects privately at first – new content is seen only by whoever created it, until it is
+  revealed together. The server does not hand out the content to anyone else beforehand.
+- Flying reactions (emojis) and laser pointer
+- Automatic reconnection; unsent changes are not lost
+- **Save status** in the header: “Saved” only once all your own changes have arrived in the database; otherwise
+  “Saving …”, “Offline – n pending” or “Saving delayed”. As long as changes are stuck offline, the browser asks before
+  the page is closed.
+- **Loading indicator:** When a board is opened, a loading indicator appears after a short time, after a few seconds
+  with a hint about a possible proxy. The home page shows placeholders, longer requests a progress bar.
+- **Also works in restrictive networks:** No WebSockets are needed. Real-time transmission runs over Server-Sent Events
+  (plain HTTP). If these are blocked too or buffered by a proxy, vibeboard switches to long polling after four seconds
+  at the latest and remembers this in the browser for seven days – the next board then opens without waiting. With
+  `?transport=sse` or `?transport=poll` the method can be forced.
 
-  *Warum kann es hinter einem Forward-Proxy dauern?* Server-Sent Events sind eine HTTP-Antwort, die nie endet. Manche
-  Proxys (und Virenscanner in Proxys) halten Antworten zurück, bis sie vollständig oder ein Puffer voll ist – beim
-  Board kommt dann zunächst gar nichts an. vibeboard schickt deshalb am Anfang 2 KB Füllzeichen (genügt für viele
-  Proxys) und erkennt einen hängenden Stream an einer fehlenden Startnachricht.
+  *Why can it take a while behind a forward proxy?* Server-Sent Events are an HTTP response that never ends. Some
+  proxies (and virus scanners in proxies) hold back responses until they are complete or a buffer is full – in that
+  case nothing arrives at the board at first. vibeboard therefore sends 2 KB of padding at the start (enough for many
+  proxies) and detects a hanging stream by a missing start message.
 
-### Arbeiten im Team
-- **Benachrichtigungen:** Glocke auf der Startseite und im Board für @Erwähnungen, Antworten und zugewiesene
-  Kommentare – live und, wenn gewünscht, per E-Mail (höchstens eine je Board alle zehn Minuten, im Profil abschaltbar).
-- **Aktivitätsverlauf:** wer hat wann was erstellt, geändert, gelöscht oder kommentiert – zusammengefasst, mit Sprung zum
-  Element. Beim Öffnen zeigt ein Hinweis die Änderungen anderer seit dem letzten Besuch und markiert sie auf der Leinwand.
-- **Rolle „Kommentieren“** zwischen Ansehen und Bearbeiten – für Fachbereiche, Kunden oder Reviews.
-- **Teams und Ordner:** Boards für ein ganzes Team freigeben (bearbeiten, kommentieren oder ansehen), persönliche
-  Ordner und Ordner im Team. Neue Mitglieder werden per E-Mail-Adresse **eingeladen** und müssen die Einladung
-  annehmen (Startseite oder Glocke); Team-Verwaltende sehen offene Einladungen und können sie zurückziehen.
-- **Gastlinks:** Personen ohne Konto sehen oder kommentieren ein einzelnes Board – befristet, jederzeit sperrbar,
-  standardmäßig abgeschaltet.
-- **Rundgänge aufzeichnen:** Ansicht, Mauszeiger und Laserpointer, auf Wunsch mit Ton; andere spielen den Rundgang ab
-  und können dabei selbst navigieren.
-- **Reaktionen:** Emojis direkt an Sticky Notes, Karten & Co. – mit Anzahl und Namen, auch für Betrachter (Rechtsklick).
-- **Schlagwörter und Filter:** Sticky Notes, Karten und Formen verschlagworten; der Filter blendet alles andere ab
-  (nach Schlagwort, Farbe, Person, Reaktionen, Maßnahmen) – nur in der eigenen Ansicht.
-- **Dateianhänge:** PDF, Word, Excel, PowerPoint, OpenDocument, Text, CSV und JSON auf das Board legen; PDFs mit
-  Vorschau der ersten Seite und Betrachter (pdf.js), alles mit Virenscan und als Download.
-- **Chat-Anbindung (Webhooks):** Benachrichtigungen in den eigenen Chat (Microsoft Teams, Slack, Matrix oder JSON),
-  Team-Kanäle für neue Team-Boards und Retro-Zusammenfassungen. Standardmäßig abgeschaltet, mit Schutz vor Aufrufen
-  ins interne Netz.
+### Teamwork
+- **Notifications:** Bell on the home page and in the board for @mentions, replies and assigned comments – live and, if
+  desired, by email (at most one per board every ten minutes, can be switched off in the profile).
+- **Activity history:** who created, changed, deleted or commented what and when – summarized, with a jump to the
+  element. On opening, a notice shows the changes by others since your last visit and marks them on the canvas.
+- **“Comment” role** between view and edit – for business units, customers or reviews.
+- **Teams and folders:** Share boards with a whole team (edit, comment or view), personal folders and folders in the
+  team. New members are **invited** by email address and must accept the invitation (home page or bell); team admins
+  see open invitations and can withdraw them.
+- **Invitation without an account:** Boards and teams can also be shared with addresses that are not yet registered.
+  After a confirmation prompt an invitation email is sent; after registering via the link, the board is shared or the
+  person is in the team.
+- **Guest links:** People without an account view or comment on a single board – time-limited, can be blocked at any
+  time, switched off by default.
+- **Record walkthroughs:** View, mouse pointer and laser pointer, with audio if desired; others play the walkthrough
+  and can navigate on their own while doing so.
+- **Reactions:** Emojis directly on sticky notes, cards & co. – with count and names, also for viewers (right-click).
+- **Tags and filters:** Tag sticky notes, cards and shapes; the filter fades out everything else (by tag, color,
+  person, reactions, action items) – only in your own view.
+- **File attachments:** Place PDF, Word, Excel, PowerPoint, OpenDocument, text, CSV and JSON files on the board; PDFs
+  with a preview of the first page and a viewer (pdf.js), all with virus scan and as a download.
+- **Chat integration (webhooks):** Notifications to your own chat (Microsoft Teams, Slack, Matrix or JSON), team
+  channels for new team boards and retro summaries. Switched off by default, with protection against calls into the
+  internal network.
 
-### Moderation
-- **Moderationsrechte:** Bearbeiten für Teilnehmende sperren, Timer/Abstimmung/Schätzrunde/privaten Modus den
-  Moderierenden vorbehalten, einzelne Elemente (z. B. Vorlagen-Hintergründe) für Teilnehmende sperren. Weitere
-  Moderierende lassen sich über das Avatar-Menü hinzufügen. Der Server setzt alle Sperren durch.
-- **Timer** für alle Teilnehmenden, mit Pause, Verlängerung und Signalton
-- **Abstimmungen** mit einstellbarer Stimmenzahl pro Person; die Stimmen bleiben bis zum Ende verdeckt, danach gibt es eine Ergebnisliste
-- **Schätzrunde** mit verdeckten Karten für eine Karte: Fibonacci-, T-Shirt- oder Stunden-Deck; die Werte bleiben verdeckt,
-  bis aufgedeckt wird. Danach erscheinen Durchschnitt, Median und Spanne, und das Ergebnis lässt sich als Story Points
-  übernehmen.
-- **Präsentationsmodus**: Frames werden zu Folien (Vollbild, Pfeil- und Leertaste, Umgebung ausgeblendet)
-- **Verborgene Bereiche:** Moderierende verdecken einen Frame; Teilnehmende sehen nur eine Abdeckung, bis aufgedeckt
-  wird. Der Server gibt den Inhalt vorher nicht heraus.
+### Facilitation
+- **Facilitation rights:** Lock editing for participants, reserve timer/vote/estimation round/private mode for
+  facilitators, lock individual elements (e.g. template backgrounds) for participants. Further facilitators can be
+  added via the avatar menu. The server enforces all locks.
+- **Timer** for all participants, with pause, extension and signal tone
+- **Votes** with an adjustable number of votes per person; the votes stay hidden until the end, after which there is a results list
+- **Estimation round** with hidden cards for a card: Fibonacci, T-shirt or hours deck; the values stay hidden until
+  revealed. Afterwards average, median and range appear, and the result can be applied as story points.
+- **Presentation mode**: Frames become slides (full screen, arrow and space keys, surroundings hidden)
+- **Hidden areas:** Facilitators cover a frame; participants see only a cover until it is revealed. The server does
+  not hand out the content beforehand.
 
-### Retrospektiven
-- **Geführter Ablauf** (Knopf 🔁): Check-in → Rückblick → Sammeln → Aufdecken → Gruppieren → Abstimmen → Besprechen →
-  Maßnahmen → Abschluss. Bei jedem Schritt stellt vibeboard die passenden Werkzeuge ein (verdecktes, auf Wunsch
-  anonymes Sammeln, Timer, Abstimmung über Themen, Besprechung, Umfragen).
-- **Themengruppen:** Beiträge auswählen → „Themengruppe bilden“; abgestimmt wird dann über Themen.
-- **Besprechungsmodus:** Themen in der Reihenfolge der Stimmen, das aktuelle ist für alle hervorgehoben, Timer je Thema
-  und Lean-Coffee-Abfrage „Weiter diskutieren? 👍 ✋ 👎“.
-- **Anonyme Beiträge:** Auch nach dem Aufdecken ohne Namen – gespeichert wird keiner.
-- **Schnellumfragen:** Stimmungsbarometer, Fist of Five, ROTI, Team-Health-Check, eigene Frage – anonym, mit Verlauf
-  über die Retro-Serie.
-- **Maßnahmen mit Nachverfolgung:** Beitrag → „Als Maßnahme festhalten“ (Person, Fälligkeit) – erscheint unter
-  „Meine Aufgaben“. „Nächste Retro anlegen“ übernimmt die Struktur; dort zeigt der Rückblick die offenen Maßnahmen
-  der letzten Retro zum Abhaken oder Übernehmen.
-- **Zusammenfassung** als Markdown, PDF, per E-Mail an die Beteiligten oder in den Team-Kanal.
-- **Glücksrad und Redereihenfolge** – alle sehen dasselbe Ergebnis.
+### Retrospectives
+- **Guided flow** (🔁 button): Check-in → Look back → Collect → Reveal → Group → Vote → Discuss → Action items →
+  Wrap-up. At each step vibeboard sets up the matching tools (hidden, optionally anonymous collecting, timer, vote on
+  topics, discussion, polls).
+- **Topic groups:** Select contributions → “Create topic group”; voting is then done on topics.
+- **Discussion mode:** Topics in the order of the votes, the current one is highlighted for everyone, a timer per topic
+  and the prompt “Keep discussing? 👍 ✋ 👎”.
+- **Anonymous contributions:** Without names even after the reveal – none is stored.
+- **Quick polls:** Mood meter, Fist of Five, ROTI, team health check, custom question – anonymous, with a trend across
+  the retro series.
+- **Action items with follow-up:** Contribution → “Record as action item” (person, due date) – appears under “My
+  tasks”. “Create next retro” carries over the structure; there the look back shows the open action items from the last
+  retro to tick off or carry over.
+- **Summary** as Markdown, PDF, by email to those involved or to the team channel.
+- **Wheel of fortune and speaking order** – everyone sees the same result.
 
-### Projektarbeit
-- **Aufgaben-Panel** je Board:
-  - Alle Karten als Liste, gruppiert nach Status, mit Story-Point-Summen.
-  - Filter „Offen“, „Mir zugewiesen“, „Überfällig“; ein Klick springt zur Karte.
-- **Meine Aufgaben** auf der Startseite: alle mir zugewiesenen Karten aus allen meinen Boards, nach Fälligkeit sortiert.
-- **Versionsverlauf:**
-  - Stände sichern, automatische Versionen alle 30 Minuten während der Bearbeitung.
-  - Frühere Stände wiederherstellen (der aktuelle wird vorher gesichert) oder als Kopie öffnen.
-- **Karten importieren** aus CSV, Excel, Jira oder Azure DevOps:
-  - Spalten wie Summary, Assignee, Status, Due Date, Story Points, Priority, Labels werden erkannt.
-  - Optional werden die Karten als Kanban-Spalten nach Status angeordnet.
-- **Direktlinks** auf einzelne Elemente: `/board/<id>#el=<elementId>`
+### Project work
+- **Task panel** per board:
+  - All cards as a list, grouped by status, with story point totals.
+  - Filters “Open”, “Assigned to me”, “Overdue”; a click jumps to the card.
+- **My tasks** on the home page: all cards assigned to me from all my boards, sorted by due date.
+- **Version history:**
+  - Save snapshots, automatic versions every 30 minutes during editing.
+  - Restore earlier snapshots (the current one is saved first) or open them as a copy.
+- **Import cards** from CSV, Excel, Jira or Azure DevOps:
+  - Columns such as Summary, Assignee, Status, Due Date, Story Points, Priority, Labels are recognized.
+  - Optionally the cards are arranged as Kanban columns by status.
+- **Direct links** to individual elements: `/board/<id>#el=<elementId>`
 
-### Export und Import
-- PNG (ganzes Board oder Auswahl) und SVG
-- PDF mit einem Frame pro Seite (über den Druckdialog des Browsers)
-- JSON als Backup; Import ins Board oder als neues Board
-- Karten aus CSV/Tabellen, Diagramme aus Text (siehe oben)
+### Export and import
+- PNG (whole board or selection) and SVG
+- PDF with one frame per page (via the browser's print dialog)
+- JSON as a backup; import into the board or as a new board
+- Cards from CSV/tables, diagrams from text (see above)
 
-### Übersicht
-- Navigation links: „+ Neues Board“, Start, Meine Aufgaben, alle/eigene/geteilte Boards, eigene Ordner, Teams
-  (mit Ordnern als Filter); rechts erscheint nur die gewählte Ansicht
-- Start: einklappbare Vorlagenleiste, Hinweis auf fällige Aufgaben, zuletzt bearbeitete Boards
-- Eigene und geteilte Boards mit Vorschaubildern
-- Suche, Sortierung, Teilen, Umbenennen, Duplizieren, Löschen, Board verlassen
-- **Papierkorb:** Gelöschte Boards bleiben 30 Tage (einstellbar) wiederherstellbar, dann werden sie endgültig gelöscht.
-- Neues Board direkt aus einer Vorlage – auch aus **eigenen Vorlagen** (Board oder Auswahl als persönliche oder
-  Team-Vorlage speichern)
-- **Installierbare App (PWA):** im Browser über „App installieren“ (Kontomenü) als eigenes Fenster nutzbar
-- „Meine Aufgaben“ über alle Boards (Karten und zugewiesene Kommentare)
-- Glocke mit Benachrichtigungen
+### Overview
+- Navigation on the left: “+ New board”, Home, My tasks, all/own/shared boards, own folders, teams
+  (with folders as a filter); only the selected view appears on the right
+- Home: collapsible template bar, notice about due tasks, recently edited boards
+- Own and shared boards with thumbnails
+- Search, sorting, sharing, renaming, duplicating, deleting, leaving a board
+- **Trash:** Deleted boards can be restored for 30 days (adjustable), then they are deleted permanently.
+- New board directly from a template – also from **your own templates** (save a board or selection as a personal or
+  team template)
+- **Installable app (PWA):** can be used in its own window via “Install app” (account menu) in the browser
+- “My tasks” across all boards (cards and assigned comments)
+- Bell with notifications
 
 ---
 
-## Vorlagen
+## Templates
 
-| Kategorie | Vorlagen |
+| Category | Templates |
 |-----------|----------|
-| Brainstorming | Brainstorming, Mindmap, Sechs Perspektiven, Crazy 8s, Pro & Contra |
-| Meetings & Retros | Start · Stop · Continue, Mad · Sad · Glad, 4L, Segelboot, Seestern, DAKI, Zeitstrahl-Retro, Heißluftballon, Speedcar, Lean Coffee, Team-Radar, Daily Stand-up, Check-in / Icebreaker |
-| Agile & Projekte | Kanban, Eisenhower-Matrix, Impact/Aufwand-Matrix, Projekt-Canvas, Produkt-Roadmap, Zeitstrahl, Gantt-Diagramm, User Story Map, Wochenplaner |
-| Strategie | SWOT-Analyse, Stakeholder-Map, Business Model Canvas¹, Lean Canvas¹, Angebot & Kundenprofil, OKR-Planung, Entscheidungsmatrix |
-| Design & UX | Customer Journey Map, Empathy Map, User Persona, Moodboard, Wireframe |
-| Softwareentwicklung | Sprint-Planung, Entwicklungs-Kanban mit WIP-Limits, Definition of Ready & Done, Architektur (C4-Kontext), ER-Diagramm, Event Storming, Bug-Triage, Tech-Debt-Matrix, Release-Planung, API-Design, Architekturentscheidung (ADR) |
-| UML | Klassendiagramm, Anwendungsfalldiagramm, Aktivitätsdiagramm, Zustandsdiagramm, Komponentendiagramm, Verteilungsdiagramm, Sequenzdiagramm |
-| Projektmanagement | Projekt-Kick-off, Risikomatrix, RAID-Log, Projektstatus, Meilensteinplan, RACI-Matrix, Teamübergreifende Planung, Lessons Learned |
-| IT-Service-Management | Incident-Postmortem, Major-Incident-Lagezentrum, Problem-Analyse (Ist / Ist nicht), Change-Request & CAB, Service Blueprint, SIPOC, Wertstromanalyse, Service-Katalog, On-Call-Übergabe, Runbook, SLA-/Service-Review, Prozessmodell (BPMN): Störung |
-| IT-Infrastruktur | Netzwerkplan, Rack-Belegung, Container-Plattform (Cluster) |
-| Diagramme | Flussdiagramm, Organigramm, Ishikawa (Fischgräte), 5-Why-Methode |
+| Brainstorming | Brainstorming, Mind map, Six perspectives, Crazy 8s, Pros & cons |
+| Meetings & retros | Start · Stop · Continue, Mad · Sad · Glad, 4L, Sailboat, Starfish, DAKI, Timeline retro, Hot-air balloon, Speedcar, Open topics round, Team radar, Daily stand-up, Check-in / Icebreaker |
+| Agile & projects | Kanban, Eisenhower matrix, Impact/effort matrix, Project canvas, Product roadmap, Timeline, Gantt chart, User story map, Weekly planner |
+| Strategy | SWOT analysis, Stakeholder map, Business Model Canvas¹, Lean Canvas¹, OKR planning, Decision matrix |
+| Design & UX | Customer journey map, Empathy map, User persona, Moodboard, Wireframe |
+| Software development | Sprint planning, Development Kanban with WIP limits, Definition of Ready & Done, Architecture (C4 context), ER diagram, Event Storming, Bug triage, Tech debt matrix, Release planning, API design, Architecture decision (ADR) |
+| UML | Class diagram, Use case diagram, Activity diagram, State diagram, Component diagram, Deployment diagram, Sequence diagram |
+| Project management | Project kick-off, Risk matrix, RAID log, Project status, Milestone plan, RACI matrix, Cross-team planning, Lessons learned |
+| IT service management | Incident postmortem, Major incident command center, Problem analysis (Is / Is not), Change request & CAB, Service blueprint, SIPOC, Value stream analysis, Service catalog, On-call handover, Runbook, SLA / service review, Process model (BPMN): Incident |
+| IT infrastructure | Network diagram, Rack layout, Container platform (cluster) |
+| Diagrams | Flowchart, Org chart, Ishikawa (fishbone), 5 Whys method |
 
-¹ Adaption eines Werks unter CC BY-SA 3.0, siehe [Lizenz](#lizenz).
+¹ Adaptation of a work under CC BY-SA 3.0, see [License](#license).
 
 ---
 
 ## Installation
 
-### Mit Docker (empfohlen)
+### With Docker (recommended)
 
 ```bash
 git clone https://github.com/laserrapt0r/vibeboard.git
 cd vibeboard
-cp .env.example .env            # POSTGRES_PASSWORD auf ein langes, zufälliges Kennwort setzen
-docker compose up -d --build    # startet PostgreSQL, ClamAV und vibeboard
+cp .env.example .env            # set POSTGRES_PASSWORD to a long, random password
+docker compose up -d --build    # starts PostgreSQL, ClamAV and vibeboard
 ```
 
-Danach ist vibeboard unter http://localhost:3000 erreichbar. Den Port legt `PORT` in der `.env` fest.
+After that, vibeboard is available at http://localhost:3000. The port is set by `PORT` in the `.env`.
 
-So geht es weiter:
-1. Beim ersten Aufruf öffnet sich die Registrierung. **Das erste Konto wird automatisch Administrator.**
-2. Unter **Administration → Mailserver** den SMTP-Zugang eintragen. Erst danach können sich weitere Personen
-   registrieren, denn jede Registrierung braucht eine E-Mail-Bestätigung.
-3. Unter **Administration → Allgemein** die öffentliche Adresse eintragen, wenn vibeboard über einen Domainnamen
-   erreichbar ist.
-4. Empfohlen: im Profil unter „Sicherheit & Geräte“ die Zwei-Faktor-Anmeldung einrichten.
+Here is how to continue:
+1. On the first visit the registration opens. **The first account automatically becomes administrator.**
+2. Under **Administration → Mail server** enter the SMTP access. Only then can further people register, because every
+   registration needs an email confirmation.
+3. Under **Administration → General** enter the public address if vibeboard is reachable via a domain name.
+4. Recommended: set up two-factor sign-in in the profile under “Security & devices”.
 
-Alternativ legen `ADMIN_EMAIL`, `ADMIN_PASSWORD` und optional `ADMIN_NAME` in der `.env` den Administrator beim Start
-an (angemeldet wird mit der E-Mail-Adresse).
+Alternatively, `ADMIN_EMAIL`, `ADMIN_PASSWORD` and optionally `ADMIN_NAME` in the `.env` create the administrator on
+startup (you sign in with the email address).
 
-ClamAV braucht etwa 1,5 GB Arbeitsspeicher. Beim ersten Start lädt es einige Minuten lang die Virensignaturen herunter;
-bis dahin werden Uploads mit einem Hinweis abgelehnt.
+ClamAV needs about 1.5 GB of memory. On the first start it downloads the virus signatures for a few minutes; until then,
+uploads are rejected with a notice.
 
-Nützliche Befehle:
+Useful commands:
 
 ```bash
-docker compose logs -f app                                        # Protokoll
-docker compose down                                               # stoppen (Daten bleiben erhalten)
-docker compose exec db pg_dump -U vibeboard vibeboard > backup.sql  # Datenbank sichern
-docker compose --profile mailtest up -d                           # zusätzlich Test-Mailserver (Mailpit)
+docker compose logs -f app                                        # log
+docker compose down                                               # stop (data is kept)
+docker compose exec db pg_dump -U vibeboard vibeboard > backup.sql  # back up the database
+docker compose --profile mailtest up -d                           # additionally a test mail server (Mailpit)
 ```
 
-Mit dem Profil `mailtest` trägst du in der Administration den SMTP-Server `mailpit`, Port `1025`, Verschlüsselung
-„keine“ ein. Alle Mails erscheinen dann unter http://localhost:8025.
+With the `mailtest` profile, enter the SMTP server `mailpit`, port `1025`, encryption “none” in the administration. All
+emails then appear at http://localhost:8025.
 
-### Ohne Docker
+### Without Docker
 
-Voraussetzungen: Node.js ≥ 20, PostgreSQL ≥ 13, für Uploads ClamAV (`clamd`) und für Sicherungen vor Upgrades `pg_dump`.
+Requirements: Node.js ≥ 20, PostgreSQL ≥ 13, ClamAV (`clamd`) for uploads and `pg_dump` for backups before upgrades.
 
 ```bash
 npm ci
@@ -295,338 +299,352 @@ DATABASE_URL=postgres://benutzer:kennwort@localhost:5432/vibeboard \
 CLAMAV_HOST=127.0.0.1 BACKUP_DIR=/var/backups/vibeboard node server.js
 ```
 
-Die Tabellen werden beim Start automatisch angelegt und migriert.
+The tables are created and migrated automatically on startup.
 
 ---
 
-## Konfiguration
+## Configuration
 
-Umgebungsvariablen (bei Docker in der `.env`):
+Environment variables (with Docker in the `.env`):
 
-| Variable | Standard | Bedeutung |
+| Variable | Default | Meaning |
 |----------|----------|-----------|
-| `PORT` | `3000` | HTTP-Port |
-| `HOST` | `0.0.0.0` | Bind-Adresse |
-| `POSTGRES_PASSWORD` | – (Pflicht) | Kennwort der Datenbank im Docker-Setup |
-| `POSTGRES_DB`, `POSTGRES_USER` | `vibeboard` | Name und Benutzer der Datenbank im Docker-Setup |
-| `DATABASE_URL` | `postgres://vibeboard:vibeboard@localhost:5432/vibeboard` | Datenbankverbindung ohne Docker (alternativ `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPORT`) |
-| `PUBLIC_URL` | – | Öffentliche Adresse für Links in E-Mails, z. B. `https://board.example.de` |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | – | Legt bei der Ersteinrichtung diesen Administrator an – nur, wenn es noch keinen aktiven Administrator und kein Konto mit der Adresse gibt (`ADMIN_USERNAME` wird als Name weiter akzeptiert) |
-| `TRUST_PROXY` | `0` | Reverse-Proxy davor: `1` (ein Proxy), `2` … (mehrere hintereinander) oder eine Liste der Proxy-Adressen/Netze, z. B. `127.0.0.1, 172.16.0.0/12`. Wertet dann `X-Forwarded-For` und `X-Forwarded-Proto` aus – siehe „Echte IP-Adressen“ |
-| `CLAMAV_HOST`, `CLAMAV_PORT` | `clamav`, `3310` (Docker) | clamd-Dienst für den Virenscan; leer = kein Scanner |
-| `BACKUP_DIR` | `/backups` (Docker) | Verzeichnis für Sicherungen vor Datenbank-Upgrades; leer = keine Sicherung |
-| `BACKUP_KEEP` | `10` | Anzahl aufbewahrter Sicherungen |
-| `BACKUP_BEFORE_UPGRADE` | `1` | `0` überspringt die Sicherung (nicht empfohlen) |
-| `ALLOW_DOWNGRADE` | `0` | `1` erlaubt den Start einer älteren Version auf einer neueren Datenbank (nicht empfohlen) |
-| `LOG_LEVEL` | `info` | Protokollstufe: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `silent`; in der Administration zur Laufzeit änderbar |
-| `LOG_FORMAT` | `text` | `text` (lesbar) oder `json` (eine JSON-Zeile je Eintrag, z. B. für Loki, Elasticsearch, Graylog) |
-| `DATA_DIR` | `./data` | Ordner mit JSON-Boards einer früheren dateibasierten Version für einen einmaligen Import |
+| `PORT` | `3000` | HTTP port |
+| `HOST` | `0.0.0.0` | Bind address |
+| `POSTGRES_PASSWORD` | – (required) | Database password in the Docker setup |
+| `POSTGRES_DB`, `POSTGRES_USER` | `vibeboard` | Database name and user in the Docker setup |
+| `DATABASE_URL` | `postgres://vibeboard:vibeboard@localhost:5432/vibeboard` | Database connection without Docker (alternatively `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPORT`) |
+| `PUBLIC_URL` | – | Public address for links in emails, e.g. `https://board.example.de` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | – | Creates this administrator during initial setup – only if there is no active administrator yet and no account with that address (`ADMIN_USERNAME` is still accepted as the name) |
+| `TRUST_PROXY` | `0` | Reverse proxy in front: `1` (one proxy), `2` … (several in a row) or a list of proxy addresses/networks, e.g. `127.0.0.1, 172.16.0.0/12`. Then evaluates `X-Forwarded-For` and `X-Forwarded-Proto` – see “Real IP addresses” |
+| `CLAMAV_HOST`, `CLAMAV_PORT` | `clamav`, `3310` (Docker) | clamd service for the virus scan; empty = no scanner |
+| `BACKUP_DIR` | `/backups` (Docker) | Directory for backups before database upgrades; empty = no backup |
+| `BACKUP_KEEP` | `10` | Number of backups kept |
+| `BACKUP_BEFORE_UPGRADE` | `1` | `0` skips the backup (not recommended) |
+| `ALLOW_DOWNGRADE` | `0` | `1` allows an older version to start on a newer database (not recommended) |
+| `LOG_LEVEL` | `info` | Log level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `silent`; can be changed at runtime in the administration |
+| `LOG_FORMAT` | `text` | `text` (readable) or `json` (one JSON line per entry, e.g. for Loki, Elasticsearch, Graylog) |
+| `DATA_DIR` | `./data` | Folder with JSON boards of an earlier file-based version for a one-time import |
 
-Alle weiteren Einstellungen nimmst du in der Administration vor.
+You make all further settings in the administration.
 
 ---
 
-## Konten und Anmeldung
+## Accounts and sign-in
 
-- **Anmeldung mit der E-Mail-Adresse.** Der Name ist nur ein Anzeigename: Er darf Leerzeichen enthalten, muss nicht
-  eindeutig sein und lässt sich im Profil jederzeit ändern. Ältere Konten ohne E-Mail-Adresse können sich übergangsweise
-  mit ihrem Namen anmelden (nur, wenn er eindeutig ist) und werden auf der Startseite gebeten, eine Adresse zu ergänzen.
-- **Registrierung** mit Name, E-Mail-Adresse und Kennwort.
-  - Das Konto wird erst aktiv, wenn der **Bestätigungslink** aus der E-Mail geöffnet wurde (48 Stunden gültig).
-  - Die Bestätigungsmail lässt sich auf der Anmeldeseite erneut anfordern.
-  - Nie bestätigte Konten werden nach 14 Tagen automatisch entfernt.
-- **Wegwerf-E-Mail-Adressen** sind gesperrt: eine Liste mit rund 10.000 bekannten Anbietern, Subdomains
-  eingeschlossen. Zusätzlich kann der Admin eigene Domains sperren oder nur bestimmte Domains zulassen, z. B. die
-  Firmendomain.
-- **Registrierungsmodus:**
-  - *offen*: Nach der E-Mail-Bestätigung ist das Konto aktiv.
-  - *mit Freigabe*: Nach der Bestätigung schaltet ein Admin das Konto frei. Admins werden per E-Mail informiert.
-  - *geschlossen*: Nur Admins legen Konten an bzw. laden per E-Mail ein.
-- **Kennwortregeln** nach NIST SP 800-63B:
-  - Mindestlänge 12 Zeichen (einstellbar)
-  - Abgelehnt werden die 10.000 häufigsten Kennwörter, bekannte Wörter mit angehängten Ziffern, Tastaturreihen,
-    Wiederholungen und Kennwörter, die Name oder E-Mail-Adresse enthalten.
-  - Optional zusätzlich der Abgleich mit „Have I Been Pwned“ (k-Anonymität).
-  - Eine Stärkeanzeige hilft bei der Wahl. Erzwungene Sonderzeichen gibt es bewusst nicht.
-- **Zwei-Faktor-Anmeldung (TOTP):**
-  - Einrichtung per QR-Code mit jeder gängigen Authenticator-App
-  - 10 Wiederherstellungscodes für den Notfall
-  - Für Administratoren auf Wunsch verpflichtend
-- **Kennwort vergessen** per E-Mail-Link (eine Stunde gültig).
-- **Profil:**
-  - Anzeigename und Farbe
-  - E-Mail-Adresse; eine neue Adresse wird erst nach Bestätigung übernommen, die alte erhält einen Hinweis
-  - Kennwort ändern; andere Geräte werden dabei abgemeldet
-- **Sicherheit & Geräte:** Übersicht aller angemeldeten Geräte mit letzter Aktivität. Einzelne oder alle anderen
-  Geräte lassen sich abmelden.
-- **Benachrichtigungen** per E-Mail bei sicherheitsrelevanten Änderungen: Kennwort geändert, E-Mail-Adresse geändert,
-  Zwei-Faktor-Anmeldung an oder aus, Registrierungsversuch mit einer bereits verwendeten Adresse.
+- **Sign in with the email address.** The name is only a display name: it may contain spaces, does not have to be
+  unique and can be changed in the profile at any time. Older accounts without an email address can temporarily sign in
+  with their name (only if it is unique) and are asked on the home page to add an address.
+- **Registration** with name, email address and password.
+  - The account only becomes active once the **confirmation link** from the email has been opened (valid for 48 hours).
+  - The confirmation email can be requested again on the sign-in page.
+  - Accounts that were never confirmed are removed automatically after 14 days.
+- **Disposable email addresses** are blocked: a list of around 10,000 known providers, subdomains included.
+  Additionally, the admin can block their own domains or allow only certain domains, e.g. the company domain.
+- **Registration mode:**
+  - *open*: After the email confirmation the account is active.
+  - *with approval*: After the confirmation an admin activates the account. Admins are informed by email.
+  - *closed*: Only admins create accounts or invite by email.
+- **Password rules** according to NIST SP 800-63B:
+  - Minimum length 12 characters (adjustable)
+  - Rejected are the 10,000 most common passwords, known words with appended digits, keyboard sequences,
+    repetitions and passwords that contain the name or email address.
+  - Optionally also a check against “Have I Been Pwned” (k-anonymity).
+  - A strength indicator helps with the choice. Forced special characters are deliberately not required.
+- **Two-factor sign-in (TOTP):**
+  - Set up via QR code with any common authenticator app
+  - 10 recovery codes for emergencies
+  - Can be made mandatory for administrators
+- **Forgot password** via an email link (valid for one hour).
+- **Profile:**
+  - Display name and color
+  - Email address; a new address is only adopted after confirmation, the old one receives a notice
+  - Change password; other devices are signed out in the process
+- **Security & devices:** Overview of all signed-in devices with last activity. Individual or all other devices can be
+  signed out.
+- **Notifications** by email for security-relevant changes: password changed, email address changed,
+  two-factor sign-in turned on or off, registration attempt with an address that is already in use.
 
-## Rechte auf Boards
+## Permissions on boards
 
-- Boards gehören der Person, die sie angelegt hat. Die Besitzerin oder der Besitzer kann
-  - Personen als *Bearbeiter*, *Kommentierende* oder *Betrachter* einladen, optional mit Einladungs-Mail. Eingeladen
-    wird über die **genaue E-Mail-Adresse** oder aus der Liste der Personen, mit denen man in einem Team ist. Eine Suche
-    über alle Konten gibt es bewusst nicht – niemand kann so die Nutzenden der Installation abfragen.
-  - den Link für alle angemeldeten Nutzer zum *Ansehen*, *Kommentieren* oder *Bearbeiten* freigeben,
-  - das Board einem **Team** zuordnen – alle Mitglieder erhalten dann die gewählte Rolle,
-  - **Gastlinks** für Personen ohne Konto erstellen (nur, wenn ein Admin den Gastzugang eingeschaltet hat),
-  - Mitglieder verwalten, das Board umbenennen und löschen.
-- **Betrachter** sehen das Board live und können abstimmen, schätzen, Reaktionen senden, den Cursor-Chat und den
-  Laserpointer nutzen. Den Versionsverlauf sehen nur Bearbeitende.
-- **Kommentierende** dürfen zusätzlich kommentieren, Kommentare zuweisen und erledigen sowie Rundgänge aufzeichnen.
-- Gilt eine Rolle aus mehreren Quellen (Mitgliedschaft, Team, Link), zählt die höchste. Rechteänderungen wirken sofort.
-- **Gäste** sehen ausschließlich das Board ihres Links – keine Startseite, keine anderen Boards, keine Profil- oder
-  Teamfunktionen. Mit Ablauf oder Sperre des Links werden ihre Zugänge gelöscht; ihre Beiträge bleiben mit Namen
-  erhalten.
-- **Administratoren** haben Zugriff auf alle Boards.
+- Boards belong to the person who created them. The owner can
+  - invite people as *editors*, *commenters* or *viewers*, optionally with an invitation email. Invitations go to the
+    **exact email address** or from the list of people you are in a team with. A search across all accounts is
+    deliberately not offered – nobody can use it to query the users of the installation. If there is no account for the
+    address, vibeboard offers an invitation email after a confirmation prompt (valid for 30 days; only if registration
+    is open and a mail server is set up).
+  - share the link with all signed-in users for *viewing*, *commenting* or *editing*,
+  - assign the board to a **team** – all members then receive the chosen role,
+  - create **guest links** for people without an account (only if an admin has switched on guest access),
+  - manage members, rename the board and delete it.
+- **Viewers** see the board live and can vote, estimate, send reactions, and use cursor chat and the laser pointer.
+  The version history is visible only to editors.
+- **Commenters** may additionally comment, assign and resolve comments, and record walkthroughs.
+- If a role applies from several sources (membership, team, link), the highest one counts. Permission changes take
+  effect immediately.
+- **Guests** see only the board of their link – no home page, no other boards, no profile or team features. When the
+  link expires or is blocked, their accesses are deleted; their contributions are kept with their names.
+- **Administrators** have access to all boards.
 
 ## Administration
 
-Unter `/admin`, nur für Administratoren:
+At `/admin`, for administrators only:
 
-- **Übersicht:**
-  - Benutzer, Anteil mit Zwei-Faktor-Anmeldung, unbestätigte Konten
-  - fehlgeschlagene Anmeldungen der letzten 24 Stunden
-  - Boards, aktive Verbindungen, Datenbankgröße
-  - Hinweise auf wartende Freigaben und fehlende Einstellungen
-  - **Systemmetriken**, alle 5 Sekunden aktualisiert, mit Verlauf der letzten 10 Minuten:
-    - CPU-Auslastung von vibeboard und des Hosts, Systemlast
-    - Arbeitsspeicher von vibeboard und des Containers bzw. Hosts
-    - Reaktionszeit der Ereignisschleife
-    - freier Speicherplatz für Anwendung und Sicherungen
-    - Datenbankverbindungen und Cache-Trefferquote
-    - Echtzeit-Verbindungen, Laufzeit, Node.js-Version
-    - Kacheln mit Engpässen werden rot hervorgehoben.
-- **Benutzerverwaltung:**
-  - Suche und Filter (wartend, unbestätigt, deaktiviert, Admins, ohne Zwei-Faktor)
-  - Benutzer anlegen, bevorzugt per Einladungs-Mail, sodass die Person ihr Kennwort selbst festlegt
-  - bearbeiten, freischalten, deaktivieren, Adminrechte vergeben
-  - Bestätigungsmail erneut senden oder E-Mail manuell bestätigen
-  - Kennwort-Link erzeugen, Zwei-Faktor zurücksetzen, alle Sitzungen beenden
-  - löschen, dabei die Boards übertragen oder mitlöschen; der letzte Administrator ist geschützt
-- **Boards:** alle Boards mit Besitzer, Mitgliedern und Freigabe; Besitzer ändern, löschen
-- **Allgemein:** Name der Instanz, öffentliche Adresse, Registrierungsmodus
-- **Sicherheit:** Kennwort-Mindestlänge, Abgleich mit „Have I Been Pwned“, Wegwerf-Adressen, gesperrte bzw.
-  erlaubte Domains, Zwei-Faktor-Pflicht für Admins
-- **Zusammenarbeit:** E-Mails bei Erwähnungen, Gastzugang (standardmäßig aus) und seine längste Gültigkeit, wer
-  Teams anlegen darf, Aufzeichnungen erlauben und ihre Höchstdauer, Dateianhänge und größte Datei, Aufbewahrung im
-  Papierkorb, Webhooks (standardmäßig aus) und ob interne Webhook-Ziele erlaubt sind
-- **Mailserver:** SMTP-Host, Port, Verschlüsselung (STARTTLS, SSL/TLS, keine), Anmeldung, Absender,
-  Zertifikatsprüfung; Testmail auch vor dem Speichern
-- **Rechtliches:** Impressum und Datenschutzerklärung bearbeiten und veröffentlichen (siehe unten)
-- **Protokoll:** Sicherheitsprotokoll der letzten 12 Monate mit Suche und Filter. Es enthält
-  - Anmeldungen und fehlgeschlagene Versuche,
-  - Kennwort-, E-Mail- und Zwei-Faktor-Änderungen,
-  - Admin-Aktionen mit IP-Adresse.
+- **Overview:**
+  - Users, share with two-factor sign-in, unconfirmed accounts
+  - failed sign-ins in the last 24 hours
+  - Boards, active connections, database size
+  - Notices about pending approvals and missing settings
+  - **System metrics**, updated every 5 seconds, with a history of the last 10 minutes:
+    - CPU load of vibeboard and of the host, system load
+    - Memory of vibeboard and of the container or host
+    - Response time of the event loop
+    - free disk space for the application and backups
+    - Database connections and cache hit rate
+    - Real-time connections, uptime, Node.js version
+    - Tiles with bottlenecks are highlighted in red.
+- **User management:**
+  - Search and filters (pending, unconfirmed, deactivated, admins, without two-factor)
+  - Create users, preferably by invitation email so that the person sets their own password
+  - edit, activate, deactivate, grant admin rights
+  - Resend the confirmation email or confirm the email manually
+  - Create a password link, reset two-factor, end all sessions
+  - delete, either transferring or deleting the boards as well; the last administrator is protected
+- **Boards:** all boards with owner, members and sharing; change owner, delete
+- **General:** Instance name, public address, registration mode
+- **Security:** Minimum password length, check against “Have I Been Pwned”, disposable addresses, blocked or
+  allowed domains, mandatory two-factor for admins
+- **Collaboration:** Emails for mentions, guest access (off by default) and its maximum validity, who may create
+  teams, allow recordings and their maximum duration, file attachments and maximum file size, retention in the trash,
+  webhooks (off by default) and whether internal webhook targets are allowed
+- **Mail server:** SMTP host, port, encryption (STARTTLS, SSL/TLS, none), sign-in, sender,
+  certificate check; test email also before saving
+- **Legal:** Edit and publish the legal notice and privacy policy (see below)
+- **Log:** Security log of the last 12 months with search and filter. It contains
+  - sign-ins and failed attempts,
+  - password, email and two-factor changes,
+  - admin actions with IP address.
 
-### Impressum und Datenschutzerklärung
+### Legal notice and privacy policy
 
-- Unter **Administration → Rechtliches** werden beide Texte gepflegt und veröffentlicht. Der Editor unterstützt
-  einfache Formatierung (Überschriften, Absätze, Listen, fett, kursiv, Links) und zeigt eine Live-Vorschau.
-- **Vorlagen** zum Einfügen:
-  - ein Impressum nach § 5 DDG
-  - eine Datenschutzerklärung, die auf die tatsächliche Datenverarbeitung von vibeboard zugeschnitten ist (Konto,
-    Board-Inhalte, Sitzungs-Cookie, Sicherheitsprotokoll, E-Mails, optional Pwned Passwords, Betroffenenrechte)
+- Under **Administration → Legal** both texts are maintained and published. The editor supports simple formatting
+  (headings, paragraphs, lists, bold, italic, links) and shows a live preview.
+- **Templates** to insert:
+  - a legal notice according to § 5 DDG
+  - a privacy policy tailored to vibeboard's actual data processing (account, board content, session cookie,
+    security log, emails, optionally Pwned Passwords, data subject rights)
 
-  Platzhalter stehen in [eckigen Klammern]. Die Vorlagen ersetzen keine Rechtsberatung.
-- Die Seiten `/impressum` und `/datenschutz` sind **ohne Anmeldung** erreichbar.
-- Verlinkt sind sie auf der Anmelde- und Registrierungsseite, in der Board-Übersicht, im Einstellungsmenü der Boards
-  und in der Administration.
-- Leere Texte werden nicht veröffentlicht; ihre Links verschwinden dann automatisch.
-- Die Texte werden ohne HTML dargestellt. Eingegebenes Markup erscheint als reiner Text, Links sind nur mit http(s),
-  mailto und tel erlaubt.
+  Placeholders are in [square brackets]. The templates are not a substitute for legal advice.
+- The pages `/impressum` and `/datenschutz` are reachable **without signing in**.
+- They are linked on the sign-in and registration page, in the board overview, in the settings menu of the boards
+  and in the administration.
+- Empty texts are not published; their links then disappear automatically.
+- The texts are displayed without HTML. Entered markup appears as plain text, links are allowed only with http(s),
+  mailto and tel.
 
 ---
 
-## Virenschutz für Uploads
+## Languages
 
-- **Was geprüft wird:** Jede hochgeladene Datei, bevor sie gespeichert oder an andere verteilt wird:
-  - Bilder per Upload, Drag & Drop oder Zwischenablage
-  - Bilder in importierten Boards
-  - Vorschaubilder
-- **Wie geprüft wird:**
-  - Mit ClamAV über das clamd-Protokoll. Im Docker-Setup läuft ClamAV als eigener Dienst und aktualisiert seine
-    Signaturen selbstständig mehrmals täglich (`freshclam`).
-  - Zusätzlich muss der Dateiinhalt zum angegebenen Bildtyp passen (PNG, JPEG, GIF, WebP, SVG).
-- **Bei einem Fund:**
-  - Die Datei wird nicht gespeichert und bei der hochladenden Person wieder entfernt; sie sieht eine Meldung mit dem
-    Namen des Funds.
-  - Der Vorgang steht im Sicherheitsprotokoll.
-- **Ohne Scanner:**
-  - Ist kein Scanner eingerichtet oder ist er nicht erreichbar, werden Uploads standardmäßig abgelehnt. Beides ist in
-    der Administration unter „Sicherheit“ einstellbar.
-- **Protokoll:** Jedes Prüfergebnis steht im Anwendungsprotokoll (`[uploads]`, mit Ergebnis, Dateiart, Größe,
-  Kurz-Hash, Dauer und Benutzer-ID – nie der Inhalt). Funde, abgelehnte Dateitypen und bei Scannerausfall ungeprüft
-  angenommene Dateien stehen zusätzlich im Sicherheitsprotokoll.
-- **In der Administration:** Status und Signaturstand stehen in der Übersicht, dazu blockierte und ungeprüft
-  angenommene Uploads der letzten 30 Tage. Sind die Signaturen älter als drei Tage, erscheint eine Warnung.
+The interface, templates, error messages and emails are available in English, German, Spanish and French.
 
-## Versionen und Upgrades
+- The language follows the browser settings (first supported language); otherwise English applies. There is no
+  separate selection in the application.
+- Emails are sent in the recipient's most recently used language; invitations to addresses without an account in the
+  language of the inviting person.
+- Templates are created in the language of the person who inserts them; board content is not translated.
+- The templates for the legal notice and privacy policy are in German because they refer to German law. The
+  operator is responsible for these texts and enters them under Administration → Legal themselves.
+- The dictionaries are in `public/i18n/`; `npm run check:i18n` checks them. The source language in the code is German.
+  The requirements documents under `docs/anforderungen/` are in German.
 
-- **Versionsnummern:** vibeboard folgt [Semantic Versioning](https://semver.org/lang/de/). Die Version steht in
-  `package.json`, alle Änderungen im [CHANGELOG](CHANGELOG.md).
-- **Automatisches Upgrade beim Start:** Wird eine neue Version gestartet, aktualisiert sie die Datenbank selbst –
-  auch über mehrere Versionen hinweg:
-  1. Eine Datenbanksperre verhindert parallele Upgrades mehrerer Instanzen.
-  2. Stehen Migrationen an, wird zuerst eine **Sicherung** mit `pg_dump` erstellt (Docker: Volume `backups`, die
-     letzten 10 bleiben erhalten). Scheitert sie, bleibt die Datenbank unverändert und der Start bricht ab.
-  3. Die Migrationen laufen nacheinander, jede in einer eigenen Transaktion; ein Fehler wird vollständig
-     zurückgerollt.
-  4. Version, Vorgänger und Sicherung werden in der Versionshistorie festgehalten (Administration → Übersicht).
-- **Downgrade-Schutz:** Eine ältere Version startet nicht auf einer Datenbank, die schon von einer neueren verwendet
-  wurde.
-- **Offene Boards** erhalten nach einem Update den Hinweis „Neu laden“.
-- **Update im Docker-Setup:** `git pull && docker compose up -d --build`.
-- **Sicherung zurückspielen:**
+## Virus protection for uploads
+
+- **What is checked:** Every uploaded file, before it is stored or distributed to others:
+  - Images via upload, drag & drop or clipboard
+  - Images in imported boards
+  - Thumbnails
+- **How it is checked:**
+  - With ClamAV via the clamd protocol. In the Docker setup ClamAV runs as its own service and updates its
+    signatures on its own several times a day (`freshclam`).
+  - In addition, the file content must match the stated image type (PNG, JPEG, GIF, WebP, SVG).
+- **On a detection:**
+  - The file is not stored and is removed again from the uploading person; they see a message with the
+    name of the detection.
+  - The event is recorded in the security log.
+- **Without a scanner:**
+  - If no scanner is set up or it is not reachable, uploads are rejected by default. Both can be set in the
+    administration under “Security”.
+- **Log:** Every check result is in the application log (`[uploads]`, with result, file type, size,
+  short hash, duration and user ID – never the content). Detections, rejected file types and files accepted unchecked
+  during a scanner outage are additionally in the security log.
+- **In the administration:** Status and signature state are in the overview, along with blocked and unchecked
+  accepted uploads of the last 30 days. If the signatures are older than three days, a warning appears.
+
+## Versions and upgrades
+
+- **Version numbers:** vibeboard follows [Semantic Versioning](https://semver.org/). The version is in
+  `package.json`, all changes in the [CHANGELOG](CHANGELOG.md).
+- **Automatic upgrade on startup:** When a new version is started, it updates the database itself –
+  even across several versions:
+  1. A database lock prevents parallel upgrades by several instances.
+  2. If migrations are pending, a **backup** with `pg_dump` is created first (Docker: volume `backups`, the
+     last 10 are kept). If it fails, the database stays unchanged and startup is aborted.
+  3. The migrations run one after the other, each in its own transaction; an error is rolled back
+     completely.
+  4. Version, predecessor and backup are recorded in the version history (Administration → Overview).
+- **Downgrade protection:** An older version does not start on a database that has already been used by a newer one.
+- **Open boards** receive the notice “Reload” after an update.
+- **Update in the Docker setup:** `git pull && docker compose up -d --build`.
+- **Restoring a backup:**
   `docker compose exec -T db pg_restore -U vibeboard -d vibeboard --clean < sicherung.dump`
-  (vorher `docker compose stop app`).
+  (beforehand `docker compose stop app`).
 
 ---
 
-## Protokollierung
+## Logging
 
-- **Stufen** nach üblichem Schema:
+- **Levels** according to the usual scheme:
 
-  | Stufe | Inhalt |
+  | Level | Content |
   |---|---|
-  | `fatal` | Fehler, die den Betrieb beenden (z. B. Start fehlgeschlagen) |
-  | `error` | Fehler, die jemand beheben sollte (z. B. E-Mail-Versand, Speichern, unerwartete Serverfehler mit Stacktrace) |
-  | `warn` | Auffälligkeiten ohne Ausfall (z. B. Upgrade ohne Sicherung, abgelehnte Uploads, langsame Anfragen über 2 s) |
-  | `info` | wichtige Abläufe (Start, Upgrades, geänderte Protokollstufe) – **Standard** |
-  | `debug` | zusätzlich jede Anfrage (Methode, Pfad, Status, Dauer) und abgelehnte Anfragen |
-  | `trace` | alles |
+  | `fatal` | Errors that end operation (e.g. startup failed) |
+  | `error` | Errors someone should fix (e.g. sending email, saving, unexpected server errors with stack trace) |
+  | `warn` | Anomalies without failure (e.g. upgrade without backup, rejected uploads, slow requests over 2 s) |
+  | `info` | important processes (startup, upgrades, changed log level) – **default** |
+  | `debug` | additionally every request (method, path, status, duration) and rejected requests |
+  | `trace` | everything |
 
-- **Einstellen:**
-  - Per `LOG_LEVEL`, oder in der Administration unter „Allgemein → Protokollierung“.
-  - Die Einstellung in der Administration gilt sofort und bleibt über Neustarts erhalten.
+- **Setting:**
+  - Via `LOG_LEVEL`, or in the administration under “General → Logging”.
+  - The setting in the administration applies immediately and is kept across restarts.
 - **Format:**
-  - `LOG_FORMAT=text` erzeugt lesbare Zeilen mit Zeitstempel (UTC), Stufe, Komponente und Feldern.
-  - `LOG_FORMAT=json` schreibt eine JSON-Zeile je Eintrag, für Log-Sammelsysteme.
-  - Fehler und Warnungen gehen nach stderr, alles andere nach stdout.
-  - Ansehen im Docker-Setup: `docker compose logs -f app`.
-- **Request-ID:**
-  - Jede Anfrage erhält eine ID. Sie steht im Header `X-Request-Id` und an allen Protokolleinträgen dieser Anfrage.
-  - Bei Serverfehlern erhält auch der Browser die ID, damit sich ein Fehler im Protokoll wiederfinden lässt.
-  - Ein vorgeschalteter Proxy kann eine eigene ID mitgeben.
-- **Datensparsamkeit:**
-  - Kennwörter, Tokens, Cookies und Schlüssel werden automatisch geschwärzt.
-  - IP-Adressen, E-Mail-Adressen, Query-Parameter und Inhalte von Boards werden nicht protokolliert.
-  - Sicherheitsrelevante Ereignisse stehen getrennt davon im Sicherheitsprotokoll der Administration.
+  - `LOG_FORMAT=text` produces readable lines with timestamp (UTC), level, component and fields.
+  - `LOG_FORMAT=json` writes one JSON line per entry, for log collection systems.
+  - Errors and warnings go to stderr, everything else to stdout.
+  - View in the Docker setup: `docker compose logs -f app`.
+- **Request ID:**
+  - Every request receives an ID. It is in the header `X-Request-Id` and in all log entries of that request.
+  - On server errors the browser also receives the ID, so that an error can be found again in the log.
+  - An upstream proxy can supply its own ID.
+- **Data minimization:**
+  - Passwords, tokens, cookies and keys are redacted automatically.
+  - IP addresses, email addresses, query parameters and board content are not logged.
+  - Security-relevant events are kept separately in the security log of the administration.
 
-## Sicherheit
+## Security
 
-**Konten**
-- Kennwörter: scrypt mit N=2¹⁷, r=8, p=1 (OWASP-Empfehlung) und Salt; Vergleich in konstanter Zeit, auch bei
-  unbekannten Benutzernamen. Ältere Hashes werden beim nächsten Login automatisch erneuert.
-- Höchstens zwei Hash-Berechnungen gleichzeitig, damit massenhafte Anmeldeversuche den Server nicht überlasten.
-- Rate-Limits für Anmeldung, Registrierung, Zwei-Faktor-Codes, „Kennwort vergessen“ und Bestätigungsmails.
-- TOTP-Codes können nicht wiederverwendet werden; Wiederherstellungscodes werden nur gehasht gespeichert.
-- Schutz gegen das Ausforschen von Konten:
-  - „Kennwort vergessen“ und „Bestätigungsmail erneut senden“ antworten immer gleich.
-  - Eine Registrierung mit bereits verwendeter E-Mail-Adresse sieht von außen aus wie eine normale Registrierung.
-    Die Inhaberin bzw. der Inhaber der Adresse wird stattdessen per E-Mail informiert.
-- Einmal-Links (Bestätigung, Reset, Einladung) sind zufällig (256 Bit), zeitlich begrenzt und nur einmal verwendbar.
-  In der Datenbank steht nur ihr Hash.
+**Accounts**
+- Passwords: scrypt with N=2¹⁷, r=8, p=1 (OWASP recommendation) and salt; constant-time comparison, also for
+  unknown user names. Older hashes are renewed automatically at the next login.
+- At most two hash computations at the same time, so that mass sign-in attempts cannot overload the server.
+- Rate limits for sign-in, registration, two-factor codes, “Forgot password” and confirmation emails.
+- TOTP codes cannot be reused; recovery codes are stored only as hashes.
+- Protection against account enumeration:
+  - “Forgot password” and “Resend confirmation email” always respond the same way.
+  - A registration with an email address that is already in use looks from the outside like a normal registration.
+    The owner of the address is informed by email instead.
+- One-time links (confirmation, reset, invitation) are random (256 bits), time-limited and usable only once.
+  Only their hash is in the database.
 
-**Sitzungen**
-- Das Session-Cookie ist `HttpOnly`, `SameSite=Lax` und unter HTTPS `Secure` mit `__Host-`-Präfix. In der Datenbank
-  steht nur ein SHA-256-Hash des Tokens.
-- Sitzungen laufen nach 30 Tagen bzw. nach 14 Tagen ohne Aktivität ab.
-- Kennwortwechsel, Deaktivierung und Abmeldung beenden auch offene Live-Verbindungen.
+**Sessions**
+- The session cookie is `HttpOnly`, `SameSite=Lax` and, under HTTPS, `Secure` with the `__Host-` prefix. Only a
+  SHA-256 hash of the token is in the database.
+- Sessions expire after 30 days or after 14 days without activity.
+- Password change, deactivation and sign-out also end open live connections.
 
 **Web**
-- Strenge Content-Security-Policy: nur eigene Skripte, keine Inline-Skripte, keine fremden Quellen, kein Einbetten in
-  Frames.
-- Weitere Header: HSTS (unter HTTPS), `X-Frame-Options: DENY`, `X-Content-Type-Options`,
+- Strict Content Security Policy: only own scripts, no inline scripts, no third-party sources, no embedding in
+  frames.
+- Further headers: HSTS (under HTTPS), `X-Frame-Options: DENY`, `X-Content-Type-Options`,
   `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Referrer-Policy`, `Permissions-Policy`
-  (Mikrofon nur für die eigene Seite, für Rundgänge mit Ton; keine Kamera, kein Standort).
-- CSRF-Schutz: Ändernde API-Aufrufe brauchen den Header `X-Vibeboard: 1`.
-- Rechte werden auf dem Server geprüft, für die REST-API und den Echtzeitkanal – auch Kommentar-, Moderations- und
-  Teamrechte. Gastzugänge lehnt jede Schnittstelle ab, die sie nicht ausdrücklich zulässt.
-- Board-Elemente werden auf dem Server und beim Darstellen geprüft (Farb-Whitelist, Zahlen erzwungen, Bilder nur
-  eingebettet). So lässt sich kein Markup oder Skript einschleusen.
-- Links in E-Mails entstehen nur aus der konfigurierten öffentlichen Adresse oder aus Adressen dieses Rechners. Ein
-  gefälschter `Host`-Header kann sie nicht umlenken.
-- Timeouts gegen langsame Verbindungen (Slowloris), Größenlimits für Anfragen.
+  (microphone only for the site itself, for walkthroughs with audio; no camera, no location).
+- CSRF protection: Modifying API calls need the header `X-Vibeboard: 1`.
+- Permissions are checked on the server, for the REST API and the real-time channel – including comment, facilitation
+  and team permissions. Guest access is rejected by every interface that does not explicitly allow it.
+- Board elements are checked on the server and when rendering (color whitelist, numbers enforced, images only
+  embedded). This way no markup or script can be injected.
+- Links in emails are built only from the configured public address or from addresses of this machine. A
+  forged `Host` header cannot redirect them.
+- Timeouts against slow connections (Slowloris), size limits for requests.
 
-**Betrieb**
-- Der Docker-Container der Anwendung läuft als normaler Benutzer mit schreibgeschütztem Dateisystem, ohne Linux-Capabilities
-  und mit `no-new-privileges`.
-- Ohne gesetztes Datenbank-Kennwort startet docker-compose nicht.
-- Für den Betrieb im Internet gehört ein Reverse-Proxy mit HTTPS davor (z. B. Caddy, nginx, Traefik). Setze dann
-  `TRUST_PROXY=1` und `PUBLIC_URL`.
+**Operation**
+- The application's Docker container runs as a normal user with a read-only file system, without Linux capabilities
+  and with `no-new-privileges`.
+- Without a database password set, docker-compose does not start.
+- For operation on the internet, a reverse proxy with HTTPS belongs in front (e.g. Caddy, nginx, Traefik). Then set
+  `TRUST_PROXY=1` and `PUBLIC_URL`.
 
-### Echte IP-Adressen im Protokoll
+### Real IP addresses in the log
 
-Steht im Protokoll bei allen Zugriffen dieselbe private Adresse wie `172.20.0.1`, sieht vibeboard nicht die Adresse
-der Nutzenden, sondern die des Docker-Netzes (Gateway). Das passiert, wenn
+If the log shows the same private address such as `172.20.0.1` for all requests, vibeboard is not seeing the users'
+address but that of the Docker network (gateway). This happens when
 
-- ein **Reverse-Proxy auf dem Host** (nginx, Caddy, Apache) an `localhost:3000` weiterleitet – Docker reicht die
-  Verbindung dann über seinen Hilfsprozess `docker-proxy` weiter, oder
-- Nutzende per **IPv6** oder vom Server selbst zugreifen – auch das läuft über `docker-proxy`.
+- a **reverse proxy on the host** (nginx, Caddy, Apache) forwards to `localhost:3000` – Docker then passes the
+  connection on through its helper process `docker-proxy`, or
+- users access via **IPv6** or from the server itself – this also goes through `docker-proxy`.
 
-Abhilfe:
+Remedy:
 
-1. **Mit Reverse-Proxy (empfohlen):** Der Proxy muss die Kopfzeile `X-Forwarded-For` setzen (Caddy und Traefik tun das
-   von selbst, bei nginx `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` und
-   `proxy_set_header X-Forwarded-Proto $scheme;`). In der `.env` dann `TRUST_PROXY=1`.
-   Wichtig: Der Port der Anwendung darf dann **nur für den Proxy** erreichbar sein, sonst könnten Aufrufer die
-   Kopfzeile selbst setzen und eine falsche Adresse vortäuschen. Dazu in der `.env` `PORT=127.0.0.1:3000` setzen –
-   docker-compose veröffentlicht den Port dann nur auf dem Host selbst.
-2. **Ohne Reverse-Proxy:** Für IPv4-Zugriffe von außen sieht vibeboard die echte Adresse, wenn Docker den
-   `docker-proxy` nicht benutzt: in `/etc/docker/daemon.json` `{ "userland-proxy": false }` eintragen und Docker neu
-   starten. Für IPv6 muss das Docker-Netz IPv6 unterstützen, sonst bleibt nur der Reverse-Proxy.
+1. **With a reverse proxy (recommended):** The proxy must set the header `X-Forwarded-For` (Caddy and Traefik do this
+   on their own, with nginx `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` and
+   `proxy_set_header X-Forwarded-Proto $scheme;`). Then set `TRUST_PROXY=1` in the `.env`.
+   Important: The application's port must then be reachable **only by the proxy**, otherwise callers could set the
+   header themselves and fake an address. To do this, set `PORT=127.0.0.1:3000` in the `.env` –
+   docker-compose then publishes the port only on the host itself.
+2. **Without a reverse proxy:** For IPv4 access from outside, vibeboard sees the real address if Docker does not use
+   the `docker-proxy`: enter `{ "userland-proxy": false }` in `/etc/docker/daemon.json` and restart Docker.
+   For IPv6 the Docker network must support IPv6, otherwise only the reverse proxy remains.
 
-Die Administration (Übersicht) zeigt einen Hinweis, wenn die eigene Anfrage mit einer Docker-Gateway-Adresse oder mit
-`X-Forwarded-For`, aber ohne `TRUST_PROXY` ankommt.
+The administration (overview) shows a notice if your own request arrives with a Docker gateway address or with
+`X-Forwarded-For` but without `TRUST_PROXY`.
 
-## Datenhaltung und Datenschutz
+## Data storage and privacy
 
-Alle Daten liegen in der eigenen PostgreSQL-Datenbank:
+All data is stored in your own PostgreSQL database:
 
-| Tabelle | Inhalt |
+| Table | Content |
 |---------|--------|
-| `users` | Konten mit Rolle, Status, Bestätigungszeitpunkt, Kennwort-Hash, Zwei-Faktor-Schlüssel, gehashten Wiederherstellungscodes |
-| `sessions` | Anmeldesitzungen (Token-Hash, Gerät, IP-Adresse, letzte Aktivität) |
-| `tokens` | Einmal-Links für Bestätigung, Einladung und Kennwort-Reset (nur als Hash) |
-| `audit_log` | Sicherheitsprotokoll, 12 Monate aufbewahrt |
-| `settings` | Einstellungen der Instanz, inklusive SMTP-Zugang |
-| `boards`, `board_members`, `board_visits` | Boards, Freigaben, zuletzt geöffnete Boards (für „seit deinem letzten Besuch“) |
-| `elements` | Ein Datensatz pro Board-Element; Bilder werden verkleinert eingebettet |
-| `board_versions` | Gesicherte Stände von Boards |
-| `notifications` | Benachrichtigungen (Erwähnung, Antwort, Zuweisung), 90 Tage aufbewahrt |
-| `board_activity` | Aktivitätsverlauf, zusammengefasst, 90 Tage bzw. höchstens 2000 Einträge je Board |
-| `guest_links` | Gastlinks (nur als Hash) mit Rolle und Ablauf; Gastzugänge sind Konten mit der Rolle `guest` |
-| `teams`, `team_members`, `folders`, `folder_boards` | Teams, Mitgliedschaften, Ordner |
-| `board_recordings` | Aufgezeichnete Rundgänge mit Zeitspur und optionaler Tonspur |
-| `team_invitations` | Offene Einladungen in Teams |
-| `board_files` | Dateianhänge (Inhalt, Name, Typ, Größe, PDF-Vorschau); ohne Verweis nach 7 Tagen entfernt |
-| `board_polls` | Ergebnisse von Schnellumfragen (nur Anzahl je Antwort, keine Einzelstimmen) |
-| `user_templates` | Eigene und Team-Vorlagen |
-| `webhooks` | Chat-Anbindungen (Adresse, Format, Ereignisse, letzter Status) |
+| `users` | Accounts with role, status, confirmation time, password hash, two-factor key, hashed recovery codes |
+| `sessions` | Sign-in sessions (token hash, device, IP address, last activity) |
+| `tokens` | One-time links for confirmation, invitation and password reset (only as a hash) |
+| `audit_log` | Security log, kept for 12 months |
+| `settings` | Instance settings, including SMTP access |
+| `boards`, `board_members`, `board_visits` | Boards, sharing, recently opened boards (for “since your last visit”) |
+| `elements` | One record per board element; images are embedded scaled down |
+| `board_versions` | Saved snapshots of boards |
+| `notifications` | Notifications (mention, reply, assignment), kept for 90 days |
+| `board_activity` | Activity history, summarized, 90 days or at most 2000 entries per board |
+| `guest_links` | Guest links (only as a hash) with role and expiry; guest accesses are accounts with the role `guest` |
+| `teams`, `team_members`, `folders`, `folder_boards` | Teams, memberships, folders |
+| `board_recordings` | Recorded walkthroughs with time track and optional audio track |
+| `team_invitations`, `pending_invites` | Open invitations to teams or to addresses without an account (address, role, inviting person; at most 30 days) |
+| `board_files` | File attachments (content, name, type, size, PDF preview); removed after 7 days without a reference |
+| `board_polls` | Results of quick polls (only the count per answer, no individual votes) |
+| `user_templates` | Own and team templates |
+| `webhooks` | Chat integrations (address, format, events, last status) |
 
-- Ausgehende Verbindungen gibt es nur zum konfigurierten Mailserver und, falls aktiviert, zur Pwned-Passwords-API und
-  zu den von Nutzenden eingerichteten Webhooks.
-- Im Browser speichert vibeboard nur Ansichtseinstellungen (Zoom, dunkles Design, Werkzeugoptionen) im `localStorage`;
-  der Service Worker der installierbaren App hält Oberfläche und Skripte für den Offline-Fall vor (keine Board-Daten).
-- Das Repository enthält keine Nutzerdaten: `data/`, `.env` und Datenbankdateien sind in `.gitignore` ausgeschlossen.
-
----
-
-## Anforderungen und Mitarbeit
-
-- [docs/anforderungen](docs/anforderungen/README.md) beschreibt alle Funktionen als Anforderungen mit dauerhaften IDs
-  und Akzeptanzkriterien.
-- [CONTRIBUTING.md](CONTRIBUTING.md) legt fest, was bei jeder neuen Funktion dazugehört:
-  - Anforderung ergänzen
-  - Version erhöhen
-  - CHANGELOG ergänzen
-  - Migration plus Upgrade-Test
+- Outgoing connections exist only to the configured mail server and, if enabled, to the Pwned Passwords API and
+  to the webhooks set up by users.
+- In the browser, vibeboard stores only view settings (zoom, dark theme, tool options) in `localStorage`;
+  the service worker of the installable app keeps the interface and scripts for offline use (no board data).
+- The repository contains no user data: `data/`, `.env` and database files are excluded in `.gitignore`.
 
 ---
 
-## Architektur
+## Requirements and contributing
+
+- [docs/anforderungen](docs/anforderungen/README.md) describes all features as requirements with permanent IDs
+  and acceptance criteria (the requirements documents are in German).
+- [CONTRIBUTING.md](CONTRIBUTING.md) defines what belongs to every new feature:
+  - Add the requirement
+  - Increase the version
+  - Update the CHANGELOG
+  - Migration plus upgrade test
+
+---
+
+## Architecture
 
 ```
 server.js              HTTP-Server, Seiten-Routing, Sicherheits-Header, CSRF-Schutz, Timeouts
@@ -669,29 +687,33 @@ public/
   admin.html           Administration                                → js/admin.js
 ```
 
-**Echtzeit:**
-- Jeder Client empfängt Änderungen über Server-Sent Events (`/api/boards/:id/events`) und sendet eigene Änderungen
-  gebündelt per POST.
-- Kommt über den Stream innerhalb von 8 Sekunden keine Begrüßung an, nutzt der Client Long-Polling
-  (`/api/boards/:id/poll`). Zum Testen lässt sich das mit `?transport=poll` erzwingen.
-- Der Server hält aktive Boards im Arbeitsspeicher, verteilt Änderungen sofort und schreibt sie gesammelt in die
-  Datenbank.
-- Ändern zwei Personen gleichzeitig dasselbe Element, gewinnt die letzte Änderung. Tabellen werden zellgenau
-  abgeglichen, Kommentare über eigene Operationen (der Server ergänzt Autor und Zeitpunkt).
+**Real-time:**
+- Each client receives changes via Server-Sent Events (`/api/boards/:id/events`) and sends its own changes
+  bundled via POST.
+- If no greeting arrives over the stream within 8 seconds, the client uses long polling
+  (`/api/boards/:id/poll`). For testing this can be forced with `?transport=poll`.
+- The server keeps active boards in memory, distributes changes immediately and writes them to the
+  database in batches.
+- If two people change the same element at the same time, the last change wins. Tables are reconciled
+  cell by cell, comments via their own operations (the server adds author and time).
 
 ---
 
-## Lizenz
+## License
 
-vibeboard steht unter der [MIT-Lizenz](LICENSE).
+vibeboard is licensed under the [MIT License](LICENSE).
 
-Ausnahmen und Inhalte Dritter, Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md):
+Exceptions and third-party content, details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md):
 
-- **Business Model Canvas**: Adaption des „Business Model Canvas“ von Strategyzer AG (strategyzer.com), lizenziert unter
+- **Business Model Canvas**: Adaptation of the “Business Model Canvas” by Strategyzer AG (strategyzer.com), licensed under
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
-- **Lean Canvas**: Adaption des „Lean Canvas“ von Ash Maurya (leanstack.com), lizenziert unter CC BY-SA 3.0.
-- **Icons**: teilweise aus bzw. nach [Lucide](https://lucide.dev) (ISC) und [Feather](https://feathericons.com) (MIT).
-- **Wegwerf-Domains**: [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) (CC0).
-- **Häufige Kennwörter**: [SecLists](https://github.com/danielmiessler/SecLists) (MIT).
+- **Lean Canvas**: Adaptation of the “Lean Canvas” by Ash Maurya (leanstack.com), based on the Business Model Canvas,
+  licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+- **Icons**: partly from or after [Lucide](https://lucide.dev) (ISC) and [Feather](https://feathericons.com) (MIT).
+- **Disposable domains**: [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) (CC0).
+- **Common passwords**: [SecLists](https://github.com/danielmiessler/SecLists) (MIT).
 
-Erwähnte Produkt- und Methodennamen gehören ihren jeweiligen Inhabern und dienen nur der Beschreibung.
+Product and method names mentioned (e.g. Jira, Azure DevOps, Excel, Microsoft Teams, Slack, Mattermost, Rocket.Chat,
+Matrix, Kubernetes, Mermaid, UML, BPMN) belong to their respective owners and serve only as description; this does not
+imply any connection or endorsement. vibeboard is an independent open-source project with no connection to Vibe, Inc. or
+its products. There is no warranty; see [LICENSE](LICENSE).

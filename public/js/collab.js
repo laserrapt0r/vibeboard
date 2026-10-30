@@ -1,4 +1,5 @@
 // Zusammenarbeit: Teilnehmer, Cursor, Folgen, Timer, Abstimmung, Reaktionen, Laser, Präsentation
+import { T } from './i18n.js';
 import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util.js';
 import {
   app, $, stage, getEl, isAnonymous, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
@@ -10,7 +11,7 @@ import { facilitatorItems, toolsReserved } from './moderation.js';
 import * as bell from './notifications.js';
 
 // Gesperrte Werkzeuge (Moderation): Hinweis statt Aktion
-const reservedHint = () => toolsReserved() && (toast('Das ist während der Moderation den Moderierenden vorbehalten'), true);
+const reservedHint = () => toolsReserved() && (toast(T('Das ist während der Moderation den Moderierenden vorbehalten')), true);
 
 /* ================================================================== */
 /* Teilnehmer & Cursor                                                 */
@@ -19,36 +20,39 @@ const reservedHint = () => toolsReserved() && (toast('Das ist während der Moder
 const cursorsLayer = $('#cursors');
 const cursorEls = new Map();
 
+// Der Server hängt an Gastnamen „ (Gast)“ an – in der eigenen Sprache anzeigen
+const peerView = (p) => ({ ...p, name: p.guest ? String(p.name).replace(/ \(Gast\)$/, '') + T(' (Gast)') : p.name });
+
 function renderAvatars() {
   const box = $('#avatars');
   if (!box) return;
   box.innerHTML = '';
-  const me = h('button', { class: 'avatar', style: { background: app.user.color }, title: `${app.user.name || 'Gast'} (du) – Profil bearbeiten`, onclick: () => openProfile() }, initials(app.user.name || 'Gast'));
+  const me = h('button', { class: 'avatar', style: { background: app.user.color }, title: T`${app.user.name || T('Gast')} (du) – Profil bearbeiten`, onclick: () => openProfile() }, initials(app.user.name || T('Gast')));
   box.append(me);
   const peers = [...app.peers.values()];
   for (const p of peers.slice(0, 6)) {
-    const b = h('button', { class: 'avatar' + (app.following === p.clientId ? ' following' : '') + (p.away ? ' away' : ''), style: { background: p.color }, title: p.name + (p.role === 'commenter' ? ' (kommentieren)' : p.viewOnly ? ' (ansehen)' : '') + (p.away ? ' – abwesend' : '') }, initials(p.name));
+    const b = h('button', { class: 'avatar' + (app.following === p.clientId ? ' following' : '') + (p.away ? ' away' : ''), style: { background: p.color }, title: p.name + (p.role === 'commenter' ? T(' (kommentieren)') : p.viewOnly ? T(' (ansehen)') : '') + (p.away ? T(' – abwesend') : '') }, initials(p.name));
     b.onclick = () => menu(b, [
       { header: p.name },
-      { label: app.following === p.clientId ? 'Nicht mehr folgen' : 'Folgen', icon: 'users', onClick: () => follow(app.following === p.clientId ? null : p.clientId) },
-      { label: 'Zur Position springen', icon: 'fit', disabled: !p.view, onClick: () => p.view && fitTo(p.view, { pad: 0, maxZ: 8 }) },
+      { label: app.following === p.clientId ? T('Nicht mehr folgen') : T('Folgen'), icon: 'users', onClick: () => follow(app.following === p.clientId ? null : p.clientId) },
+      { label: T('Zur Position springen'), icon: 'fit', disabled: !p.view, onClick: () => p.view && fitTo(p.view, { pad: 0, maxZ: 8 }) },
       ...facilitatorItems(p),
     ]);
     box.append(b);
   }
   if (peers.length > 6) box.append(h('span', { class: 'avatar more' }, '+' + (peers.length - 6)));
   if (peers.length && !app.viewOnly) {
-    const all = h('button', { class: 'icon-btn', title: 'Alle zu mir holen / Alle folgen mir', html: ICONS.users });
+    const all = h('button', { class: 'icon-btn', title: T('Alle zu mir holen / Alle folgen mir'), html: ICONS.users });
     all.onclick = () => !reservedHint() && menu(all, [
-      { header: 'Aufmerksamkeit lenken' },
-      { label: 'Alle zu mir holen (einmalig)', icon: 'fit', onClick: () => {
+      { header: T('Aufmerksamkeit lenken') },
+      { label: T('Alle zu mir holen (einmalig)'), icon: 'fit', onClick: () => {
         app.sync.signal('summon', { rect: visibleRect(), name: app.user.name });
-        toast('Alle Teilnehmenden wurden zu deiner Ansicht geholt');
+        toast(T('Alle Teilnehmenden wurden zu deiner Ansicht geholt'));
       } },
-      { label: 'Alle folgen mir (Moderation)', icon: 'users', onClick: () => {
+      { label: T('Alle folgen mir (Moderation)'), icon: 'users', onClick: () => {
         if (app.following) follow(null);
         app.sync.signal('lead', { rect: visibleRect(), name: app.user.name });
-        toast('Alle folgen jetzt deiner Ansicht – bis sie selbst navigieren');
+        toast(T('Alle folgen jetzt deiner Ansicht – bis sie selbst navigieren'));
       } },
     ]);
     box.append(all);
@@ -59,7 +63,7 @@ function renderAvatars() {
   if (fp) {
     fb.style.setProperty('--c', fp.color);
     fb.innerHTML = '';
-    fb.append(h('span', {}, `Du folgst ${fp.name}`), h('button', { class: 'btn small', onclick: () => follow(null) }, 'Beenden'));
+    fb.append(h('span', {}, T`Du folgst ${fp.name}`), h('button', { class: 'btn small', onclick: () => follow(null) }, T('Beenden')));
   }
   stage.style.boxShadow = fp ? `inset 0 0 0 4px ${fp.color}` : '';
 }
@@ -112,7 +116,7 @@ function updateCursor(p) {
     const ang = (Math.atan2(s.y - H / 2, s.x - W / 2) * 180) / Math.PI;
     c.style.transform = `translate(${cx}px, ${cy}px)`;
     c.querySelector('.peer-arrow').style.transform = `rotate(${ang + 135}deg)`;
-    c.title = `${p.name} – klicken, um hinzuspringen`;
+    c.title = T`${p.name} – klicken, um hinzuspringen`;
   } else {
     c.style.transform = `translate(${s.x}px, ${s.y}px)`;
     c.querySelector('.peer-arrow').style.transform = '';
@@ -131,7 +135,7 @@ function openCursorChat() {
   if (chatBox) return;
   const p = toScreen(lastPointer().x, lastPointer().y);
   const sr = stage.getBoundingClientRect();
-  const input = h('input', { type: 'text', maxlength: 120, placeholder: 'Nachricht an alle …', 'aria-label': 'Cursor-Chat' });
+  const input = h('input', { type: 'text', maxlength: 120, placeholder: T('Nachricht an alle …'), 'aria-label': T('Cursor-Chat') });
   chatBox = h('div', { class: 'cursor-chat-input', style: { left: Math.min(innerWidth - 260, sr.left + p.x + 18) + 'px', top: Math.min(innerHeight - 60, sr.top + p.y + 22) + 'px', background: app.user.color } }, input);
   document.body.append(chatBox);
   input.focus();
@@ -273,7 +277,7 @@ function timerRemaining(t) {
 }
 
 // Nur anwenden, wenn die Änderung auch gesendet wird (sonst liefe z. B. ein Timer nur lokal)
-const mayChangeSession = () => !app.viewOnly || (toast('Das Bearbeiten ist gerade gesperrt'), false);
+const mayChangeSession = () => !app.viewOnly || (toast(T('Das Bearbeiten ist gerade gesperrt')), false);
 
 export function setTimer(t) {
   if (!mayChangeSession()) return;
@@ -317,20 +321,20 @@ function renderTimer() {
     timerWidget.append(
       h('span', { class: 'timer-icon', html: ICONS.timer }),
       h('span', { class: 'timer-time' }),
-      h('button', { class: 'icon-btn small', title: '+1 Minute', onclick: () => {
+      h('button', { class: 'icon-btn small', title: T('+1 Minute'), onclick: () => {
         const c = app.session.timer;
         if (!c) return;
         if (c.running) setTimer({ ...c, endsAt: Math.max(c.endsAt, now()) + 60000, duration: c.duration + 60000 });
         else setTimer({ ...c, remaining: c.remaining + 60000, duration: c.duration + 60000 });
       } }, '+1'),
       h('button', { class: 'icon-btn small timer-pp' }),
-      h('button', { class: 'icon-btn small', title: 'Timer beenden', html: ICONS.stop, onclick: () => setTimer(null) }),
+      h('button', { class: 'icon-btn small', title: T('Timer beenden'), html: ICONS.stop, onclick: () => setTimer(null) }),
     );
   }
   timerWidget.querySelector('.timer-time').textContent = fmt(rem);
   const pp = timerWidget.querySelector('.timer-pp');
   pp.innerHTML = t.running ? ICONS.pause : ICONS.play;
-  pp.title = t.running ? 'Pausieren' : rem > 0 ? 'Fortsetzen' : 'Neu starten';
+  pp.title = t.running ? T('Pausieren') : rem > 0 ? T('Fortsetzen') : T('Neu starten');
   pp.onclick = () => {
     const c = app.session.timer;
     if (c.running) setTimer({ ...c, running: false, remaining: timerRemaining(c) });
@@ -343,7 +347,7 @@ function renderTimer() {
   if (done && beepedFor !== t.endsAt) {
     beepedFor = t.endsAt;
     beep();
-    toast('⏰ Die Zeit ist abgelaufen!', 4000);
+    toast(T('⏰ Die Zeit ist abgelaufen!'), 4000);
   }
 }
 
@@ -352,14 +356,14 @@ setInterval(() => app.session.timer && renderTimer(), 250);
 function openTimerMenu(anchor) {
   const custom = h('input', { type: 'number', min: 1, max: 180, value: 5, style: { width: '64px' } });
   popover(anchor, h('div', { class: 'timer-pop' },
-    h('div', { class: 'pop-title' }, 'Timer für alle starten'),
-    h('div', { class: 'row wrap' }, [1, 2, 3, 5, 10, 15, 30].map((m) => h('button', { class: 'btn small', onclick: () => { startTimer(m * 60000); closePop(); } }, m + ' Min'))),
-    h('div', { class: 'row', style: { marginTop: '10px' } }, custom, h('span', {}, 'Minuten'), h('button', { class: 'btn primary small', onclick: () => {
+    h('div', { class: 'pop-title' }, T('Timer für alle starten')),
+    h('div', { class: 'row wrap' }, [1, 2, 3, 5, 10, 15, 30].map((m) => h('button', { class: 'btn small', onclick: () => { startTimer(m * 60000); closePop(); } }, m + T(' Min')))),
+    h('div', { class: 'row', style: { marginTop: '10px' } }, custom, h('span', {}, T('Minuten')), h('button', { class: 'btn primary small', onclick: () => {
       const m = Math.max(1, Math.min(180, Number(custom.value) || 5));
       startTimer(m * 60000);
       closePop();
-    } }, 'Start')),
-    app.session.timer ? h('button', { class: 'btn small danger', style: { marginTop: '10px' }, onclick: () => { setTimer(null); closePop(); } }, 'Timer beenden') : null));
+    } }, T('Start'))),
+    app.session.timer ? h('button', { class: 'btn small danger', style: { marginTop: '10px' }, onclick: () => { setTimer(null); closePop(); } }, T('Timer beenden')) : null));
 }
 
 /* ================================================================== */
@@ -385,27 +389,27 @@ function openVotingMenu(anchor) {
   const v = app.session.voting;
   if (v && v.active) {
     menu(anchor, [
-      { header: 'Abstimmung läuft' },
-      { label: 'Abstimmung beenden & Ergebnisse zeigen', icon: 'check', onClick: endVoting },
-      { label: 'Abstimmung abbrechen', icon: 'close', danger: true, onClick: () => setVoting(null) },
+      { header: T('Abstimmung läuft') },
+      { label: T('Abstimmung beenden & Ergebnisse zeigen'), icon: 'check', onClick: endVoting },
+      { label: T('Abstimmung abbrechen'), icon: 'close', danger: true, onClick: () => setVoting(null) },
     ]);
     return;
   }
   const num = h('input', { type: 'number', min: 1, max: 50, value: 3 });
-  const title = h('input', { type: 'text', placeholder: 'z. B. Welche Idee setzen wir um?' });
+  const title = h('input', { type: 'text', placeholder: T('z. B. Welche Idee setzen wir um?') });
   const form = h('form', { class: 'form', onsubmit: (e) => {
     e.preventDefault();
     setVoting({ active: true, votesPerUser: Math.max(1, Math.min(50, Number(num.value) || 3)), votes: {}, title: title.value.trim(), by: app.user.name, startedAt: Date.now() });
     hideResults = false;
     m.close();
-    toast('Abstimmung gestartet – klicke auf Elemente, um abzustimmen');
+    toast(T('Abstimmung gestartet – klicke auf Elemente, um abzustimmen'));
   } },
-  h('p', { class: 'muted' }, 'Alle Teilnehmenden können Sticky Notes, Formen, Karten und Bilder anklicken, um Stimmen zu vergeben. Die Stimmen der anderen bleiben bis zum Ende verborgen.'),
-  h('label', {}, 'Frage (optional)', title),
-  h('label', {}, 'Stimmen pro Person', num),
-  v && !v.active ? h('p', { class: 'muted small' }, 'Die Ergebnisse der letzten Abstimmung werden dabei verworfen.') : null,
-  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, 'Abbrechen'), h('button', { type: 'submit', class: 'btn primary' }, 'Abstimmung starten')));
-  const m = modal('Abstimmung starten', form);
+  h('p', { class: 'muted' }, T('Alle Teilnehmenden können Sticky Notes, Formen, Karten und Bilder anklicken, um Stimmen zu vergeben. Die Stimmen der anderen bleiben bis zum Ende verborgen.')),
+  h('label', {}, T('Frage (optional)'), title),
+  h('label', {}, T('Stimmen pro Person'), num),
+  v && !v.active ? h('p', { class: 'muted small' }, T('Die Ergebnisse der letzten Abstimmung werden dabei verworfen.')) : null,
+  h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, T('Abbrechen')), h('button', { type: 'submit', class: 'btn primary' }, T('Abstimmung starten'))));
+  const m = modal(T('Abstimmung starten'), form);
 }
 
 function endVoting() {
@@ -423,19 +427,19 @@ function openResults() {
 
 app.on('renderVotesPanel', (side, close) => {
   const v = app.session.voting;
-  side.append(h('div', { class: 'side-head' }, h('h3', {}, 'Abstimmungsergebnis'), h('span', { class: 'spacer' }), close));
+  side.append(h('div', { class: 'side-head' }, h('h3', {}, T('Abstimmungsergebnis')), h('span', { class: 'spacer' }), close));
   if (!v) {
-    side.append(h('p', { class: 'muted pad' }, 'Keine Abstimmung vorhanden.'));
+    side.append(h('p', { class: 'muted pad' }, T('Keine Abstimmung vorhanden.')));
     return;
   }
   if (v.title) side.append(h('p', { class: 'pad' }, h('b', {}, v.title)));
   if (v.active) {
-    side.append(h('p', { class: 'muted pad' }, 'Die Abstimmung läuft noch. Ergebnisse erscheinen nach dem Beenden.'));
+    side.append(h('p', { class: 'muted pad' }, T('Die Abstimmung läuft noch. Ergebnisse erscheinen nach dem Beenden.')));
     return;
   }
   const rows = Object.entries(v.votes || {}).map(([id, m]) => ({ id, el: getEl(id), n: Object.values(m).reduce((a, b) => a + b, 0), voters: Object.keys(m).length })).filter((r) => r.el).sort((a, b) => b.n - a.n);
   const total = rows.reduce((s, r) => s + r.n, 0);
-  side.append(h('p', { class: 'muted pad small' }, `${total} Stimmen auf ${rows.length} Elemente verteilt`));
+  side.append(h('p', { class: 'muted pad small' }, T`${total} Stimmen auf ${rows.length} Elemente verteilt`));
   const max = rows[0]?.n || 1;
   rows.forEach((r, i) => {
     const label = r.el.text || r.el.title || r.el.char || r.el.name || r.el.type;
@@ -450,8 +454,8 @@ app.on('renderVotesPanel', (side, close) => {
     h('b', { class: 'vote-n' }, r.n)));
   });
   side.append(h('div', { class: 'side-actions' },
-    h('button', { class: 'btn small', onclick: () => { hideResults = true; toggleSidePanel('votes'); renderVotes(); } }, 'Ausblenden'),
-    app.viewOnly ? null : h('button', { class: 'btn small danger', onclick: () => { setVoting(null); toggleSidePanel('votes'); } }, 'Ergebnisse löschen')));
+    h('button', { class: 'btn small', onclick: () => { hideResults = true; toggleSidePanel('votes'); renderVotes(); } }, T('Ausblenden')),
+    app.viewOnly ? null : h('button', { class: 'btn small danger', onclick: () => { setVoting(null); toggleSidePanel('votes'); } }, T('Ergebnisse löschen'))));
 });
 
 function renderVoting() {
@@ -465,9 +469,9 @@ function renderVoting() {
     banner.innerHTML = '';
     append(banner,
       h('span', { html: ICONS.vote }),
-      h('span', {}, h('b', {}, v.title || 'Abstimmung läuft'), ' · ', left > 0 ? `Noch ${left} von ${v.votesPerUser} Stimmen` : 'Alle Stimmen vergeben', h('span', { class: 'muted small' }, '  (Klick = Stimme, Alt+Klick = zurücknehmen)')),
-      h('button', { class: 'btn small', onclick: () => { app.voteMode = !app.voteMode; renderVoting(); } }, app.voteMode ? 'Pausieren' : 'Abstimmen'),
-      app.viewOnly ? null : h('button', { class: 'btn small primary', onclick: endVoting }, 'Beenden'),
+      h('span', {}, h('b', {}, v.title || T('Abstimmung läuft')), ' · ', left > 0 ? T`Noch ${left} von ${v.votesPerUser} Stimmen` : T('Alle Stimmen vergeben'), h('span', { class: 'muted small' }, T('  (Klick = Stimme, Alt+Klick = zurücknehmen)'))),
+      h('button', { class: 'btn small', onclick: () => { app.voteMode = !app.voteMode; renderVoting(); } }, app.voteMode ? T('Pausieren') : T('Abstimmen')),
+      app.viewOnly ? null : h('button', { class: 'btn small primary', onclick: endVoting }, T('Beenden')),
     );
   }
   renderVotes();
@@ -502,7 +506,7 @@ app.on('view', renderVotes);
 app.on('vote', (elId, delta) => {
   const v = app.session.voting;
   if (!v || !v.active) return;
-  if (delta > 0 && myVotesUsed(v) >= v.votesPerUser) return toast('Du hast alle Stimmen vergeben (Alt+Klick nimmt eine zurück)');
+  if (delta > 0 && myVotesUsed(v) >= v.votesPerUser) return toast(T('Du hast alle Stimmen vergeben (Alt+Klick nimmt eine zurück)'));
   app.sync.op({ op: 'vote', elId, delta });
 });
 
@@ -517,7 +521,7 @@ app.on('present', (startId) => startPresentation(startId));
 
 function startPresentation(startId) {
   const list = frames();
-  if (!list.length) return toast('Lege zuerst Frames an – sie werden zu Folien');
+  if (!list.length) return toast(T('Lege zuerst Frames an – sie werden zu Folien'));
   finishEdit();
   setSelection([]);
   setTool('select');
@@ -546,10 +550,10 @@ function showSlide() {
   fitTo({ x: el.x, y: el.y, w: el.w, h: el.h }, { pad: 24, maxZ: 8 });
   pbar.innerHTML = '';
   pbar.append(
-    h('button', { class: 'icon-btn', title: 'Zurück (←)', html: ICONS.chevLeft, onclick: () => go(-1) }),
-    h('span', {}, `${present.i + 1} / ${present.list.length} · ${el.title || 'Frame'}`),
-    h('button', { class: 'icon-btn', title: 'Weiter (→)', html: ICONS.chevRight, onclick: () => go(1) }),
-    h('button', { class: 'icon-btn', title: 'Beenden (Esc)', html: ICONS.close, onclick: stopPresentation }),
+    h('button', { class: 'icon-btn', title: T('Zurück (←)'), html: ICONS.chevLeft, onclick: () => go(-1) }),
+    h('span', {}, `${present.i + 1} / ${present.list.length} · ${el.title || T('Frame')}`),
+    h('button', { class: 'icon-btn', title: T('Weiter (→)'), html: ICONS.chevRight, onclick: () => go(1) }),
+    h('button', { class: 'icon-btn', title: T('Beenden (Esc)'), html: ICONS.close, onclick: stopPresentation }),
   );
   pbar.classList.remove('hidden');
 }
@@ -593,26 +597,26 @@ app.on('key', (e) => {
 /* ================================================================== */
 
 app.on('buildCollabTools', (box) => {
-  const timerBtn = h('button', { class: 'icon-btn', id: 'btn-timer', title: 'Timer', html: ICONS.timer });
+  const timerBtn = h('button', { class: 'icon-btn', id: 'btn-timer', title: T('Timer'), html: ICONS.timer });
   timerBtn.onclick = () => !reservedHint() && openTimerMenu(timerBtn);
-  const voteBtn = h('button', { class: 'icon-btn', id: 'btn-vote', title: 'Abstimmung', html: ICONS.vote });
+  const voteBtn = h('button', { class: 'icon-btn', id: 'btn-vote', title: T('Abstimmung'), html: ICONS.vote });
   voteBtn.onclick = () => {
     const v = app.session.voting;
     if (toolsReserved()) return v ? openResults() : reservedHint();
     if (v && !v.active && !app.viewOnly) {
       menu(voteBtn, [
-        { label: 'Ergebnisse anzeigen', icon: 'vote', onClick: () => { hideResults = false; renderVotes(); openResults(); } },
-        { label: 'Neue Abstimmung', icon: 'plus', onClick: () => openVotingMenu(voteBtn) },
+        { label: T('Ergebnisse anzeigen'), icon: 'vote', onClick: () => { hideResults = false; renderVotes(); openResults(); } },
+        { label: T('Neue Abstimmung'), icon: 'plus', onClick: () => openVotingMenu(voteBtn) },
       ]);
     } else if (!app.viewOnly) openVotingMenu(voteBtn);
     else openResults();
   };
-  const reactBtn = h('button', { class: 'icon-btn', title: 'Reaktion senden', html: ICONS.smile });
+  const reactBtn = h('button', { class: 'icon-btn', title: T('Reaktion senden'), html: ICONS.smile });
   reactBtn.onclick = () => popover(reactBtn, h('div', { class: 'react-row' }, REACTIONS.map((r) => h('button', { class: 'emoji-btn', onclick: () => {
     showReaction(r, app.user.name);
     app.sync.signal('reaction', { emoji: r, name: app.user.name });
   } }, r))));
-  const presentBtn = h('button', { class: 'icon-btn', title: 'Präsentieren', html: ICONS.present, onclick: () => startPresentation(null) });
+  const presentBtn = h('button', { class: 'icon-btn', title: T('Präsentieren'), html: ICONS.present, onclick: () => startPresentation(null) });
   if (!app.viewOnly) box.append(timerBtn, voteBtn);
   box.append(reactBtn, presentBtn);
 });
@@ -624,8 +628,8 @@ app.on('buildCollabTools', (box) => {
 function showUpdateBanner(version) {
   if (document.getElementById('update-banner')) return;
   document.body.append(h('div', { id: 'update-banner', class: 'panel' },
-    h('span', {}, `vibeboard wurde auf Version ${version} aktualisiert.`),
-    h('button', { class: 'btn small primary', onclick: () => location.reload() }, 'Neu laden')));
+    h('span', {}, T`vibeboard wurde auf Version ${version} aktualisiert.`),
+    h('button', { class: 'btn small primary', onclick: () => location.reload() }, T('Neu laden'))));
 }
 
 // Benachrichtigung öffnen: im selben Board ohne Neuladen zum Kommentar springen
@@ -671,7 +675,7 @@ export function initCollab() {
     app.peers.clear();
     cursorEls.forEach((c) => c.remove());
     cursorEls.clear();
-    for (const p of msg.peers) app.peers.set(p.clientId, { ...p });
+    for (const p of msg.peers) app.peers.set(p.clientId, peerView(p));
     app.loaded = true;
     app.emit('session', 'all');
     app.emit('name');
@@ -702,10 +706,10 @@ export function initCollab() {
         if (was && was.active && op.voting && !op.voting.active) {
           hideResults = false;
           openResults();
-          toast('Abstimmung beendet – Ergebnisse sind da');
+          toast(T('Abstimmung beendet – Ergebnisse sind da'));
         } else if (op.voting && op.voting.active && (!was || !was.active)) {
           app.voteMode = true;
-          toast(`${op.voting.by || 'Jemand'} hat eine Abstimmung gestartet`);
+          toast(T`${op.voting.by || T('Jemand')} hat eine Abstimmung gestartet`);
         }
         renderVoting();
       } else if (['privateMode', 'estimation', 'moderation', 'retro', 'discussion', 'poll', 'picker'].includes(op.op)) {
@@ -719,13 +723,13 @@ export function initCollab() {
     renderVoting();
   });
   s.on('join', (msg) => {
-    app.peers.set(msg.user.clientId, { ...msg.user });
+    app.peers.set(msg.user.clientId, peerView(msg.user));
     app.emit('peers');
     // Neu Hinzukommende kennen den eigenen Zustand noch nicht
     if (document.hidden) s.signal('presence', { away: true });
     if (app.editing && !isAnonymous(getEl(app.editing.id))) s.signal('editing', app.editing.id);
     if (app.sel.size) s.signal('sel', [...app.sel].filter((id) => !isAnonymous(getEl(id))).slice(0, 200));
-    toast(`${msg.user.name} ist dem Board beigetreten`);
+    toast(T`${msg.user.name} ist dem Board beigetreten`);
   });
   s.on('leave', (msg) => {
     const p = app.peers.get(msg.clientId);
@@ -734,7 +738,7 @@ export function initCollab() {
     if (app.following === msg.clientId) app.following = null;
     app.emit('peers');
     scheduleRender(true);
-    if (p) toast(`${p.name} hat das Board verlassen`);
+    if (p) toast(T`${p.name} hat das Board verlassen`);
   });
   s.on('signal', (msg) => {
     const p = app.peers.get(msg.from);
@@ -767,12 +771,12 @@ export function initCollab() {
         break;
       case 'summon':
         fitTo(d.rect, { pad: 0, maxZ: 8 });
-        toast(`${p.name} hat alle zu sich geholt`);
+        toast(T`${p.name} hat alle zu sich geholt`);
         break;
       case 'lead':
         p.view = d.rect;
         follow(msg.from);
-        toast(`${p.name} moderiert – du folgst der Ansicht. Eigenes Verschieben beendet das Folgen.`, 4000);
+        toast(T`${p.name} moderiert – du folgst der Ansicht. Eigenes Verschieben beendet das Folgen.`, 4000);
         break;
       case 'chat':
         p.chat = { text: d && typeof d.text === 'string' ? d.text.slice(0, 120) : '', t: Date.now() };
@@ -797,7 +801,7 @@ export function initCollab() {
     else location.reload();
   });
   s.on('deleted', () => {
-    alert('Dieses Board wurde gelöscht.');
+    alert(T('Dieses Board wurde gelöscht.'));
     location.href = '/';
   });
   s.on('error', (err) => toast(err, 5000));

@@ -32,12 +32,13 @@
 - **Seit:** 2.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Vorlagen nach Werken unter freien Lizenzen enthalten die erforderliche Namensnennung auf dem Board (Business Model Canvas, Lean Canvas: CC BY-SA 3.0).
-  - Geschützte Marken werden nicht als Vorlagenname verwendet (z. B. „Sechs Perspektiven“ statt „Six Thinking Hats“).
+  - Geschützte Marken werden nicht als Vorlagenname verwendet.
+  - Geändert in 4.2.0: Die Vorlage „Angebot & Kundenprofil“ ist entfernt (Nachbildung eines geschützten Canvas ohne Erlaubnis). „Offene Themenrunde“ ersetzt einen möglicherweise geschützten Namen; „Sechs Perspektiven“ hat eine eigene Reihenfolge und eigene Farben. Hinweise der CC-Vorlagen nennen Quelle, Lizenz und Lizenzadresse gut lesbar.
 
 ### REQ-TPL-005 Weitere Retro-Vorlagen
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
-  - Neu: Seestern, DAKI, Zeitstrahl, Heißluftballon, Speedcar, Lean Coffee, Team-Radar (Kategorie „Meetings & Retros“).
+  - Neu: Seestern, DAKI, Zeitstrahl, Heißluftballon, Speedcar, Offene Themenrunde, Team-Radar (Kategorie „Meetings & Retros“).
 
 ### REQ-TPL-006 Eigene Vorlagen
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt

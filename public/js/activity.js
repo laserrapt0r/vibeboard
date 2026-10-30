@@ -1,17 +1,18 @@
 // Aktivitätsverlauf: wer hat was geändert – mit Sprung zum Element und Markierung der Änderungen seit dem
 // letzten Besuch
+import { T, LOCALE, guestName } from './i18n.js';
 import { h, api, toast, relTime, initials, ICONS, unionRect } from './util.js';
 import { app, getEl, bounds, fitTo, setSelection, scheduleRender, $ } from './core.js';
 import { currentSidePanel, renderSidePanel, toggleSidePanel, showSidePanel } from './ui.js';
 
 const TYPE = {
-  sticky: 'Sticky Note', text: 'Text', shape: 'Form', connector: 'Verbindung', pen: 'Freihandlinie', frame: 'Frame', card: 'Karte',
-  table: 'Tabelle', code: 'Code-Block', image: 'Bild', emoji: 'Sticker', comment: 'Kommentar',
+  sticky: T('Sticky Note'), text: T('Text'), shape: T('Form'), connector: T('Verbindung'), pen: T('Freihandlinie'), frame: T('Frame'), card: T('Karte'),
+  table: T('Tabelle'), code: T('Code-Block'), image: T('Bild'), emoji: T('Sticker'), comment: T('Kommentar'),
 };
 const VERB = {
-  created: 'hat erstellt', changed: 'hat bearbeitet', deleted: 'hat gelöscht', commented: 'hat kommentiert', resolved: 'hat erledigt',
-  reopened: 'hat wieder geöffnet', assigned: 'hat zugewiesen', renamed: 'hat das Board umbenannt in', revealed: 'hat aufgedeckt',
-  restored: 'hat eine frühere Version wiederhergestellt', recorded: 'hat einen Rundgang aufgezeichnet:',
+  created: T('hat erstellt'), changed: T('hat bearbeitet'), deleted: T('hat gelöscht'), commented: T('hat kommentiert'), resolved: T('hat erledigt'),
+  reopened: T('hat wieder geöffnet'), assigned: T('hat zugewiesen'), renamed: T('hat das Board umbenannt in'), revealed: T('hat aufgedeckt'),
+  restored: T('hat eine frühere Version wiederhergestellt'), recorded: T('hat einen Rundgang aufgezeichnet:'),
 };
 
 let items = [];
@@ -47,8 +48,8 @@ function computeChanged() {
 }
 
 function describe(i) {
-  const what = i.elementType ? TYPE[i.elementType] || 'Element' : '';
-  if (i.kind === 'revealed') return `hat den privaten Modus aufgedeckt (${i.count} Element${i.count === 1 ? '' : 'e'})`;
+  const what = i.elementType ? TYPE[i.elementType] || T('Element') : '';
+  if (i.kind === 'revealed') return i.count === 1 ? T('hat den privaten Modus aufgedeckt (1 Element)') : T`hat den privaten Modus aufgedeckt (${i.count} Elemente)`;
   if (i.kind === 'renamed' || i.kind === 'recorded') return `${VERB[i.kind]} „${i.label}“`;
   if (!what) return VERB[i.kind] || i.kind;
   return `${VERB[i.kind] || i.kind}: ${what}${i.count > 1 ? ` (${i.count}×)` : ''}`;
@@ -56,7 +57,7 @@ function describe(i) {
 
 function jump(i) {
   const el = i.elementId && getEl(i.elementId);
-  if (!el) return toast(i.kind === 'deleted' ? 'Dieses Element wurde gelöscht' : 'Das Element gibt es nicht mehr');
+  if (!el) return toast(i.kind === 'deleted' ? T('Dieses Element wurde gelöscht') : T('Das Element gibt es nicht mehr'));
   if (el.type === 'comment') {
     fitTo({ x: el.x - 200, y: el.y - 200, w: 400, h: 400 }, { maxZ: 1.5 });
     setTimeout(() => app.emit('openComment', el.id), 320);
@@ -67,20 +68,20 @@ function jump(i) {
 }
 
 async function renderPanel(side, close) {
-  side.append(h('div', { class: 'side-head' }, h('h3', {}, 'Aktivität'), h('span', { class: 'spacer' }), close));
+  side.append(h('div', { class: 'side-head' }, h('h3', {}, T('Aktivität')), h('span', { class: 'spacer' }), close));
   const n = changedSince.size;
   side.append(h('div', { class: 'side-actions' },
     h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: highlight, onchange: (e) => {
       highlight = e.target.checked;
       scheduleRender(true);
-    } }), `Änderungen seit meinem letzten Besuch markieren${n ? ` (${n})` : ''}`)));
+    } }), T`Änderungen seit meinem letzten Besuch markieren${n ? ` (${n})` : ''}`)));
   if (Date.now() - loadedAt > 15000) {
     await load();
     if (currentSidePanel() !== 'activity') return;
     return renderSidePanel();
   }
   if (!items.length) {
-    side.append(h('p', { class: 'muted pad' }, 'Noch keine Aktivität aufgezeichnet.'));
+    side.append(h('p', { class: 'muted pad' }, T('Noch keine Aktivität aufgezeichnet.')));
     return;
   }
   const list = h('div', { class: 'activity-list' });
@@ -88,13 +89,13 @@ async function renderPanel(side, close) {
   for (const i of items) {
     if (!markerDone && app.lastVisit && i.at <= app.lastVisit) {
       markerDone = true;
-      list.append(h('div', { class: 'activity-marker' }, `Dein letzter Besuch · ${new Date(app.lastVisit).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}`));
+      list.append(h('div', { class: 'activity-marker' }, T`Dein letzter Besuch · ${new Date(app.lastVisit).toLocaleString(LOCALE, { dateStyle: 'short', timeStyle: 'short' })}`));
     }
     const isNew = app.lastVisit && i.at > app.lastVisit && i.userId !== String(app.user.id);
-    list.append(h('button', { class: 'activity-row' + (isNew ? ' new' : ''), onclick: () => jump(i), title: new Date(i.at).toLocaleString('de-DE') },
+    list.append(h('button', { class: 'activity-row' + (isNew ? ' new' : ''), onclick: () => jump(i), title: new Date(i.at).toLocaleString(LOCALE) },
       h('span', { class: 'avatar xs', style: { background: i.color || '#888' } }, initials(i.user || '?')),
       h('span', { class: 'activity-main' },
-        h('span', {}, h('b', {}, i.user || 'Jemand'), ' ', describe(i)),
+        h('span', {}, h('b', {}, i.user === 'Anonym' ? T('Anonym') : guestName(i.user) || T('Jemand')), ' ', describe(i)),
         i.label && !['renamed', 'recorded'].includes(i.kind) ? h('span', { class: 'activity-label' }, i.label) : null,
         h('span', { class: 'muted small' }, relTime(i.at)))));
   }
@@ -102,7 +103,7 @@ async function renderPanel(side, close) {
   // Scrollposition über den Neuaufbau erhalten
   side.scrollTop = scrollPos;
   side.onscroll = () => (scrollPos = side.scrollTop);
-  if (items.length >= 60) side.append(h('div', { class: 'side-actions' }, h('button', { class: 'btn small', onclick: async () => { await load(true); renderSidePanel(); } }, 'Ältere laden')));
+  if (items.length >= 60) side.append(h('div', { class: 'side-actions' }, h('button', { class: 'btn small', onclick: async () => { await load(true); renderSidePanel(); } }, T('Ältere laden'))));
 }
 
 app.on('renderPanel', (kind, side, close) => {
@@ -136,7 +137,7 @@ app.on('loaded', async () => {
   if (!n) return;
   const bar = h('div', { class: 'panel since-banner' },
     h('span', { html: ICONS.activity }),
-    h('span', {}, `${n} Element${n === 1 ? '' : 'e'} wurde${n === 1 ? '' : 'n'} seit deinem letzten Besuch von anderen geändert.`),
+    h('span', {}, n === 1 ? T('1 Element wurde seit deinem letzten Besuch von anderen geändert.') : T`${n} Elemente wurden seit deinem letzten Besuch von anderen geändert.`),
     h('button', { class: 'btn small primary', onclick: () => {
       highlight = true;
       showSidePanel('activity');
@@ -145,8 +146,8 @@ app.on('loaded', async () => {
       if (rects.length) fitTo(unionRect(rects), { maxZ: 1.5, pad: 160 });
       scheduleRender(true);
       bar.remove();
-    } }, 'Anzeigen'),
-    h('button', { class: 'icon-btn small', title: 'Schließen', html: ICONS.close, onclick: () => bar.remove() }));
+    } }, T('Anzeigen')),
+    h('button', { class: 'icon-btn small', title: T('Schließen'), html: ICONS.close, onclick: () => bar.remove() }));
   document.body.append(bar);
   setTimeout(() => bar.remove(), 15000);
 });

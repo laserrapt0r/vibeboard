@@ -1,4 +1,5 @@
 // Echtzeit-Synchronisation: Server-Sent Events (Empfang) + gebündelte POSTs (Senden)
+import { T } from './i18n.js';
 import { uid } from './util.js';
 
 // Hat sich gezeigt, dass Server-Sent Events hier nicht durchkommen (z. B. Pufferung durch einen Forward-Proxy),
@@ -164,13 +165,13 @@ export class Sync {
           this.emit('status', false);
           return;
         }
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (!r.ok) throw new Error(T('HTTP ') + r.status);
         for (const m of (await r.json()).messages || []) this.dispatch(m);
         // Nachrichten abholen, bis die Verbindung serverseitig beendet wird (410)
         while (!this.stopped && this.pollLoop === loop) {
           const q = await fetch(`/api/boards/${this.boardId}/poll?client=${encodeURIComponent(this.clientId)}`, { cache: 'no-store', credentials: 'same-origin' });
           if (q.status === 410) break;
-          if (!q.ok) throw new Error('HTTP ' + q.status);
+          if (!q.ok) throw new Error(T('HTTP ') + q.status);
           for (const m of (await q.json()).messages || []) this.dispatch(m);
         }
       } catch {

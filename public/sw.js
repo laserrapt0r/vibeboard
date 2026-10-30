@@ -4,8 +4,8 @@
  * und Skripte aus dem Zwischenspeicher, Seitenaufrufe zeigen dann die Offline-Seite. Schnittstellen (/api/),
  * Echtzeit-Kanal und Dateien werden nie zwischengespeichert.
  */
-const CACHE = 'vibeboard-shell-v1';
-const SHELL = ['/offline.html', '/css/app.css', '/favicon.svg', '/icons/icon-192.png', '/manifest.webmanifest'];
+const CACHE = 'vibeboard-shell-v3';
+const SHELL = ['/offline.html', '/css/app.css', '/favicon.svg', '/icons/icon-192.png', '/manifest.webmanifest', '/js/i18n.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -20,7 +20,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/') || url.pathname === '/sw.js') return;
   const isPage = req.mode === 'navigate';
-  const isAsset = /^\/(css|js|icons|vendor)\//.test(url.pathname) || url.pathname === '/favicon.svg' || url.pathname === '/manifest.webmanifest';
+  const isAsset = /^\/(css|js|icons|vendor|i18n)\//.test(url.pathname) || url.pathname === '/favicon.svg' || url.pathname === '/manifest.webmanifest';
   if (!isPage && !isAsset) return;
   e.respondWith((async () => {
     try {

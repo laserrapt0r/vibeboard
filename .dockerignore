@@ -8,5 +8,4 @@ node_modules
 .env
 .env.*
 !.env.example
-README.md
-THIRD_PARTY_NOTICES.md
+README*.md

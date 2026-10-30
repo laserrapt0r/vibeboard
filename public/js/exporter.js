@@ -1,4 +1,5 @@
 // Export: SVG, PNG, JSON, PDF (Druck), Vorschaubilder
+import { T } from './i18n.js';
 import { renderSvgDocument } from './render.js';
 import { esc } from './util.js';
 
@@ -14,7 +15,7 @@ export function download(name, blobOrUrl) {
 }
 
 export function safeName(s) {
-  return String(s || 'board').replace(/[^\wäöüÄÖÜß.-]+/g, '_').slice(0, 80);
+  return String(s || 'board').replace(/[^\p{L}\p{N}_.-]+/gu, '_').slice(0, 80);
 }
 
 export function svgString(elements, opts) {
@@ -31,7 +32,7 @@ export async function pngDataUrl(elements, { scale = 2, maxSize = 8000, backgrou
   try {
     await new Promise((res, rej) => {
       img.onload = res;
-      img.onerror = () => rej(new Error('SVG konnte nicht gerendert werden'));
+      img.onerror = () => rej(new Error(T('SVG konnte nicht gerendert werden')));
       img.src = url;
     });
     const c = document.createElement('canvas');
@@ -56,8 +57,8 @@ export async function thumbnail(elements) {
 export async function printFrames(elements, frames, rawTitle) {
   const title = esc(rawTitle);
   const win = window.open('', '_blank');
-  if (!win) throw new Error('Pop-up wurde blockiert');
-  win.document.write(`<!doctype html><title>${title}</title><p style="font-family:sans-serif">PDF wird vorbereitet …</p>`);
+  if (!win) throw new Error(T('Pop-up wurde blockiert'));
+  win.document.write(`<!doctype html><title>${title}</title><p style="font-family:sans-serif">${T('PDF wird vorbereitet …')}</p>`);
   const pages = [];
   const list = frames.length ? frames : [null];
   for (const f of list) {

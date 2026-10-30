@@ -13,6 +13,7 @@ RUN npm ci --omit=dev --omit=optional && npm cache clean --force
 COPY server.js ./
 COPY lib ./lib
 COPY public ./public
+COPY LICENSE THIRD_PARTY_NOTICES.md ./
 
 ENV NODE_ENV=production \
     PORT=3000 \

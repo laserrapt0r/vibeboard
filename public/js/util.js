@@ -1,3 +1,4 @@
+import { T, LOCALE } from './i18n.js';
 // Allgemeine Hilfsfunktionen
 
 export const SVGNS = 'http://www.w3.org/2000/svg';
@@ -83,7 +84,7 @@ export function measure(text, size, bold, italic) {
   const key = `${size}|${bold ? 1 : 0}${italic ? 1 : 0}|${text}`;
   let w = mcache.get(key);
   if (w === undefined) {
-    mctx.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${size}px ${FONT}`;
+    mctx.font = `${italic ? T('italic ') : ''}${bold ? T('bold ') : ''}${size}px ${FONT}`;
     w = mctx.measureText(text).width;
     if (mcache.size > 20000) mcache.clear();
     mcache.set(key, w);
@@ -181,6 +182,7 @@ export function unionRect(rects) {
 
 export function initials(name) {
   return String(name || '?')
+    .replace(/\s*\([^()]*\)$/, '') // Zusatz wie „(Gast)“ zählt nicht
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -190,16 +192,17 @@ export function initials(name) {
 
 export function fmtDate(ts) {
   const d = new Date(ts);
-  return d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString(LOCALE) + ' ' + d.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
 }
 
 export function relTime(ts) {
   const s = (Date.now() - ts) / 1000;
-  if (s < 60) return 'gerade eben';
-  if (s < 3600) return `vor ${Math.floor(s / 60)} Min.`;
-  if (s < 86400) return `vor ${Math.floor(s / 3600)} Std.`;
-  if (s < 86400 * 7) return `vor ${Math.floor(s / 86400)} Tag${s >= 172800 ? 'en' : ''}`;
-  return new Date(ts).toLocaleDateString('de-DE');
+  if (s < 60) return T('gerade eben');
+  if (s < 3600) return T`vor ${Math.floor(s / 60)} Min.`;
+  if (s < 86400) return T`vor ${Math.floor(s / 3600)} Std.`;
+  if (s < 172800) return T('vor 1 Tag');
+  if (s < 86400 * 7) return T`vor ${Math.floor(s / 86400)} Tagen`;
+  return new Date(ts).toLocaleDateString(LOCALE);
 }
 
 /* ---------------- Server-API ---------------- */
@@ -212,7 +215,7 @@ function progress(delta) {
   if (busy > 0 && !busyTimer && !document.querySelector('.top-progress')) {
     busyTimer = setTimeout(() => {
       busyTimer = null;
-      if (busy > 0) document.body.append(h('div', { class: 'top-progress', role: 'progressbar', 'aria-label': 'Wird geladen' }));
+      if (busy > 0) document.body.append(h('div', { class: 'top-progress', role: 'progressbar', 'aria-label': T('Wird geladen') }));
     }, 400);
   }
   if (busy <= 0) {
@@ -246,7 +249,7 @@ async function request(url, { method = 'GET', body, raw } = {}) {
   const r = await fetch(url, opts);
   if (r.status === 401 && !url.startsWith('/api/auth/')) {
     location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
-    throw new Error('Nicht angemeldet');
+    throw Object.assign(new Error(T('Nicht angemeldet')), { code: 'auth' });
   }
   if (raw) return r;
   const data = await r.json().catch(() => ({}));
@@ -300,7 +303,7 @@ function guardAsync(el, fn) {
       btns.forEach((b, i) => (b.disabled = prev[i]));
     }).catch((err) => {
       console.error(err);
-      toast(err.message || 'Aktion fehlgeschlagen');
+      toast(err.message || T('Aktion fehlgeschlagen'));
     });
   };
 }
@@ -362,7 +365,7 @@ export function modal(title, content, { wide = false, onClose } = {}) {
     }
   };
   const box = h('div', { class: 'modal' + (wide ? ' wide' : '') },
-    h('div', { class: 'modal-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', title: 'Schließen', onclick: close, html: ICONS.close })),
+    h('div', { class: 'modal-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', title: T('Schließen'), onclick: close, html: ICONS.close })),
     h('div', { class: 'modal-body' }, content));
   const back = h('div', { class: 'modal-back', onpointerdown: (e) => e.target === back && close() }, box);
   document.body.append(back);
@@ -383,14 +386,14 @@ export function promptDialog(title, label, value = '') {
     const form = h('form', { class: 'form', onsubmit: (e) => { e.preventDefault(); finish(input.value); } },
       h('label', {}, label, input),
       h('div', { class: 'form-actions' },
-        h('button', { type: 'button', class: 'btn', onclick: () => finish(null) }, 'Abbrechen'),
-        h('button', { type: 'submit', class: 'btn primary' }, 'OK')));
+        h('button', { type: 'button', class: 'btn', onclick: () => finish(null) }, T('Abbrechen')),
+        h('button', { type: 'submit', class: 'btn primary' }, T('OK'))));
     const m = modal(title, form, { onClose: () => finish(null) });
     setTimeout(() => { input.focus(); input.select(); }, 0);
   });
 }
 
-export function confirmDialog(title, text, okLabel = 'OK', danger = false) {
+export function confirmDialog(title, text, okLabel = T('OK'), danger = false) {
   return new Promise((resolve) => {
     let done = false;
     const finish = (v) => {
@@ -401,7 +404,7 @@ export function confirmDialog(title, text, okLabel = 'OK', danger = false) {
     };
     const okBtn = h('button', { class: 'btn ' + (danger ? 'danger' : 'primary'), onclick: () => finish(true) }, okLabel);
     const m = modal(title, h('div', { class: 'form' }, h('p', {}, text),
-      h('div', { class: 'form-actions' }, h('button', { class: 'btn', onclick: () => finish(false) }, 'Abbrechen'), okBtn)),
+      h('div', { class: 'form-actions' }, h('button', { class: 'btn', onclick: () => finish(false) }, T('Abbrechen')), okBtn)),
       { onClose: () => finish(false) });
     setTimeout(() => okBtn.focus(), 0);
   });

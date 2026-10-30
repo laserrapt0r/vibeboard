@@ -4,6 +4,31 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.2.0] – 2026-10-30
+
+Schemaversion 8.
+
+### Hinzugefügt
+- **Einladung an Adressen ohne Konto** (REQ-BOARD-010): Beim Teilen eines Boards oder Einladen ins Team fragt vibeboard
+  bei unbekannten Adressen nach und verschickt auf Wunsch eine Einladungsmail. Nach der Registrierung über den Link ist
+  das Board geteilt bzw. die Person im Team. Offene Einladungen lassen sich zurückziehen.
+- **Mehrsprachigkeit** (REQ-NFR-008): Oberfläche, Vorlagen, Meldungen und E-Mails auf Englisch, Deutsch, Spanisch und
+  Französisch. Die Sprache folgt dem Browser, Standard ist Englisch; Datum und Zahlen folgen der Browsersprache.
+  `npm run check:i18n` prüft die Wörterbücher.
+- CSV-Import erkennt auch spanische und französische Spaltennamen.
+
+### Geändert
+- `README.md` ist jetzt englisch; Fassungen auf Deutsch, Spanisch und Französisch liegen daneben.
+- Vorlage „Sechs Perspektiven“: eigene Reihenfolge und Farben.
+- Vorlage „Lean Coffee“ heißt jetzt „Offene Themenrunde“.
+- Hinweise der Vorlagen Business Model Canvas und Lean Canvas: gut lesbar, mit Quelle und Lizenzadresse.
+- Lizenzangabe: `(MIT AND CC-BY-SA-3.0)`, Copyright-Zeile in `LICENSE`; `LICENSE` und `THIRD_PARTY_NOTICES.md` liegen im
+  Docker-Image.
+
+### Entfernt
+- Vorlage „Angebot & Kundenprofil“: Sie bildete ein Werk nach, dessen Nutzung in Software eine Erlaubnis braucht.
+  Bestehende Boards bleiben unverändert.
+
 ## [4.1.0] – 2026-10-30
 
 Schemaversion 7. Neue Abhängigkeit: pdfjs-dist (Apache-2.0).

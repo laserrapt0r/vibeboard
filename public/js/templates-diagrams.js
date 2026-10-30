@@ -1,4 +1,5 @@
 // Vorlagen für UML, BPMN und IT-Infrastruktur (Netzwerkplan, Rack, Container-Plattform)
+import { T } from './i18n.js';
 import { B, LIGHT } from './template-kit.js';
 
 const INK = '#1a1a1a';
@@ -22,24 +23,24 @@ const icon = (b, kind, x, y, text, o = {}) => b.shape(x, y, 120, 150, { shape: k
 export const DIAGRAM_TEMPLATES = [
   /* ---------------- UML ---------------- */
   {
-    id: 'uml-class', name: 'Klassendiagramm', category: 'UML', icon: '🧩',
-    description: 'Klassen mit Attributen und Operationen, Vererbung, Schnittstellen, Assoziation, Aggregation und Komposition.',
+    id: 'uml-class', name: T('Klassendiagramm'), category: 'UML', icon: '🧩',
+    description: T('Klassen mit Attributen und Operationen, Vererbung, Schnittstellen, Assoziation, Aggregation und Komposition.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 1960, 1220, 'Klassendiagramm');
-      b.heading(60, 40, 'Klassendiagramm', 'Abschnitte einer Klasse (Name, Attribute, Operationen) werden durch eine Zeile „--“ getrennt.', 1500);
-      const kunde = cls(b, 80, 220, 320, 170, 'Kunde\n--\n- id: Long\n- name: String\n- email: String\n--\n+ bestellen(): Bestellung');
-      const gk = cls(b, 80, 620, 320, 130, 'Geschäftskunde\n--\n- ustId: String\n--\n+ rechnungAnfordern(): void');
-      const adr = cls(b, 500, 620, 280, 150, 'Adresse\n--\n- straße: String\n- plz: String\n- ort: String');
-      const best = cls(b, 900, 220, 340, 190, 'Bestellung\n--\n- nummer: String\n- datum: Date\n- status: Status\n--\n+ summe(): Decimal\n+ abschließen(): void');
-      const pos = cls(b, 900, 620, 300, 130, 'Position\n--\n- menge: int\n--\n+ betrag(): Decimal');
-      const art = cls(b, 1420, 640, 320, 150, 'Artikel\n--\n- nr: String\n- bezeichnung: String\n- preis: Decimal');
-      const zahl = cls(b, 1420, 200, 360, 120, '«interface»\nZahlungsart\n--\n--\n+ bezahlen(betrag: Decimal): boolean');
-      const kk = cls(b, 1340, 420, 230, 110, 'Kreditkarte\n--\n- nummer: String');
-      const re = cls(b, 1630, 420, 230, 110, 'Rechnung\n--\n- zahlungsziel: int');
-      const stat = cls(b, 1420, 880, 280, 160, '«enumeration»\nStatus\n--\nOFFEN\nBEZAHLT\nVERSANDT');
-      edge(b, gk, kunde, { from: 'top', to: 'bottom', arrowEnd: 'triangle', label: 'erbt von' });
-      edge(b, kunde, best, { from: 'right', to: 'left', arrowEnd: 'open', label: '1        bestellt        0..*' });
+      b.frame(0, 0, 1960, 1220, T('Klassendiagramm'));
+      b.heading(60, 40, T('Klassendiagramm'), T('Abschnitte einer Klasse (Name, Attribute, Operationen) werden durch eine Zeile „--“ getrennt.'), 1500);
+      const kunde = cls(b, 80, 220, 320, 170, T('Kunde\n--\n- id: Long\n- name: String\n- email: String\n--\n+ bestellen(): Bestellung'));
+      const gk = cls(b, 80, 620, 320, 130, T('Geschäftskunde\n--\n- ustId: String\n--\n+ rechnungAnfordern(): void'));
+      const adr = cls(b, 500, 620, 280, 150, T('Adresse\n--\n- straße: String\n- plz: String\n- ort: String'));
+      const best = cls(b, 900, 220, 340, 190, T('Bestellung\n--\n- nummer: String\n- datum: Date\n- status: Status\n--\n+ summe(): Decimal\n+ abschließen(): void'));
+      const pos = cls(b, 900, 620, 300, 130, T('Position\n--\n- menge: int\n--\n+ betrag(): Decimal'));
+      const art = cls(b, 1420, 640, 320, 150, T('Artikel\n--\n- nr: String\n- bezeichnung: String\n- preis: Decimal'));
+      const zahl = cls(b, 1420, 200, 360, 120, T('«interface»\nZahlungsart\n--\n--\n+ bezahlen(betrag: Decimal): boolean'));
+      const kk = cls(b, 1340, 420, 230, 110, T('Kreditkarte\n--\n- nummer: String'));
+      const re = cls(b, 1630, 420, 230, 110, T('Rechnung\n--\n- zahlungsziel: int'));
+      const stat = cls(b, 1420, 880, 280, 160, T('«enumeration»\nStatus\n--\nOFFEN\nBEZAHLT\nVERSANDT'));
+      edge(b, gk, kunde, { from: 'top', to: 'bottom', arrowEnd: 'triangle', label: T('erbt von') });
+      edge(b, kunde, best, { from: 'right', to: 'left', arrowEnd: 'open', label: T('1        bestellt        0..*') });
       edge(b, kunde, adr, { from: [0.6, 1], to: 'top', routing: 'elbow', arrowStart: 'diamond', label: '1..*' });
       edge(b, best, pos, { from: 'bottom', to: 'top', arrowStart: 'diamondFilled', label: '1..*' });
       edge(b, pos, art, { from: 'right', to: 'left', arrowEnd: 'open', label: '0..*   1' });
@@ -47,29 +48,29 @@ export const DIAGRAM_TEMPLATES = [
       edge(b, kk, zahl, { from: 'top', to: [-0.45, 1], arrowEnd: 'triangle', dash: true });
       edge(b, re, zahl, { from: 'top', to: [0.45, 1], arrowEnd: 'triangle', dash: true });
       edge(b, best, stat, { from: [0.95, 1], to: 'left', routing: 'elbow', arrowEnd: 'open' });
-      legend(b, 80, 1100, 1000, 'Pfeile: ▷ durchgezogen = Vererbung · ▷ gestrichelt = Realisierung · ◆ Komposition · ◇ Aggregation · gestrichelt mit Spitze = Abhängigkeit');
+      legend(b, 80, 1100, 1000, T('Pfeile: ▷ durchgezogen = Vererbung · ▷ gestrichelt = Realisierung · ◆ Komposition · ◇ Aggregation · gestrichelt mit Spitze = Abhängigkeit'));
       return b.els;
     },
   },
   {
-    id: 'uml-usecase', name: 'Anwendungsfalldiagramm', category: 'UML', icon: '🎭',
-    description: 'Akteure, Systemgrenze und Anwendungsfälle mit «include» und «extend».',
+    id: 'uml-usecase', name: T('Anwendungsfalldiagramm'), category: 'UML', icon: '🎭',
+    description: T('Akteure, Systemgrenze und Anwendungsfälle mit «include» und «extend».'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 1760, 1120, 'Anwendungsfalldiagramm');
-      b.heading(60, 40, 'Anwendungsfalldiagramm', 'Wer nutzt das System wofür? Akteure stehen außerhalb der Systemgrenze.', 1400);
-      area(b, 460, 190, 840, 840, 'Onlineshop');
-      const kunde = b.shape(170, 280, 110, 170, { shape: 'actor', text: 'Kunde', fontSize: 15, bold: true });
-      const ma = b.shape(170, 720, 110, 170, { shape: 'actor', text: 'Mitarbeiter/in', fontSize: 15, bold: true });
-      const pay = b.shape(1460, 470, 110, 170, { shape: 'actor', text: '«system»\nZahlungsdienst', fontSize: 15, bold: true });
+      b.frame(0, 0, 1760, 1120, T('Anwendungsfalldiagramm'));
+      b.heading(60, 40, T('Anwendungsfalldiagramm'), T('Wer nutzt das System wofür? Akteure stehen außerhalb der Systemgrenze.'), 1400);
+      area(b, 460, 190, 840, 840, T('Onlineshop'));
+      const kunde = b.shape(170, 280, 110, 170, { shape: 'actor', text: T('Kunde'), fontSize: 15, bold: true });
+      const ma = b.shape(170, 720, 110, 170, { shape: 'actor', text: T('Mitarbeiter/in'), fontSize: 15, bold: true });
+      const pay = b.shape(1460, 470, 110, 170, { shape: 'actor', text: T('«system»\nZahlungsdienst'), fontSize: 15, bold: true });
       const uc = (x, y, t) => b.shape(x, y, 280, 100, { shape: 'ellipse', text: t, fontSize: 16 });
-      const suchen = uc(540, 250, 'Artikel suchen');
-      const bestellen = uc(540, 420, 'Bestellung aufgeben');
-      const anmelden = uc(960, 260, 'Anmelden');
-      const bezahlen = uc(960, 500, 'Bezahlen');
-      const gutschein = uc(960, 680, 'Gutschein einlösen');
-      const verwalten = uc(540, 760, 'Bestellungen verwalten');
-      const storno = uc(540, 900, 'Bestellung stornieren');
+      const suchen = uc(540, 250, T('Artikel suchen'));
+      const bestellen = uc(540, 420, T('Bestellung aufgeben'));
+      const anmelden = uc(960, 260, T('Anmelden'));
+      const bezahlen = uc(960, 500, T('Bezahlen'));
+      const gutschein = uc(960, 680, T('Gutschein einlösen'));
+      const verwalten = uc(540, 760, T('Bestellungen verwalten'));
+      const storno = uc(540, 900, T('Bestellung stornieren'));
       edge(b, kunde, suchen);
       edge(b, kunde, bestellen);
       edge(b, ma, verwalten);
@@ -78,32 +79,32 @@ export const DIAGRAM_TEMPLATES = [
       edge(b, bestellen, anmelden, { arrowEnd: 'open', dash: true, label: '«include»' });
       edge(b, bestellen, bezahlen, { arrowEnd: 'open', dash: true, label: '«include»' });
       edge(b, gutschein, bezahlen, { from: 'top', to: 'bottom', arrowEnd: 'open', dash: true, label: '«extend»' });
-      legend(b, 460, 1040, 840, 'Linie = Akteur nimmt teil · «include» = wird immer mit ausgeführt · «extend» = optionale Erweiterung');
+      legend(b, 460, 1040, 840, T('Linie = Akteur nimmt teil · «include» = wird immer mit ausgeführt · «extend» = optionale Erweiterung'));
       return b.els;
     },
   },
   {
-    id: 'uml-activity', name: 'Aktivitätsdiagramm', category: 'UML', icon: '🔀',
-    description: 'Ablauf mit Verantwortungsbereichen (Swimlanes), Entscheidung, paralleler Verarbeitung, Start und Ende.',
+    id: 'uml-activity', name: T('Aktivitätsdiagramm'), category: 'UML', icon: '🔀',
+    description: T('Ablauf mit Verantwortungsbereichen (Swimlanes), Entscheidung, paralleler Verarbeitung, Start und Ende.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 1660, 1400, 'Aktivitätsdiagramm');
-      b.heading(60, 40, 'Aktivitätsdiagramm: Bestellung abwickeln', 'Jede Spalte ist ein Verantwortungsbereich. Balken = Aufteilen bzw. Zusammenführen paralleler Abläufe.', 1500);
-      ['Kunde', 'Shop', 'Lager'].forEach((t, i) => area(b, 60 + i * 520, 180, 520, 1160, t, { fill: i % 2 ? '#ffffff' : '#f8f9fa', align: 'center' }));
+      b.frame(0, 0, 1660, 1400, T('Aktivitätsdiagramm'));
+      b.heading(60, 40, T('Aktivitätsdiagramm: Bestellung abwickeln'), T('Jede Spalte ist ein Verantwortungsbereich. Balken = Aufteilen bzw. Zusammenführen paralleler Abläufe.'), 1500);
+      [T('Kunde'), T('Shop'), T('Lager')].forEach((t, i) => area(b, 60 + i * 520, 180, 520, 1160, t, { fill: i % 2 ? '#ffffff' : '#f8f9fa', align: 'center' }));
       const act = (x, y, t) => b.shape(x, y, 240, 80, { shape: 'roundrect', text: t, fontSize: 16, fill: '#eef1ff', stroke: '#4262ff' });
       const start = b.shape(302, 250, 36, 36, { shape: 'initial', fill: INK });
-      const aufgeben = act(200, 330, 'Bestellung aufgeben');
-      const pruefen = act(720, 330, 'Bestellung prüfen');
+      const aufgeben = act(200, 330, T('Bestellung aufgeben'));
+      const pruefen = act(720, 330, T('Bestellung prüfen'));
       const dec = b.shape(804, 480, 72, 72, { shape: 'diamond', text: '', fill: '#ffffff' });
-      b.text(890, 494, 200, 'verfügbar?', 15, { color: '#495057' });
-      const absage = act(200, 476, 'Absage erhalten');
+      b.text(890, 494, 200, T('verfügbar?'), 15, { color: '#495057' });
+      const absage = act(200, 476, T('Absage erhalten'));
       const end1 = b.shape(300, 610, 40, 40, { shape: 'final' });
       const fork = b.shape(700, 640, 820, 10, { shape: 'forkbar', fill: INK });
-      const rechnung = act(720, 720, 'Rechnung erstellen');
-      const pick = act(1240, 720, 'Ware kommissionieren');
+      const rechnung = act(720, 720, T('Rechnung erstellen'));
+      const pick = act(1240, 720, T('Ware kommissionieren'));
       const join = b.shape(700, 880, 820, 10, { shape: 'forkbar', fill: INK });
-      const versand = act(1240, 960, 'Ware versenden');
-      const empfang = act(200, 960, 'Ware empfangen');
+      const versand = act(1240, 960, T('Ware versenden'));
+      const empfang = act(200, 960, T('Ware empfangen'));
       const end2 = b.shape(300, 1110, 40, 40, { shape: 'final' });
       const flow = (a, c, o = {}) => edge(b, a, c, { arrowEnd: 'open', routing: 'elbow', ...o });
       flow(start, aufgeben, { from: 'bottom', to: 'top' });
@@ -123,100 +124,100 @@ export const DIAGRAM_TEMPLATES = [
     },
   },
   {
-    id: 'uml-state', name: 'Zustandsdiagramm', category: 'UML', icon: '🚦',
-    description: 'Lebenszyklus eines Tickets: Zustände, Übergänge mit Ereignis [Bedingung] / Aktion, Start und Ende.',
+    id: 'uml-state', name: T('Zustandsdiagramm'), category: 'UML', icon: '🚦',
+    description: T('Lebenszyklus eines Tickets: Zustände, Übergänge mit Ereignis [Bedingung] / Aktion, Start und Ende.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 2040, 900, 'Zustandsdiagramm');
-      b.heading(60, 40, 'Zustandsdiagramm: Ticket', 'Übergänge beschriften als „Ereignis [Bedingung] / Aktion“.', 1400);
+      b.frame(0, 0, 2040, 900, T('Zustandsdiagramm'));
+      b.heading(60, 40, T('Zustandsdiagramm: Ticket'), T('Übergänge beschriften als „Ereignis [Bedingung] / Aktion“.'), 1400);
       const st = (x, y, t) => b.shape(x, y, 260, 100, { shape: 'roundrect', text: t, fontSize: 16, fill: '#ffffff', stroke: INK });
       const start = b.shape(80, 342, 36, 36, { shape: 'initial', fill: INK });
-      const neu = st(190, 310, 'Neu\nentry / Eingang bestätigen');
-      const arbeit = st(660, 310, 'In Bearbeitung\ndo / analysieren');
-      const wartet = st(660, 620, 'Wartet auf Rückmeldung');
-      const geloest = st(1130, 310, 'Gelöst\nentry / Lösung mitteilen');
-      const zu = st(1600, 310, 'Geschlossen');
+      const neu = st(190, 310, T('Neu\nentry / Eingang bestätigen'));
+      const arbeit = st(660, 310, T('In Bearbeitung\ndo / analysieren'));
+      const wartet = st(660, 620, T('Wartet auf Rückmeldung'));
+      const geloest = st(1130, 310, T('Gelöst\nentry / Lösung mitteilen'));
+      const zu = st(1600, 310, T('Geschlossen'));
       const end1 = b.shape(1940, 340, 40, 40, { shape: 'final' });
       const tr = (a, c, o) => edge(b, a, c, { arrowEnd: 'open', ...o });
       tr(start, neu, { from: 'right', to: 'left' });
       tr(neu, arbeit, { from: 'right', to: 'left', label: 'zuweisen' });
-      tr(arbeit, wartet, { from: [-0.5, 1], to: [-0.5, -1], label: 'Rückfrage stellen', labelPos: 0.35 });
-      tr(wartet, arbeit, { from: [0.5, -1], to: [0.5, 1], label: 'Antwort eingegangen', labelPos: 0.35 });
-      tr(arbeit, geloest, { from: 'right', to: 'left', label: 'Lösung bereitgestellt' });
-      tr(geloest, arbeit, { from: [0, -1], to: [0, -1], routing: 'elbow', label: 'abgelehnt / wieder öffnen' });
-      tr(geloest, zu, { from: 'right', to: 'left', label: 'bestätigt\n[oder nach 5 Tagen]' });
+      tr(arbeit, wartet, { from: [-0.5, 1], to: [-0.5, -1], label: T('Rückfrage stellen'), labelPos: 0.35 });
+      tr(wartet, arbeit, { from: [0.5, -1], to: [0.5, 1], label: T('Antwort eingegangen'), labelPos: 0.35 });
+      tr(arbeit, geloest, { from: 'right', to: 'left', label: T('Lösung bereitgestellt') });
+      tr(geloest, arbeit, { from: [0, -1], to: [0, -1], routing: 'elbow', label: T('abgelehnt / wieder öffnen') });
+      tr(geloest, zu, { from: 'right', to: 'left', label: T('bestätigt\n[oder nach 5 Tagen]') });
       tr(zu, end1, { from: 'right', to: 'left' });
       return b.els;
     },
   },
   {
-    id: 'uml-component', name: 'Komponentendiagramm', category: 'UML', icon: '🧱',
-    description: 'Komponenten mit angebotenen und benötigten Schnittstellen, Abhängigkeiten und Infrastruktur.',
+    id: 'uml-component', name: T('Komponentendiagramm'), category: 'UML', icon: '🧱',
+    description: T('Komponenten mit angebotenen und benötigten Schnittstellen, Abhängigkeiten und Infrastruktur.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 1900, 880, 'Komponentendiagramm');
-      b.heading(60, 40, 'Komponentendiagramm', 'Kreis = angebotene Schnittstelle · gestrichelter Pfeil = benötigt / hängt ab von', 1500);
+      b.frame(0, 0, 1900, 880, T('Komponentendiagramm'));
+      b.heading(60, 40, T('Komponentendiagramm'), T('Kreis = angebotene Schnittstelle · gestrichelter Pfeil = benötigt / hängt ab von'), 1500);
       const comp = (x, y, t) => b.shape(x, y, 280, 120, { shape: 'component', text: t, fontSize: 16, fill: '#ffffff', stroke: INK });
       const iface = (x, y, t) => {
         const c = b.shape(x, y, 26, 26, { shape: 'ellipse', fill: '#ffffff', stroke: INK });
         b.text(x - 60, y + 30, 150, t, 13, { color: '#495057', align: 'center' });
         return c;
       };
-      const web = comp(80, 260, 'Web-Frontend');
-      area(b, 520, 180, 1300, 620, '«subsystem» Shop-Backend', { strokeWidth: 1.5, dash: true });
-      const bestell = comp(760, 260, 'Bestellservice');
-      const zahlung = comp(1400, 260, 'Zahlungsservice');
-      const benach = comp(1400, 560, 'Benachrichtigung');
-      const iBest = iface(600, 307, 'REST /bestellungen');
-      const iZahl = iface(1250, 307, 'IZahlung');
-      const broker = b.shape(760, 560, 280, 110, { shape: 'queue', text: 'Message Broker', fontSize: 16, fill: '#fff4e6', stroke: '#e8590c' });
-      const db = b.shape(570, 580, 170, 150, { shape: 'cylinder', text: 'Bestell-DB', fontSize: 16, fill: '#e6fcf5', stroke: '#0ca678' });
+      const web = comp(80, 260, T('Web-Frontend'));
+      area(b, 520, 180, 1300, 620, T('«subsystem» Shop-Backend'), { strokeWidth: 1.5, dash: true });
+      const bestell = comp(760, 260, T('Bestellservice'));
+      const zahlung = comp(1400, 260, T('Zahlungsservice'));
+      const benach = comp(1400, 560, T('Benachrichtigung'));
+      const iBest = iface(600, 307, T('REST /bestellungen'));
+      const iZahl = iface(1250, 307, T('IZahlung'));
+      const broker = b.shape(760, 560, 280, 110, { shape: 'queue', text: T('Message Broker'), fontSize: 16, fill: '#fff4e6', stroke: '#e8590c' });
+      const db = b.shape(570, 580, 170, 150, { shape: 'cylinder', text: T('Bestell-DB'), fontSize: 16, fill: '#e6fcf5', stroke: '#0ca678' });
       edge(b, bestell, iBest, { from: 'left', to: 'right' });
       edge(b, web, iBest, { from: 'right', to: 'left', arrowEnd: 'open', dash: true, label: 'nutzt' });
       edge(b, zahlung, iZahl, { from: 'left', to: 'right' });
       edge(b, bestell, iZahl, { from: 'right', to: 'left', arrowEnd: 'open', dash: true });
-      edge(b, bestell, broker, { from: 'bottom', to: 'top', arrowEnd: 'open', dash: true, label: 'Ereignis „bestellt“' });
+      edge(b, bestell, broker, { from: 'bottom', to: 'top', arrowEnd: 'open', dash: true, label: T('Ereignis „bestellt“') });
       edge(b, benach, broker, { from: 'left', to: 'right', arrowEnd: 'open', dash: true, label: 'abonniert' });
-      edge(b, bestell, db, { from: [-0.6, 1], to: 'top', routing: 'elbow', arrowEnd: 'open', dash: true, label: 'SQL' });
+      edge(b, bestell, db, { from: [-0.6, 1], to: 'top', routing: 'elbow', arrowEnd: 'open', dash: true, label: T('SQL') });
       return b.els;
     },
   },
   {
-    id: 'uml-deployment', name: 'Verteilungsdiagramm', category: 'UML', icon: '🖥️',
-    description: 'Knoten (Geräte, Laufzeitumgebungen), darauf verteilte Artefakte und Kommunikationswege.',
+    id: 'uml-deployment', name: T('Verteilungsdiagramm'), category: 'UML', icon: '🖥️',
+    description: T('Knoten (Geräte, Laufzeitumgebungen), darauf verteilte Artefakte und Kommunikationswege.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 1960, 900, 'Verteilungsdiagramm');
-      b.heading(60, 40, 'Verteilungsdiagramm', 'Welche Software läuft wo, und wie sind die Knoten verbunden?', 1400);
+      b.frame(0, 0, 1960, 900, T('Verteilungsdiagramm'));
+      b.heading(60, 40, T('Verteilungsdiagramm'), T('Welche Software läuft wo, und wie sind die Knoten verbunden?'), 1400);
       const node = (x, y, w, h, t, o = {}) => b.shape(x, y, w, h, { shape: 'umlnode', text: t, fontSize: 15, bold: true, valign: 'top', fill: '#ffffff', stroke: INK, ...o });
       const artifact = (x, y, t) => b.shape(x, y, 220, 80, { shape: 'note', text: t, fontSize: 14, fill: '#ffffff', stroke: INK });
-      const client = node(80, 260, 360, 320, '«device»\nArbeitsplatz-PC');
-      node(110, 360, 290, 190, '«executionEnvironment»\nWebbrowser', { fill: '#f8f9fa', bold: false, locked: true });
-      artifact(145, 450, '«artifact»\nfrontend.js');
-      const app = node(640, 220, 600, 420, '«device»\nAnwendungsserver (Linux)');
-      node(670, 320, 530, 300, '«executionEnvironment»\nContainer-Laufzeit', { fill: '#f8f9fa', bold: false, locked: true });
-      artifact(700, 410, '«artifact»\nshop-api.jar');
-      artifact(950, 410, '«artifact»\nfrontend.zip');
-      artifact(700, 515, '«artifact»\nreverse-proxy.conf');
-      const dbs = node(1440, 260, 440, 320, '«device»\nDatenbankserver');
-      node(1470, 360, 370, 190, '«executionEnvironment»\nPostgreSQL 16', { fill: '#f8f9fa', bold: false, locked: true });
-      artifact(1510, 450, '«artifact»\nshop (Schema)');
+      const client = node(80, 260, 360, 320, T('«device»\nArbeitsplatz-PC'));
+      node(110, 360, 290, 190, T('«executionEnvironment»\nWebbrowser'), { fill: '#f8f9fa', bold: false, locked: true });
+      artifact(145, 450, T('«artifact»\nfrontend.js'));
+      const app = node(640, 220, 600, 420, T('«device»\nAnwendungsserver (Linux)'));
+      node(670, 320, 530, 300, T('«executionEnvironment»\nContainer-Laufzeit'), { fill: '#f8f9fa', bold: false, locked: true });
+      artifact(700, 410, T('«artifact»\nshop-api.jar'));
+      artifact(950, 410, T('«artifact»\nfrontend.zip'));
+      artifact(700, 515, T('«artifact»\nreverse-proxy.conf'));
+      const dbs = node(1440, 260, 440, 320, T('«device»\nDatenbankserver'));
+      node(1470, 360, 370, 190, T('«executionEnvironment»\nPostgreSQL 16'), { fill: '#f8f9fa', bold: false, locked: true });
+      artifact(1510, 450, T('«artifact»\nshop (Schema)'));
       edge(b, client, app, { from: 'right', to: [-1, 0.07], label: '«HTTPS»' });
-      edge(b, app, dbs, { from: [1, 0.07], to: 'left', label: '«TCP/IP» 5432' });
-      legend(b, 640, 720, 1240, 'Quader = Knoten · «device» = Hardware/VM · «executionEnvironment» = Laufzeitumgebung · Dokument = Artefakt');
+      edge(b, app, dbs, { from: [1, 0.07], to: 'left', label: T('«TCP/IP» 5432') });
+      legend(b, 640, 720, 1240, T('Quader = Knoten · «device» = Hardware/VM · «executionEnvironment» = Laufzeitumgebung · Dokument = Artefakt'));
       return b.els;
     },
   },
 
   /* ---------------- BPMN ---------------- */
   {
-    id: 'bpmn-incident', name: 'Prozessmodell (BPMN): Störung', category: 'IT-Service-Management', icon: '🧭',
-    description: 'Incident-Prozess mit Bahnen je Rolle, Aufgaben, Gateways und Ereignissen in BPMN-Notation.',
+    id: 'bpmn-incident', name: T('Prozessmodell (BPMN): Störung'), category: 'IT-Service-Management', icon: '🧭',
+    description: T('Incident-Prozess mit Bahnen je Rolle, Aufgaben, Gateways und Ereignissen in BPMN-Notation.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 1980, 1080, 'Prozessmodell');
-      b.heading(60, 40, 'Störungsbearbeitung (BPMN)', 'Kreis dünn = Start · Kreis dick = Ende · Raute mit × = Entweder-oder · Pfeile = Reihenfolge', 1500);
-      const lanes = ['Anwender/in', 'Service Desk', '2nd Level'];
+      b.frame(0, 0, 1980, 1080, T('Prozessmodell'));
+      b.heading(60, 40, T('Störungsbearbeitung (BPMN)'), T('Kreis dünn = Start · Kreis dick = Ende · Raute mit × = Entweder-oder · Pfeile = Reihenfolge'), 1500);
+      const lanes = [T('Anwender/in'), T('Service Desk'), T('2nd Level')];
       lanes.forEach((t, i) => {
         b.shape(60, 190 + i * 260, 140, 260, { shape: 'rect', text: t, fontSize: 16, bold: true, fill: '#f1f3f5', stroke: LINE, strokeWidth: 1.5, locked: true });
         b.shape(200, 190 + i * 260, 1720, 260, { shape: 'rect', fill: i % 2 ? '#ffffff' : '#fcfcfd', stroke: LINE, strokeWidth: 1.5, locked: true });
@@ -224,19 +225,19 @@ export const DIAGRAM_TEMPLATES = [
       const task = (x, y, t) => b.shape(x, y, 200, 90, { shape: 'roundrect', text: t, fontSize: 15, fill: '#ffffff', stroke: INK });
       const ev = (kind, x, y, t) => b.shape(x, y, 56, 56, { shape: kind, text: t, fontSize: 13, fill: '#ffffff', stroke: INK });
       const gw = (kind, x, y, t) => b.shape(x, y, 72, 72, { shape: kind, text: t, fontSize: 13, fill: '#ffffff', stroke: INK });
-      const start = ev('event', 250, 292, 'Störung bemerkt');
-      const melden = task(370, 275, 'Störung melden');
-      const erfassen = task(370, 535, 'Ticket erfassen und klassifizieren');
+      const start = ev('event', 250, 292, T('Störung bemerkt'));
+      const melden = task(370, 275, T('Störung melden'));
+      const erfassen = task(370, 535, T('Ticket erfassen und klassifizieren'));
       const bekannt = gw('gatewayx', 664, 544, '');
-      b.text(610, 500, 180, 'Lösung bekannt?', 13, { align: 'center', color: '#495057' });
-      const anwenden = task(820, 535, 'Bekannte Lösung anwenden');
-      const analyse = task(820, 795, 'Analysieren und beheben');
+      b.text(610, 500, 180, T('Lösung bekannt?'), 13, { align: 'center', color: '#495057' });
+      const anwenden = task(820, 535, T('Bekannte Lösung anwenden'));
+      const analyse = task(820, 795, T('Analysieren und beheben'));
       const merge = gw('gatewayx', 1104, 544, '');
-      const info = task(1240, 535, 'Anwender/in informieren');
-      const pruefen = task(1240, 275, 'Lösung prüfen');
+      const info = task(1240, 535, T('Anwender/in informieren'));
+      const pruefen = task(1240, 275, T('Lösung prüfen'));
       const ok = gw('gatewayx', 1540, 284, '');
-      b.text(1486, 240, 180, 'Behoben?', 13, { align: 'center', color: '#495057' });
-      const fertig = ev('eventend', 1760, 292, 'Störung behoben');
+      b.text(1486, 240, 180, T('Behoben?'), 13, { align: 'center', color: '#495057' });
+      const fertig = ev('eventend', 1760, 292, T('Störung behoben'));
       const flow = (a, c, o = {}) => edge(b, a, c, { arrowEnd: 'arrow', routing: 'elbow', ...o });
       flow(start, melden, { from: 'right', to: 'left' });
       flow(melden, erfassen, { from: 'bottom', to: 'top' });
@@ -249,45 +250,45 @@ export const DIAGRAM_TEMPLATES = [
       flow(info, pruefen, { from: 'top', to: 'bottom' });
       flow(pruefen, ok, { from: 'right', to: 'left' });
       flow(ok, fertig, { from: 'right', to: 'left', label: 'ja' });
-      flow(ok, erfassen, { from: 'bottom', to: [0.5, -1], label: 'nein, wieder öffnen' });
+      flow(ok, erfassen, { from: 'bottom', to: [0.5, -1], label: T('nein, wieder öffnen') });
       return b.els;
     },
   },
 
   /* ---------------- IT-Infrastruktur ---------------- */
   {
-    id: 'network-plan', name: 'Netzwerkplan', category: 'IT-Infrastruktur', icon: '🌐',
-    description: 'Internetanbindung, Firewall, DMZ, Serverraum und LAN mit Switches, Arbeitsplätzen und WLAN.',
+    id: 'network-plan', name: T('Netzwerkplan'), category: 'IT-Infrastruktur', icon: '🌐',
+    description: T('Internetanbindung, Firewall, DMZ, Serverraum und LAN mit Switches, Arbeitsplätzen und WLAN.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 2000, 1720, 'Netzwerkplan');
-      b.heading(60, 40, 'Netzwerkplan', 'Geräte über die Formenauswahl → „Netzwerk & Rechenzentrum“ ergänzen. Verbindungen mit Bandbreite oder VLAN beschriften.', 1600);
+      b.frame(0, 0, 2000, 1720, T('Netzwerkplan'));
+      b.heading(60, 40, T('Netzwerkplan'), T('Geräte über die Formenauswahl → „Netzwerk & Rechenzentrum“ ergänzen. Verbindungen mit Bandbreite oder VLAN beschriften.'), 1600);
       const net = (a, c, o = {}) => edge(b, a, c, { stroke: LINE, strokeWidth: 2, ...o });
       const dev = (kind, x, y, w, h, t, o = {}) => b.shape(x, y, w, h, { shape: kind, text: t, fontSize: 14, fill: '#ffffff', stroke: INK, ...o });
-      const inet = icon(b, 'internet', 940, 180, 'Internet');
-      const router = icon(b, 'router', 940, 380, 'Edge-Router');
-      const fw = dev('firewall', 900, 580, 200, 120, 'Firewall');
-      area(b, 80, 540, 660, 430, 'DMZ · VLAN 30', { fill: LIGHT.red, stroke: '#e03131', dash: true });
-      const dmzSw = dev('switch', 280, 610, 260, 80, 'DMZ-Switch');
-      const web = dev('server', 130, 780, 220, 130, 'Webserver');
-      const mail = dev('server', 470, 780, 220, 130, 'Mail-Relay');
-      area(b, 1260, 540, 660, 430, 'Serverraum · VLAN 10', { fill: LIGHT.green, stroke: '#2f9e44', dash: true });
-      const srvSw = dev('switch', 1460, 610, 260, 80, 'Server-Switch');
-      const app = dev('server', 1300, 780, 220, 130, 'Anwendungsserver');
-      const nas = dev('storage', 1620, 790, 260, 110, 'NAS (Backup)');
-      area(b, 80, 1040, 1840, 620, 'LAN · VLAN 20 (Clients) · VLAN 40 (WLAN)', { fill: LIGHT.blue, stroke: '#1c7ed6', dash: true });
-      const core = dev('switch', 870, 1090, 260, 80, 'Core-Switch');
-      const accA = dev('switch', 200, 1240, 260, 80, 'Access-Switch EG');
-      const accB = dev('switch', 760, 1240, 260, 80, 'Access-Switch OG');
-      const pcs = [[150, 'PC Empfang'], [330, 'PC Buchhaltung'], [710, 'PC Vertrieb'], [890, 'PC Technik']].map(([x, t]) => dev('desktop', x, 1420, 150, 125, t, { fontSize: 13 }));
-      const ap = icon(b, 'accesspoint', 1420, 1210, 'WLAN-Access-Point');
-      const lap = dev('laptop', 1300, 1460, 170, 110, 'Notebook');
-      const phone = dev('mobile', 1560, 1440, 80, 140, 'Telefon', { fontSize: 12 });
-      net(inet, router, { from: 'bottom', to: 'top', label: 'Glasfaser 1 Gbit/s' });
+      const inet = icon(b, 'internet', 940, 180, T('Internet'));
+      const router = icon(b, 'router', 940, 380, T('Edge-Router'));
+      const fw = dev('firewall', 900, 580, 200, 120, T('Firewall'));
+      area(b, 80, 540, 660, 430, T('DMZ · VLAN 30'), { fill: LIGHT.red, stroke: '#e03131', dash: true });
+      const dmzSw = dev('switch', 280, 610, 260, 80, T('DMZ-Switch'));
+      const web = dev('server', 130, 780, 220, 130, T('Webserver'));
+      const mail = dev('server', 470, 780, 220, 130, T('Mail-Relay'));
+      area(b, 1260, 540, 660, 430, T('Serverraum · VLAN 10'), { fill: LIGHT.green, stroke: '#2f9e44', dash: true });
+      const srvSw = dev('switch', 1460, 610, 260, 80, T('Server-Switch'));
+      const app = dev('server', 1300, 780, 220, 130, T('Anwendungsserver'));
+      const nas = dev('storage', 1620, 790, 260, 110, T('NAS (Backup)'));
+      area(b, 80, 1040, 1840, 620, T('LAN · VLAN 20 (Clients) · VLAN 40 (WLAN)'), { fill: LIGHT.blue, stroke: '#1c7ed6', dash: true });
+      const core = dev('switch', 870, 1090, 260, 80, T('Core-Switch'));
+      const accA = dev('switch', 200, 1240, 260, 80, T('Access-Switch EG'));
+      const accB = dev('switch', 760, 1240, 260, 80, T('Access-Switch OG'));
+      const pcs = [[150, T('PC Empfang')], [330, T('PC Buchhaltung')], [710, T('PC Vertrieb')], [890, T('PC Technik')]].map(([x, t]) => dev('desktop', x, 1420, 150, 125, t, { fontSize: 13 }));
+      const ap = icon(b, 'accesspoint', 1420, 1210, T('WLAN-Access-Point'));
+      const lap = dev('laptop', 1300, 1460, 170, 110, T('Notebook'));
+      const phone = dev('mobile', 1560, 1440, 80, 140, T('Telefon'), { fontSize: 12 });
+      net(inet, router, { from: 'bottom', to: 'top', label: T('Glasfaser 1 Gbit/s') });
       net(router, fw, { from: 'bottom', to: 'top' });
-      net(fw, dmzSw, { from: 'left', to: 'right', label: 'DMZ' });
-      net(fw, srvSw, { from: 'right', to: 'left', label: 'Server' });
-      net(fw, core, { from: 'bottom', to: 'top', label: 'LAN' });
+      net(fw, dmzSw, { from: 'left', to: 'right', label: T('DMZ') });
+      net(fw, srvSw, { from: 'right', to: 'left', label: T('Server') });
+      net(fw, core, { from: 'bottom', to: 'top', label: T('LAN') });
       net(dmzSw, web, { from: 'bottom', to: 'top' });
       net(dmzSw, mail, { from: 'bottom', to: 'top' });
       net(srvSw, app, { from: 'bottom', to: 'top' });
@@ -302,14 +303,14 @@ export const DIAGRAM_TEMPLATES = [
     },
   },
   {
-    id: 'rack-plan', name: 'Rack-Belegung', category: 'IT-Infrastruktur', icon: '🗄️',
-    description: 'Zwei Serverschränke mit 42 Höheneinheiten, Belegung nach Gerätetyp und Legende.',
+    id: 'rack-plan', name: T('Rack-Belegung'), category: 'IT-Infrastruktur', icon: '🗄️',
+    description: T('Zwei Serverschränke mit 42 Höheneinheiten, Belegung nach Gerätetyp und Legende.'),
     build: () => {
       const b = new B();
       const U = 18, units = 42, rackW = 320;
       const head = 40, base = 12, rackH = head + units * U + base;
-      b.frame(0, 0, 1500, rackH + 330, 'Rack-Belegung');
-      b.heading(60, 40, 'Rack-Belegung', 'Geräte als Rechtecke in Höheneinheiten (1 HE = 18 px) – zum Umbauen einfach verschieben.', 1300);
+      b.frame(0, 0, 1500, rackH + 330, T('Rack-Belegung'));
+      b.heading(60, 40, T('Rack-Belegung'), T('Geräte als Rechtecke in Höheneinheiten (1 HE = 18 px) – zum Umbauen einfach verschieben.'), 1300);
       const COLORS = { net: ['#d0ebff', '#1c7ed6'], srv: ['#e9ecef', '#495057'], sto: ['#d3f9d8', '#2f9e44'], pwr: ['#ffe8cc', '#e8590c'], pp: ['#f8f9fa', '#adb5bd'] };
       const rack = (x, name, devices) => {
         const y = 200;
@@ -321,60 +322,60 @@ export const DIAGRAM_TEMPLATES = [
           b.shape(x + rw + 2, y + head + (units - top) * U + 1, rackW - 2 * rw - 4, size * U - 2, { shape: 'rect', text: label, fontSize: size > 1 ? 13 : 11, fill, stroke, strokeWidth: 1 });
         }
       };
-      rack(140, 'Rack A01 · Netzwerk', [
-        [42, 1, 'Patchfeld 1 (24 Ports)', 'pp'], [41, 1, 'Patchfeld 2 (24 Ports)', 'pp'], [40, 1, 'Core-Switch 48 Ports', 'net'],
-        [39, 1, 'Access-Switch EG', 'net'], [38, 1, 'Access-Switch OG', 'net'], [36, 1, 'Firewall', 'net'], [35, 1, 'Router', 'net'],
-        [4, 3, 'USV 3 kVA', 'pwr'],
+      rack(140, T('Rack A01 · Netzwerk'), [
+        [42, 1, T('Patchfeld 1 (24 Ports)'), 'pp'], [41, 1, T('Patchfeld 2 (24 Ports)'), 'pp'], [40, 1, T('Core-Switch 48 Ports'), 'net'],
+        [39, 1, T('Access-Switch EG'), 'net'], [38, 1, T('Access-Switch OG'), 'net'], [36, 1, T('Firewall'), 'net'], [35, 1, T('Router'), 'net'],
+        [4, 3, T('USV 3 kVA'), 'pwr'],
       ]);
-      rack(620, 'Rack A02 · Server', [
-        [42, 1, 'Patchfeld (24 Ports)', 'pp'], [41, 1, 'Server-Switch', 'net'], [38, 2, 'Virtualisierungshost 1', 'srv'],
-        [36, 2, 'Virtualisierungshost 2', 'srv'], [34, 2, 'Virtualisierungshost 3', 'srv'], [31, 2, 'Backup-Server', 'srv'],
-        [28, 4, 'Speichersystem (SAN)', 'sto'], [4, 3, 'USV 3 kVA', 'pwr'],
+      rack(620, T('Rack A02 · Server'), [
+        [42, 1, T('Patchfeld (24 Ports)'), 'pp'], [41, 1, T('Server-Switch'), 'net'], [38, 2, T('Virtualisierungshost 1'), 'srv'],
+        [36, 2, T('Virtualisierungshost 2'), 'srv'], [34, 2, T('Virtualisierungshost 3'), 'srv'], [31, 2, T('Backup-Server'), 'srv'],
+        [28, 4, T('Speichersystem (SAN)'), 'sto'], [4, 3, T('USV 3 kVA'), 'pwr'],
       ]);
       const ly = 220;
-      b.text(1040, ly, 400, 'Legende', 20, { bold: true });
-      [['net', 'Netzwerk'], ['srv', 'Server'], ['sto', 'Speicher'], ['pwr', 'Stromversorgung'], ['pp', 'Patchfeld / Kabelführung']].forEach(([k, t], i) => {
+      b.text(1040, ly, 400, T('Legende'), 20, { bold: true });
+      [['net', T('Netzwerk')], ['srv', T('Server')], ['sto', T('Speicher')], ['pwr', T('Stromversorgung')], ['pp', T('Patchfeld / Kabelführung')]].forEach(([k, t], i) => {
         const [fill, stroke] = COLORS[k];
         b.shape(1040, ly + 50 + i * 44, 40, 28, { shape: 'rect', fill, stroke, strokeWidth: 1, locked: true });
         b.text(1094, ly + 50 + i * 44, 320, t, 16);
       });
-      b.text(1040, ly + 300, 420, 'Freie Höheneinheiten bleiben leer.\nGewicht und Leistung je Rack im Blick behalten.', 15, { color: '#6b6b6b' });
+      b.text(1040, ly + 300, 420, T('Freie Höheneinheiten bleiben leer.\nGewicht und Leistung je Rack im Blick behalten.'), 15, { color: '#6b6b6b' });
       return b.els;
     },
   },
   {
-    id: 'container-cluster', name: 'Container-Plattform (Cluster)', category: 'IT-Infrastruktur', icon: '☸️',
-    description: 'Cluster-Übersicht, z. B. für Kubernetes: Ingress, Services, Deployments, Pods, ConfigMap, Secret, Volume und Nodes.',
+    id: 'container-cluster', name: T('Container-Plattform (Cluster)'), category: 'IT-Infrastruktur', icon: '☸️',
+    description: T('Cluster-Übersicht, z. B. für Kubernetes: Ingress, Services, Deployments, Pods, ConfigMap, Secret, Volume und Nodes.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 1960, 1360, 'Container-Plattform');
-      b.heading(60, 40, 'Container-Plattform: Cluster-Übersicht', 'Symbole unter Formen → „Container-Plattform“. Pfeile zeigen den Weg der Anfragen.', 1600);
-      const users = icon(b, 'users', 80, 520, 'Nutzer/innen');
-      area(b, 300, 180, 1600, 1130, 'Cluster', { fill: '#f8f9fa' });
-      const ingress = icon(b, 'ingress', 380, 520, 'Ingress\nshop.example.org');
-      area(b, 600, 230, 1260, 760, 'Namespace: shop', { fill: '#ffffff', dash: true });
-      const row = (y, name, workload = 'Deployment') => {
-        const svc = icon(b, 'k8sservice', 660, y, `Service\n${name}`);
+      b.frame(0, 0, 1960, 1360, T('Container-Plattform'));
+      b.heading(60, 40, T('Container-Plattform: Cluster-Übersicht'), T('Symbole unter Formen → „Container-Plattform“. Pfeile zeigen den Weg der Anfragen.'), 1600);
+      const users = icon(b, 'users', 80, 520, T('Nutzer/innen'));
+      area(b, 300, 180, 1600, 1130, T('Cluster'), { fill: '#f8f9fa' });
+      const ingress = icon(b, 'ingress', 380, 520, T('Ingress\nshop.example.org'));
+      area(b, 600, 230, 1260, 760, T('Namespace: shop'), { fill: '#ffffff', dash: true });
+      const row = (y, name, workload = T('Deployment')) => {
+        const svc = icon(b, 'k8sservice', 660, y, T`Service\n${name}`);
         const dep = icon(b, 'deployment', 880, y, `${workload}\n${name}`);
-        const pods = [0, 1].map((i) => icon(b, 'pod', 1100 + i * 160, y, `Pod\n${name}-${i + 1}`));
-        edge(b, svc, dep, { from: [1, -0.25], to: [-1, -0.25], arrowEnd: 'open', dash: true, label: 'wählt Pods' });
+        const pods = [0, 1].map((i) => icon(b, 'pod', 1100 + i * 160, y, T`Pod\n${name}-${i + 1}`));
+        edge(b, svc, dep, { from: [1, -0.25], to: [-1, -0.25], arrowEnd: 'open', dash: true, label: T('wählt Pods') });
         pods.forEach((p) => edge(b, dep, p, { from: [1, -0.25], to: [-1, -0.25], arrowEnd: 'open' }));
         return { svc, dep, pods };
       };
       const web = row(270, 'web');
       const api = row(510, 'api');
-      const db = row(750, 'db', 'StatefulSet');
-      const cfg = icon(b, 'configmap', 1560, 270, 'ConfigMap\nweb-config');
-      const sec = icon(b, 'secret', 1560, 510, 'Secret\ndb-zugang');
-      const vol = icon(b, 'volume', 1560, 750, 'Volume\ndaten (10 GiB)');
+      const db = row(750, 'db', T('StatefulSet'));
+      const cfg = icon(b, 'configmap', 1560, 270, T('ConfigMap\nweb-config'));
+      const sec = icon(b, 'secret', 1560, 510, T('Secret\ndb-zugang'));
+      const vol = icon(b, 'volume', 1560, 750, T('Volume\ndaten (10 GiB)'));
       edge(b, cfg, web.pods[1], { from: [-1, -0.25], to: [1, -0.25], dash: true });
       edge(b, sec, api.pods[1], { from: [-1, -0.25], to: [1, -0.25], dash: true });
-      edge(b, vol, db.pods[1], { from: [-1, -0.25], to: [1, -0.25], dash: true, label: 'eingehängt' });
-      edge(b, users, ingress, { from: [1, -0.25], to: [-1, -0.25], arrowEnd: 'arrow', label: 'HTTPS' });
+      edge(b, vol, db.pods[1], { from: [-1, -0.25], to: [1, -0.25], dash: true, label: T('eingehängt') });
+      edge(b, users, ingress, { from: [1, -0.25], to: [-1, -0.25], arrowEnd: 'arrow', label: T('HTTPS') });
       edge(b, ingress, web.svc, { from: [1, -0.25], to: [-1, -0.25], routing: 'elbow', arrowEnd: 'arrow', label: '/' });
       edge(b, ingress, api.svc, { from: [1, -0.25], to: [-1, -0.25], routing: 'elbow', arrowEnd: 'arrow', label: '/api' });
-      [0, 1, 2].forEach((i) => icon(b, 'k8snode', 700 + i * 360, 1060, `Node ${i + 1}`));
-      b.text(1760, 1110, 120, 'Pods werden auf die Nodes verteilt.', 14, { color: '#6b6b6b' });
+      [0, 1, 2].forEach((i) => icon(b, 'k8snode', 700 + i * 360, 1060, T`Node ${i + 1}`));
+      b.text(1760, 1110, 120, T('Pods werden auf die Nodes verteilt.'), 14, { color: '#6b6b6b' });
       return b.els;
     },
   },
