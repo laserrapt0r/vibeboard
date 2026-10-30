@@ -52,7 +52,8 @@ function renderLogin() {
   if (config.needsSetup) return location.replace('/register');
   const err = errorBox();
   const extra = h('div');
-  const login = field('E-Mail-Adresse', { type: 'text', inputmode: 'email', autocomplete: 'username', required: true, autocapitalize: 'none', spellcheck: 'false' });
+  const login = field('E-Mail-Adresse', { type: 'text', inputmode: 'email', autocomplete: 'username', required: true, autocapitalize: 'none', spellcheck: 'false' },
+    'Früher hast du dich mit einem Benutzernamen angemeldet? Jetzt gilt die E-Mail-Adresse deines Kontos.');
   const pw = field('Kennwort', { type: 'password', autocomplete: 'current-password', required: true });
   const form = h('form', { class: 'form', onsubmit: async (e) => {
     e.preventDefault();

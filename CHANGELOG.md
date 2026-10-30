@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.0.1] – 2026-10-30
+
+### Behoben
+- Anmeldung (REQ-AUTH-005): Wer sich wie früher mit dem Benutzernamen anmeldet, erhielt nur „Benutzername oder
+  Kennwort ist falsch“. Jetzt erklärt die Meldung, dass die E-Mail-Adresse gilt; das Anmeldeformular weist ebenfalls
+  darauf hin. Die Meldung hängt nur von der Eingabe ab (mit oder ohne „@“) und verrät nicht, ob ein Konto existiert.
+
 ## [4.0.0] – 2026-10-30
 
 Inkompatible Änderungen: Anmeldung nur noch per E-Mail-Adresse, Teams nur noch per Einladung, keine Personensuche

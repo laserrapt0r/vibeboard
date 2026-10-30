@@ -38,6 +38,7 @@
 - **Akzeptanzkriterien:**
   - Mit Benutzername oder E-Mail-Adresse und Kennwort.
   - Geändert in 4.0.0: Anmeldung nur noch mit E-Mail-Adresse und Kennwort. Übergang für ältere Konten ohne E-Mail-Adresse: Anmeldung mit dem bisherigen Namen, sofern genau ein Konto ohne Adresse diesen Namen trägt; die Startseite und die Administration weisen auf fehlende Adressen hin. „Kennwort vergessen“ und „Bestätigungsmail erneut senden“ arbeiten nur mit der E-Mail-Adresse.
+  - Geändert in 4.0.1: Scheitert eine Anmeldung mit einer Eingabe ohne „@“, erklärt die Meldung, dass die Anmeldung mit der E-Mail-Adresse erfolgt (für alle solchen Eingaben gleich, unabhängig davon, ob ein Konto existiert). Das Formular weist unter dem Feld darauf hin.
   - Fehlermeldungen unterscheiden nicht zwischen unbekanntem Konto und falschem Kennwort.
   - Deaktivierte, unbestätigte und noch nicht freigeschaltete Konten erhalten eine passende Meldung (erst nach korrektem Kennwort).
   - Nach der Anmeldung wird zur ursprünglich aufgerufenen Seite weitergeleitet – nur innerhalb der Anwendung.
