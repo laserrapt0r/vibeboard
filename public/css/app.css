@@ -338,6 +338,7 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
   background: var(--tool-accent, transparent); border: 1px solid rgba(0, 0, 0, 0.15);
 }
 #tools .icon-btn:not([style*='--tool-accent'])::after { display: none; }
+#tools [data-tool].held { box-shadow: inset 0 0 0 2px var(--accent); }
 .tool-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
 /* Kontextleiste */

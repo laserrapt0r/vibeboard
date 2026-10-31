@@ -118,6 +118,7 @@
 - **Beschreibung:** Hierarchische Knoten mit automatischer Platzierung und Verbindung.
 - **Akzeptanzkriterien:**
   - Tab erzeugt einen Unterknoten, Enter (beim Tippen) bzw. Umschalt+Enter einen Geschwisterknoten.
+  - Geändert in 4.8.0: Neue Knoten, die leer bleiben, verschwinden beim Beenden; aus einem leeren neuen Knoten heraus entsteht kein weiterer. Beim ersten Bearbeiten erklärt ein Hinweis die Tasten.
   - Hauptäste erhalten unterschiedliche Farben; Unterknoten werden ohne Überlappung untereinander angeordnet.
 
 ### REQ-ELEM-011 Bilder

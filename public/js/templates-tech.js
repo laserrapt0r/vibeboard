@@ -2,7 +2,7 @@
 import { T, LOCALE } from './i18n.js';
 import { B, C, LIGHT, dayOffset, columnsTemplate, quadrantTemplate } from './template-kit.js';
 import { textToElements } from './diagram-parse.js';
-import { uid } from './util.js';
+import { columnName, uid } from './util.js';
 
 /* ---------------- Bausteine ---------------- */
 
@@ -18,13 +18,13 @@ function blocks(b, x, y, w, items, { cols = 3, h = 300, gap = 24 } = {}) {
 }
 
 // Kanban-Spalten mit Kopf und optionalen Karten
-function lanes(b, x, y, cols, { colW = 320, colH = 820, gap = 20 } = {}) {
+function lanes(b, x, y, cols, { colW = 320, colH = 820, gap = 20, status = false } = {}) {
   cols.forEach((c, i) => {
     const cx = x + i * (colW + gap);
-    b.zone(cx, y, colW, colH, c.light || LIGHT.grey);
+    b.zone(cx, y, colW, colH, c.light || LIGHT.grey, status ? { statusCol: true } : {});
     b.shape(cx, y, colW, 64, { shape: 'roundrect', fill: c.color, stroke: 'none', strokeWidth: 0, text: c.title, fontSize: 20, bold: true, locked: true, textColor: c.textColor });
     if (c.hint) b.text(cx + 14, y + 74, colW - 28, c.hint, 13, { color: '#6b6b6b' });
-    (c.cards || []).forEach((cd, k) => b.card(cx + 10, y + (c.hint ? 120 : 84) + k * 175, cd.title, { w: colW - 20, h: 160, ...cd, title: cd.title }));
+    (c.cards || []).forEach((cd, k) => b.card(cx + 10, y + (c.hint ? 120 : 84) + k * 175, cd.title, { w: colW - 20, h: 160, ...(status ? { status: columnName(c.title) } : {}), ...cd, title: cd.title }));
   });
   return x + cols.length * (colW + gap) - gap;
 }
@@ -94,7 +94,7 @@ export const TECH_TEMPLATES = [
         { title: T('Review · WIP 2'), color: '#e5dbff', hint: T('Code-Review, Pair-Review') },
         { title: T('Test'), color: '#ffe8cc' },
         { title: T('Fertig'), color: '#d3f9d8', hint: T('Definition of Done erfüllt') },
-      ], { colW: 330, colH: 880 });
+      ], { status: true, colW: 330, colH: 880 });
       return b.els;
     },
   },

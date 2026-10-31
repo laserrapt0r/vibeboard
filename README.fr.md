@@ -112,6 +112,7 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
   - Même largeur, hauteur ou taille ; copier et appliquer la taille ; aligner sur la grille.
 - **Duplication intelligente :** Ctrl+D répète le dernier décalage utilisé.
 - Regrouper les notes adhésives par couleur
+- Travailler vite : Tab en tapant ajoute la note ou forme suivante à côté, un double-clic garde un outil actif et le menu des formes montre celles récemment utilisées. Dans les modèles, les libellés se modifient directement et les fonds restent verrouillés ; les modèles de rétro et de brainstorming proposent leur déroulé ou minuteur. Glisser une carte dans une colonne Kanban définit son statut, et un cadre peut être supprimé avec son contenu.
 - Grouper, verrouiller, calques (premier plan et arrière-plan), dupliquer (aussi par glissement avec Alt) ; un deuxième
   clic dans un groupe sélectionne un seul élément pour le modifier
 - Copier et coller, y compris entre tableaux

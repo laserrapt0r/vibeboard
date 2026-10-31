@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.8.0] – 2026-10-31
+
+### Hinzugefügt
+- **Position fixieren** (REQ-EDIT-010): Fixierte Elemente lassen sich nicht einzeln verschieben oder per Entf löschen, ihr Text bleibt bearbeitbar. Im Kontextmenü.
+- **Frame samt Inhalt löschen** im Kontextmenü, auch mit gesperrten Teilen; rückgängig machbar.
+- **Tab beim Tippen** legt die nächste Notiz oder Form gleicher Art daneben an und bleibt dabei in Spalte oder Frame (REQ-EDIT-011).
+- **Werkzeug aktiv halten:** Doppelklick aufs Werkzeug oder Umschalt+Taste, Esc beendet (REQ-EDIT-012).
+- Das Formen-Menü zeigt die zuletzt verwendeten Formen.
+- **Angebote zur Vorlage** (REQ-TPL-010): Retro-Vorlagen bieten den geführten Ablauf an, Brainstorming und Crazy 8s den Timer. Nichts startet von selbst.
+- **Kanban auf dem Board** (REQ-TPL-011): Eine Karte in eine andere Spalte zu ziehen setzt ihren Status. Karten aus Jira oder Azure DevOps bleiben davon ausgenommen.
+
+### Geändert
+- Vorlagen fixieren Beschriftungen nur noch; Spalten lassen sich direkt umbenennen (REQ-TPL-009). Hintergründe bleiben gesperrt.
+- Gantt-Diagramm und Zeitstrahl bestehen aus Karten und erscheinen damit in der Zeitleiste.
+- Wer einen Frame verschiebt, nimmt gesperrte und fixierte Teile darin mit; von der Moderation Gesperrtes bleibt stehen.
+
+### Behoben
+- Leere neue Mindmap-Knoten bleiben beim Beenden nicht mehr stehen.
+- Vorlagen fielen beim Verschieben des Frames auseinander, weil gesperrte Hintergründe stehen blieben.
+
 ## [4.7.0] – 2026-10-31
 
 ### Hinzugefügt

@@ -577,6 +577,39 @@ function retroMenu(anchor) {
 
 app.on('retroMenu', retroMenu);
 
+// Zur Vorlage passender Ablauf: nur ein Angebot für die, die steuern dürfen. Eine laufende Sitzung bleibt unberührt.
+function offerFlow(offer) {
+  const busy = () => !!app.session.timer || !!(app.session.retro && app.session.retro.active);
+  if (!offer || app.viewOnly || !canSteer() || busy()) return;
+  if (offer.retro) return toast(T('Geführten Retro-Ablauf starten?'), 12000, { label: T('Starten'), onClick: () => !busy() && openStart() });
+  if (!offer.timer) return;
+  const active = () => !!(app.session.privateMode && app.session.privateMode.active);
+  const usePrivate = offer.private && !active();
+  toast(usePrivate ? T`Timer (${offer.timer} Min.) und Privatmodus starten?` : T`Timer mit ${offer.timer} Minuten starten?`, 12000, {
+    label: T('Starten'),
+    onClick: () => {
+      // Das Angebot steht einige Sekunden: Was inzwischen läuft, bleibt, wie es ist
+      if (busy()) return;
+      if (usePrivate && !active()) op({ op: 'privateMode', active: true });
+      startTimer(offer.timer);
+    },
+  });
+}
+app.on('templateOffer', offerFlow);
+
+// Neu aus einer Vorlage erstelltes Board (siehe dashboard.js)
+app.on('loaded', () => {
+  const key = 'vibeboard.offer.' + app.boardId;
+  try {
+    const saved = sessionStorage.getItem(key);
+    if (!saved) return;
+    sessionStorage.removeItem(key);
+    offerFlow(JSON.parse(saved));
+  } catch {
+    /* Speicher gesperrt oder Inhalt unbrauchbar – dann eben ohne Angebot */
+  }
+});
+
 app.on('buildCollabTools', (box) => {
   const b = h('button', { class: 'icon-btn', id: 'btn-retro', title: T('Retro: Ablauf, Umfragen, Maßnahmen'), html: '<span class="emoji-icon">🔁</span>' });
   b.onclick = () => retroMenu(b);

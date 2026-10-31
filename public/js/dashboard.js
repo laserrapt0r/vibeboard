@@ -108,6 +108,12 @@ async function createFromTemplate(t) {
     const elements = (await loadTemplate(t)).build();
     const b = await api('/api/boards', { method: 'POST', body: { name: name.trim() || t.name, elements } });
     await Promise.all([uploadThumb(b.id, elements), markTemplateUsed(t)]);
+    // Das Board bietet den passenden Ablauf an, sobald es geladen ist (siehe retro.js)
+    try {
+      if (t.offer) sessionStorage.setItem('vibeboard.offer.' + b.id, JSON.stringify(t.offer));
+    } catch {
+      /* Speicher gesperrt – dann eben ohne Angebot */
+    }
     location.href = '/board/' + b.id;
   } catch (e) {
     toast(e.message);

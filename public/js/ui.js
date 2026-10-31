@@ -21,7 +21,7 @@ import {
   arrangeGrid, clusterByColor, frames, makeElement, addElements, nextZ, insertImageFile, setSelection, pasteElements,
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
-  tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment,
+  tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment, togglePin, deleteFramesWithContent, holdTool,
   setBusy, clearBusy,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
@@ -90,6 +90,7 @@ function buildTools() {
       setTool(id);
     });
     b.dataset.tool = id;
+    b.addEventListener('dblclick', () => holdTool(id));
     nav.append(b);
   }
 }
@@ -120,7 +121,7 @@ function showFlyout(id, anchor) {
       content = h('div', {}, h('div', { class: 'pop-title' }, T('Farbe der Sticky Note')), swatchGrid(STICKY_COLORS, o.stickyColor, (c) => { o.stickyColor = c; done(); }));
       break;
     case 'shape':
-      content = h('div', { class: 'shape-pop' }, SHAPE_GROUPS.flatMap(([group, keys]) => [
+      content = h('div', { class: 'shape-pop' }, [[T('Zuletzt verwendet'), (o.recentShapes || []).filter((k) => SHAPES.some((x) => x[0] === k))], ...SHAPE_GROUPS].filter(([, keys]) => keys.length).flatMap(([group, keys]) => [
         h('div', { class: 'pop-title' }, group),
         h('div', { class: 'shape-grid' }, keys.map((k) => h('button', {
           class: 'shape-btn' + (o.shape === k ? ' active' : ''), title: SHAPES.find((x) => x[0] === k)[1],
@@ -158,6 +159,7 @@ function showFlyout(id, anchor) {
 function syncToolButtons() {
   for (const b of document.querySelectorAll('#tools [data-tool]')) {
     b.classList.toggle('active', b.dataset.tool === app.tool);
+    b.classList.toggle('held', b.dataset.tool === app.tool && !!app.toolHeld);
     b.setAttribute('aria-pressed', String(b.dataset.tool === app.tool));
     const id = b.dataset.tool;
     if (id === 'sticky') b.style.setProperty('--tool-accent', app.toolOpts.stickyColor);
@@ -1003,6 +1005,7 @@ function insertTemplate(t) {
   if (!placeElements(t.build())) return;
   markTemplateUsed(t);
   toast(T`Vorlage „${t.name}“ eingefügt`);
+  app.emit('templateOffer', t.offer);
 }
 
 // Fügt fertige Elemente (Vorlage, Diagramm, Import) in der Ansichtsmitte ein, ohne Bestehendes zu überdecken
@@ -1232,7 +1235,7 @@ function openSettings(anchor) {
 export function openShortcuts() {
   const groups = [
     [T('Werkzeuge'), [['V', T('Auswählen')], [T('H / Leertaste'), T('Verschieben')], ['N', T('Sticky Note')], ['T', T('Text')], ['S', T('Form')], ['R / O', T('Rechteck / Ellipse')], ['L', T('Verbindungslinie')], ['P', T('Stift')], ['E', T('Radierer')], ['F', T('Frame')], ['K', T('Karte')], ['M', T('Mindmap')], ['C', T('Kommentar')], ['X', T('Laserpointer')]]],
-    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
+    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
     [T('Tabellen'), [[T('Klick in ausgewählte Tabelle'), T('Zelle wählen')], [T('Umschalt + Klick / Pfeil'), T('Bereich wählen')], [T('Pfeiltasten'), T('Zellauswahl bewegen')], [T('Enter / F2'), T('Zelle bearbeiten')], [T('Tippen'), T('Zelle überschreiben')], [T('Entf'), T('Inhalt leeren')], ['Tab', T('Nächste Zelle (beim Bearbeiten)')], [T('Linie ziehen'), T('Spaltenbreite / Zeilenhöhe')]]],
     [T('Verbinder'), [[T('Linie ziehen'), T('Biegen (Knickpunkt)')], [T('◦ auf der Linie ziehen'), T('Knickpunkt einfügen')], [T('Doppelklick auf ▪'), T('Knickpunkt entfernen')], [T('Beschriftung ziehen'), T('Entlang der Linie verschieben')], [T('Ende an Rand ziehen'), T('Fester Andockpunkt')], [T('Ende in Formmitte'), T('Automatisch andocken')]]],
     [T('Mindmap'), [['Tab', T('Unterknoten hinzufügen')], [T('Enter (beim Tippen)'), T('Geschwisterknoten')], [T('Umschalt+Enter'), T('Geschwisterknoten')]]],
@@ -1358,6 +1361,7 @@ stage.addEventListener('contextmenu', (e) => {
     { label: T('In den Vordergrund'), hint: T('Strg+]'), onClick: bringToFront },
     { label: T('In den Hintergrund'), hint: T('Strg+['), onClick: sendToBack },
     { label: selectedEls().every((x) => x.locked) ? T('Entsperren') : T('Sperren'), hint: T('Strg+L'), onClick: toggleLock },
+    { label: selectedEls().every((x) => x.locked === 'text') ? T('Fixierung lösen') : T('Position fixieren (Text bleibt bearbeitbar)'), onClick: togglePin },
     app.isFacilitator ? { label: selectedEls().every((x) => x.modLock) ? T('Für Teilnehmende freigeben') : T('Für Teilnehmende sperren'), onClick: toggleModLock } : null,
     app.sel.size > 1 ? { label: T('Gruppieren'), hint: T('Strg+G'), onClick: groupSel } : null,
     selectedEls().some((x) => x.groupId) ? { label: T('Gruppierung aufheben'), onClick: ungroupSel } : null,
@@ -1365,6 +1369,7 @@ stage.addEventListener('contextmenu', (e) => {
     el && app.sel.size === 1 ? { label: T('Reagieren …'), onClick: () => app.emit('reactMenu', el, e) } : null,
     '-',
     { label: T('Löschen'), hint: T('Entf'), danger: true, onClick: () => deleteEls([...app.sel]) },
+    selectedEls().some((x) => x.type === 'frame') ? { label: T('Frame samt Inhalt löschen'), danger: true, onClick: deleteFramesWithContent } : null,
   ] : [
     { label: T('Sticky Note hier'), onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
     { label: T('Text hier'), onClick: () => { const s = makeElement('text', w.x, w.y); act(() => setEl(s)); startEdit(s.id, { isNew: true }); } },

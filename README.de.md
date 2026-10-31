@@ -111,6 +111,7 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   - Gleiche Breite, Höhe oder Größe; Größe kopieren und übernehmen; am Raster ausrichten.
 - **Intelligentes Duplizieren:** Strg+D wiederholt den zuletzt verwendeten Versatz.
 - Sticky Notes nach Farbe clustern
+- Schnell arbeiten: Tab beim Tippen legt die nächste Notiz oder Form daneben an, ein Doppelklick hält ein Werkzeug aktiv, und das Formen-Menü zeigt die zuletzt verwendeten Formen. In Vorlagen lassen sich Beschriftungen direkt ändern, Hintergründe bleiben gesperrt; Retro- und Brainstorming-Vorlagen bieten den passenden Ablauf oder Timer an. Eine Karte in eine Kanban-Spalte zu ziehen setzt ihren Status, und ein Frame lässt sich samt Inhalt löschen.
 - Gruppieren, Sperren, Ebenen (Vorder- und Hintergrund), Duplizieren (auch per Alt-Ziehen); ein zweiter Klick in eine
   Gruppe wählt ein einzelnes Element zum Bearbeiten
 - Kopieren und Einfügen, auch zwischen Boards

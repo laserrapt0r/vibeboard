@@ -1,5 +1,6 @@
 // Vorlagen-Bibliothek mit gängigen Moderations-, Agile- und Strategiemethoden
 import { T, LOCALE } from './i18n.js';
+import { columnName } from './util.js';
 import { B, C, LIGHT, dayOffset, columnsTemplate, quadrantTemplate } from './template-kit.js';
 import { TECH_TEMPLATES } from './templates-tech.js';
 import { DIAGRAM_TEMPLATES } from './templates-diagrams.js';
@@ -66,14 +67,15 @@ export const TEMPLATES = [
       const cols = [[T('📥  Backlog'), '#9e9e9e'], [T('📝  Zu erledigen'), '#4262ff'], [T('⚙️  In Arbeit'), '#f59f00'], [T('✅  Erledigt'), '#12b886']];
       cols.forEach(([t, col], i) => {
         const x = 60 + i * 390;
-        b.zone(x, 190, 360, 840, '#f1f2f5');
+        b.zone(x, 190, 360, 840, '#f1f2f5', { statusCol: true });
         b.shape(x, 190, 360, 64, { shape: 'roundrect', fill: '#ffffff', stroke: col, strokeWidth: 3, text: t, fontSize: 20, bold: true, locked: true });
       });
-      b.card(90, 280, T('Ideen für Q3 sammeln'), { color: '#9e9e9e', description: T('Input aus dem Workshop einarbeiten') });
-      b.card(480, 280, T('Anforderungen dokumentieren'), { color: '#4262ff', assignee: T('Anna Muster'), due: dayOffset(5), status: T('Hoch') });
-      b.card(480, 440, T('Wireframes erstellen'), { color: '#4262ff', assignee: T('Ben Beispiel'), due: dayOffset(9) });
-      b.card(870, 280, T('API-Schnittstelle entwickeln'), { color: '#f59f00', assignee: T('Chris Code'), due: dayOffset(2), status: T('In Arbeit'), description: T('REST-Endpunkte für Benutzerverwaltung') });
-      b.card(1260, 280, T('Projekt-Setup'), { color: '#12b886', assignee: T('Anna Muster'), status: T('Fertig') });
+      const [backlog, todo, doing, done] = cols.map(([t]) => columnName(t));
+      b.card(90, 280, T('Ideen für Q3 sammeln'), { color: '#9e9e9e', description: T('Input aus dem Workshop einarbeiten'), status: backlog });
+      b.card(480, 280, T('Anforderungen dokumentieren'), { color: '#4262ff', assignee: T('Anna Muster'), due: dayOffset(5), status: todo, priority: 'high' });
+      b.card(480, 440, T('Wireframes erstellen'), { color: '#4262ff', assignee: T('Ben Beispiel'), due: dayOffset(9), status: todo });
+      b.card(870, 280, T('API-Schnittstelle entwickeln'), { color: '#f59f00', assignee: T('Chris Code'), due: dayOffset(2), status: doing, description: T('REST-Endpunkte für Benutzerverwaltung') });
+      b.card(1260, 280, T('Projekt-Setup'), { color: '#12b886', assignee: T('Anna Muster'), status: done });
       return b.els;
     },
   },
@@ -448,7 +450,7 @@ export const TEMPLATES = [
   },
   {
     id: 'timeline', name: T('Zeitstrahl'), category: 'Agile & Projekte', icon: '📍',
-    description: T('Meilensteine auf einer Zeitachse darstellen.'),
+    description: T('Meilensteine auf einer Zeitachse darstellen. Die Karten erscheinen auch in der Zeitleiste.'),
     build: () => {
       const b = new B();
       b.frame(0, 0, 1800, 760, T('Zeitstrahl'));
@@ -461,17 +463,17 @@ export const TEMPLATES = [
         const up = i % 2 === 0;
         b.shape(x - 18, 402, 36, 36, { shape: 'ellipse', fill: cols[i], stroke: '#ffffff', strokeWidth: 4 });
         b.line(x, up ? 400 : 440, x, up ? 330 : 510, { stroke: cols[i], strokeWidth: 2 });
-        b.shape(x - 110, up ? 210 : 510, 220, 120, { shape: 'roundrect', fill: '#ffffff', stroke: cols[i], strokeWidth: 3, text: T`${m}\nKW ${10 + i * 4}`, fontSize: 18, bold: true });
+        b.card(x - 110, up ? 210 : 510, m, { w: 220, h: 120, color: cols[i], due: dayOffset(i * 28) });
       });
       return b.els;
     },
   },
   {
     id: 'gantt', name: T('Gantt-Diagramm'), category: 'Agile & Projekte', icon: '📊',
-    description: T('Einfacher Projektzeitplan mit Arbeitspaketen und Wochen.'),
+    description: T('Einfacher Projektzeitplan mit Arbeitspaketen und Wochen. Die Balken sind Karten: Termine in der Karte oder Zeitleiste ändern.'),
     build: () => {
       const b = new B();
-      const weeks = 8, rows = 6, X = 60, Y = 190, cw0 = 260, cw = 140, rh = 64;
+      const weeks = 8, rows = 6, X = 60, Y = 190, cw0 = 260, cw = 140, rh = 92;
       const W = cw0 + cw * weeks;
       b.frame(0, 0, W + 120, Y + rh * (rows + 1) + 60, T('Gantt-Diagramm'));
       b.heading(60, 40, T('Gantt-Diagramm'), T('Projektzeitplan'), 1000);
@@ -483,7 +485,7 @@ export const TEMPLATES = [
       const spans = [[0, 2], [1, 3], [2, 4], [3, 7], [5, 7], [7, 8]];
       const cols = ['#4262ff', '#7048e8', '#e64980', '#f59f00', '#12b886', '#1098ad'];
       // Balken liegen genau auf den Wochenlinien – so rasten gezogene oder neue Balken passend ein
-      spans.forEach(([s, e], i) => b.shape(X + cw0 + s * cw, Y + rh * (i + 1) + 14, (e - s) * cw, rh - 28, { shape: 'roundrect', fill: cols[i], stroke: 'none', strokeWidth: 0 }));
+      spans.forEach(([s, e], i) => b.card(X + cw0 + s * cw, Y + rh * (i + 1) + 6, tasks[i], { w: (e - s) * cw, h: rh - 12, color: cols[i], start: dayOffset(s * 7), due: dayOffset(e * 7 - 1) }));
       return b.els;
     },
   },
@@ -751,6 +753,16 @@ export const TEMPLATES = [
 ];
 
 TEMPLATES.push(...TECH_TEMPLATES, ...DIAGRAM_TEMPLATES);
+
+// Zur Vorlage passender Ablauf: wird nur angeboten, nie von selbst gestartet
+const OFFERS = { brainstorm: { timer: 10, private: true }, crazy8: { timer: 8 } };
+for (const t of TEMPLATES) t.offer = t.id.startsWith('retro-') ? { retro: true } : OFFERS[t.id];
+
+// Hintergründe bleiben gesperrt. Beschriftungen sind nur fixiert: Spalten umzubenennen gehört zur normalen Arbeit mit einer Vorlage.
+for (const t of TEMPLATES) {
+  const build = t.build;
+  t.build = () => build().map((e) => (e.locked === true && String(e.text ?? '').trim() ? { ...e, locked: 'text' } : e));
+}
 
 export function templateById(id) {
   return TEMPLATES.find((t) => t.id === id);

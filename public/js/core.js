@@ -2,7 +2,7 @@
 import { T } from './i18n.js';
 import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
-  debounce, throttle, toast, contrastText, STICKY_COLORS, api,
+  debounce, throttle, toast, contrastText, STICKY_COLORS, api, columnName,
 } from './util.js';
 import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
   outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions, SHAPE_DEFAULTS, labelBelow, labelOutside, setElementLookup } from './render.js';
@@ -951,7 +951,7 @@ function renderOverlay() {
 /* ================================================================== */
 
 export function canEdit(el) {
-  return el && !isLocked(el) && !el.hidden && ['sticky', 'shape', 'text', 'frame', 'connector', 'table', 'code'].includes(el.type);
+  return el && (!isLocked(el) || textOpen(el)) && !el.hidden && ['sticky', 'shape', 'text', 'frame', 'connector', 'table', 'code'].includes(el.type);
 }
 
 export function startEdit(id, opts = {}) {
@@ -972,7 +972,11 @@ export function startEdit(id, opts = {}) {
     app.cellSel = { id, r0: cell[0], c0: cell[1], r1: cell[0], c1: cell[1] };
   }
   begin();
-  app.editing = { id, field, cell, isNew: !!opts.isNew };
+  app.editing = { id, field, cell, isNew: !!opts.isNew, drop: !!opts.drop };
+  if (el.mind && !loadPref('mindHint', false)) {
+    savePref('mindHint', true);
+    toast(T('Mindmap: Enter legt den nächsten Knoten an, Tab einen Unterknoten, Esc beendet.'), 6000);
+  }
   setSelection([id]);
   const val = cell ? el.cells?.[cell[0]]?.[cell[1]] ?? '' : el[field] ?? '';
   editor.value = val;
@@ -1106,6 +1110,8 @@ editor.addEventListener('keydown', (e) => {
   e.stopPropagation();
   const ed = app.editing;
   if (!ed) return;
+  // Neue Mindmap-Knoten und Tab-Notizen: Leer weiterzugehen ergäbe nur eine Kette leerer Objekte
+  const blank = () => ed.drop && !String(getEl(ed.id)?.[ed.field] ?? '').trim();
   if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
     e.preventDefault();
     finishEdit();
@@ -1126,11 +1132,17 @@ editor.addEventListener('keydown', (e) => {
       if (c < 0) { c = el.cols - 1; r = (r - 1 + el.rows) % el.rows; }
       startEdit(el.id, { cell: [r, c] });
     } else if (el && el.mind) {
+      if (blank()) return;
       finishEdit();
       mindAddChild(el);
+    } else if (el && (el.type === 'sticky' || el.type === 'shape') && !el.locked) {
+      if (!String(el[ed.field] ?? '').trim()) return;
+      finishEdit();
+      addNextTo(el);
     }
   } else if (e.key === 'Enter' && !e.shiftKey && getEl(ed.id)?.mind) {
     e.preventDefault();
+    if (blank()) return;
     const el = getEl(ed.id);
     finishEdit();
     mindAddSibling(el);
@@ -1145,17 +1157,30 @@ export function finishEdit() {
   const ed = app.editing;
   if (!ed) return;
   const el = getEl(ed.id);
-  if (el && el.type === 'text' && !String(el.text || '').trim()) deleteEls([el.id]);
+  if (el && ((el.type === 'text' && !el.locked) || ed.drop) && !String(el.text || '').trim()) deleteEls([el.id]);
   cancelEditUI();
   commit();
+  if (ed.created) commit();
 }
 
 // Bearbeitung von außen beendet (Element gelöscht o. Ä.): Oberfläche schließen und die in startEdit
 // geöffnete Transaktion abschließen, damit die Undo-Historie nicht hängen bleibt
 export function abortEdit() {
-  if (!app.editing) return;
+  const ed = app.editing;
+  if (!ed) return;
   cancelEditUI();
   commit();
+  if (ed.created) commit();
+}
+
+// Anlegen und erste Eingabe sind ein Schritt: Rückgängig nimmt beides zusammen zurück, und ein leer verworfenes Objekt
+// hinterlässt keinen Eintrag im Verlauf
+function createAndEdit(id, make) {
+  begin();
+  make();
+  startEdit(id, { isNew: true, drop: true });
+  if (app.editing?.id === id) app.editing.created = true;
+  else commit();
 }
 
 function cancelEditUI() {
@@ -1207,11 +1232,10 @@ export function mindAddChild(node) {
     textColor: isRoot ? '#ffffff' : undefined, bold: isRoot, fontSize: isRoot ? 20 : 16, text: '',
   });
   const conn = makeElement('connector', 0, 0, { from: { id: node.id }, to: { id: child.id }, stroke: color, strokeWidth: isRoot ? 4 : 2, routing: 'curve', arrowEnd: false, mind: true });
-  act(() => {
+  createAndEdit(child.id, () => {
     setEl(child);
     setEl(conn);
   });
-  startEdit(child.id, { isNew: true });
 }
 
 export function mindAddSibling(node) {
@@ -1220,12 +1244,74 @@ export function mindAddSibling(node) {
   else mindAddChild(node);
 }
 
+// Nächstes Objekt gleicher Art daneben (Tab beim Tippen). Bleibt im selben Bereich: Liegt das Objekt in einer Spalte oder einem
+// Frame, geht es erst daneben und dann darunter weiter. Ist die Spalte voll, läuft es unten über: In die Nachbarspalte zu
+// rutschen ergäbe eine falsche Kategorie.
+const NEXT_GAP = 20;
+const NEXT_DROP = ['id', 'text', 'locked', 'modLock', 'groupId', 'priv', 'privName', 'anon', 'reactions', 'votes', 'mind', 'link', 'order', 'kind', 'statusCol', 'tags', 'ext', 'fileRef', 'approval'];
+
+function freeSpotNextTo(el) {
+  const c = { x: el.x + el.w / 2, y: el.y + el.h / 2 };
+  const holds = (b) => c.x >= b.x && c.x <= b.x + b.w && c.y >= b.y && c.y <= b.y + b.h;
+  // Unten übergelaufene Objekte gehören weiter zu ihrer Spalte
+  const below = (b) => c.x >= b.x && c.x <= b.x + b.w && c.y >= b.y && c.y <= b.y + b.h + 40 * (el.h + NEXT_GAP);
+  const areas = [...app.els.values()].filter((e) => e.id !== el.id && !e.hidden && (e.type === 'frame' ? holds(e) : e.locked && e.type === 'shape' && below(e)));
+  const area = areas.sort((a, b) => a.w * a.h - b.w * b.h)[0];
+  const inWidth = (r) => !area || (r.x >= area.x && r.x + r.w <= area.x + area.w);
+  const inArea = (r) => !area || (inWidth(r) && r.y >= area.y && r.y + r.h <= area.y + area.h);
+  const others = [...app.els.values()].filter((e) => e.id !== el.id && e.type !== 'connector' && !e.hidden && !areas.includes(e)).map(bounds);
+  const open = (r) => !others.some((b) => rectsIntersect(b, r));
+  const step = { x: el.w + NEXT_GAP, y: el.h + NEXT_GAP };
+  for (const fits of [inArea, inWidth]) {
+    for (let i = 1; i < 40; i++) {
+      for (const [dx, dy] of [[i, 0], [0, i], [-i, i]]) {
+        const r = { x: el.x + dx * step.x, y: el.y + dy * step.y, w: el.w, h: el.h };
+        if (fits(r) && open(r)) return r;
+      }
+    }
+  }
+  return { x: el.x, y: Math.max(...others.filter((b) => b.x < el.x + el.w && el.x < b.x + b.w).map((b) => b.y + b.h), el.y + el.h) + NEXT_GAP, w: el.w, h: el.h };
+}
+
+export function addNextTo(el) {
+  const spot = freeSpotNextTo(el);
+  const n = { ...clone(el), id: uid(), z: nextZ(), author: app.user.name || '', x: spot.x, y: spot.y, text: '' };
+  for (const k of NEXT_DROP) if (k !== 'id' && k !== 'text') delete n[k];
+  createAndEdit(n.id, () => {
+    setEl(n);
+    setSelection([n.id]);
+    const v = visibleRect();
+    if (spot.x < v.x || spot.y < v.y || spot.x + spot.w > v.x + v.w || spot.y + spot.h > v.y + v.h) {
+      app.view.x -= (spot.x + spot.w / 2 - (v.x + v.w / 2)) * app.view.z;
+      app.view.y -= (spot.y + spot.h / 2 - (v.y + v.h / 2)) * app.view.z;
+      applyView();
+    }
+  });
+}
+
 /* ================================================================== */
 /* Werkzeuge                                                           */
 /* ================================================================== */
 
+// Diese Werkzeuge kehren nach einem Objekt zur Auswahl zurück. Wer viele anlegt, hält sie aktiv (Doppelklick, Umschalt+Taste).
+export const HOLDABLE = new Set(['sticky', 'shape', 'frame', 'text', 'card', 'table', 'code', 'mindmap']);
+
+export function holdTool(t) {
+  if (!HOLDABLE.has(t)) return;
+  setTool(t);
+  if (app.tool !== t) return;
+  app.toolHeld = true;
+  app.emit('tool', t);
+  toast(T('Werkzeug bleibt aktiv – Esc beendet'), 2500);
+}
+
+const afterCreate = () => {
+  if (!app.toolHeld) setTool('select');
+};
+
 export function setTool(t) {
   if (app.viewOnly && !['select', 'hand', 'laser'].includes(t) && !(t === 'comment' && app.canComment)) return;
+  if (t !== app.tool) app.toolHeld = false;
   app.tool = t;
   stage.dataset.tool = t;
   if (t !== 'select') {
@@ -1236,6 +1322,12 @@ export function setTool(t) {
 
 export function saveToolOpts() {
   savePref('toolOpts', app.toolOpts);
+}
+
+function rememberShape(k) {
+  if (!k) return;
+  app.toolOpts.recentShapes = [k, ...(app.toolOpts.recentShapes || []).filter((x) => x !== k)].slice(0, 6);
+  saveToolOpts();
 }
 
 /* ================================================================== */
@@ -1460,9 +1552,8 @@ function onDown(e) {
       return;
     case 'mindmap': {
       const el = makeElement('shape', w.x, w.y, { x: w.x - 130, y: w.y - 45, w: 260, h: 90, shape: 'pill', fill: '#1a1a1a', stroke: 'none', strokeWidth: 0, textColor: '#ffffff', bold: true, fontSize: 22, text: '', mind: true });
-      act(() => setEl(el));
-      setTool('select');
-      startEdit(el.id, { isNew: true });
+      afterCreate();
+      createAndEdit(el.id, () => setEl(el));
       return;
     }
     case 'connector': {
@@ -1509,8 +1600,10 @@ function startMarquee(e, start, pendingSelect) {
 }
 
 // Dokumentseiten sind gegen Verrutschen gesperrt, gehören aber fest zu ihrem Frame
+// Sperre und Fixierung schützen vor versehentlichem Verschieben einzelner Teile. Wer den Frame bewegt, meint alles darin:
+// Sonst fiele eine Vorlage beim Verschieben auseinander. Was die Moderation sperrt, bleibt stehen.
 function pageOfMovedFrame(el) {
-  if (!el.fileRef || el.modLock) return false;
+  if (el.modLock) return false;
   return selectedEls().some((f) => f.type === 'frame' && frameChildren(f).some((c) => c.id === el.id));
 }
 
@@ -1598,7 +1691,10 @@ function onMove(e) {
       return;
     case 'move': {
       if (!drag.moved && !far) return;
-      if (!drag.moved) setBusy('move', [...app.sel]);
+      if (!drag.moved) {
+        setBusy('move', [...app.sel]);
+        drag.fromColumns = columnsOfSelection();
+      }
       drag.moved = true;
       let dx = w.x - s.w.x, dy = w.y - s.w.y;
       // Umschalt: nur waagerecht oder senkrecht verschieben
@@ -1979,6 +2075,35 @@ function bestSnap(vals, cands, thr) {
   return best;
 }
 
+// Kanban auf dem Board: Wer eine Karte in eine Spalte zieht, setzt ihren Status. Name der Spalte ist ihre Überschrift.
+function columnAt(el) {
+  const c = { x: el.x + el.w / 2, y: el.y + el.h / 2 };
+  const zone = [...app.els.values()]
+    .filter((z) => z.statusCol && !z.hidden && c.x >= z.x && c.x <= z.x + z.w && c.y >= z.y && c.y <= z.y + z.h)
+    .sort((a, b) => a.w * a.h - b.w * b.h)[0];
+  if (!zone) return '';
+  const head = [...app.els.values()]
+    .filter((e) => e.id !== zone.id && e.type === 'shape' && String(e.text ?? '').trim() && e.x >= zone.x - 1 && e.x + e.w <= zone.x + zone.w + 1 && e.y >= zone.y - 1 && e.y < zone.y + 100)
+    .sort((a, b) => a.y - b.y)[0];
+  return head ? columnName(head.text) : '';
+}
+
+// Spalten beim Start des Ziehens: Nur ein Wechsel setzt den Status, sonst machte ein kleiner Zug eine Änderung aus der
+// Kanban-Ansicht rückgängig. Karten aus Jira oder Azure bleiben außen vor: Ziehen auf dem Board darf kein Ticket umstellen.
+const columnsOfSelection = () => new Map(selectedEls().filter((e) => e.type === 'card').map((e) => [e.id, columnAt(e)]));
+
+function applyColumnStatus(from) {
+  let last = '';
+  for (const el of selectedEls()) {
+    if (el.type !== 'card' || el.ext || isLocked(el)) continue;
+    const status = columnAt(getEl(el.id));
+    if (!status || status === from?.get(el.id) || status === el.status) continue;
+    updateEl(el.id, { status });
+    last = status;
+  }
+  if (last) toast(T`Status: ${last}`, 1800);
+}
+
 function onUp(e) {
   pointers.delete(e.pointerId);
   if (!pointers.size) {
@@ -2001,6 +2126,7 @@ function onUp(e) {
   hoverAnchor = null;
   switch (d.mode) {
     case 'move':
+      if (d.moved) applyColumnStatus(d.fromColumns);
       commit();
       if (d.clickComment && !d.moved) app.emit('openComment', d.clickComment);
       if (d.clickSelect && !d.moved) setSelection([d.clickSelect]);
@@ -2045,7 +2171,8 @@ function onUp(e) {
         el = makeElement(d.type, snapV(d.start.w.x), snapV(d.start.w.y));
       }
       act(() => setEl(el));
-      setTool('select');
+      if (d.type === 'shape') rememberShape(el.shape);
+      afterCreate();
       setSelection([el.id]);
       if (['sticky', 'shape', 'text', 'code'].includes(el.type)) startEdit(el.id, { isNew: true });
       else if (el.type === 'frame') startEdit(el.id);
@@ -2191,9 +2318,9 @@ stage.addEventListener('dblclick', (e) => {
     return;
   }
   const hit = hitInfo(e.target);
-  if (hit && isLocked(hit.el)) {
+  if (hit && isLocked(hit.el) && !textOpen(hit.el)) {
     setSelection([hit.el.id]);
-    toast(hit.el.locked ? T('Dieses Element ist gesperrt – zum Bearbeiten entsperren (Strg+L oder Schloss-Symbol)') : T('Dieses Element hat die Moderation für Teilnehmende gesperrt'), 3500);
+    toast(hit.el.locked && !(hit.el.modLock && !app.isFacilitator) ? T('Dieses Element ist gesperrt – zum Bearbeiten entsperren (Strg+L oder Schloss-Symbol)') : T('Dieses Element hat die Moderation für Teilnehmende gesperrt'), 3500);
     return;
   }
   const w = toWorld(e.clientX, e.clientY);
@@ -2456,7 +2583,7 @@ function moveWithContent(el, dx, dy, done) {
     if (done.has(id)) continue;
     done.add(id);
     const cur = getEl(id);
-    if (cur && !isLocked(cur)) setEl(translated(cur, dx, dy));
+    if (cur && (!isLocked(cur) || (cur.id !== el.id && !cur.modLock))) setEl(translated(cur, dx, dy));
   }
 }
 
@@ -2614,6 +2741,31 @@ export function ungroupSel() {
   toast(T('Gruppierung aufgehoben'));
 }
 
+// Fixiert: Lage und Aussehen stehen fest, der Text bleibt bearbeitbar (z. B. Spaltenüberschriften in Vorlagen)
+export function togglePin() {
+  const free = selectedEls().filter((e) => !(e.modLock && !app.isFacilitator));
+  // Gemischte Auswahl: Volle Sperren bleiben, sonst würden Hintergründe nebenbei bearbeitbar
+  const open = free.filter((e) => e.locked !== true);
+  const sel = open.length ? open : free;
+  const pin = !sel.every((e) => e.locked === 'text');
+  act(() => sel.forEach((el) => setEl({ ...el, locked: pin ? 'text' : false })));
+  scheduleRender(true);
+  app.emit('selection');
+}
+
+// Löscht Frames samt Inhalt, auch fixierte und gesperrte Teile – was die Moderation sperrt, und Kommentare bleiben
+export function deleteFramesWithContent() {
+  const list = selectedEls().filter((e) => e.type === 'frame' && !(e.modLock && !app.isFacilitator));
+  const ids = new Set(list.map((f) => f.id));
+  for (const f of list) frameChildren(f).forEach((c) => ids.add(c.id));
+  const gone = [...ids].filter((id) => {
+    const el = getEl(id);
+    return el && el.type !== 'comment' && !(el.modLock && !app.isFacilitator);
+  });
+  deleteEls(gone);
+  toast(T`${gone.length} Elemente gelöscht – Strg+Z macht das rückgängig`, 3500);
+}
+
 export function toggleLock() {
   const sel = selectedEls();
   const lock = !sel.every((e) => e.locked);
@@ -2625,6 +2777,11 @@ export function toggleLock() {
 // Gesperrt für mich: selbst gesperrt oder von der Moderation für Teilnehmende gesperrt
 export function isLocked(el) {
   return !!el && (!!el.locked || (!!el.modLock && !app.isFacilitator));
+}
+
+// Fixiert, aber Text frei: Die Sperre der Moderation geht immer vor
+export function textOpen(el) {
+  return !!el && el.locked === 'text' && el.type !== 'card' && !(el.modLock && !app.isFacilitator);
 }
 
 // Moderation: Elemente für Teilnehmende sperren bzw. freigeben (der Server prüft die Berechtigung)
@@ -2823,17 +2980,14 @@ window.addEventListener('keydown', (e) => {
     else startEdit(one.id, { selectAll: false });
     return;
   }
-  if (key === 'r') {
-    app.toolOpts.shape = 'rect';
-    setTool('shape');
+  if (key === 'r' || key === 'o') {
+    app.toolOpts.shape = key === 'r' ? 'rect' : 'ellipse';
+    if (e.shiftKey) holdTool('shape');
+    else setTool('shape');
     return;
   }
-  if (key === 'o') {
-    app.toolOpts.shape = 'ellipse';
-    setTool('shape');
-    return;
-  }
-  if (TOOL_KEYS[key] && !e.altKey) setTool(TOOL_KEYS[key]);
+  if (TOOL_KEYS[key] && e.shiftKey && !e.altKey && HOLDABLE.has(TOOL_KEYS[key])) holdTool(TOOL_KEYS[key]);
+  else if (TOOL_KEYS[key] && !e.altKey) setTool(TOOL_KEYS[key]);
 });
 
 // Leertaste losgelassen, während ein anderes Fenster aktiv war

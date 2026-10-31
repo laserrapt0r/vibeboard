@@ -35,6 +35,7 @@ export class B {
   shape(x, y, w, h, o = {}) {
     return this.add({ type: 'shape', shape: 'rect', x, y, w, h, fill: '#ffffff', stroke: '#1a1a1a', strokeWidth: 2, text: '', fontSize: 16, ...o });
   }
+  // Kanban-Spalte: Die Überschrift darin ist zugleich der Status der Karten, die hineingezogen werden
   zone(x, y, w, h, fill, o = {}) {
     return this.shape(x, y, w, h, { shape: 'roundrect', fill, stroke: 'none', strokeWidth: 0, locked: true, ...o });
   }
