@@ -1,0 +1,167 @@
+{{- $name := include "vibeboard.fullname" . -}}
+{{- $selector := dict "root" . "name" "vibeboard" -}}
+{{- if not .Values.backups.existingClaim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-backups
+  labels:
+    {{- include "vibeboard.labels" . | nindent 4 }}
+  annotations:
+    # Backups stay when the release is removed
+    helm.sh/resource-policy: keep
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- with .Values.backups.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.backups.size | quote }}
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "vibeboard.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "vibeboard.selector" $selector | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "vibeboard.labels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ $selector.name | quote }}
+spec:
+  # Fixed: see the note at the top of values.yaml
+  replicas: 1
+  # Never run two instances side by side, not even during a rollout
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "vibeboard.selector" $selector | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vibeboard.labels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ $selector.name | quote }}
+      annotations:
+        # Restart when the configuration changes
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: vibeboard
+          image: {{ include "vibeboard.image" (dict "repository" .Values.image.repository "tag" (.Values.image.tag | default .Chart.AppVersion) "digest" .Values.image.digest) | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: {{ $name }}-config
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: { name: {{ include "vibeboard.secretName" . }}, key: postgres-password }
+            - name: ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef: { name: {{ include "vibeboard.secretName" . }}, key: admin-email, optional: true }
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: {{ include "vibeboard.secretName" . }}, key: admin-password, optional: true }
+            {{- if .Values.kerberos.enabled }}
+            - name: KRB5_KTNAME
+              value: /etc/vibeboard/krb5.keytab
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          # Upgrades run database migrations and a backup before the server starts listening
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+            failureThreshold: 120
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: backups
+              mountPath: /backups
+            {{- if .Values.kerberos.enabled }}
+            - name: keytab
+              mountPath: /etc/vibeboard
+              readOnly: true
+            - name: krb5
+              mountPath: /etc/krb5.conf
+              subPath: krb5.conf
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+        - name: backups
+          persistentVolumeClaim:
+            claimName: {{ .Values.backups.existingClaim | default (printf "%s-backups" $name) }}
+        {{- if .Values.kerberos.enabled }}
+        - name: keytab
+          secret:
+            secretName: {{ required "kerberos.keytabSecret is required" .Values.kerberos.keytabSecret }}
+            defaultMode: 0440
+        - name: krb5
+          configMap:
+            name: {{ required "kerberos.configMap is required" .Values.kerberos.configMap }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.5.0] – 2026-10-31
+
+### Hinzugefügt
+- **Helm-Chart** (REQ-OPS-013) unter `deploy/helm/vibeboard`.
+- **Automatischer Rechte-Test** (REQ-SEC-014): `npm run test:access` ruft jede Route mit jeder Rolle auf und läuft bei jedem Push.
+
+### Sicherheit
+- Dateien in verborgenen Bereichen und privaten Elementen sind nicht mehr über ihre Kennung abrufbar (Datei, Vorschau, Name, PDF).
+- Sichtbarkeit wird zentral in `boards.canSeeElement` entschieden.
+
 ## [4.4.1] – 2026-10-31
 
 ### Behoben

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["publicUrl"],
+  "properties": {
+    "publicUrl": { "type": "string", "pattern": "^https?://[^/]+$", "description": "Public address without trailing slash" },
+    "replicaCount": { "type": "integer", "maximum": 1, "description": "vibeboard must run with exactly one replica" },
+    "trustProxy": { "type": ["string", "integer"] },
+    "backupKeep": { "type": "integer", "minimum": 1 },
+    "logging": { "type": "object", "properties": {
+      "level": { "enum": ["trace", "debug", "info", "warn", "error", "fatal", "silent"] },
+      "format": { "enum": ["text", "json"] }
+    } },
+    "service": { "type": "object", "properties": { "type": { "enum": ["ClusterIP", "NodePort", "LoadBalancer"] } } }
+  }
+}

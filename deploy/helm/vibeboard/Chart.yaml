@@ -1,0 +1,13 @@
+apiVersion: v2
+name: vibeboard
+description: Self-hosted collaborative whiteboard with PostgreSQL and optional virus scanning
+type: application
+version: 0.1.0
+appVersion: "4.5.0"
+kubeVersion: ">=1.27.0-0"
+keywords:
+  - whiteboard
+  - collaboration
+home: https://github.com/laserrapt0r/vibeboard
+sources:
+  - https://github.com/laserrapt0r/vibeboard

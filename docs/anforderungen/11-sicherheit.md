@@ -107,3 +107,12 @@ BSI IT-Grundschutz.
 - **Akzeptanzkriterien:**
   - Dateien werden immer als Download (Content-Disposition: attachment, RFC 6266) mit `Content-Security-Policy: sandbox` ausgeliefert, nie im Kontext der Anwendung angezeigt.
   - Vorschauen (PDF) rendert der Browser mit pdf.js (ohne eval) und lädt sie als PNG hoch; sie werden wie Bilder geprüft.
+
+### REQ-SEC-014 Automatische Prüfung der Zugriffsrechte
+- **Seit:** 4.5.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Bei jedem Push wird jede Route aus dem Router gelesen und ohne Anmeldung, als fremde Person, Gast, Ansehen, Kommentieren und Bearbeiten aufgerufen. Neue Routen sind ohne Zutun erfasst.
+  - Öffentliche Routen stehen mit Begründung in einer Liste; alles andere muss ohne Anmeldung scheitern. Die Administration ist nur für Administratoren erreichbar.
+  - Testmarken in privaten Elementen, verborgenen Bereichen, Dateien und Geheimnissen dürfen in keiner Antwort an Unberechtigte stehen. Gegenproben stellen sicher, dass Berechtigte sie sehen.
+  - Sichtbarkeit von Elementen entscheidet allein `boards.canSeeElement`; Prüfungen auf das im Server nie gesetzte Feld `hidden` lassen den Test fehlschlagen.
+  - Grenze: Der Test prüft HTTP-Antworten. Regeln innerhalb einzelner Board-Operationen brauchen eigene Prüfungen.

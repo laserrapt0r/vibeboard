@@ -1,5 +1,7 @@
 # vibeboard on Kubernetes
 
+Prefer Helm? See the [Helm chart](../helm/README.md).
+
 Kustomize manifests for vibeboard, PostgreSQL and ClamAV, tested with `kustomize build` and schema validation against
 Kubernetes 1.33. They haven't been run on a live cluster yet, so try them in a test namespace first.
 
@@ -15,8 +17,8 @@ Kubernetes 1.33. They haven't been run on a live cluster yet, so try them in a t
 
 ```bash
 # 1. Build and push the image
-docker build -t registry.example.org/vibeboard:4.4.1 .
-docker push registry.example.org/vibeboard:4.4.1
+docker build -t registry.example.org/vibeboard:4.5.0 .
+docker push registry.example.org/vibeboard:4.5.0
 
 # 2. Adapt: image in kustomization.yaml, PUBLIC_URL in configmap.yaml, host names in ingress.yaml
 

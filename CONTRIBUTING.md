@@ -47,6 +47,17 @@ Eine Änderung ist erst fertig, wenn alle Punkte erfüllt sind:
 Dependabot-Pull-Requests sind von Punkt 1 bis 3 der Definition of Done ausgenommen: Sie ändern nur Abhängigkeiten und gehen mit
 der nächsten Version ins CHANGELOG. Wer eine Änderung ohne Dependabot macht, befolgt die Liste vollständig.
 
+## Zugriffsrechte
+
+Rechte werden nicht im Einzelfall geprüft und gehofft, sondern automatisch abgesichert:
+
+- **Sichtbarkeit von Elementen** entscheidet nur `boards.canSeeElement(b, el, uid, role)`. Elemente in `b.elements` sind ungeschwärzt.
+  Das Feld `hidden` gibt es nur im Browser, im Server ist es nie gesetzt.
+- **`npm run test:access`** läuft bei jedem Push: Jede Route wird automatisch aus dem Router gelesen und mit jeder Rolle aufgerufen. Neue
+  Routen sind damit ohne Zutun erfasst. Eine Route, die ohne Anmeldung oder für Fremde etwas liefert, lässt den Test fehlschlagen,
+  bis sie bewusst in `scripts/test-access.js` eingetragen und begründet ist. Geheime Testmarken in privaten und verborgenen Inhalten
+  dürfen in keiner Antwort auftauchen.
+
 ## Upgrade-Test ausführen
 
 ```bash

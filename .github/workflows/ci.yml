@@ -47,6 +47,10 @@ jobs:
       - run: npm run test:upgrade
         env:
           DATABASE_URL: postgres://vb:vb@localhost:5432/vb_test
+      - name: Zugriffsrechte prüfen
+        run: npm run test:access
+        env:
+          DATABASE_URL: postgres://vb:vb@localhost:5432/vb_access
 
   docker:
     name: Docker-Image

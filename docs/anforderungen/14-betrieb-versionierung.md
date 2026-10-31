@@ -100,3 +100,12 @@
   - `main` nimmt Pull Requests nur mit grüner Prüfung an (Tests und Docker-Image).
   - Die Prüfung installiert npm-Pakete ohne Installationsskripte und prüft ihre Registry-Signaturen.
   - GitHub Actions und Basis-Image sind über Hashes fest eingebunden.
+
+### REQ-OPS-013 Helm-Chart
+- **Seit:** 4.5.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - `deploy/helm/vibeboard` installiert Anwendung, PostgreSQL und ClamAV; Gotenberg, Kerberos, eigene Datenbank, eigener Scanner, Ingress und HTTPRoute sind wählbar.
+  - Das Chart bietet keine Anzahl von Instanzen an und lehnt mehr als eine ab. `publicUrl` ist Pflicht.
+  - Kennwörter können aus einem vorhandenen Secret kommen; ein erzeugtes Datenbank-Kennwort bleibt bei Upgrades erhalten.
+  - Datenbank- und Sicherungsvolumes überstehen das Entfernen des Release.
+  - Chart und Kustomize-Manifeste bestehen in der automatischen Prüfung `helm lint` und die Schemaprüfung.

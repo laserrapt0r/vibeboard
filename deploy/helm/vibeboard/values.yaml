@@ -1,0 +1,144 @@
+# There is deliberately no replica count: live board state, rate limits and sign-in tickets are kept
+# in the memory of one process. Two instances would overwrite each other's changes.
+
+image:
+  # vibeboard does not publish an image: build it and push it to your registry
+  repository: vibeboard
+  # Defaults to the chart's appVersion
+  tag: ""
+  # Pinning by digest (sha256:...) takes precedence over the tag
+  digest: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# Required: public address, used for links in e-mails and SSO redirects
+publicUrl: ""
+
+# Number of proxies in front of the app, or a list of addresses and networks
+trustProxy: "1"
+
+logging:
+  level: info
+  format: json
+
+# Number of database backups kept before upgrades
+backupKeep: 10
+
+auth:
+  # Name of an existing Secret with the keys postgres-password and, optionally, admin-email and admin-password.
+  # Recommended for production: keeps passwords out of the Helm values.
+  existingSecret: ""
+  # Used only without existingSecret. Empty: a random password is generated once and kept on upgrades.
+  postgresPassword: ""
+  # Optional: creates the first administrator on the first start
+  adminEmail: ""
+  adminPassword: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  # Live updates need unbuffered responses and long timeouts. Traefik needs nothing here.
+  # For ingress-nginx use the values in the chart's README.
+  annotations: {}
+  host: board.example.org
+  tls:
+    enabled: true
+    secretName: vibeboard-tls
+
+# Alternative to the Ingress for clusters using the Gateway API
+httpRoute:
+  enabled: false
+  hostnames:
+    - board.example.org
+  parentRefs: []
+
+backups:
+  size: 10Gi
+  storageClass: ""
+  # Use a volume you manage yourself
+  existingClaim: ""
+
+postgres:
+  # false: use your own PostgreSQL server (see external)
+  enabled: true
+  image:
+    repository: postgres
+    tag: 16-alpine
+    digest: ""
+  database: vibeboard
+  username: vibeboard
+  size: 10Gi
+  storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  external:
+    host: ""
+    port: 5432
+
+clamav:
+  # Without a scanner, uploads stay blocked until an administrator allows that
+  enabled: true
+  image:
+    repository: clamav/clamav
+    tag: stable
+    digest: ""
+  size: 2Gi
+  storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 1500Mi
+    limits:
+      memory: 3Gi
+  # Your own ClamAV server, if enabled is false
+  external:
+    host: ""
+    port: 3310
+
+# Converts Office files to PDF so that their pages can be reviewed on the board
+gotenberg:
+  enabled: false
+  image:
+    repository: gotenberg/gotenberg
+    tag: "8"
+    digest: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1500Mi
+
+kerberos:
+  enabled: false
+  # Secret with the key krb5.keytab
+  keytabSecret: ""
+  # ConfigMap with the key krb5.conf
+  configMap: ""
+
+# Database and virus scanner accept connections only from the app.
+# Takes effect only if the cluster's network plugin enforces NetworkPolicies.
+networkPolicy:
+  enabled: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# Additional environment variables, e.g. NODE_EXTRA_CA_CERTS
+extraEnv: []
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vibeboard.fullname" . }}-config
+  labels:
+    {{- include "vibeboard.labels" . | nindent 4 }}
+data:
+  PUBLIC_URL: {{ required "publicUrl is required, e.g. https://board.example.org" .Values.publicUrl | quote }}
+  TRUST_PROXY: {{ .Values.trustProxy | quote }}
+  PGHOST: {{ include "vibeboard.pgHost" . | quote }}
+  PGPORT: {{ (.Values.postgres.enabled | ternary 5432 .Values.postgres.external.port) | quote }}
+  PGDATABASE: {{ .Values.postgres.database | quote }}
+  PGUSER: {{ .Values.postgres.username | quote }}
+  CLAMAV_HOST: {{ include "vibeboard.clamavHost" . | quote }}
+  CLAMAV_PORT: {{ (.Values.clamav.enabled | ternary 3310 .Values.clamav.external.port) | quote }}
+  BACKUP_KEEP: {{ .Values.backupKeep | quote }}
+  LOG_LEVEL: {{ .Values.logging.level | quote }}
+  LOG_FORMAT: {{ .Values.logging.format | quote }}
+  {{- if .Values.gotenberg.enabled }}
+  OFFICE_CONVERTER_URL: {{ printf "http://%s-gotenberg:3000" (include "vibeboard.fullname" .) | quote }}
+  {{- end }}

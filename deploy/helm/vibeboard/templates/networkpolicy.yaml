@@ -1,0 +1,27 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $root := . -}}
+{{- $app := dict "root" . "name" "vibeboard" -}}
+{{- range $svc := list (dict "name" "postgres" "port" 5432 "on" .Values.postgres.enabled) (dict "name" "clamav" "port" 3310 "on" .Values.clamav.enabled) (dict "name" "gotenberg" "port" 3000 "on" .Values.gotenberg.enabled) }}
+{{- if $svc.on }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "vibeboard.fullname" $root }}-{{ $svc.name }}
+  labels:
+    {{- include "vibeboard.labels" $root | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "vibeboard.selector" (dict "root" $root "name" $svc.name) | nindent 6 }}
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "vibeboard.selector" $app | nindent 14 }}
+      ports:
+        - port: {{ $svc.port }}
+{{- end }}
+{{- end }}
+{{- end }}
