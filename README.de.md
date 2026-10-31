@@ -121,7 +121,7 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 - Änderungen erscheinen sofort bei allen Teilnehmenden
 - **Live-Cursor mit Namen:**
   - Die Auswahl der anderen ist farbig markiert und mit Namen beschriftet; wer gerade tippt, wird mit
-    „✎ Name schreibt …“ angezeigt.
+    „✎ Name schreibt …“ angezeigt. Verschieben, Größe ändern und ein offener Kartendialog erscheinen genauso; gesperrt wird nichts.
   - Personen außerhalb der eigenen Ansicht erscheinen als Pfeil am Bildschirmrand; ein Klick springt hin.
   - Abwesende (anderer Tab) werden ausgegraut; die Ansichten aller stehen als Rahmen in der Minimap.
   - Fremde Mauszeiger lassen sich in den Einstellungen ausblenden.

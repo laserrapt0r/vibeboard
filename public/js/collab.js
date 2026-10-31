@@ -5,6 +5,7 @@ import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util
 import {
   app, $, stage, getEl, isAnonymous, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
   loadElements, applyRemoteOp, applyRemoteTableOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
+  BUSY_TTL, resendBusy,
 } from './core.js';
 import { throttle } from './util.js';
 import { menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
@@ -758,6 +759,7 @@ export function initCollab() {
     // Neu Hinzukommende kennen den eigenen Zustand noch nicht
     if (document.hidden) s.signal('presence', { away: true });
     if (app.editing && !isAnonymous(getEl(app.editing.id))) s.signal('editing', app.editing.id);
+    resendBusy();
     if (app.sel.size) s.signal('sel', [...app.sel].filter((id) => !isAnonymous(getEl(id))).slice(0, 200));
     toast(T`${msg.user.name} ist dem Board beigetreten`);
   });
@@ -823,6 +825,22 @@ export function initCollab() {
         p.editing = typeof d === 'string' ? d.slice(0, 64) : null;
         scheduleRender(true);
         break;
+      case 'busy': {
+        const ids = d && Array.isArray(d.ids) ? d.ids.filter((x) => typeof x === 'string').slice(0, 200).map((x) => x.slice(0, 64)) : [];
+        p.busy = ids.length && d && ['move', 'resize', 'card'].includes(d.what) ? { what: d.what, ids } : null;
+        scheduleRender(true);
+        app.emit('busy');
+        // Bleibt die Wiederholung aus (Absturz, Verbindung weg), verschwindet der Hinweis von selbst
+        clearTimeout(p.busyTimer);
+        if (p.busy) {
+          p.busyTimer = setTimeout(() => {
+            p.busy = null;
+            scheduleRender(true);
+            app.emit('busy');
+          }, BUSY_TTL);
+        }
+        break;
+      }
     }
   });
   s.on('reload', (msg) => {

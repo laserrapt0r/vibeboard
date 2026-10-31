@@ -121,7 +121,7 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
 - Los cambios aparecen al instante para todos los participantes
 - **Cursores en vivo con nombres:**
   - La selección de las demás personas se marca con color y lleva su nombre; quien está escribiendo en ese momento se
-    muestra como «✎ Nombre está escribiendo …».
+    muestra como «✎ Nombre está escribiendo …». Mover, cambiar el tamaño y un diálogo de tarjeta abierto se muestran igual; no se bloquea nada.
   - Las personas fuera de tu vista aparecen como una flecha en el borde de la pantalla; un clic te lleva hasta ellas.
   - Las personas ausentes (otra pestaña) se muestran en gris; las vistas de todos aparecen como marcos en el minimapa.
   - Los punteros del ratón de otras personas se pueden ocultar en los ajustes.

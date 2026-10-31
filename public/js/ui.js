@@ -22,6 +22,7 @@ import {
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
   tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment,
+  setBusy, clearBusy,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
 
@@ -603,7 +604,22 @@ app.on('editCard', (id) => {
   h('datalist', { id: 'status-list' }, [T('Offen'), T('In Arbeit'), T('Review'), T('Test'), T('Blockiert'), T('Fertig')].map((n) => h('option', { value: n }))),
   h('div', {}, h('div', { class: 'label' }, T('Farbe')), sw),
   h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, T('Abbrechen')), h('button', { type: 'submit', class: 'btn primary' }, T('Speichern'))));
-  const m = modal(T('Karte bearbeiten'), form);
+  // Weicher Hinweis: Niemand wird ausgesperrt, gespeichert wird nur, was man selbst geändert hat
+  const others = h('p', { class: 'muted small', role: 'status' });
+  const showOthers = () => {
+    const names = [...app.peers.values()].filter((p) => !p.away && p.busy?.what === 'card' && p.busy.ids.includes(id)).map((p) => p.name);
+    others.textContent = names.length ? T`Diese Karte ist gerade auch geöffnet bei: ${names.join(', ')}` : '';
+  };
+  form.prepend(others);
+  showOthers();
+  app.on('busy', showOthers);
+  setBusy('card', [id]);
+  const m = modal(T('Karte bearbeiten'), form, {
+    onClose: () => {
+      app.off('busy', showOthers);
+      clearBusy('card');
+    },
+  });
   setTimeout(() => title.focus(), 0);
 });
 

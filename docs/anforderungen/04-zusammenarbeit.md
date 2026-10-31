@@ -43,6 +43,9 @@
     - Wechselt jemand in einen anderen Tab, gilt die Person als abwesend: Avatar verblasst, Zeiger und Auswahl werden ausgeblendet.
     - Die Ansichten der anderen erscheinen als farbige Rahmen in der Minimap.
     - „Mauszeiger anderer ausblenden“ (Einstellungen) blendet fremde Zeiger für die eigene Ansicht aus; die Einstellung bleibt gespeichert.
+  - Geändert in 4.7.0:
+    - Auch Verschieben, Größe ändern und der offene Kartendialog erscheinen als „✎ Name …“ am Element; wer dieselbe Karte öffnet, sieht im Dialog, bei wem sie noch offen ist.
+    - Die Hinweise sperren nichts, gelten nicht für anonyme Beiträge und verschwinden nach spätestens 12 Sekunden von selbst, wenn die Verbindung abreißt.
 
 ### REQ-COLLAB-005 Folgen und Zusammenholen
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt

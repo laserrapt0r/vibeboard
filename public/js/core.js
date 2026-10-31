@@ -723,6 +723,32 @@ export function isAnonymous(el) {
   const pm = app.session && app.session.privateMode;
   return !!el && (!!el.anon || !!(pm && pm.active && pm.anonymous));
 }
+
+// Weicher Hinweis an andere, woran man gerade arbeitet (Ziehen, Kartendialog). Er sperrt nichts. Das Signal wiederholt sich, damit
+// Hinzukommende es sehen und der Hinweis bei einem Abbruch von selbst verschwindet (siehe BUSY_TTL bei den anderen).
+const BUSY_BEAT = 5000;
+export const BUSY_TTL = 12000;
+let busy = null, busyTimer = null;
+const sendBusy = () => app.sync && app.sync.signal('busy', busy);
+
+export function setBusy(what, ids) {
+  clearInterval(busyTimer);
+  const list = ids.filter((id) => !isAnonymous(app.els.get(id))).slice(0, 200);
+  busy = !app.viewOnly && list.length ? { what, ids: list } : null;
+  if (!busy) return;
+  sendBusy();
+  busyTimer = setInterval(sendBusy, BUSY_BEAT);
+}
+
+export function clearBusy(what) {
+  if (!busy || (what && busy.what !== what)) return;
+  clearInterval(busyTimer);
+  busy = null;
+  sendBusy();
+}
+
+export const resendBusy = () => busy && sendBusy();
+
 const sendSel = throttle(() => app.sync.signal('sel', [...app.sel].filter((id) => !isAnonymous(app.els.get(id))).slice(0, 200)), 200);
 
 const escXml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -776,7 +802,7 @@ function renderOverlay() {
   for (const p of app.peers.values()) {
     if (p.away) continue;
     let labelAt = null;
-    for (const id of p.sel || []) {
+    for (const id of new Set([...(p.sel || []), ...(p.busy?.ids || [])])) {
       const el = getEl(id);
       if (!el) continue;
       const b = bounds(el);
@@ -785,9 +811,11 @@ function renderOverlay() {
     }
     // Namensschild an der Auswahl bzw. am gerade bearbeiteten Element
     const ed = p.editing && getEl(p.editing);
-    if (ed) labelAt = bounds(ed);
+    const active = !ed && p.busy && p.busy.ids.map(getEl).find(Boolean);
+    if (ed || active) labelAt = bounds(ed || active);
     if (labelAt) {
-      const label = (ed ? '✎ ' : '') + p.name + (ed ? T(' schreibt …') : '');
+      const doing = ed ? T(' schreibt …') : active ? { move: T(' verschiebt …'), resize: T(' ändert die Größe …'), card: T(' bearbeitet die Karte …') }[p.busy.what] : '';
+      const label = (ed || active ? '✎ ' : '') + p.name + doing;
       const fs = 11 / z, lw = (label.length * 6.4 + 14) / z, lh = 18 / z;
       out += `<g class="peer-tag"><rect x="${labelAt.x - 3 / z}" y="${labelAt.y - 3 / z - lh}" width="${lw}" height="${lh}" rx="${4 / z}" fill="${p.color}"/>` +
         `<text x="${labelAt.x + 4 / z}" y="${labelAt.y - 3 / z - lh * 0.3}" font-size="${fs}" font-weight="bold" fill="#fff" font-family="Helvetica, Arial, sans-serif">${escXml(label)}</text></g>`;
@@ -1570,6 +1598,7 @@ function onMove(e) {
       return;
     case 'move': {
       if (!drag.moved && !far) return;
+      if (!drag.moved) setBusy('move', [...app.sel]);
       drag.moved = true;
       let dx = w.x - s.w.x, dy = w.y - s.w.y;
       // Umschalt: nur waagerecht oder senkrecht verschieben
@@ -1613,6 +1642,8 @@ function onMove(e) {
     case 'resize': {
       const ob = drag.ob;
       if (!ob) return;
+      if (!drag.announced) setBusy('resize', [...app.sel]);
+      drag.announced = true;
       const dx = w.x - s.w.x, dy = w.y - s.w.y;
       const k = drag.handle;
       const z = app.view.z, thr = 6 / z;
@@ -1950,6 +1981,10 @@ function bestSnap(vals, cands, thr) {
 
 function onUp(e) {
   pointers.delete(e.pointerId);
+  if (!pointers.size) {
+    clearBusy('move');
+    clearBusy('resize');
+  }
   if (!drag) return;
   const d = drag;
   if (d.mode === 'pinch') {

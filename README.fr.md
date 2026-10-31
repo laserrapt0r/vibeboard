@@ -122,7 +122,7 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
 - Les modifications apparaissent immédiatement chez tous les participants
 - **Curseurs en direct avec noms :**
   - La sélection des autres est marquée en couleur et porte leur nom ; la personne qui est en train d'écrire s'affiche
-    avec « ✎ Nom écrit … ».
+    avec « ✎ Nom écrit … ». Déplacer, redimensionner et une fiche ouverte s'affichent de la même façon ; rien n'est verrouillé.
   - Les personnes en dehors de votre vue apparaissent sous forme de flèche au bord de l'écran ; un clic permet de les rejoindre.
   - Les personnes absentes (autre onglet) sont grisées ; les vues de tous figurent sous forme de cadres dans la mini-carte.
   - Les pointeurs de souris des autres peuvent être masqués dans les paramètres.

@@ -4,6 +4,11 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.7.0] – 2026-10-31
+
+### Hinzugefügt
+- **Hinweise, woran andere gerade arbeiten** (REQ-COLLAB-004): Beim Verschieben, beim Ändern der Größe und im Kartendialog steht der Name am Element. Wer dieselbe Karte öffnet, sieht das im Dialog. Die Hinweise sperren nichts.
+
 ## [4.6.0] – 2026-10-31
 
 ### Hinzugefügt

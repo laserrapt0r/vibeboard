@@ -120,7 +120,7 @@ Pasting multi-line text into the board automatically creates one sticky note per
 - Changes appear immediately for all participants
 - **Live cursors with names:**
   - The selection of others is marked in color and labeled with their name; anyone who is currently typing is shown as
-    “✎ Name is writing …”.
+    “✎ Name is writing …”. Moving, resizing and an open card dialog are shown the same way; nothing is locked.
   - People outside your own view appear as an arrow at the edge of the screen; a click jumps to them.
   - Absent people (other tab) are grayed out; everyone's views are shown as frames in the minimap.
   - Other people's mouse pointers can be hidden in the settings.
