@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.3.2] – 2026-10-31
+
+### Hinzugefügt
+- **Automatische Updates über GitHub** (REQ-OPS-012): Dependabot für npm, GitHub Actions und das Basis-Image. Sicherheitsupdates
+  kommen sofort, normale Updates erst nach sieben Tagen. Patch- und Minor-Updates werden nach grüner Prüfung automatisch übernommen.
+- **Automatische Prüfung** bei jedem Push und Pull Request: Paketherkunft, Syntax, Wörterbücher, Upgrade-Test und Docker-Image.
+
+### Sicherheit
+- Basis-Image und GitHub Actions sind fest über ihren Hash eingebunden.
+
 ## [4.3.1] – 2026-10-31
 
 ### Behoben

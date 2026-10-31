@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Der Token darf nur lesen; Abhängigkeiten aus einem Pull Request laufen hier ohne Geheimnisse
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: vb_test
+          POSTGRES_USER: vb
+          POSTGRES_PASSWORD: vb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vb -d vb_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      # Ohne Installationsskripte: Sie sind der übliche Weg von Schadcode aus manipulierten Paketen
+      - run: npm ci --ignore-scripts
+      - name: Herkunft der Pakete prüfen
+        run: npm audit signatures
+      - name: Syntax prüfen
+        run: find server.js lib scripts -name '*.js' -print0 | xargs -0 -n1 node --check
+      - run: npm run check:i18n
+      - run: npm run test:upgrade
+        env:
+          DATABASE_URL: postgres://vb:vb@localhost:5432/vb_test
+
+  docker:
+    name: Docker-Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker build -t vibeboard:ci .
+      - name: Bibliotheken im Image laden
+        run: docker run --rm vibeboard:ci node -e "require('kerberos'); require('ldapts'); require('pg'); console.log(require('./package.json').version)"

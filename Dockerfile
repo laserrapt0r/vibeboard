@@ -1,15 +1,17 @@
 # vibeboard – kollaboratives Whiteboard
 
+# Basis-Image fest über seinen Hash eingebunden; Dependabot schlägt Aktualisierungen vor (Sicherheitsupdates von Alpine und Node.js)
+
 # Abhängigkeiten in einer eigenen Stufe bauen: Die Kerberos-Anbindung wird für Alpine kompiliert,
 # die Werkzeuge dafür landen nicht im fertigen Image
-FROM node:22-alpine AS deps
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS deps
 RUN apk add --no-cache python3 make g++ krb5-dev
 WORKDIR /app
 COPY package.json package-lock.json ./
 # Die Canvas-Anbindung von pdf.js für Node wird im Server nicht gebraucht
 RUN npm ci --omit=dev --build-from-source=kerberos && rm -rf node_modules/@napi-rs
 
-FROM node:22-alpine
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
 
 # pg_dump für die automatische Sicherung vor Datenbank-Upgrades
 # (Version 17 kann auch ältere PostgreSQL-Server sichern)

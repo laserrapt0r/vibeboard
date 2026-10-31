@@ -659,6 +659,10 @@ Toutes les données se trouvent dans votre propre base de données PostgreSQL :
 
 ---
 
+## Mise à jour des dépendances
+
+Dependabot surveille les paquets npm, GitHub Actions et l'image de base Docker. Les mises à jour de sécurité arrivent immédiatement ; les autres attendent sept jours, afin qu'une version compromise puisse être découverte avant. Les mises à jour patch et minor sont intégrées automatiquement si tous les contrôles réussissent ; les majeures nécessitent une relecture. Elles n'atteignent votre serveur qu'au prochain `git pull` suivi d'une reconstruction. Les autres images s'obtiennent avec `docker compose pull`.
+
 ## Exigences et contribution
 
 - [docs/anforderungen](docs/anforderungen/README.md) décrit toutes les fonctionnalités sous forme d'exigences avec des ID permanents

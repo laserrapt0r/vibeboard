@@ -1,0 +1,42 @@
+# Automatische Updates. Sicherheitsupdates kommen sofort; die Wartezeit gilt nur für normale Versionsupdates.
+# Sie gibt der Gemeinschaft Zeit, manipulierte Veröffentlichungen zu entdecken, bevor sie hier ankommen.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    open-pull-requests-limit: 5
+    groups:
+      # Kleine Updates gemeinsam, damit nicht jede Woche viele einzelne Pull Requests entstehen
+      kleine-updates:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: "Abhängigkeiten"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "CI"
+
+  # Basis-Image im Dockerfile (Node.js und Alpine)
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "Docker"

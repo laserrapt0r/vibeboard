@@ -650,6 +650,10 @@ Alle Daten liegen in der eigenen PostgreSQL-Datenbank:
 
 ---
 
+## Aktualisierung der Abhängigkeiten
+
+Dependabot überwacht npm-Pakete, GitHub Actions und das Docker-Basis-Image. Sicherheitsupdates kommen sofort; andere Updates warten sieben Tage, damit manipulierte Veröffentlichungen vorher auffallen können. Patch- und Minor-Updates werden nach bestandener Prüfung automatisch übernommen, Major-Updates brauchen eine Durchsicht. Auf deinen Server gelangen Updates erst mit dem nächsten `git pull` und Neubau. Die übrigen Images holt `docker compose pull`.
+
 ## Anforderungen und Mitarbeit
 
 - [docs/anforderungen](docs/anforderungen/README.md) beschreibt alle Funktionen als Anforderungen mit dauerhaften IDs

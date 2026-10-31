@@ -42,6 +42,11 @@ Eine Änderung ist erst fertig, wenn alle Punkte erfüllt sind:
 9. **Getestet:** Neue Funktion im Browser und, falls betroffen, mit mehreren Personen gleichzeitig sowie im Rückfall-Transport
    (`?transport=poll`) geprüft.
 
+## Automatische Updates
+
+Dependabot-Pull-Requests sind von Punkt 1 bis 3 der Definition of Done ausgenommen: Sie ändern nur Abhängigkeiten und gehen mit
+der nächsten Version ins CHANGELOG. Wer eine Änderung ohne Dependabot macht, befolgt die Liste vollständig.
+
 ## Upgrade-Test ausführen
 
 ```bash

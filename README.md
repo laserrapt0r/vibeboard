@@ -645,6 +645,10 @@ All data is stored in your own PostgreSQL database:
 
 ---
 
+## Dependency updates
+
+Dependabot watches npm packages, GitHub Actions and the Docker base image. Security updates arrive at once; other updates wait seven days, so that a compromised release can be discovered first. Patch and minor updates are merged automatically once all checks pass; major updates need a review. Updates reach your server only with your next `git pull` and rebuild. Pull the other images with `docker compose pull`.
+
 ## Requirements and contributing
 
 - [docs/anforderungen](docs/anforderungen/README.md) describes all features as requirements with permanent IDs

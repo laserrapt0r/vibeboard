@@ -90,3 +90,13 @@
   - Genau eine Instanz der Anwendung (Strategie `Recreate`), weil der Live-Zustand im Speicher liegt.
   - Anwendung und Datenbank laufen ohne Root-Rechte mit schreibgeschütztem Dateisystem; Kennwörter liegen nicht im Repository.
   - Die Manifeste bestehen `kustomize build` und die Schemaprüfung mit `kubeconform`.
+
+### REQ-OPS-012 Automatische Updates der Abhängigkeiten
+- **Seit:** 4.3.2 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Dependabot überwacht npm, GitHub Actions und das Basis-Image; Warnungen und Sicherheitsupdates sind eingeschaltet.
+  - Normale Updates warten mindestens sieben Tage, Major-Updates bei npm 30 Tage; Sicherheitsupdates warten nicht.
+  - Patch- und Minor-Updates werden automatisch übernommen, Major-Updates nie.
+  - `main` nimmt Pull Requests nur mit grüner Prüfung an (Tests und Docker-Image).
+  - Die Prüfung installiert npm-Pakete ohne Installationsskripte und prüft ihre Registry-Signaturen.
+  - GitHub Actions und Basis-Image sind über Hashes fest eingebunden.

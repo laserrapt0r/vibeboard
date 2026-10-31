@@ -15,8 +15,8 @@ Kubernetes 1.33. They haven't been run on a live cluster yet, so try them in a t
 
 ```bash
 # 1. Build and push the image
-docker build -t registry.example.org/vibeboard:4.3.1 .
-docker push registry.example.org/vibeboard:4.3.1
+docker build -t registry.example.org/vibeboard:4.3.2 .
+docker push registry.example.org/vibeboard:4.3.2
 
 # 2. Adapt: image in kustomization.yaml, PUBLIC_URL in configmap.yaml, host names in ingress.yaml
 

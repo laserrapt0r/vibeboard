@@ -15,4 +15,4 @@ images:
   # Point this at your own registry; vibeboard does not publish an image
   - name: vibeboard
     newName: vibeboard
-    newTag: "4.3.1"
+    newTag: "4.3.2"
