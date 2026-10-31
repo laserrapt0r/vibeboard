@@ -38,5 +38,9 @@ updates:
       day: monday
     cooldown:
       default-days: 7
+    ignore:
+      # Node.js-Hauptversionen bewusst von Hand wechseln, nur auf Versionen mit Langzeitsupport (LTS)
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "Docker"
