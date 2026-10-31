@@ -4,6 +4,11 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.4.1] – 2026-10-31
+
+### Behoben
+- SAML: Gruppen, die als mehrere Attribute gleichen Namens kommen (Standard bei Keycloak), werden vollständig ausgewertet. Vorher griffen nötige Gruppe und Adminrechte in diesem Fall nicht.
+
 ## [4.4.0] – 2026-10-31
 
 Schemaversion 10.
