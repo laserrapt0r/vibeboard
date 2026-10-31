@@ -30,6 +30,7 @@
   - Noch nicht bestätigte eigene Änderungen (auch Timer, Abstimmung, Umbenennen) werden erneut gesendet und lokal beibehalten.
   - Beim Schließen des Tabs werden ausstehende Änderungen sofort gesendet.
   - Geändert in 4.0.0: Hängen beim Schließen noch Änderungen fest, weil keine Verbindung besteht oder der Server nicht speichern kann, fragt der Browser vor dem Verlassen der Seite nach.
+  - Geändert in 4.10.1: Auch nach einer HTTP-Fehlerantwort, etwa 502 eines Proxys während eines Neustarts oder 401, verbindet sich der Browser selbst neu: mit wachsendem Abstand bis 30 Sekunden, sofort wenn das Netz zurückkehrt oder der Tab wieder in den Vordergrund kommt. Ausstehende Änderungen gehen dabei nicht verloren.
 
 ### REQ-COLLAB-004 Präsenz
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt

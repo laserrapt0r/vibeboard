@@ -8,6 +8,7 @@ import { Reconciler, enqueue, enqueueDelete, requeue, supersede, supersedeParts,
 const TRANSPORT_KEY = 'vibeboard.transport';
 const TRANSPORT_DAYS = 7;
 const SSE_TIMEOUT = 4000;
+const RECONNECT_MAX = 30000;
 
 function rememberedPoll() {
   try {
@@ -67,6 +68,10 @@ export class Sync {
     this.connected = false;
     this.inflight = Promise.resolve();
     this.sending = [];
+    this.closedCount = 0;
+    // Netz wieder da oder Tab wieder im Vordergrund: nicht auf die nächste Wartezeit warten
+    window.addEventListener('online', () => this.reconnect());
+    document.addEventListener('visibilitychange', () => !document.hidden && this.reconnect());
     this.started = new WeakSet(); // Pakete, die schon unterwegs sind und sich nicht mehr ändern dürfen
     this.transport = null;
     this.pollLoop = 0;
@@ -135,12 +140,15 @@ export class Sync {
   // geht es automatisch mit Long-Polling weiter (normales HTTP, funktioniert praktisch überall)
   connect() {
     this.stopped = false;
+    clearTimeout(this.reconnectTimer);
+    if (this.es) this.es.close();
     const forced = new URLSearchParams(location.search).get('transport');
     if (this.transport === 'poll' || forced === 'poll' || (forced !== 'sse' && rememberedPoll())) return this.connectPoll();
     this.transport = 'sse';
     const p = new URLSearchParams({ client: this.clientId });
     let greeted = false;
     let failures = 0;
+    clearTimeout(this.sseTimer);
     this.es = new EventSource(`/api/boards/${this.boardId}/events?${p}`);
     // remember: nur wenn der Stream offensichtlich zurückgehalten wird (Zeitüberschreitung), nicht bei kurzen Störungen
     // wie einem Neustart des Servers – sonst bliebe der Browser grundlos eine Woche beim Long-Polling
@@ -152,7 +160,8 @@ export class Sync {
       this.connectPoll();
     };
     // Keine Begrüßung innerhalb weniger Sekunden → Stream kommt vermutlich nicht durch (z. B. Pufferung)
-    this.sseTimer = setTimeout(() => !greeted && fallback(true), SSE_TIMEOUT);
+    // Hatte der Stream hier schon funktioniert, ist es eine Störung: Dann nichts für die nächsten Tage merken
+    this.sseTimer = setTimeout(() => !greeted && fallback(!this.everConnected), SSE_TIMEOUT);
     this.es.onmessage = (e) => {
       let msg;
       try {
@@ -167,6 +176,7 @@ export class Sync {
       }
       if (msg.type === 'hello') {
         greeted = true;
+        this.closedCount = 0;
         clearTimeout(this.sseTimer);
         rememberTransport('sse');
       }
@@ -176,8 +186,24 @@ export class Sync {
       this.connected = false;
       this.emit('status', false);
       this.emitState();
-      if (!greeted && ++failures >= 2) fallback(false);
+      if (!greeted && ++failures >= 2) return fallback(false);
+      // Nach einem Netzabbruch verbindet der Browser von selbst neu. Nach einer HTTP-Fehlerantwort (etwa 502 vom Proxy während
+      // eines Neustarts, 401) gibt er aber endgültig auf: Ohne neuen Versuch bliebe der Tab offline, bis jemand neu lädt.
+      if (this.es.readyState === EventSource.CLOSED) {
+        clearTimeout(this.sseTimer);
+        this.reconnectLater();
+      }
     };
+  }
+
+  reconnectLater() {
+    clearTimeout(this.reconnectTimer);
+    const wait = Math.min(RECONNECT_MAX, 2000 * 2 ** this.closedCount++);
+    this.reconnectTimer = setTimeout(() => this.reconnect(), wait);
+  }
+
+  reconnect() {
+    if (!this.stopped && !this.connected && this.transport === 'sse') this.connect();
   }
 
   async connectPoll() {
@@ -189,9 +215,17 @@ export class Sync {
       try {
         // Anmelden am Board (liefert die Begrüßung mit dem aktuellen Stand)
         const r = await fetch(`/api/boards/${this.boardId}/events?${p}`, { cache: 'no-store', credentials: 'same-origin' });
-        if (r.status === 401 || r.status === 403 || r.status === 404) {
+        if (r.status === 403 || r.status === 404) {
           this.emit('status', false);
           return;
+        }
+        // Abgemeldet: Nach einer erneuten Anmeldung, auch in einem anderen Tab, geht es von selbst weiter
+        if (r.status === 401) {
+          this.connected = false;
+          this.emit('status', false);
+          this.emitState();
+          await new Promise((res) => setTimeout(res, RECONNECT_MAX));
+          continue;
         }
         if (!r.ok) throw new Error(T('HTTP ') + r.status);
         for (const m of (await r.json()).messages || []) this.dispatch(m);
