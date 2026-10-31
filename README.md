@@ -49,6 +49,7 @@ All content in the screenshots is sample data.
 - [Accounts and sign-in](#accounts-and-sign-in)
 - [Permissions on boards](#permissions-on-boards)
 - [Administration](#administration)
+- [Accessibility](#accessibility)
 - [Languages](#languages)
 - [Virus protection for uploads](#virus-protection-for-uploads)
 - [Versions and upgrades](#versions-and-upgrades)
@@ -303,6 +304,10 @@ The tables are created and migrated automatically on startup.
 
 ---
 
+### On Kubernetes
+
+Manifests are in [deploy/kubernetes](deploy/kubernetes/README.md). The app must run with exactly one replica.
+
 ## Configuration
 
 Environment variables (with Docker in the `.env`):
@@ -364,6 +369,10 @@ You make all further settings in the administration.
   signed out.
 - **Notifications** by email for security-relevant changes: password changed, email address changed,
   two-factor sign-in turned on or off, registration attempt with an address that is already in use.
+
+### External sign-in
+
+Besides local accounts, vibeboard can use **Keycloak**, **LDAP/Active Directory** and **Kerberos single sign-on**. All are optional and configured under *Administration → Sign-in*; LDAP is preset for Active Directory. Several methods can be active at once, and local administrators always keep an emergency access. Setup: [docs/authentication.md](docs/authentication.md).
 
 ## Permissions on boards
 
@@ -443,6 +452,10 @@ At `/admin`, for administrators only:
   mailto and tel.
 
 ---
+
+## Accessibility
+
+vibeboard aims for WCAG 2.2 AA outside the canvas, in the light and dark themes: full keyboard use of dialogs and menus, visible focus, skip links, screen reader announcements and reduced motion. On a board, the *Element list* offers the content as text; a chosen element can be moved with the arrow keys. Free drawing and arranging on the canvas remain visual. Automated checks with axe-core pass, but a test with real screen readers is still open.
 
 ## Languages
 

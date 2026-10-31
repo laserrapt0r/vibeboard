@@ -1,14 +1,23 @@
 # vibeboard – kollaboratives Whiteboard
+
+# Abhängigkeiten in einer eigenen Stufe bauen: Die Kerberos-Anbindung wird für Alpine kompiliert,
+# die Werkzeuge dafür landen nicht im fertigen Image
+FROM node:22-alpine AS deps
+RUN apk add --no-cache python3 make g++ krb5-dev
+WORKDIR /app
+COPY package.json package-lock.json ./
+# Die Canvas-Anbindung von pdf.js für Node wird im Server nicht gebraucht
+RUN npm ci --omit=dev --build-from-source=kerberos && rm -rf node_modules/@napi-rs
+
 FROM node:22-alpine
 
 # pg_dump für die automatische Sicherung vor Datenbank-Upgrades
 # (Version 17 kann auch ältere PostgreSQL-Server sichern)
-RUN apk add --no-cache postgresql17-client
+RUN apk add --no-cache postgresql17-client krb5-libs
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-# Optionale Pakete (z. B. die Canvas-Anbindung von pdf.js für Node) werden im Server nicht gebraucht
-RUN npm ci --omit=dev --omit=optional && npm cache clean --force
+COPY --from=deps /app/node_modules ./node_modules
 
 COPY server.js ./
 COPY lib ./lib
@@ -19,7 +28,8 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
     DATA_DIR=/import \
-    BACKUP_DIR=/backups
+    BACKUP_DIR=/backups \
+    KRB5RCACHEDIR=/tmp
 
 RUN mkdir -p /backups && chown node:node /backups
 USER node

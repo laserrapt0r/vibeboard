@@ -5,9 +5,13 @@ let openPop = null;
 
 export function closePop() {
   if (openPop) {
-    openPop.el.remove();
-    openPop.onClose && openPop.onClose();
+    const { el, anchor, onClose } = openPop;
+    const hadFocus = el.contains(document.activeElement);
+    el.remove();
+    anchor.setAttribute?.('aria-expanded', 'false');
+    onClose && onClose();
     openPop = null;
+    if (hadFocus) anchor.focus?.();
   }
 }
 
@@ -36,7 +40,26 @@ export function popover(anchor, content, { placement = 'bottom', onClose, cls = 
   el.style.left = x + 'px';
   el.style.top = y + 'px';
   openPop = { el, anchor, onClose };
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    e.stopPropagation();
+    closePop();
+  });
   return el;
+}
+
+// Pfeiltasten, Pos1 und Ende bewegen den Fokus zwischen den Einträgen (Tastaturmuster für Menüs)
+function menuKeys(list) {
+  list.addEventListener('keydown', (e) => {
+    const items = [...list.querySelectorAll('[role^=menuitem]:not([disabled])')];
+    const i = items.indexOf(document.activeElement);
+    const target = { ArrowDown: items[(i + 1) % items.length], ArrowUp: items[(i - 1 + items.length) % items.length], Home: items[0], End: items[items.length - 1] }[e.key];
+    if (e.key === 'Tab') return closePop();
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    target.focus();
+  });
 }
 
 document.addEventListener('pointerdown', (e) => {
@@ -44,10 +67,12 @@ document.addEventListener('pointerdown', (e) => {
 }, true);
 
 export function menu(anchor, items, opts) {
-  const list = h('div', { class: 'menu' }, items.filter(Boolean).map((it) => {
-    if (it === '-') return h('div', { class: 'menu-sep' });
-    if (it.header) return h('div', { class: 'menu-header' }, it.header);
+  const list = h('div', { class: 'menu', role: 'menu' }, items.filter(Boolean).map((it) => {
+    if (it === '-') return h('div', { class: 'menu-sep', role: 'separator' });
+    if (it.header) return h('div', { class: 'menu-header', role: 'presentation' }, it.header);
     return h('button', {
+      role: it.checked !== undefined ? 'menuitemcheckbox' : 'menuitem',
+      'aria-checked': it.checked !== undefined ? String(!!it.checked) : null,
       class: 'menu-item' + (it.checked ? ' checked' : '') + (it.danger ? ' danger' : ''),
       disabled: it.disabled,
       onclick: () => {
@@ -57,6 +82,11 @@ export function menu(anchor, items, opts) {
     }, h('span', { class: 'mi-icon', html: it.icon ? ICONS[it.icon] || it.icon : it.checked !== undefined ? (it.checked ? ICONS.check : '') : '' }),
     h('span', { class: 'mi-label' }, it.label), it.hint ? h('span', { class: 'mi-hint' }, it.hint) : null);
   }));
-  return popover(anchor, list, opts);
+  const pop = popover(anchor, list, opts);
+  menuKeys(list);
+  anchor.setAttribute?.('aria-haspopup', 'menu');
+  anchor.setAttribute?.('aria-expanded', 'true');
+  list.querySelector('[role^=menuitem]:not([disabled])')?.focus({ preventScroll: true });
+  return pop;
 }
 

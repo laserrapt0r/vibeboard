@@ -1,6 +1,6 @@
 // Administrationsoberfläche
 import { T, LOCALE, DEC } from './i18n.js';
-import { h, append, api, ICONS, toast, modal, confirmDialog, initials, relTime, fmtDate, loadPref } from './util.js';
+import { h, append, api, ICONS, toast, modal, confirmDialog, initials, relTime, fmtDate, loadPref, readableOn } from './util.js';
 import { menu } from './menu.js';
 import { accountMenuItems, openSecurityDialog } from './account.js';
 import { renderMarkdown } from './markdown.js';
@@ -20,11 +20,14 @@ const SECTIONS = [
   ['boards', T('Boards'), 'template'],
   ['settings', T('Allgemein'), 'settings'],
   ['security', T('Sicherheit'), 'lock'],
+  ['signin', T('Anmeldung'), 'unlock'],
   ['collab', T('Zusammenarbeit'), 'team'],
   ['mail', T('Mailserver'), 'comment'],
   ['legal', T('Rechtliches'), 'edit'],
   ['audit', T('Protokoll'), 'layers'],
 ];
+
+const PROVIDER = { oidc: 'Keycloak', ldap: 'LDAP', kerberos: 'Kerberos' };
 
 const STATUS = { active: [T('Aktiv'), 'ok'], pending: [T('Wartet auf Freigabe'), 'warn'], disabled: [T('Deaktiviert'), 'off'] };
 const LINK = { private: T('Privat'), view: T('Link: ansehen'), comment: T('Link: kommentieren'), edit: T('Link: bearbeiten') };
@@ -60,7 +63,7 @@ function route() {
   for (const [id, label, icon] of SECTIONS) {
     nav.append(h('a', { href: '#' + id, class: 'admin-nav-item' + (id === cur ? ' active' : '') }, h('span', { html: ICONS[icon] }), label));
   }
-  ({ overview, users, boards, settings, security, collab, mail, legal, audit }[cur] || overview)().catch((e) => {
+  ({ overview, users, boards, settings, security, signin, collab, mail, legal, audit }[cur] || overview)().catch((e) => {
     if (e.code === 'mfa_required') {
       section(T('Zwei-Faktor-Anmeldung erforderlich'),
         h('p', {}, e.message),
@@ -154,8 +157,8 @@ async function overview() {
         o.virusScanner.reachable ? T`${o.virusScanner.engine} · Signaturen ${o.virusScanner.signatures}${o.virusScanner.signaturesDate ? T(' vom ') + new Date(o.virusScanner.signaturesDate).toLocaleDateString(LOCALE) : ''} · ${o.uploadsBlocked30d} blockiert${o.uploadsUnscanned30d ? T`, ${o.uploadsUnscanned30d} ungeprüft angenommen` : ''} (30 Tage)` : ''),
       tile(T('System'), 'v' + o.version, T`Laufzeit ${fmtUptime(o.uptime)} · ${o.disposableDomains.toLocaleString(LOCALE)} gesperrte Wegwerf-Domains`),
     ),
-    h('div', { class: 'version-history' }, h('h3', {}, T('System')), systemBox),
-    o.versionHistory.length ? h('div', { class: 'version-history' }, h('h3', {}, T('Versionshistorie')),
+    h('div', { class: 'version-history' }, h('h2', {}, T('System')), systemBox),
+    o.versionHistory.length ? h('div', { class: 'version-history' }, h('h2', {}, T('Versionshistorie')),
       h('table', { class: 'admin-table' }, h('thead', {}, h('tr', {}, [T('Version'), T('vorher'), T('Schema'), T('Sicherung vor dem Upgrade'), T('gestartet')].map((t) => h('th', {}, t)))),
         h('tbody', {}, o.versionHistory.map((v) => h('tr', {}, h('td', {}, h('b', {}, v.version)), h('td', {}, v.previous || '–'), h('td', {}, v.schema),
           h('td', { class: 'small' }, v.backup || h('span', { class: 'muted' }, '–')), h('td', {}, fmtDate(v.started_at))))))) : null);
@@ -165,8 +168,8 @@ async function overview() {
 
 async function users() {
   const list = await api('/api/admin/users');
-  const search = h('input', { type: 'search', placeholder: T('Name, Benutzername oder E-Mail …'), class: 'admin-search' });
-  const filter = h('select', { class: 'admin-filter' },
+  const search = h('input', { type: 'search', placeholder: T('Name, Benutzername oder E-Mail …'), 'aria-label': T('Suchen'), class: 'admin-search' });
+  const filter = h('select', { class: 'admin-filter', 'aria-label': T('Filter') },
     [['', T('Alle')], ['pending', T('Wartet auf Freigabe')], ['unverified', T('E-Mail unbestätigt')], ['disabled', T('Deaktiviert')], ['admin', T('Administratoren')], ['nomfa', T('Ohne Zwei-Faktor')]].map(([v, l]) => h('option', { value: v }, l)));
   const table = h('div', { class: 'table-wrap' });
   const count = h('span', { class: 'muted small' });
@@ -179,14 +182,15 @@ async function users() {
     count.textContent = T`${rows.length} von ${list.length}`;
     table.innerHTML = '';
     table.append(h('table', { class: 'admin-table' },
-      h('thead', {}, h('tr', {}, [T('Benutzer'), T('E-Mail'), T('Rolle'), T('Status'), '2FA', T('Boards'), T('Letzte Anmeldung'), ''].map((t) => h('th', {}, t)))),
+      h('thead', {}, h('tr', {}, [T('Benutzer'), T('E-Mail'), T('Rolle'), T('Status'), '2FA', T('Boards'), T('Letzte Anmeldung')].map((t) => h('th', {}, t)), h('th', {}, h('span', { class: 'sr-only' }, T('Aktionen'))))),
       h('tbody', {}, rows.map((u) => {
         const [sl, sc] = STATUS[u.status];
         const actions = h('button', { class: 'icon-btn small', title: T('Aktionen'), html: ICONS.more });
         actions.onclick = () => userMenu(actions, u);
         return h('tr', { class: u.status === 'pending' ? 'row-warn' : '' },
           h('td', {}, h('div', { class: 'user-cell' }, h('span', { class: 'avatar sm', style: { background: u.color } }, initials(u.displayName)),
-            h('div', {}, h('b', {}, u.displayName), h('div', { class: 'muted small' }, (u.email || T('ohne E-Mail-Adresse')) + (u.id === me.id ? T(' · du') : ''))))),
+            h('div', {}, h('b', {}, u.displayName), h('div', { class: 'muted small' }, (u.email || T('ohne E-Mail-Adresse')) + (u.id === me.id ? T(' · du') : '')),
+              u.providers.length ? h('div', { class: 'muted small' }, u.providers.map((p) => PROVIDER[p] || p).join(', ')) : null))),
           h('td', {}, u.email ? h('div', {}, u.email, ' ', u.emailVerified ? h('span', { class: 'pill ok', title: T('bestätigt') }, '✓') : h('span', { class: 'pill warn' }, T('unbestätigt'))) : h('span', { class: 'muted' }, '–'),
             u.pendingEmail ? h('div', { class: 'muted small' }, '→ ' + u.pendingEmail + T(' (wartet)')) : null),
           h('td', {}, u.role === 'admin' ? h('span', { class: 'pill accent' }, T('Admin')) : T('Benutzer')),
@@ -232,7 +236,7 @@ function userMenu(anchor, u) {
     u.status === 'pending' ? { label: T('Freischalten'), icon: 'check', onClick: () => patchUser(u, { status: 'active' }, T('Freigeschaltet')) } : null,
     !u.emailVerified && u.email ? { label: T('Bestätigungsmail erneut senden'), icon: 'comment', onClick: () => post(`/api/admin/users/${u.id}/resend-verification`, (r) => T`Bestätigungsmail an ${r.email} gesendet`) } : null,
     !u.emailVerified && u.email ? { label: T('E-Mail manuell bestätigen'), icon: 'check', onClick: () => patchUser(u, { emailVerified: true }, T('E-Mail-Adresse als bestätigt markiert')) } : null,
-    { label: T('Link zum Kennwort-Zurücksetzen'), icon: 'link', onClick: () => resetLink(u) },
+    u.external ? null : { label: T('Link zum Kennwort-Zurücksetzen'), icon: 'link', onClick: () => resetLink(u) },
     u.mfa && !self ? { label: T('Zwei-Faktor-Anmeldung zurücksetzen'), icon: 'unlock', onClick: async () => {
       if (await confirmDialog(T('Zwei-Faktor zurücksetzen'), T`${u.displayName} kann sich danach wieder nur mit Kennwort anmelden und die Zwei-Faktor-Anmeldung neu einrichten. Nur nach sicherer Identitätsprüfung verwenden.`, T('Zurücksetzen'), true)) patchUser(u, { resetMfa: true }, T('Zwei-Faktor-Anmeldung zurückgesetzt'));
     } } : null,
@@ -240,6 +244,8 @@ function userMenu(anchor, u) {
     u.status === 'active' && !self ? { label: T('Deaktivieren'), icon: 'lock', onClick: () => patchUser(u, { status: 'disabled' }, T('Deaktiviert')) } : null,
     u.status === 'disabled' ? { label: T('Aktivieren'), icon: 'unlock', onClick: () => patchUser(u, { status: 'active' }, T('Aktiviert')) } : null,
     !self ? { label: u.role === 'admin' ? T('Adminrechte entziehen') : T('Zum Admin machen'), icon: 'settings', onClick: () => patchUser(u, { role: u.role === 'admin' ? 'user' : 'admin' }) } : null,
+    u.role === 'admin' && !u.providers.length ? { label: u.externalLinkOk ? T('Externe Anmeldung nicht mehr freigeben') : T('Für externe Anmeldung freigeben'), icon: 'link', onClick: () => patchUser(u, { allowExternalLink: !u.externalLinkOk }, u.externalLinkOk ? T('Freigabe zurückgenommen') : T('Bei der nächsten externen Anmeldung mit dieser Adresse wird das Konto verknüpft')) } : null,
+    u.providers.length && !u.external ? { label: T('Externe Verknüpfung lösen'), icon: 'unlock', onClick: () => patchUser(u, { unlinkExternal: true }, T('Verknüpfung gelöst')) } : null,
     { label: T('Protokoll anzeigen'), icon: 'layers', onClick: () => (location.hash = 'audit/' + encodeURIComponent(u.email || u.displayName)) },
     !self ? '-' : null,
     !self ? { label: T('Löschen …'), icon: 'trash', danger: true, onClick: () => deleteUser(u) } : null,
@@ -354,7 +360,7 @@ function deleteUser(u) {
 
 async function boards() {
   const [list, userList] = await Promise.all([api('/api/admin/boards'), api('/api/admin/users')]);
-  const search = h('input', { type: 'search', placeholder: T('Suchen …'), class: 'admin-search' });
+  const search = h('input', { type: 'search', placeholder: T('Suchen …'), 'aria-label': T('Suchen'), class: 'admin-search' });
   const table = h('div', { class: 'table-wrap' });
   const render = () => {
     const q = search.value.trim().toLowerCase();
@@ -520,6 +526,113 @@ async function security() {
 
 /* ---------------- Zusammenarbeit ---------------- */
 
+/* ---------------- Anmeldung ---------------- */
+
+const adField = (label, input, hint) => h('label', {}, label, input, hint ? h('span', { class: 'field-hint' }, hint) : null);
+
+// Ergebnis eines Verbindungstests – als Live-Region, damit Screenreader es ansagen
+function testButton(provider, loginInput) {
+  const out = h('div', { class: 'auth-test', role: 'status' });
+  const btn = h('button', { type: 'button', class: 'btn', onclick: async () => {
+    btn.disabled = true;
+    out.textContent = T('Wird geprüft …');
+    try {
+      const { steps } = await api('/api/admin/auth/test', { method: 'POST', body: { provider, login: loginInput ? loginInput.value : '' } });
+      out.textContent = '';
+      for (const s of steps) {
+        out.append(h('div', { class: s.ok ? 'ok-text' : 'warn-text' }, `${s.ok ? '✓' : '✗'} ${T(s.text)}`,
+          s.details ? h('span', { class: 'muted small' }, ' ' + Object.entries(s.details).map(([k, v]) => `${k}: ${v}`).join(' · ')) : null));
+      }
+    } catch (e) {
+      out.textContent = e.message;
+    }
+    btn.disabled = false;
+  } }, T('Gespeicherte Einstellungen testen'));
+  return h('div', { class: 'auth-test-row' }, loginInput ? adField(T('Beispiel-Anmeldename (optional)'), loginInput) : null, btn, out);
+}
+
+async function signin() {
+  const all = await api('/api/admin/settings');
+  const { auth, oidc, ldap, kerberos } = all;
+  const err = errorBox();
+  const text = (value, attrs = {}) => h('input', { type: 'text', value, spellcheck: 'false', autocomplete: 'off', ...attrs });
+  const box = (checked) => h('input', { type: 'checkbox', checked });
+  const select = (value, options) => h('select', {}, options.map(([v, l]) => h('option', { value: v, selected: v === value }, l)));
+  const a = {
+    localLogin: select(auth.localLogin, [['all', T('Alle lokalen Konten')], ['admins', T('Nur Administratoren (Notzugang)')]]),
+    provision: select(auth.provision, [['active', T('Konto automatisch anlegen und freischalten')], ['pending', T('Konto anlegen, Freigabe durch Admin')], ['off', T('Kein neues Konto – nur vorhandene Adressen')]]),
+    sessionHours: h('input', { type: 'number', min: 1, max: 720, value: auth.sessionHours }),
+    autoSso: select(auth.autoSso, [['', T('Nein, Anmeldeseite zeigen')], ['oidc', 'Keycloak'], ['kerberos', 'Kerberos']]),
+  };
+  const o = {
+    enabled: box(oidc.enabled), label: text(oidc.label, { maxlength: 40 }), issuer: text(oidc.issuer, { placeholder: 'https://sso.example.org/realms/firma' }), clientId: text(oidc.clientId),
+    clientSecret: h('input', { type: 'password', autocomplete: 'new-password', placeholder: oidc.hasSecret ? T('unverändert lassen') : '' }),
+    scopes: text(oidc.scopes), requiredRole: text(oidc.requiredRole), adminRole: text(oidc.adminRole), trustUnverifiedEmail: box(oidc.trustUnverifiedEmail),
+  };
+  const l = {
+    enabled: box(ldap.enabled), url: text(ldap.url, { placeholder: 'ldaps://dc.example.org:636' }), startTls: box(ldap.startTls), rejectUnauthorized: box(ldap.rejectUnauthorized),
+    caCert: h('textarea', { rows: 3, spellcheck: 'false', placeholder: '-----BEGIN CERTIFICATE-----' }, ldap.caCert),
+    bindDn: text(ldap.bindDn, { placeholder: 'CN=vibeboard,OU=Dienste,DC=example,DC=org' }),
+    bindPassword: h('input', { type: 'password', autocomplete: 'new-password', placeholder: ldap.hasPassword ? T('unverändert lassen') : '' }),
+    baseDn: text(ldap.baseDn, { placeholder: 'DC=example,DC=org' }), userFilter: h('textarea', { rows: 3, spellcheck: 'false' }, ldap.userFilter),
+    attrId: text(ldap.attrId), attrLogin: text(ldap.attrLogin), attrEmail: text(ldap.attrEmail), attrName: text(ldap.attrName), attrGroups: text(ldap.attrGroups),
+    nestedGroups: box(ldap.nestedGroups), requiredGroup: text(ldap.requiredGroup), adminGroup: text(ldap.adminGroup),
+  };
+  const k = { enabled: box(kerberos.enabled), label: text(kerberos.label, { maxlength: 40 }), realm: text(kerberos.realm, { placeholder: 'EXAMPLE.ORG' }), servicePrincipal: text(kerberos.servicePrincipal, { placeholder: 'HTTP/board.example.org' }), emailDomain: text(kerberos.emailDomain) };
+  const values = (fields) => Object.fromEntries(Object.entries(fields).map(([key, el]) => [key, el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) : el.value]));
+  const form = h('form', { class: 'form admin-form', onsubmit: async (e) => {
+    e.preventDefault();
+    err.hide();
+    if (auth.localLogin === 'all' && a.localLogin.value === 'admins'
+      && !(await confirmDialog(T('Lokale Anmeldung einschränken'), T('Personen mit lokalem Kennwort können sich dann nicht mehr damit anmelden. Sie brauchen ein Konto beim Anmeldedienst mit derselben E-Mail-Adresse. Administratoren behalten den Notzugang.'), T('Einschränken'), true))) return;
+    try {
+      await api('/api/admin/settings', { method: 'PUT', body: { oidc: values(o), ldap: values(l), kerberos: values(k), auth: values(a) } });
+      toast(T('Einstellungen gespeichert'));
+      signin();
+    } catch (ex) {
+      err.show(ex.message);
+    }
+  } },
+  h('p', { class: 'muted' }, T('Mehrere Methoden können gleichzeitig aktiv sein. So lässt sich umstellen, ohne dass jemand den Zugang verliert. Lokale Administrator-Konten behalten immer ihren Notzugang, auch wenn ein Anmeldedienst ausfällt.')),
+  h('fieldset', {}, h('legend', {}, T('Allgemein')),
+    adField(T('Anmeldung mit lokalem Kennwort'), a.localLogin, T('„Nur Administratoren“ schließt zugleich die Registrierung.')),
+    adField(T('Bei der ersten externen Anmeldung'), a.provision, T('Hat jemand bereits ein Konto mit derselben E-Mail-Adresse, wird es verknüpft. Administrator-Konten nur nach Freigabe in der Benutzerverwaltung.')),
+    adField(T('Gültigkeit externer Sitzungen (Stunden)'), a.sessionHours, T('Im Verzeichnis gesperrte Personen fallen spätestens nach dieser Zeit heraus.')),
+    adField(T('Anmeldeseite direkt weiterleiten'), a.autoSso, T('Mit ?local=1 an der Adresse /login bleibt die Anmeldeseite erreichbar.'))),
+  h('fieldset', {}, h('legend', {}, 'Keycloak (OpenID Connect)'),
+    h('label', { class: 'check' }, o.enabled, T('Anmeldung über Keycloak einschalten')),
+    h('p', { class: 'muted small' }, T`Client in Keycloak mit Standard Flow anlegen. Gültige Weiterleitung: ${(location.origin)}/api/auth/oidc/callback · nach der Abmeldung: ${location.origin}/login`),
+    adField(T('Aussteller-Adresse (Issuer)'), o.issuer), h('div', { class: 'form-row' }, adField(T('Client-ID'), o.clientId), adField(T('Client-Geheimnis'), o.clientSecret)),
+    h('div', { class: 'form-row' }, adField(T('Text auf der Schaltfläche'), o.label), adField(T('Scopes'), o.scopes)),
+    h('div', { class: 'form-row' }, adField(T('Nötige Rolle oder Gruppe (optional)'), o.requiredRole), adField(T('Rolle oder Gruppe für Adminrechte (optional)'), o.adminRole)),
+    h('label', { class: 'check' }, o.trustUnverifiedEmail, T('E-Mail-Adressen auch ohne Bestätigungsvermerk vertrauen')),
+    h('p', { class: 'muted small' }, T('Nur einschalten, wenn in Keycloak niemand seine Adresse selbst ändern kann: Sonst ließen sich fremde Konten und Einladungen übernehmen.')),
+    testButton('oidc')),
+  h('fieldset', {}, h('legend', {}, 'LDAP / Active Directory'),
+    h('label', { class: 'check' }, l.enabled, T('Anmeldung über LDAP einschalten')),
+    h('p', { class: 'muted small' }, T('Die Felder sind für Active Directory vorbelegt. Angemeldet wird im normalen Formular mit Anmeldename, UPN oder E-Mail-Adresse.')),
+    adField(T('Server-Adresse'), l.url, T('ldaps:// oder ldap:// mit StartTLS – Kennwörter gehen nie unverschlüsselt über das Netz.')),
+    h('label', { class: 'check' }, l.startTls, T('StartTLS verwenden')), h('label', { class: 'check' }, l.rejectUnauthorized, T('Serverzertifikat prüfen')),
+    adField(T('Eigene Zertifizierungsstelle (PEM, optional)'), l.caCert),
+    h('div', { class: 'form-row' }, adField(T('Dienstkonto (Bind-DN)'), l.bindDn), adField(T('Kennwort des Dienstkontos'), l.bindPassword)),
+    adField(T('Suchbasis (Base-DN)'), l.baseDn), adField(T('Suchfilter'), l.userFilter, T('{login} wird durch die Eingabe ersetzt. Vorbelegt: Personen, keine deaktivierten Konten.')),
+    h('div', { class: 'form-row' }, adField(T('Dauerhafte Kennung'), l.attrId), adField(T('Anmeldename'), l.attrLogin)),
+    h('div', { class: 'form-row' }, adField(T('E-Mail-Adresse'), l.attrEmail), adField(T('Anzeigename'), l.attrName)),
+    adField(T('Gruppen'), l.attrGroups),
+    h('div', { class: 'form-row' }, adField(T('Nötige Gruppe (DN, optional)'), l.requiredGroup), adField(T('Gruppe für Adminrechte (DN, optional)'), l.adminGroup)),
+    h('label', { class: 'check' }, l.nestedGroups, T('Verschachtelte Gruppen auflösen (nur Active Directory)')),
+    testButton('ldap', text(''))),
+  h('fieldset', {}, h('legend', {}, 'Kerberos (SSO)'),
+    h('label', { class: 'check' }, k.enabled, T('Einmalanmeldung per Kerberos einschalten')),
+    h('p', { class: 'muted small' }, T('Braucht eine Keytab-Datei für den Dienst (KRB5_KTNAME) und im Browser die Freigabe dieser Adresse. Ist LDAP eingeschaltet, kommen Adresse, Name und Gruppen aus dem Verzeichnis.')),
+    h('div', { class: 'form-row' }, adField(T('Realm'), k.realm), adField(T('Dienstprinzipal (optional)'), k.servicePrincipal)),
+    h('div', { class: 'form-row' }, adField(T('Text auf der Schaltfläche'), k.label), adField(T('E-Mail-Domain (nötig ohne LDAP)'), k.emailDomain, T('Kurzname@Domain muss das Postfach der Person sein: Darüber werden Konten und Einladungen zugeordnet.'))),
+    testButton('kerberos')),
+  err.el,
+  h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, T('Speichern'))));
+  section(T('Anmeldung'), form);
+}
+
 async function collab() {
   const all = await api('/api/admin/settings');
   const c = all.collab;
@@ -658,7 +771,7 @@ async function legal() {
   const texts = { imprint: l.imprint || '', privacy: l.privacy || '' };
   const err = errorBox();
   const tabs = h('div', { class: 'seg' });
-  const editor = h('textarea', { class: 'legal-editor', rows: 24, spellcheck: true });
+  const editor = h('textarea', { class: 'legal-editor', rows: 24, spellcheck: true, 'aria-label': T('Text') });
   const preview = h('article', { class: 'legal-text legal-preview' });
   const status = h('div', { class: 'muted small' });
   const updated = (k) => l[k + 'UpdatedAt'] ? T('zuletzt geändert am ') + new Date(l[k + 'UpdatedAt']).toLocaleString(LOCALE) : T('noch nicht veröffentlicht');
@@ -724,8 +837,8 @@ async function legal() {
 
 async function audit() {
   const preset = decodeURIComponent(location.hash.split('/')[1] || '');
-  const search = h('input', { type: 'search', placeholder: T('Benutzer oder IP …'), class: 'admin-search', value: preset });
-  const filter = h('select', { class: 'admin-filter' }, h('option', { value: '' }, T('Alle Ereignisse')));
+  const search = h('input', { type: 'search', placeholder: T('Benutzer oder IP …'), 'aria-label': T('Suchen'), class: 'admin-search', value: preset });
+  const filter = h('select', { class: 'admin-filter', 'aria-label': T('Ereignis') }, h('option', { value: '' }, T('Alle Ereignisse')));
   const table = h('div', { class: 'table-wrap' });
   const more = h('button', { class: 'btn small hidden' }, T('Ältere laden'));
   let entries = [];
@@ -780,6 +893,7 @@ async function audit() {
   const btn = document.getElementById('admin-user');
   btn.textContent = initials(me.displayName);
   btn.style.background = me.color;
+  btn.style.color = readableOn(me.color);
   btn.onclick = () => menu(btn, accountMenuItems(me, (u) => (me = u)), { placement: 'bottom' });
   window.addEventListener('hashchange', route);
   route();

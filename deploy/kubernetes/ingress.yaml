@@ -1,0 +1,31 @@
+# Live updates use Server-Sent Events: the proxy must not buffer them and must keep idle connections open.
+# Traefik needs no annotations for this. The annotations below are for the ingress-nginx controller and
+# are ignored by others. For the Gateway API see optional/httproute.yaml.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vibeboard
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "40m"
+    # Kerberos tickets from Active Directory can exceed the default header limits
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "64k"
+spec:
+  # ingressClassName: traefik
+  tls:
+    - hosts:
+        - board.example.org
+      secretName: vibeboard-tls
+  rules:
+    - host: board.example.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vibeboard
+                port:
+                  name: http

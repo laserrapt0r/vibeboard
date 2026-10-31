@@ -263,8 +263,8 @@ async function request(url, { method = 'GET', body, raw } = {}) {
 }
 
 export async function logout() {
-  await api('/api/auth/logout', { method: 'POST' }).catch(() => {});
-  location.href = '/login';
+  const r = await api('/api/auth/logout', { method: 'POST' }).catch(() => null);
+  location.href = (r && r.redirect) || '/login?loggedout=1';
 }
 
 export function loadPref(key, def) {
@@ -308,12 +308,27 @@ function guardAsync(el, fn) {
   };
 }
 
+// Schrift mit dem besseren Kontrast auf einer frei gewählten Personenfarbe
+export function readableOn(hex) {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
+  if (!m) return '#ffffff';
+  const [r, g, b] = m.slice(1).map((v) => {
+    const c = parseInt(v, 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return 1.05 / (l + 0.05) >= (l + 0.05) / 0.05 ? '#ffffff' : '#000000';
+}
+
 export function h(tag, attrs = {}, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v == null || v === false) continue;
     if (k === 'class') el.className = v;
-    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k === 'style' && typeof v === 'object') {
+      Object.assign(el.style, v);
+      if (v.background && /\b(avatar|peer-name)\b/.test(attrs.class || '')) el.style.color = readableOn(v.background);
+    }
     else if ((k === 'onsubmit' && tag === 'form') || (k === 'onclick' && tag === 'button')) el.addEventListener(k.slice(2), guardAsync(el, v));
     else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
     else if (k === 'html') el.innerHTML = v;
@@ -323,6 +338,8 @@ export function h(tag, attrs = {}, ...children) {
     if (c == null || c === false) continue;
     el.append(c instanceof Node ? c : document.createTextNode(String(c)));
   }
+  // Schaltflächen nur mit Symbol: Der Tooltip ist zugleich der Name für Bildschirmleser
+  if (tag === 'button' && attrs && attrs.title && !attrs['aria-label'] && !el.textContent.trim()) el.setAttribute('aria-label', attrs.title);
   return el;
 }
 
@@ -331,13 +348,18 @@ export function append(parent, ...kids) {
   parent.append(...kids.flat().filter((k) => k != null && k !== false));
 }
 
+// Live-Region muss schon vor der ersten Meldung im Dokument stehen, sonst sagen Bildschirmleser sie nicht an
+function toastRegion() {
+  return document.body.appendChild(h('div', { id: 'toast', role: 'status', 'aria-live': 'polite' }));
+}
+if (document.body) toastRegion();
+
 let toastTimer;
 // action: optionaler Knopf { label, onClick }
 export function toast(msg, ms = 2200, action) {
   let t = document.getElementById('toast');
   if (!t) {
-    t = h('div', { id: 'toast' });
-    document.body.append(t);
+    t = toastRegion();
   }
   t.textContent = msg;
   t.classList.toggle('with-action', !!action);
@@ -352,24 +374,48 @@ export function toast(msg, ms = 2200, action) {
   toastTimer = setTimeout(() => t.classList.remove('show', 'with-action'), ms);
 }
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+const visibleIn = (root) => [...root.querySelectorAll(FOCUSABLE)].filter((el) => el.getClientRects().length);
+let dialogCount = 0;
+
 export function modal(title, content, { wide = false, onClose } = {}) {
+  const opener = document.activeElement;
+  const titleId = 'dialog-title-' + ++dialogCount;
   const close = () => {
     back.remove();
     document.removeEventListener('keydown', onKey, true);
     onClose && onClose();
+    // Tastatur und Bildschirmleser dorthin zurückführen, wo der Dialog geöffnet wurde
+    if (opener && opener.isConnected && !document.querySelector('.modal-back')) opener.focus();
   };
   const onKey = (e) => {
+    // Bei gestapelten Dialogen reagiert nur der oberste
+    if ([...document.querySelectorAll('.modal-back')].pop() !== back) return;
     if (e.key === 'Escape') {
       e.stopPropagation();
       close();
+    } else if (e.key === 'Tab') {
+      const items = visibleIn(box);
+      if (!items.length) return e.preventDefault();
+      const first = items[0], last = items[items.length - 1];
+      const inside = box.contains(document.activeElement) && document.activeElement !== box;
+      if (e.shiftKey && (!inside || document.activeElement === first)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
+        e.preventDefault();
+        first.focus();
+      }
     }
   };
-  const box = h('div', { class: 'modal' + (wide ? ' wide' : '') },
-    h('div', { class: 'modal-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', title: T('Schließen'), onclick: close, html: ICONS.close })),
+  const box = h('div', { class: 'modal' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId, tabindex: '-1' },
+    h('div', { class: 'modal-head' }, h('h2', { id: titleId }, title), h('button', { class: 'icon-btn', title: T('Schließen'), onclick: close, html: ICONS.close })),
     h('div', { class: 'modal-body' }, content));
   const back = h('div', { class: 'modal-back', onpointerdown: (e) => e.target === back && close() }, box);
   document.body.append(back);
   document.addEventListener('keydown', onKey, true);
+  // Erstes Feld des Inhalts, sonst der Dialog selbst; Aufrufer dürfen danach ein bestimmtes Feld fokussieren
+  (visibleIn(box.querySelector('.modal-body'))[0] || box).focus({ preventScroll: true });
   return { close, box };
 }
 
@@ -457,6 +503,7 @@ export const ICONS = {
   search: I('<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>'),
   settings: I('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   present: I('<path d="M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M7 21l5-5 5 5"/>'),
+  list: I('<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>'),
   layers: I('<path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>'),
   home: I('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>'),
   more: I('<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>'),

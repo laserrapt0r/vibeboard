@@ -1,0 +1,34 @@
+# Mounts the keytab and krb5.conf for Kerberos SSO. Add to kustomization.yaml:
+#   patches:
+#     - path: optional/kerberos-patch.yaml
+# First create the two objects from your files:
+#   kubectl -n vibeboard create secret generic vibeboard-keytab --from-file=krb5.keytab
+#   kubectl -n vibeboard create configmap vibeboard-krb5 --from-file=krb5.conf
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibeboard
+spec:
+  template:
+    spec:
+      containers:
+        - name: vibeboard
+          env:
+            - name: KRB5_KTNAME
+              value: /etc/vibeboard/krb5.keytab
+          volumeMounts:
+            - name: keytab
+              mountPath: /etc/vibeboard
+              readOnly: true
+            - name: krb5
+              mountPath: /etc/krb5.conf
+              subPath: krb5.conf
+              readOnly: true
+      volumes:
+        - name: keytab
+          secret:
+            secretName: vibeboard-keytab
+            defaultMode: 0440
+        - name: krb5
+          configMap:
+            name: vibeboard-krb5

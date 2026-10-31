@@ -11,19 +11,21 @@
   <link rel="stylesheet" href="/css/app.css">
 </head>
 <body class="dash-page">
+  <a class="skip-link" href="#dash-main">Zum Inhalt springen</a>
   <header class="dash-top">
     <a class="dash-brand" href="/">
       <svg viewBox="0 0 32 32" width="32" height="32"><rect x="2" y="2" width="28" height="28" rx="7" fill="#4262ff"/><rect x="8" y="8" width="9" height="9" rx="1.5" fill="#fff9b1"/><rect x="15" y="15" width="9" height="9" rx="1.5" fill="#ffcee0"/></svg>
       <span>vibeboard</span>
     </a>
     <div class="spacer"></div>
-    <input id="dash-search" type="search" placeholder="Boards durchsuchen …">
+    <input id="dash-search" type="search" placeholder="Boards durchsuchen …" aria-label="Boards durchsuchen">
     <span id="dash-bell"></span>
     <a id="dash-admin" class="icon-btn hidden" href="/admin" title="Administration"></a>
     <button id="dash-dark" class="icon-btn" title="Dunkles Design"></button>
     <button id="dash-user" class="avatar" title="Konto"></button>
   </header>
-  <main class="dash-main dash-layout">
+  <main id="dash-main" class="dash-main dash-layout" tabindex="-1">
+    <h1 class="sr-only">Boards</h1>
     <nav id="dash-nav" class="dash-nav" aria-label="Boards ordnen"></nav>
     <div class="dash-page-content">
       <!-- Start: Vorlagenleiste, fällige Aufgaben, zuletzt bearbeitete Boards -->

@@ -35,8 +35,11 @@ export function openProfileDialog(me, onSaved) {
   let color = me.color;
   const err = errorBox();
   const display = h('input', { type: 'text', value: me.displayName || '', maxlength: 60, required: true, autocomplete: 'name' });
-  const email = h('input', { type: 'email', value: me.email || '', placeholder: 'name@beispiel.de', autocomplete: 'email' });
-  const status = me.pendingEmail
+  // Extern verwaltete Konten: Adresse und Name kommen aus dem Verzeichnis
+  const email = h('input', { type: 'email', value: me.email || '', placeholder: 'name@beispiel.de', autocomplete: 'email', disabled: me.external });
+  const status = me.external
+    ? h('span', { class: 'field-hint' }, T('Wird vom Anmeldedienst deiner Organisation verwaltet.'))
+    : me.pendingEmail
     ? h('span', { class: 'field-hint warn' }, T`Änderung auf ${me.pendingEmail} wartet auf Bestätigung – bitte den Link in der E-Mail öffnen.`)
     : h('span', { class: 'field-hint' }, me.emailVerified && me.email ? T('✓ bestätigt. Eine neue Adresse wird erst nach Bestätigung übernommen.') : T('Für Einladungen und „Kennwort vergessen“.'));
   const notifyEmail = h('input', { type: 'checkbox', checked: me.notifyEmail !== false });
@@ -131,7 +134,9 @@ export async function openSecurityDialog(me, onSaved) {
 
     // Zwei-Faktor
     const mfaBox = h('section', { class: 'sec-block' }, h('h3', {}, T('Zwei-Faktor-Anmeldung')));
-    if (user.mfa) {
+    if (user.external && user.mfa) {
+      mfaBox.append(h('p', {}, h('span', { class: 'pill ok' }, T('Aktiv')), T(' Dein Kennwort wird beim Anmeldedienst deiner Organisation verwaltet. Zurücksetzen kann den zweiten Faktor die Administration.')));
+    } else if (user.mfa) {
       mfaBox.append(
         h('p', {}, h('span', { class: 'pill ok' }, T('Aktiv')), T` Bei der Anmeldung wird zusätzlich ein Code aus deiner Authenticator-App abgefragt. Noch ${recoveryCodesLeft} Wiederherstellungscodes übrig.`),
         h('div', { class: 'row wrap' },
@@ -170,7 +175,7 @@ export async function openSecurityDialog(me, onSaved) {
         render();
       } }, T('Alle anderen Geräte abmelden')) : null));
 
-    body.append(h('section', { class: 'sec-block' }, h('h3', {}, T('Kennwort')),
+    if (!user.external) body.append(h('section', { class: 'sec-block' }, h('h3', {}, T('Kennwort')),
       h('button', { type: 'button', class: 'btn small', onclick: () => openPasswordDialog() }, T('Kennwort ändern'))));
     onSaved && onSaved(user);
   }

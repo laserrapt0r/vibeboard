@@ -50,6 +50,7 @@ Todo el contenido de las capturas de pantalla son datos de ejemplo.
 - [Cuentas e inicio de sesión](#cuentas-e-inicio-de-sesión)
 - [Permisos en los tableros](#permisos-en-los-tableros)
 - [Administración](#administración)
+- [Accesibilidad](#accesibilidad)
 - [Idiomas](#idiomas)
 - [Protección antivirus para las cargas](#protección-antivirus-para-las-cargas)
 - [Versiones y actualizaciones](#versiones-y-actualizaciones)
@@ -310,6 +311,10 @@ Las tablas se crean y migran automáticamente al arrancar.
 
 ---
 
+### En Kubernetes
+
+Los manifiestos están en [deploy/kubernetes](deploy/kubernetes/README.md). La aplicación debe ejecutarse con exactamente una réplica.
+
 ## Configuración
 
 Variables de entorno (con Docker, en el `.env`):
@@ -374,6 +379,10 @@ Todos los demás ajustes los haces en la administración.
 - **Notificaciones** por correo electrónico ante cambios relevantes para la seguridad: contraseña cambiada, dirección de
   correo electrónico cambiada, inicio de sesión en dos pasos activado o desactivado, intento de registro con una
   dirección ya utilizada.
+
+### Inicio de sesión externo
+
+Además de las cuentas locales, vibeboard puede usar **Keycloak**, **LDAP/Active Directory** e **inicio de sesión único con Kerberos**. Todo es opcional y se configura en *Administración → Inicio de sesión*; LDAP viene predefinido para Active Directory. Pueden estar activos varios métodos a la vez, y los administradores locales conservan siempre un acceso de emergencia. Configuración: [docs/authentication.md](docs/authentication.md) (en inglés).
 
 ## Permisos en los tableros
 
@@ -454,6 +463,10 @@ En `/admin`, solo para administradores:
   mailto y tel.
 
 ---
+
+## Accesibilidad
+
+Fuera del lienzo, vibeboard aspira a WCAG 2.2 AA en los temas claro y oscuro: diálogos y menús totalmente manejables con el teclado, foco visible, enlaces de salto, avisos para lectores de pantalla y movimiento reducido. En un tablero, la *Lista de elementos* ofrece el contenido como texto; un elemento elegido se mueve con las flechas. Dibujar y colocar libremente en el lienzo sigue siendo visual. Las comprobaciones automáticas con axe-core se superan, pero falta una prueba con lectores de pantalla reales.
 
 ## Idiomas
 

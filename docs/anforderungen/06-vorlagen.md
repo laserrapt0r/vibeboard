@@ -40,6 +40,14 @@
 - **Akzeptanzkriterien:**
   - Neu: Seestern, DAKI, Zeitstrahl, Heißluftballon, Speedcar, Offene Themenrunde, Team-Radar (Kategorie „Meetings & Retros“).
 
+### REQ-TPL-007 Zuletzt verwendete Vorlagen zuerst
+- **Seit:** 4.3.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Alle Vorlagen-Auswahlen (Galerie im Board und auf der Startseite, Schnellauswahl, „+ Neues Board“) zeigen zuletzt verwendete Vorlagen zuerst, die jüngste vorn.
+  - Auch eigene Vorlagen zählen; „Leeres Board“ bleibt an erster Stelle und zählt nicht.
+  - Die Reihenfolge gehört zum Konto und gilt auf allen Geräten. Die Schnellauswahl behält ihre Länge.
+  - In der Galerie sind zuletzt verwendete Vorlagen gekennzeichnet; gelöschte Vorlagen werden übersprungen.
+
 ### REQ-TPL-006 Eigene Vorlagen
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**

@@ -1,0 +1,35 @@
+# Database and virus scanner accept connections only from the app.
+# Takes effect only if the cluster's network plugin enforces NetworkPolicies.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-from-app
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vibeboard
+      ports:
+        - port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: clamav-from-app
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: clamav
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vibeboard
+      ports:
+        - port: 3310

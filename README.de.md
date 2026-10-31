@@ -50,6 +50,7 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 - [Konten und Anmeldung](#konten-und-anmeldung)
 - [Rechte auf Boards](#rechte-auf-boards)
 - [Administration](#administration)
+- [Barrierefreiheit](#barrierefreiheit)
 - [Sprachen](#sprachen)
 - [Virenschutz für Uploads](#virenschutz-für-uploads)
 - [Versionen und Upgrades](#versionen-und-upgrades)
@@ -306,6 +307,10 @@ Die Tabellen werden beim Start automatisch angelegt und migriert.
 
 ---
 
+### Auf Kubernetes
+
+Die Manifeste liegen unter [deploy/kubernetes](deploy/kubernetes/README.md). Die Anwendung muss mit genau einer Instanz laufen.
+
 ## Konfiguration
 
 Umgebungsvariablen (bei Docker in der `.env`):
@@ -368,6 +373,10 @@ Alle weiteren Einstellungen nimmst du in der Administration vor.
   Geräte lassen sich abmelden.
 - **Benachrichtigungen** per E-Mail bei sicherheitsrelevanten Änderungen: Kennwort geändert, E-Mail-Adresse geändert,
   Zwei-Faktor-Anmeldung an oder aus, Registrierungsversuch mit einer bereits verwendeten Adresse.
+
+### Externe Anmeldung
+
+Neben lokalen Konten kann vibeboard **Keycloak**, **LDAP/Active Directory** und **Kerberos-Einmalanmeldung** nutzen. Alles ist optional und wird unter *Administration → Anmeldung* eingerichtet; LDAP ist für Active Directory vorbelegt. Mehrere Methoden können gleichzeitig aktiv sein, lokale Administratoren behalten immer einen Notzugang. Einrichtung: [docs/authentication.md](docs/authentication.md) (Englisch).
 
 ## Rechte auf Boards
 
@@ -447,6 +456,10 @@ Unter `/admin`, nur für Administratoren:
   mailto und tel erlaubt.
 
 ---
+
+## Barrierefreiheit
+
+vibeboard zielt außerhalb der Zeichenfläche auf WCAG 2.2 AA, im hellen und dunklen Design: Dialoge und Menüs vollständig per Tastatur, sichtbarer Fokus, Sprunglinks, Ansagen für Bildschirmleser und reduzierte Bewegung. Auf dem Board bietet die *Elementliste* den Inhalt als Text; ein gewähltes Element lässt sich mit den Pfeiltasten verschieben. Freies Zeichnen und das Anordnen auf der Zeichenfläche bleiben visuell. Die automatische Prüfung mit axe-core besteht, ein Test mit echten Bildschirmlesern steht noch aus.
 
 ## Sprachen
 

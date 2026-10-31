@@ -51,6 +51,7 @@ Tous les contenus des captures d'écran sont des données d'exemple.
 - [Comptes et connexion](#comptes-et-connexion)
 - [Droits sur les tableaux](#droits-sur-les-tableaux)
 - [Administration](#administration)
+- [Accessibilité](#accessibilité)
 - [Langues](#langues)
 - [Protection antivirus des téléversements](#protection-antivirus-des-téléversements)
 - [Versions et mises à jour](#versions-et-mises-à-jour)
@@ -313,6 +314,10 @@ Les tables sont créées et migrées automatiquement au démarrage.
 
 ---
 
+### Sur Kubernetes
+
+Les manifestes se trouvent dans [deploy/kubernetes](deploy/kubernetes/README.md). L'application doit tourner avec exactement une réplique.
+
 ## Configuration
 
 Variables d'environnement (avec Docker, dans le `.env`) :
@@ -377,6 +382,10 @@ Tous les autres paramètres se règlent dans l'administration.
 - **Notifications** par e-mail en cas de modifications importantes pour la sécurité : mot de passe modifié, adresse
   e-mail modifiée, connexion à deux facteurs activée ou désactivée, tentative d'inscription avec une adresse déjà
   utilisée.
+
+### Connexion externe
+
+En plus des comptes locaux, vibeboard peut utiliser **Keycloak**, **LDAP/Active Directory** et **l'authentification unique Kerberos**. Tout est facultatif et se configure sous *Administration → Connexion* ; LDAP est prérempli pour Active Directory. Plusieurs méthodes peuvent être actives en même temps, et les administrateurs locaux conservent toujours un accès de secours. Mise en place : [docs/authentication.md](docs/authentication.md) (en anglais).
 
 ## Droits sur les tableaux
 
@@ -457,6 +466,10 @@ Sous `/admin`, réservé aux administrateurs :
   mailto et tel.
 
 ---
+
+## Accessibilité
+
+Hors de la zone de dessin, vibeboard vise WCAG 2.2 AA dans les thèmes clair et sombre : boîtes de dialogue et menus entièrement utilisables au clavier, focus visible, liens d'évitement, annonces pour lecteurs d'écran et mouvement réduit. Sur un tableau, la *Liste des éléments* propose le contenu sous forme de texte ; un élément choisi se déplace avec les touches fléchées. Le dessin libre et la disposition sur la zone de dessin restent visuels. Les contrôles automatiques avec axe-core sont réussis, mais un test avec de vrais lecteurs d'écran reste à faire.
 
 ## Langues
 

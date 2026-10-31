@@ -35,6 +35,7 @@ const CSRF_HEADER = 'x-vibeboard';
 
 const router = new Router();
 require('./lib/routes/auth').register(router);
+require('./lib/routes/sso').register(router);
 require('./lib/routes/boards').register(router);
 require('./lib/routes/collab').register(router);
 require('./lib/routes/files').register(router);
@@ -124,7 +125,8 @@ function requestId(req) {
   return typeof given === 'string' && /^[\w.-]{8,64}$/.test(given) ? given : crypto.randomBytes(8).toString('hex');
 }
 
-const server = http.createServer((req, res) => {
+// Kerberos-Tickets aus Active Directory können mit vielen Gruppen deutlich größer als die üblichen 16 KB werden
+const server = http.createServer({ maxHeaderSize: 64 * 1024 }, (req, res) => {
   const reqId = requestId(req);
   res.setHeader('X-Request-Id', reqId);
   // Sprache der Antwort folgt dem Browser (ohne unterstützte Sprache: Englisch)

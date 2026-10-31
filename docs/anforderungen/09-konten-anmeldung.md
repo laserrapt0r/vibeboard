@@ -73,3 +73,45 @@
   - Sitzungen gelten 30 Tage und enden nach 14 Tagen ohne Aktivität.
   - Unter „Sicherheit & Geräte“ sind alle Sitzungen mit Browser, Betriebssystem, IP-Adresse und letzter Aktivität sichtbar; einzelne oder alle anderen lassen sich beenden.
   - Abmelden, Kennwortwechsel und Deaktivierung beenden auch offene Live-Verbindungen der betroffenen Sitzungen.
+
+### REQ-AUTH-010 Anmeldung über Keycloak
+- **Seit:** 4.3.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Authorization Code Flow mit PKCE (S256), `state` und `nonce`; `state` ist einmalig und an den Browser gebunden.
+  - ID-Token: nur asymmetrische Signaturen, Prüfung von Aussteller, Empfänger, Ablauf und `nonce`.
+  - Unbestätigte Adressen werden abgelehnt, außer die Administration vertraut ihnen ausdrücklich.
+  - Eine nötige Rolle oder Gruppe begrenzt den Zugang; eine Rolle oder Gruppe kann Adminrechte vergeben.
+  - Abmelden führt zur Abmeldung beim Dienst. Das Ziel nach der Anmeldung bleibt erhalten und muss innerhalb der Anwendung liegen.
+
+### REQ-AUTH-011 Anmeldung über LDAP und Active Directory
+- **Seit:** 4.3.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Die Zuordnung ist für Active Directory vorbelegt (`objectGUID`, `sAMAccountName`, `mail`, `displayName`, `memberOf`, Filter ohne deaktivierte Konten) und änderbar.
+  - Anmeldung im normalen Formular mit Anmeldename, UPN oder E-Mail-Adresse: Suche mit Dienstkonto, dann Bind als gefundene Person.
+  - Nur `ldaps://` oder StartTLS, außer auf localhost. Serverzertifikate werden geprüft; eine eigene Zertifizierungsstelle ist möglich.
+  - Eingaben werden im Filter maskiert, leere Kennwörter abgelehnt, mehrdeutige Treffer nicht angemeldet.
+  - Fehlversuche sind auch je Verzeichniseintrag begrenzt, damit keine Kontosperre im AD entsteht.
+  - Gruppen begrenzen den Zugang und vergeben Adminrechte, auf Wunsch mit verschachtelten Gruppen.
+  - Fällt das Verzeichnis aus, erscheint eine klare Meldung; lokale Konten melden sich weiter an.
+
+### REQ-AUTH-012 Einmalanmeldung per Kerberos
+- **Seit:** 4.3.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - HTTP Negotiate (SPNEGO) mit Keytab, ohne vorgeschalteten Proxy-Dienst; die Antwort bestätigt den Dienst gegenüber dem Browser.
+  - Nur Prinzipale des eingetragenen Realms; Dienstprinzipale werden abgelehnt.
+  - Mit LDAP kommen Adresse, Name und Gruppen aus dem Verzeichnis und es entsteht dieselbe Identität wie bei LDAP; ohne LDAP ist die E-Mail-Domain Pflicht und es gilt Kurzname@Domain.
+  - Browser ohne Kerberos landen ohne Fehlerseite wieder bei der Anmeldung; NTLM wird nicht akzeptiert.
+
+### REQ-AUTH-013 Mehrere Anmeldemethoden und Verknüpfung
+- **Seit:** 4.3.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Lokal, Keycloak, LDAP und Kerberos können gleichzeitig aktiv sein; die Anmeldeseite zeigt, was eingeschaltet ist. Standard: nur lokal.
+  - Die lokale Anmeldung lässt sich auf Administratoren begrenzen, aber nie ganz abschalten (Notzugang). Das setzt eine eingeschaltete externe Methode und ein aktives Admin-Konto mit Kennwort voraus; auch das Abschalten der letzten Methode wird dann abgelehnt.
+  - Die erste externe Anmeldung verknüpft ein Konto mit derselben Adresse. Admin-Konten nur nach Freigabe je Konto.
+  - Neue Konten: automatisch aktiv, mit Freigabe oder gar nicht. Offene Einladungen werden eingelöst.
+  - Name und Adresse folgen dem Verzeichnis. Die Rolle folgt ihm nur bei Konten ohne lokales Kennwort; die letzte Administration wird nie entzogen.
+  - Rein externe Konten haben kein Kennwort: Kennwortwechsel, Zurücksetzen und Adressänderung sind gesperrt. Sie können die Zwei-Faktor-Anmeldung einrichten; zurücksetzen kann sie nur die Administration.
+  - Ein eingerichteter zweiter Faktor gilt bei jeder Methode. „Administration nur mit Zwei-Faktor-Anmeldung“ gilt auch für LDAP; nur rein externe Konten mit Keycloak oder Kerberos sind ausgenommen.
+  - Wird ein unbestätigtes Konto verknüpft, verliert es sein Kennwort, seine Sitzungen und offene Links (Schutz vor vorab angelegten Konten).
+  - Solange eine externe Methode aktiv ist, lässt sich das letzte aktive Admin-Konto mit lokalem Kennwort weder deaktivieren noch herabstufen oder löschen.
+  - Extern angemeldete Sitzungen gelten einstellbar kürzer (Standard: 7 Tage), damit im Verzeichnis gesperrte Personen herausfallen.

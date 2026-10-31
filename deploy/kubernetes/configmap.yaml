@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibeboard-config
+data:
+  # Public address, used for links in e-mails and as the base of the SSO redirects
+  PUBLIC_URL: "https://board.example.org"
+  # Exactly one proxy (the ingress controller) sits in front of the app
+  TRUST_PROXY: "1"
+  PGHOST: "postgres"
+  PGPORT: "5432"
+  PGDATABASE: "vibeboard"
+  PGUSER: "vibeboard"
+  CLAMAV_HOST: "clamav"
+  CLAMAV_PORT: "3310"
+  BACKUP_KEEP: "10"
+  LOG_LEVEL: "info"
+  # One JSON object per line suits log collectors
+  LOG_FORMAT: "json"

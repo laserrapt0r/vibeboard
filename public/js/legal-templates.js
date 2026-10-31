@@ -74,6 +74,10 @@ Lädt dich jemand per E-Mail zu einem Board oder Team ein, ohne dass du ein Kont
 
 Kommentare speichern wir mit deinem Anzeigenamen und dem Zeitpunkt. Erwähnst du jemanden mit @Name, antwortet jemand in einem Kommentar-Thread, an dem du beteiligt bist, oder wird dir ein Kommentar als Aufgabe zugewiesen, legen wir eine Benachrichtigung an (Board, auslösende Person, Ausschnitt des Kommentars). Sie erscheint in der Glocke und – sofern du das nicht im Profil abgeschaltet hast – per E-Mail. Benachrichtigungen werden nach 90 Tagen gelöscht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
 
+[Nur aufnehmen, wenn Keycloak, LDAP oder Kerberos in der Administration eingeschaltet sind:] # Anmeldung über den Anmeldedienst der Organisation
+
+Melden Sie sich über den Anmeldedienst Ihrer Organisation an, erhalten wir von ihm eine dauerhafte Kennung, Ihren Namen, Ihre E-Mail-Adresse und gegebenenfalls Rollen oder Gruppen, die den Zugang und Administrationsrechte steuern. Wir verwenden diese Angaben nur für die Anmeldung und halten Ihr Konto damit aktuell. Kennwörter erreichen uns bei Keycloak und Kerberos nicht; bei LDAP werden sie nur zur Prüfung an das Verzeichnis weitergegeben und nicht gespeichert. Rechtsgrundlage ist [Art. 6 Abs. 1 lit. b oder f DSGVO, § 26 BDSG]. Verantwortlich für den Anmeldedienst ist [Organisation].
+
 [Nur aufnehmen, wenn Webhooks in der Administration eingeschaltet sind:] # Chat-Anbindung (Webhooks)
 
 Auf eigenen Wunsch kannst du Benachrichtigungen an einen Chat-Kanal schicken lassen; Team-Verwaltende können neue Team-Boards und Retro-Zusammenfassungen an den Kanal des Teams senden. Dabei übertragen wir die Benachrichtigung (z. B. Name der auslösenden Person, Board-Name, Ausschnitt des Kommentars bzw. die Zusammenfassung) an den von dir angegebenen Dienst (z. B. Microsoft Teams, Slack, Matrix). Für die Verarbeitung dort gilt die Datenschutzerklärung dieses Dienstes. Die Webhook-Adresse speichern wir, bis du den Webhook löschst. Rechtsgrundlage ist Art. 6 Abs. 1 lit. a bzw. b DSGVO.

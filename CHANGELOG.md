@@ -4,6 +4,38 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.3.0] – 2026-10-31
+
+Schemaversion 9.
+
+### Hinzugefügt
+- **Anmeldung über Keycloak** (REQ-AUTH-010): OpenID Connect mit PKCE, geprüftem ID-Token, Rollen und Gruppen für Zugang
+  und Adminrechte sowie Abmeldung beim Dienst.
+- **Anmeldung über LDAP und Active Directory** (REQ-AUTH-011): Felder sind für Active Directory vorbelegt, verschlüsselte
+  Verbindung ist Pflicht, Gruppen steuern Zugang und Adminrechte.
+- **Einmalanmeldung per Kerberos** (REQ-AUTH-012): SPNEGO direkt in der Anwendung, mit Keytab; mit LDAP kommen Adresse,
+  Name und Gruppen aus dem Verzeichnis.
+- **Mehrere Anmeldemethoden gleichzeitig** (REQ-AUTH-013, REQ-ADMIN-011): Bereich „Anmeldung“ in der Administration mit
+  Verbindungstests. Lokale Administrator-Konten behalten immer einen Notzugang.
+- **Zuletzt verwendete Vorlagen zuerst** (REQ-TPL-007) in allen Auswahlen, je Konto gespeichert.
+- **Barrierefreiheit** (REQ-NFR-009): Dialoge mit Fokusführung, Menüs mit Pfeiltasten, sichtbarer Tastaturfokus,
+  Sprunglinks, angesagte Meldungen und Auswahl, Elementliste als Textfassung des Boards, Kontraste nach WCAG 2.2 AA in
+  hellem und dunklem Design, reduzierte Bewegung.
+- **Kubernetes-Manifeste** (REQ-OPS-011) unter `deploy/kubernetes/`.
+
+### Geändert
+- Papierkorb zeigt Vorschaubilder (REQ-BOARD-009).
+- Docker-Image: Abhängigkeiten werden in einer eigenen Stufe gebaut, die Kerberos-Anbindung wird für Alpine kompiliert.
+- Anfragekopf bis 64 KB, weil Kerberos-Tickets aus Active Directory groß werden können.
+
+### Sicherheit
+- LDAP-Filterwerte werden maskiert, Anmeldungen ohne Kennwort abgelehnt und Fehlversuche je Verzeichniseintrag begrenzt.
+- Admin-Konten werden nie automatisch mit einer externen Identität verknüpft; unbestätigte Adressen aus Keycloak übernehmen
+  weder Konten noch Einladungen.
+- Verknüpfte unbestätigte Konten verlieren ihr Kennwort (Schutz vor vorab angelegten Konten); ein eingerichteter zweiter Faktor gilt bei jeder Anmeldemethode; das letzte lokale Admin-Konto bleibt erhalten.
+- Anmeldeseite: Zieladressen der Form `/.//host` führen nicht mehr auf fremde Seiten (Fehler bestand schon vorher).
+- Die Rolle folgt nur bei rein externen Konten dem Verzeichnis, damit ein Notzugang nicht durch einen Gruppenabgleich verloren geht.
+
 ## [4.2.0] – 2026-10-30
 
 Schemaversion 8.

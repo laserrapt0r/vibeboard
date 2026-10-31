@@ -1,6 +1,6 @@
 {
   "name": "vibeboard",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "description": "Kollaboratives Online-Whiteboard mit Echtzeit-Zusammenarbeit, Vorlagen, Benutzerverwaltung und PostgreSQL",
   "main": "server.js",
   "scripts": {
@@ -15,6 +15,7 @@
   "license": "(MIT AND CC-BY-SA-3.0)",
   "private": true,
   "dependencies": {
+    "ldapts": "9.2.0",
     "nodemailer": "^10.2.1",
     "pdfjs-dist": "^6.4.299",
     "pg": "^8.23.1",
@@ -23,5 +24,8 @@
   "devDependencies": {
     "acorn": "^8.19.0",
     "acorn-walk": "^8.3.5"
+  },
+  "optionalDependencies": {
+    "kerberos": "7.0.0"
   }
 }

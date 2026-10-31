@@ -1,0 +1,18 @@
+# vibeboard on Kubernetes – apply with: kubectl apply -k deploy/kubernetes
+# See README.md in this directory first: the Secret must exist and host names must be adapted.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: vibeboard
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - postgres.yaml
+  - clamav.yaml
+  - app.yaml
+  - ingress.yaml
+  - networkpolicy.yaml
+images:
+  # Point this at your own registry; vibeboard does not publish an image
+  - name: vibeboard
+    newName: vibeboard
+    newTag: "4.3.0"

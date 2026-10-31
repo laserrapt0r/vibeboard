@@ -82,3 +82,11 @@
 - **Seit:** 3.1.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Jede neue oder geänderte Funktion wird in diesen Anforderungsdokumenten ergänzt (Vorgehen siehe [README](README.md#pflege-bei-neuen-funktionen)), zusammen mit Versionsnummer, CHANGELOG und README.
+
+### REQ-OPS-011 Betrieb auf Kubernetes
+- **Seit:** 4.3.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - `deploy/kubernetes/` enthält mit Kustomize anwendbare Manifeste für Anwendung, PostgreSQL, ClamAV, Ingress und NetworkPolicies, optional HTTPRoute und Kerberos.
+  - Genau eine Instanz der Anwendung (Strategie `Recreate`), weil der Live-Zustand im Speicher liegt.
+  - Anwendung und Datenbank laufen ohne Root-Rechte mit schreibgeschütztem Dateisystem; Kennwörter liegen nicht im Repository.
+  - Die Manifeste bestehen `kustomize build` und die Schemaprüfung mit `kubeconform`.

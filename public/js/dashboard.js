@@ -1,8 +1,8 @@
 // Board-Übersicht (Startseite)
 import { T, LOCALE } from './i18n.js';
-import { h, api, ICONS, toast, modal, promptDialog, confirmDialog, initials, relTime, loadPref, savePref } from './util.js';
+import { h, api, ICONS, toast, modal, promptDialog, confirmDialog, initials, relTime, loadPref, savePref, readableOn } from './util.js';
 import { TEMPLATES } from './templates.js';
-import { templateGallery, templatePreview } from './gallery.js';
+import { templateGallery, loadCustom, byRecent, loadTemplate, markTemplateUsed, fillPreview } from './gallery.js';
 import { menu } from './menu.js';
 import { openShareDialog } from './share.js';
 import { openProfileDialog, accountMenuItems } from './account.js';
@@ -105,9 +105,9 @@ async function createFromTemplate(t) {
   const name = await promptDialog(T('Neues Board'), T('Name des Boards'), t.id === 'blank' ? T('Unbenanntes Board') : t.name);
   if (name === null) return;
   try {
-    const elements = t.build();
+    const elements = (await loadTemplate(t)).build();
     const b = await api('/api/boards', { method: 'POST', body: { name: name.trim() || t.name, elements } });
-    await uploadThumb(b.id, elements);
+    await Promise.all([uploadThumb(b.id, elements), markTemplateUsed(t)]);
     location.href = '/board/' + b.id;
   } catch (e) {
     toast(e.message);
@@ -115,6 +115,15 @@ async function createFromTemplate(t) {
 }
 
 const QUICK_TEMPLATES = ['blank', 'brainstorm', 'kanban', 'retro-ssc', 'mindmap', 'bmc', 'swot', 'flowchart', 'journey'];
+let templateState = { custom: [], recent: [] };
+
+// Schnellauswahl: leeres Board, zuletzt verwendete Vorlagen, dann die häufigen – immer gleich viele Einträge
+function quickTemplates() {
+  const all = [...templateState.custom, ...TEMPLATES];
+  const known = (id) => all.find((t) => t.id === id);
+  const ids = [...new Set(['blank', ...templateState.recent.filter(known), ...QUICK_TEMPLATES])];
+  return byRecent(ids.slice(0, QUICK_TEMPLATES.length).map(known).filter(Boolean), templateState.recent);
+}
 
 function openAllTemplates() {
   const m = modal(T('Neues Board aus Vorlage'), templateGallery((t) => {
@@ -127,7 +136,7 @@ function openAllTemplates() {
 function newBoardMenu(anchor) {
   menu(anchor, [
     { header: T('Neues Board') },
-    ...QUICK_TEMPLATES.map((id) => TEMPLATES.find((x) => x.id === id)).filter(Boolean).map((t) => ({ label: `${t.icon}  ${t.name}`, onClick: () => createFromTemplate(t) })),
+    ...quickTemplates().map((t) => ({ label: `${t.icon}  ${t.name}`, onClick: () => createFromTemplate(t) })),
     '-',
     { label: T('Alle Vorlagen …'), icon: 'template', onClick: openAllTemplates },
   ], { placement: 'bottom' });
@@ -180,10 +189,9 @@ function renderTemplates() {
   box.classList.toggle('hidden', tplCollapsed);
   box.innerHTML = '';
   if (tplCollapsed) return;
-  for (const id of QUICK_TEMPLATES) {
-    const t = TEMPLATES.find((x) => x.id === id);
+  for (const t of quickTemplates()) {
     const prev = h('div', { class: 'tpl-prev' });
-    prev.innerHTML = templatePreview(t);
+    fillPreview(prev, t);
     box.append(h('button', { class: 'tpl-card', title: t.description, onclick: () => createFromTemplate(t) }, prev, h('div', { class: 'tpl-info' }, h('div', { class: 'tpl-name' }, `${t.icon}  ${t.name}`))));
   }
 }
@@ -284,7 +292,8 @@ function renderTrash() {
   for (const b of trash.boards) {
     const days = Math.max(0, Math.ceil((b.purgeAt - Date.now()) / 86400000));
     const thumb = h('div', { class: 'board-thumb' });
-    thumb.append(h('div', { class: 'board-thumb-empty' }, '🗑️'));
+    if (b.hasThumb) thumb.append(h('img', { src: `/api/trash/${b.id}/thumb?t=${b.deletedAt}`, alt: '', loading: 'lazy' }));
+    else thumb.append(h('div', { class: 'board-thumb-empty' }, '🗑️'));
     box.append(h('div', { class: 'board-card trashed' }, thumb,
       h('div', { class: 'board-info' },
         h('div', { class: 'board-name' }, b.name),
@@ -692,6 +701,7 @@ function renderUser() {
   const b = document.getElementById('dash-user');
   b.textContent = initials(me.displayName);
   b.style.background = me.color;
+  b.style.color = readableOn(me.color);
   b.title = me.displayName + T(' – Konto');
   document.getElementById('dash-admin').classList.toggle('hidden', me.role !== 'admin');
   // Ältere Konten ohne E-Mail-Adresse: Anmeldung künftig nur noch per E-Mail
@@ -771,6 +781,10 @@ importInput.addEventListener('change', async () => {
   }
   renderUser();
   renderTemplates();
+  loadCustom().then((r) => {
+    templateState = r;
+    if (r.recent.length) renderTemplates();
+  });
   document.getElementById('dash-bell').append(bellButton());
   refreshBell();
   load();

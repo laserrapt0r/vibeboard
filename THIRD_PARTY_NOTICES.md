@@ -116,6 +116,10 @@ Diese Pakete sind nicht im Repository enthalten. Sie werden bei der Installation
 | [pg](https://github.com/brianc/node-postgres) (inkl. pg-pool, pg-protocol, pg-types, pg-connection-string, pgpass, postgres-array, postgres-bytea, postgres-date, postgres-interval, xtend, pg-cloudflare) | MIT |
 | split2, pg-int8 | ISC |
 | [nodemailer](https://nodemailer.com) | MIT-0 |
+| [ldapts](https://github.com/ldapts/ldapts) | MIT |
+| strict-event-emitter-types (von ldapts) | ISC |
+| [kerberos](https://github.com/mongodb-js/kerberos) (optional, verwendet die Bibliothek MIT Kerberos) | Apache-2.0 |
+| node-addon-api, prebuild-install und dessen Abhängigkeiten (von kerberos, zum Bauen) | MIT, ISC, BSD, Apache-2.0 |
 | [uqr](https://github.com/unjs/uqr) (QR-Codes für die Zwei-Faktor-Einrichtung) | MIT |
 | [acorn](https://github.com/acornjs/acorn), acorn-walk (nur Entwicklung: Prüfung der Übersetzungen) | MIT |
 | `@napi-rs/canvas` (optional von pdfjs-dist; wird im Docker-Image nicht installiert) | MIT |

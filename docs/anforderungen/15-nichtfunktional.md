@@ -54,3 +54,14 @@
   - Inhalte der Boards werden nicht übersetzt; Vorlagen entstehen in der Sprache der Person, die sie einfügt.
   - Die Vorlagen für Impressum und Datenschutzerklärung bleiben deutsch: Sie beziehen sich auf deutsches Recht und werden vom Betreiber verantwortet.
   - Wörterbücher: `public/i18n/*.json`, Quellsprache Deutsch; `npm run check:i18n` prüft Vollständigkeit und Platzhalter.
+
+### REQ-NFR-009 Barrierefreiheit
+- **Seit:** 4.3.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Oberflächen außerhalb der Zeichenfläche halten WCAG 2.2 AA ein, in hellem und dunklem Design; der automatische Test mit axe-core meldet keine Verstöße.
+  - Dialoge: Rolle, Titel, Fokus darin gefangen, Escape schließt, Fokus kehrt zum Auslöser zurück.
+  - Menüs: Pfeiltasten, Pos1, Ende, Escape; Zustände werden maschinenlesbar gesetzt.
+  - Tastaturfokus ist immer sichtbar; Sprunglinks führen zu Inhalt oder Werkzeugen; `prefers-reduced-motion` wird beachtet.
+  - Meldungen und Änderungen der Auswahl werden Bildschirmlesern angesagt; `lang` folgt der Sprache der Oberfläche.
+  - Die Elementliste bietet den Boardinhalt als Text; ein gewähltes Element lässt sich per Tastatur verschieben, bearbeiten und löschen.
+  - Bekannte Grenze: Freies Zeichnen und das Anordnen auf der Zeichenfläche bleiben visuell. Ein Test mit echten Bildschirmlesern steht noch aus.

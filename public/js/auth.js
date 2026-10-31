@@ -7,18 +7,25 @@ import { legalFooter } from './footer.js';
 const box = document.getElementById('auth');
 const params = new URLSearchParams(location.search);
 const mode = location.pathname.slice(1) || 'login';
-let config = { siteName: 'vibeboard', registration: 'open', registrationReason: '', passwordMinLength: 12, mailEnabled: false, needsSetup: false };
+let config = { siteName: 'vibeboard', registration: 'open', registrationReason: '', passwordMinLength: 12, mailEnabled: false, needsSetup: false, auth: { local: 'all', ldap: false, sso: [], auto: '' } };
 
 if (loadPref('settings', {}).dark) document.body.classList.add('dark');
 
 // Token nicht im Verlauf/Referrer stehen lassen
 if (params.get('token')) history.replaceState(null, '', location.pathname);
+// Ticket für den zweiten Faktor nach externer Anmeldung
+const mfaTicket = params.get('mfa');
+if (mfaTicket) {
+  params.delete('mfa');
+  history.replaceState(null, '', location.pathname + (params.size ? '?' + params : ''));
+}
 
 // Nur relative Ziele innerhalb der Anwendung zulassen
 function nextUrl() {
   try {
     const u = new URL(params.get('next') || '/', location.origin);
-    return u.origin === location.origin ? u.pathname + u.search + u.hash : '/';
+    // Ein Pfad mit „//“ am Anfang (z. B. aus /.//host) wäre als Ziel eine fremde Adresse
+    return u.origin === location.origin && !u.pathname.startsWith('//') ? u.pathname + u.search + u.hash : '/';
   } catch {
     return '/';
   }
@@ -49,12 +56,42 @@ const toLogin = (label = T('Zur Anmeldung')) => h('a', { class: 'btn primary blo
 
 /* ---------------- Anmelden ---------------- */
 
+const SSO_ERRORS = {
+  failed: T('Die Anmeldung über den Anmeldedienst ist fehlgeschlagen. Bitte versuche es noch einmal.'),
+  kerberos: T('Die automatische Anmeldung ist in diesem Browser nicht möglich. Bitte melde dich anders an.'),
+  denied: T('Du hast keinen Zugang zu dieser Anwendung. Bitte wende dich an deine IT.'),
+  no_email: T('Dein Verzeichniseintrag enthält keine E-Mail-Adresse. Bitte wende dich an deine IT.'),
+  unverified_email: T('Deine E-Mail-Adresse ist beim Anmeldedienst nicht bestätigt.'),
+  admin_link: T('Dieses Administrator-Konto ist nicht für die externe Anmeldung freigegeben.'),
+  no_account: T('Für dich gibt es hier noch kein Konto. Bitte wende dich an einen Administrator.'),
+  disabled: T('Dein Konto wurde deaktiviert.'),
+  pending: T('Dein Konto wartet noch auf die Freigabe durch einen Administrator.'),
+};
+
+// Anmeldedienste der Organisation; das Ziel nach der Anmeldung läuft über den Server mit
+function ssoButtons() {
+  const next = encodeURIComponent(nextUrl());
+  return config.auth.sso.map((p) => h('a', { class: 'btn primary block', href: `${p.url}?next=${next}` }, T`Anmelden mit ${p.label}`));
+}
+
 function renderLogin() {
   if (config.needsSetup) return location.replace('/register');
+  if (mfaTicket && !renderLogin.done) {
+    renderLogin.done = true;
+    return renderMfa(mfaTicket);
+  }
+  const { auth } = config;
+  const ssoError = params.get('sso_error');
+  // Direkt weiterleiten – außer nach einer Abmeldung oder einem Fehler, sonst gäbe es eine Schleife
+  const auto = auth.sso.find((p) => p.id === auth.auto);
+  if (auto && !ssoError && !params.has('loggedout') && !params.has('local')) return location.replace(`${auto.url}?next=${encodeURIComponent(nextUrl())}`);
   const err = errorBox();
+  const ssoAlert = ssoError ? h('div', { class: 'form-error', role: 'alert' }, SSO_ERRORS[ssoError] || SSO_ERRORS.failed) : null;
+  // Ohne Verzeichnis gibt es für die meisten kein Formular mehr: Es bleibt als Notzugang der Administration erreichbar
+  const formFirst = auth.local === 'all' || auth.ldap;
   const extra = h('div');
-  const login = field(T('E-Mail-Adresse'), { type: 'text', inputmode: 'email', autocomplete: 'username', required: true, autocapitalize: 'none', spellcheck: 'false' },
-    T('Früher hast du dich mit einem Benutzernamen angemeldet? Jetzt gilt die E-Mail-Adresse deines Kontos.'));
+  const login = field(auth.ldap ? T('Anmeldename oder E-Mail-Adresse') : T('E-Mail-Adresse'), { type: 'text', inputmode: auth.ldap ? 'text' : 'email', autocomplete: 'username', required: true, autocapitalize: 'none', spellcheck: 'false' },
+    auth.ldap ? T('Mit den Zugangsdaten deiner Organisation.') : T('Früher hast du dich mit einem Benutzernamen angemeldet? Jetzt gilt die E-Mail-Adresse deines Kontos.'));
   const pw = field(T('Kennwort'), { type: 'password', autocomplete: 'current-password', required: true });
   const form = h('form', { class: 'form', onsubmit: async (e) => {
     e.preventDefault();
@@ -76,9 +113,13 @@ function renderLogin() {
     }
   } }, login.el, pw.el, err.el, extra, h('button', { type: 'submit', class: 'btn primary block' }, T('Anmelden')));
   const links = h('div', { class: 'auth-links' },
-    config.mailEnabled ? h('a', { href: '/forgot' }, T('Kennwort vergessen?')) : h('span', { class: 'muted small' }, T('Kennwort vergessen? Wende dich an einen Administrator.')),
+    auth.local !== 'all' ? null : config.mailEnabled ? h('a', { href: '/forgot' }, T('Kennwort vergessen?')) : h('span', { class: 'muted small' }, T('Kennwort vergessen? Wende dich an einen Administrator.')),
     config.registration !== 'closed' ? h('span', {}, T('Noch kein Konto? '), h('a', { href: '/register' + location.search }, T('Registrieren'))) : null);
-  shell(T('Anmelden'), null, form, links);
+  const sso = ssoButtons();
+  const ssoBox = sso.length ? h('div', { class: 'auth-sso' }, sso) : null;
+  if (formFirst) return shell(T('Anmelden'), null, ssoAlert, ssoBox, sso.length ? h('p', { class: 'auth-or' }, T('oder')) : null, form, links);
+  shell(T('Anmelden'), null, ssoAlert, ssoBox,
+    h('details', { class: 'auth-local', open: params.has('local') }, h('summary', {}, T('Lokales Administrator-Konto')), form));
 }
 
 function renderMfa(ticket) {

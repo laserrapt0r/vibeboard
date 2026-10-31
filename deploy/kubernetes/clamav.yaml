@@ -1,0 +1,76 @@
+# Virus scanner for uploads. Updates its signatures itself (freshclam).
+# Needs about 1.5 GB of memory; the first start takes minutes while the signatures download.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clamav-data
+  labels:
+    app.kubernetes.io/name: clamav
+    app.kubernetes.io/part-of: vibeboard
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clamav
+  labels:
+    app.kubernetes.io/name: clamav
+    app.kubernetes.io/part-of: vibeboard
+spec:
+  selector:
+    app.kubernetes.io/name: clamav
+  ports:
+    - name: clamd
+      port: 3310
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clamav
+  labels:
+    app.kubernetes.io/name: clamav
+    app.kubernetes.io/part-of: vibeboard
+spec:
+  replicas: 1
+  # The volume can only be attached to one pod at a time
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: clamav
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: clamav
+        app.kubernetes.io/part-of: vibeboard
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: clamav
+          image: clamav/clamav:stable
+          ports:
+            - name: clamd
+              containerPort: 3310
+          startupProbe:
+            tcpSocket: { port: clamd }
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket: { port: clamd }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 1500Mi }
+            limits: { memory: 3Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clamav
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: clamav-data

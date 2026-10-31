@@ -90,6 +90,7 @@
   - Der Besitzer sieht seine gelöschten Boards unter „Papierkorb“ mit Restlaufzeit, kann sie wiederherstellen (auch per „Rückgängig“ direkt nach dem Löschen) oder endgültig löschen.
   - Nach Ablauf der Frist (Standard 30 Tage, einstellbar 1–365) werden sie automatisch endgültig gelöscht.
   - Löschen, Wiederherstellen und endgültiges Löschen erscheinen im Sicherheitsprotokoll.
+  - Geändert in 4.3.0: Der Papierkorb zeigt das Vorschaubild des Boards; nur für Besitzer und Administration abrufbar.
 
 ### REQ-BOARD-010 Einladung an Adressen ohne Konto
 - **Seit:** 4.2.0 · **Priorität:** Soll · **Status:** umgesetzt

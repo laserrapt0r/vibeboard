@@ -94,3 +94,11 @@
   - Geändert in 4.1.0: zusätzlich Dateianhänge erlauben (Standard: an) mit größter Datei (Standard 20 MB, höchstens 100), Aufbewahrung im Papierkorb (Standard 30 Tage), Webhooks erlauben (Standard: aus) und interne Webhook-Ziele zulassen (Standard: aus).
   - Abschalten des Gastzugangs erfordert eine Bestätigung und beendet sofort alle Gastzugänge.
   - Die Übersicht zeigt die Zahl der Teams und aktiven Gastzugänge; Gäste zählen nicht als Benutzer.
+
+### REQ-ADMIN-011 Anmeldung
+- **Seit:** 4.3.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Der Bereich „Anmeldung“ konfiguriert lokale Anmeldung, Umgang mit neuen Konten, Sitzungsdauer, Direktweiterleitung, Keycloak, LDAP und Kerberos.
+  - Geheimnisse werden nie ausgeliefert; ein leeres Feld behält den gespeicherten Wert.
+  - Je Methode prüft ein Test die gespeicherten Einstellungen; bei LDAP zeigt er die Zuordnung für eine Beispielperson.
+  - Die Benutzerverwaltung zeigt verknüpfte Methoden, gibt Admin-Konten für die Verknüpfung frei und löst Verknüpfungen, sofern ein Kennwort besteht.

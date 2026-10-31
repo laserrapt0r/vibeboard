@@ -6,7 +6,7 @@ import {
 } from './util.js';
 import { SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
-import { templateGallery } from './gallery.js';
+import { templateGallery, markTemplateUsed } from './gallery.js';
 import { popover, closePop, menu } from './menu.js';
 import { openShareDialog } from './share.js';
 import { openProfileDialog, accountMenuItems } from './account.js';
@@ -157,6 +157,7 @@ function showFlyout(id, anchor) {
 function syncToolButtons() {
   for (const b of document.querySelectorAll('#tools [data-tool]')) {
     b.classList.toggle('active', b.dataset.tool === app.tool);
+    b.setAttribute('aria-pressed', String(b.dataset.tool === app.tool));
     const id = b.dataset.tool;
     if (id === 'sticky') b.style.setProperty('--tool-accent', app.toolOpts.stickyColor);
     if (id === 'pen') b.style.setProperty('--tool-accent', app.toolOpts.penColor);
@@ -880,7 +881,10 @@ app.on('render', () => sidePanel === 'frames' && renderSideThrottled());
 
 export function renderSidePanel() {
   side.classList.toggle('hidden', !sidePanel);
-  document.querySelectorAll('[data-panel]').forEach((b) => b.classList.toggle('active', b.dataset.panel === sidePanel));
+  document.querySelectorAll('[data-panel]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.panel === sidePanel);
+    b.setAttribute('aria-pressed', String(b.dataset.panel === sidePanel));
+  });
   if (!sidePanel) return;
   // Nicht neu aufbauen, während jemand in ein Textfeld des Panels tippt (Checkboxen sind unkritisch)
   const ae = document.activeElement;
@@ -971,7 +975,9 @@ export function openTemplates() {
 }
 
 function insertTemplate(t) {
-  if (placeElements(t.build())) toast(T`Vorlage „${t.name}“ eingefügt`);
+  if (!placeElements(t.build())) return;
+  markTemplateUsed(t);
+  toast(T`Vorlage „${t.name}“ eingefügt`);
 }
 
 // Fügt fertige Elemente (Vorlage, Diagramm, Import) in der Ansichtsmitte ein, ohne Bestehendes zu überdecken
@@ -1177,6 +1183,42 @@ function textOf(el) {
   return [el.text, el.title, el.description, el.label, el.assignee, el.status, ...(el.thread || []).map((m) => m.text), ...(el.cells || []).flat()].filter(Boolean).join(' ');
 }
 
+/* ================================================================== */
+/* Elementliste: Der Boardinhalt als Text, für Tastatur und Bildschirmleser */
+/* ================================================================== */
+
+const TYPE_NAMES = {
+  sticky: T('Haftnotiz'), text: T('Text'), shape: T('Form'), connector: T('Verbindung'), image: T('Bild'), pen: T('Zeichnung'), highlighter: T('Markierung'),
+  frame: T('Frame'), comment: T('Kommentar'), card: T('Karte'), table: T('Tabelle'), code: T('Code'), emoji: T('Emoji'), file: T('Datei'), mindmap: T('Mindmap-Knoten'),
+};
+const describeEl = (el) => {
+  const text = (el.title || textOf(el) || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+  return `${TYPE_NAMES[el.type] || T('Element')}${text ? `: ${text}` : ''}`;
+};
+
+function openElementList() {
+  const els = [...app.els.values()].filter((e) => !e.hidden).sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  const list = h('ul', { class: 'element-list' }, els.map((el) => h('li', {}, h('button', { class: 'btn block', onclick: () => {
+    m.close();
+    setSelection([el.id]);
+    fitTo(bounds(el), { maxZ: 1.5, pad: 200 });
+  } }, describeEl(el)))));
+  const m = modal(T('Elementliste'), h('div', { class: 'form' },
+    h('p', { class: 'muted' }, els.length ? T('Wähle ein Element aus. Danach verschieben es die Pfeiltasten, Eingabe bearbeitet den Text, Entf löscht es.') : T('Dieses Board ist noch leer.')), list));
+}
+
+// Geänderte Auswahl ansagen: Das Board selbst ist eine Zeichenfläche ohne lesbare Struktur
+function selectionAnnouncer() {
+  const live = h('div', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+  document.body.append(live);
+  app.on('selection', () => {
+    const n = app.sel.size;
+    const first = n === 1 ? getEl([...app.sel][0]) : null;
+    live.textContent = !n ? '' : first ? T`Ausgewählt: ${describeEl(first)}` : T`${n} Elemente ausgewählt`;
+  });
+}
+selectionAnnouncer();
+
 export function openSearch() {
   searchBox.classList.remove('hidden');
   searchBox.innerHTML = '';
@@ -1377,7 +1419,7 @@ function buildZoom() {
 
 function buildTopbar() {
   const top = $('#topbar');
-  const nameInput = h('input', { id: 'board-name', type: 'text', value: app.name, title: T('Board umbenennen'), readonly: app.viewOnly });
+  const nameInput = h('input', { 'aria-label': T('Name des Boards'), id: 'board-name', type: 'text', value: app.name, title: T('Board umbenennen'), readonly: app.viewOnly });
   nameInput.addEventListener('change', () => {
     const n = nameInput.value.trim() || T('Unbenanntes Board');
     app.name = n;
@@ -1406,6 +1448,7 @@ function buildTopbar() {
     iconBtn('activity', T('Aktivität – wer hat was geändert?'), () => toggleSidePanel('activity'), { 'data-panel': 'activity' }),
     app.viewOnly ? null : iconBtn('history', T('Versionsverlauf'), () => toggleSidePanel('versions'), { 'data-panel': 'versions' }),
     iconBtn('search', T('Suchen (Strg+F)'), openSearch),
+    iconBtn('list', T('Elementliste'), openElementList),
     iconBtn('download', T('Exportieren & Importieren'), (e) => openExportMenu(e.currentTarget)),
   );
   const right = $('#topright');
@@ -1427,7 +1470,7 @@ function buildTopbar() {
 function saveIndicator() {
   const dot = h('span', { class: 'save-dot', 'aria-hidden': 'true' });
   const text = h('span', { class: 'save-text' });
-  const chip = h('span', { id: 'conn-status', class: 'save-chip connecting', tabindex: '0' }, dot, text);
+  const chip = h('span', { id: 'conn-status', class: 'save-chip connecting', role: 'group', 'aria-label': T('Speicherstatus'), tabindex: '0' }, dot, text);
   const live = h('span', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
   chip.append(live);
   let shown = null, prev = null, delay = null;
