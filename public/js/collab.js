@@ -1,5 +1,6 @@
 // Zusammenarbeit: Teilnehmer, Cursor, Folgen, Timer, Abstimmung, Reaktionen, Laser, Präsentation
 import { T } from './i18n.js';
+import { applyPatch, equal, idOf } from './merge.js';
 import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util.js';
 import {
   app, $, stage, getEl, isAnonymous, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
@@ -660,10 +661,26 @@ export function initCollab() {
       app.serverVersion = app.serverVersion || msg.version;
     }
     const drafts = [...app.els.values()].filter((e) => e.draft);
+    const before = new Map(app.els);
     loadElements(msg.board.elements);
+    // Der vollständige Stand ist die neue Grundlage; offene eigene Änderungen liegen darauf auf
+    app.sync.rebase(msg.seq, getEl);
     for (const d of drafts) if (!getEl(d.id)) applyRemoteOp({ op: 'upsert', el: d });
     // Eigene, noch nicht bestätigte Änderungen wieder anwenden – sie werden gleich (erneut) gesendet
     for (const op of app.sync.pendingOps()) {
+      if (op.op === 'patch') {
+        const base = getEl(op.id);
+        if (base?.hidden) continue;
+        // Inzwischen gelöscht: Wer offline daran gearbeitet hat, verliert die Arbeit nicht
+        const lost = !base && before.get(op.id);
+        if (lost) app.sync.promote(op.id, lost);
+        if (base || lost) applyRemoteOp({ op: 'upsert', el: base ? applyPatch(base, op) : lost });
+        continue;
+      }
+      if (op.op === 'tpatch' || op.op === 'tstruct') {
+        applyRemoteTableOp(op);
+        continue;
+      }
       const srv = op.op === 'upsert' && getEl(op.el.id);
       if (srv && srv.hidden) continue;
       applyRemoteOp(srv && srv.priv ? { ...op, el: { ...op.el, priv: srv.priv, privName: srv.privName } } : op);
@@ -690,10 +707,23 @@ export function initCollab() {
     rerenderAll();
     app.emit('loaded');
   });
+  // Ergebnis des Abgleichs anzeigen. Unveränderte Stände lassen wir aus: Ein Neuzeichnen stört sonst laufende Eingaben.
+  const show = (op) => {
+    const cur = getEl(idOf(op));
+    if (op.op === 'upsert' ? !cur || !equal(cur, op.el) : cur) applyRemoteOp(op);
+  };
+  s.on('apply', (ops) => ops.forEach(show));
   s.on('ops', (msg) => {
     for (const op of msg.ops) {
-      if (op.op === 'upsert' || op.op === 'delete') applyRemoteOp(op);
-      else if (op.op === 'tpatch' || op.op === 'tstruct') applyRemoteTableOp(op);
+      if (op.op === 'upsert' || op.op === 'delete') {
+        const next = app.sync.incoming(op, msg.seq);
+        if (next) show(next);
+      } else if (op.op === 'tpatch' || op.op === 'tstruct') {
+        if (!app.sync.incomingPartial(op, msg.seq)) continue;
+        applyRemoteTableOp(op);
+        const next = app.sync.merge.has(op.id) && app.sync.resolved(op.id);
+        if (next) show(next);
+      }
       else if (op.op === 'rename') {
         app.name = op.name;
         app.emit('name');
@@ -811,24 +841,25 @@ export function initCollab() {
   // Benachrichtigung in Echtzeit (z. B. @Erwähnung): Glocke aktualisieren, Hinweis mit Sprung zum Kommentar
   s.on('notify', (msg) => bell.push(msg.item, { onOpen: openNotification }));
   let checking = false;
-  // Vom Server abgelehnte Uploads (Virenscan/Dateityp) auch lokal entfernen
+  // Vom Server abgelehnte Uploads (Virenscan/Dateityp): Sync nimmt sie zurück, hier nur der Hinweis
   s.on('rejected', (list) => {
-    for (const r of list) applyRemoteOp({ op: 'delete', id: r.id });
     toast(list[0].reason, 7000);
   });
   // Privater Modus: Server hat neue eigene Elemente als privat markiert – nur das Kennzeichen übernehmen
-  // Vom Server abgelehnte Änderungen (z. B. an fremden privaten Elementen) rückgängig machen
-  s.on('revert', (list) => list.forEach((op) => applyRemoteOp(op)));
   s.on('marks', (list) => {
     for (const m of list) {
       const el = getEl(m.id);
       if (!el) continue;
-      const next = { ...el, priv: m.priv, privName: m.privName };
-      if (m.anon) {
-        next.anon = true;
-        delete next.author;
-      }
-      applyRemoteOp({ op: 'upsert', el: next });
+      const mark = (e) => {
+        const next = { ...e, priv: m.priv, privName: m.privName };
+        if (m.anon) {
+          next.anon = true;
+          delete next.author;
+        }
+        return next;
+      };
+      app.sync.merge.fix(m.id, mark);
+      applyRemoteOp({ op: 'upsert', el: mark(el) });
     }
   });
   s.on('saveState', (st) => app.emit('saveState', st));

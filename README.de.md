@@ -136,6 +136,7 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   feststecken, fragt der Browser vor dem Schließen der Seite nach.
 - **Ladeanzeige:** Beim Öffnen eines Boards erscheint nach kurzer Zeit eine Ladeanzeige, nach einigen Sekunden mit
   Hinweis auf einen möglichen Proxy. Die Startseite zeigt Platzhalter, längere Anfragen einen Fortschrittsbalken.
+- **Keine Konflikte beim gemeinsamen Bearbeiten:** Ändern mehrere Personen im selben Moment dasselbe Element, haben danach alle denselben Stand. Änderungen an verschiedenen Eigenschaften (etwa Farbe und Text) bleiben beide erhalten; bei derselben Eigenschaft gewinnt, was zuletzt beim Server ankommt.
 - **Funktioniert auch in restriktiven Netzen:** Es werden keine WebSockets benötigt. Die Echtzeit-Übertragung läuft über
   Server-Sent Events (normales HTTP). Werden auch diese blockiert oder von einem Proxy gepuffert, wechselt vibeboard
   nach spätestens vier Sekunden auf Long-Polling und merkt sich das im Browser sieben Tage lang – das nächste Board

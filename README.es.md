@@ -137,6 +137,7 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
 - **Indicador de carga:** Al abrir un tablero aparece, tras un breve tiempo, un indicador de carga y, pasados unos
   segundos, con una indicación sobre un posible proxy. La página de inicio muestra marcadores de posición y, en las
   solicitudes más largas, una barra de progreso.
+- **Sin conflictos al editar en grupo:** Si varias personas cambian el mismo elemento en el mismo momento, todas terminan con el mismo resultado. Los cambios en propiedades distintas (por ejemplo, color y texto) se conservan; en la misma propiedad gana el último cambio que llega al servidor.
 - **Funciona también en redes restrictivas:** No se necesitan WebSockets. La transmisión en tiempo real va por
   Server-Sent Events (HTTP normal). Si también estos se bloquean o un proxy los almacena en búfer, vibeboard cambia
   a long polling como máximo a los cuatro segundos y lo recuerda en el navegador durante siete días: el siguiente

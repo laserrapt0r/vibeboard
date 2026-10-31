@@ -6,6 +6,7 @@
 - **Akzeptanzkriterien:**
   - Änderungen sind bei anderen Teilnehmenden im lokalen Netz in der Regel innerhalb einer Sekunde sichtbar.
   - Konflikte am selben Element werden nach „die letzte Änderung gewinnt“ aufgelöst.
+  - Geändert in 4.6.0: Das gilt je Feld, die Reihenfolge legt der Server fest. Siehe [REQ-COLLAB-019](#req-collab-019-gleichzeitige-änderungen-am-selben-element).
   - Geändert in 3.7.0: Kommentare werden nicht mehr als ganzes Element überschrieben, sondern über eigene Operationen geändert ([REQ-ELEM-014](02-elemente.md)).
   - Geändert in 3.5.0: Bei Tabellen gilt das je Zelle. Änderungen an verschiedenen Zellen gehen nicht verloren, und eingefügte oder gelöschte Zeilen und Spalten verschieben die Zellen anderer Personen korrekt (REQ-ELEM-009).
   - Nur angemeldete Personen mit mindestens Leserecht erhalten den Echtzeitkanal; Änderungen erfordern Schreibrecht (Prüfung auf dem Server).
@@ -171,3 +172,17 @@
   - Status: in Prüfung, freigegeben, abgelehnt, geändert nach Freigabe. Eine Freigabe gilt für den geprüften Stand: Ändert sich der Inhalt, auch an Verbindungen, verfällt sie. Kommentare und das Verschieben des Frames ändern den Stand nicht.
   - Prüfende und Anfordernde werden benachrichtigt; Status erscheint live am Element und im Panel „Freigaben“; das Protokoll hält die Entscheidungen fest.
   - Wer angefordert hat und der Besitzer können erneut vorlegen oder entfernen.
+
+### REQ-COLLAB-019 Gleichzeitige Änderungen am selben Element
+- **Seit:** 4.6.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Beschreibung:** Ändern mehrere Personen dasselbe Element fast gleichzeitig, haben danach alle denselben Stand, ohne Neuladen und ohne Sperren.
+- **Akzeptanzkriterien:**
+  - Der Server legt die Reihenfolge fest und nummeriert jedes Paket. Eigene Änderungen erscheinen sofort; bis zur Bestätigung liegen sie auf dem letzten Stand des Servers auf.
+  - Änderungen gehen als einzelne Felder: Ändert eine Person die Farbe und eine andere den Text, bleibt beides erhalten. Am selben Feld gewinnt, was zuletzt beim Server ankommt.
+  - Die Reihenfolge, in der Bestätigung und Live-Stream eintreffen, hat keinen Einfluss auf das Ergebnis. Das gilt auch für den Rückfall-Transport.
+  - Löschen geht vor gleichzeitiges Bearbeiten. Wer während einer Verbindungsstörung ein Element bearbeitet hat und von der Löschung nichts mitbekommen hat, verliert die Arbeit nicht: Das Element kommt mit diesem Stand zurück. War die Löschung sichtbar, bleibt das Element gelöscht.
+  - Scheitern mehrere Pakete nacheinander, setzt sich beim erneuten Senden die jeweils neuere Änderung durch. Eine wiederholte Tabellenänderung wird nur einmal ausgeführt.
+  - Bei abgelaufener Sitzung oder Drosselung bleiben eigene Änderungen erhalten und werden erneut gesendet. Lehnt der Server eine Änderung ab, kehrt die Anzeige zum Stand des Servers zurück.
+  - Vom Server abgelehnte Änderungen (Sperre, fremde private Elemente, Virenscan) kehren beim Absender zum Stand des Servers zurück.
+  - Rechte und Prüfungen gelten für Feldänderungen wie für vollständige Elemente.
+  - `npm run test:sync` prüft das mit zufälligen Abläufen und läuft bei jedem Push auf `main` und jedem Pull Request.

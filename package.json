@@ -1,6 +1,6 @@
 {
   "name": "vibeboard",
-  "version": "4.5.0",
+  "version": "4.6.0",
   "description": "Kollaboratives Online-Whiteboard mit Echtzeit-Zusammenarbeit, Vorlagen, Benutzerverwaltung und PostgreSQL",
   "main": "server.js",
   "scripts": {
@@ -8,6 +8,7 @@
     "check": "node --check server.js",
     "test:upgrade": "node scripts/test-upgrade.js",
     "test:access": "node scripts/test-access.js",
+    "test:sync": "node scripts/test-sync.js",
     "check:i18n": "node scripts/check-i18n.js"
   },
   "engines": {

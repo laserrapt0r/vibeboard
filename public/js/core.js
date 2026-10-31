@@ -344,7 +344,7 @@ export function setEl(el, send = true) {
   if (!prev || prev.z !== el.z) orderDirty = true;
   if (el.z > maxZ) maxZ = el.z;
   markDirty(el.id);
-  if (send) app.sync.upsert(el);
+  if (send) app.sync.upsert(el, prev);
 }
 
 export function updateEl(id, patch) {
@@ -356,10 +356,11 @@ export function updateEl(id, patch) {
 export function deleteEl(id) {
   if (app.viewOnly || !app.els.has(id) || app.els.get(id).hidden) return;
   record(id);
+  const prev = app.els.get(id);
   app.els.delete(id);
   app.sel.delete(id);
   markDirty(id);
-  app.sync.remove(id);
+  app.sync.remove(id, prev);
 }
 
 export function deleteEls(ids) {
@@ -487,7 +488,7 @@ const TableOps = globalThis.TableOps;
 export function tablePatch(t, p) {
   const n = TableOps.applyPatch(t, p);
   setEl(n, false);
-  if (!app.viewOnly) app.sync.op({ op: 'tpatch', id: t.id, ...p });
+  if (!app.viewOnly) app.sync.op({ op: 'tpatch', id: t.id, ...p, opId: uid(), prev: t });
   return n;
 }
 
@@ -495,7 +496,7 @@ export function tableStruct(t, st) {
   const n = TableOps.applyStruct(t, st);
   if (!n) return null;
   setEl(n, false);
-  if (!app.viewOnly) app.sync.op({ op: 'tstruct', id: t.id, ...st });
+  if (!app.viewOnly) app.sync.op({ op: 'tstruct', id: t.id, ...st, opId: uid(), prev: t });
   return n;
 }
 

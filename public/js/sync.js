@@ -1,6 +1,7 @@
 // Echtzeit-Synchronisation: Server-Sent Events (Empfang) + gebündelte POSTs (Senden)
 import { T } from './i18n.js';
 import { uid } from './util.js';
+import { Reconciler, enqueue, enqueueDelete, requeue, supersede, supersedeParts, stamped, byStamp, wasRetried, tracked, idOf } from './merge.js';
 
 // Hat sich gezeigt, dass Server-Sent Events hier nicht durchkommen (z. B. Pufferung durch einen Forward-Proxy),
 // wird das für einige Tage gemerkt – so startet das nächste Board sofort mit Long-Polling statt erst zu warten.
@@ -45,6 +46,12 @@ function packets(ops) {
   return out;
 }
 
+// Tabellenänderungen laufen über table-ops.js (klassisches Skript, auch vom Server genutzt)
+function applyTableOp(el, op) {
+  const TableOps = globalThis.TableOps;
+  return op.op === 'tstruct' ? TableOps.applyStruct(el, op) : TableOps.applyPatch(el, op);
+}
+
 export class Sync {
   constructor(boardId, user, { viewOnly = false, canComment = false } = {}) {
     this.boardId = boardId;
@@ -52,13 +59,15 @@ export class Sync {
     this.viewOnly = viewOnly;
     this.canComment = canComment;
     this.clientId = uid();
-    this.queue = new Map(); // dedupliziert upserts pro Element
+    this.queue = new Map(); // je Element eine Operation: upsert (neu), patch (geänderte Felder) oder delete
+    this.merge = new Reconciler({ applyOther: applyTableOp });
     this.extra = [];        // nicht deduplizierbare Operationen
     this.flushTimer = null;
     this.handlers = {};
     this.connected = false;
     this.inflight = Promise.resolve();
     this.sending = [];
+    this.started = new WeakSet(); // Pakete, die schon unterwegs sind und sich nicht mehr ändern dürfen
     this.transport = null;
     this.pollLoop = 0;
     // Speicherstand des Servers (siehe lib/boards.js): eigene Änderungen gelten als gespeichert,
@@ -215,15 +224,59 @@ export class Sync {
     this.connect();
   }
 
-  upsert(el) {
+  upsert(el, prev) {
     if (this.viewOnly) return;
-    this.queue.set(el.id, { op: 'upsert', el: JSON.parse(JSON.stringify(el)) });
+    this.merge.touch(el.id, prev);
+    if (enqueue(this.queue, el, prev)) this.schedule();
+  }
+
+  remove(id, prev) {
+    if (this.viewOnly) return;
+    this.merge.touch(id, prev);
+    enqueueDelete(this.queue, id);
     this.schedule();
   }
 
-  remove(id) {
-    if (this.viewOnly) return;
-    this.queue.set(id, { op: 'delete', id });
+  // Offene eigene Operationen an einem Element, älteste zuerst
+  openOps(id) {
+    const out = [...this.sending.flat(), ...this.extra].filter((o) => tracked(o) && idOf(o) === id);
+    if (this.queue.has(id)) out.push(this.queue.get(id));
+    return out;
+  }
+
+  // Aktueller Stand eines geführten Elements als Operation, sonst null (siehe merge.js)
+  resolved(id) {
+    const v = this.merge.view(id, this.openOps(id));
+    if (!v) return null;
+    return v.el ? { op: 'upsert', el: v.el } : { op: 'delete', id };
+  }
+
+  // Vollständiger Stand vom Server: liefert, was anzuzeigen ist
+  incoming(op, seq) {
+    return this.merge.remote(op, seq) ? this.resolved(idOf(op)) : op;
+  }
+
+  // Tabellenänderung vom Server: false, wenn sie schon enthalten ist
+  incomingPartial(op, seq) {
+    return this.merge.partial(op, seq);
+  }
+
+  // Nach dem Wiederverbinden: offene Änderungen liegen jetzt auf dem vollständigen Stand des Servers auf
+  rebase(seq, current) {
+    this.merge.reset();
+    for (const op of [...this.sending.flat(), ...this.extra, ...this.queue.values()]) {
+      if (tracked(op)) this.merge.rebase(idOf(op), current(idOf(op)), seq);
+    }
+  }
+
+  // Kommentare löscht der Server über eine eigene Operation, die nicht an den Absender zurückkommt
+  forget(id) {
+    this.merge.forget(id);
+  }
+
+  // Das Element gibt es auf dem Server nicht mehr, die eigene Arbeit daran soll nicht verloren gehen
+  promote(id, el) {
+    this.queue.set(id, stamped({ op: 'upsert', el: JSON.parse(JSON.stringify(el)) }));
     this.schedule();
   }
 
@@ -231,7 +284,11 @@ export class Sync {
     // Abstimmen und Schätzen dürfen auch Betrachter, Kommentieren ab der Rolle „Kommentieren“
     if (this.viewOnly && !['vote', 'estimate', 'pollVote', 'romanVote', 'react'].includes(o.op) && !(o.op === 'comment' && this.canComment)) return;
     if (o.op === 'vote') delete o.userId;
-    this.extra.push(o);
+    if (tracked(o) && o.prev !== undefined) {
+      this.merge.touch(o.id, o.prev);
+      delete o.prev;
+    }
+    this.extra.push(stamped(o));
     this.schedule();
   }
 
@@ -260,8 +317,15 @@ export class Sync {
   }
 
   post(ops) {
+    // Während des Wartens in der Kette kann das Paket durch angenommene neuere Änderungen leer geworden sein
+    if (!ops.length) {
+      this.sending = this.sending.filter((x) => x !== ops);
+      return Promise.resolve();
+    }
+    this.started.add(ops);
     const body = JSON.stringify({ clientId: this.clientId, ops });
     if (!this.sending.includes(ops)) this.sending.push(ops);
+    let settled = false; // Antwort verarbeitet: Ab hier dürfen die Operationen nicht mehr erneut gesendet werden
     return fetch(`/api/boards/${this.boardId}/ops`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Vibeboard': '1' },
@@ -270,12 +334,48 @@ export class Sync {
     })
       .then(async (r) => {
         const res = await r.json().catch(() => ({}));
-        // 409: Verbindung (noch) nicht registriert – nach dem Wiederverbinden erneut senden
-        if (r.status === 409 || r.status >= 500) throw new Error(res.error || 'retry');
+        // 409: Verbindung (noch) nicht registriert – nach dem Wiederverbinden erneut senden. 401 und 429 ebenso: Abgelaufene
+        // Sitzung und Drosselung sagen nichts über die Änderung, die eigene Arbeit bleibt erhalten. Eine 200 ohne unsere
+        // Antwort stammt von einem Proxy: Der Server hat nichts übernommen.
+        if ([401, 409, 429].includes(r.status) || r.status >= 500 || (r.ok && res.ok !== true)) {
+          throw Object.assign(new Error(res.error || 'retry'), { slow: r.status === 401 || r.status === 429 });
+        }
+        settled = true;
         if (res.voting !== undefined) this.emit('voting', res.voting);
-        if (res.rejected && res.rejected.length) this.emit('rejected', res.rejected);
+        // Während einer Störung bearbeitet, die Löschung hat uns nicht erreicht: Die Arbeit geht nicht verloren, das Element
+        // kommt zurück. Haben wir die Löschung gesehen, ist das Element auch hier schon verschwunden und bleibt es.
+        for (const id of res.gone || []) {
+          const op = ops.find((o) => o.op === 'patch' && o.id === id);
+          const mine = op && wasRetried(op) && this.resolved(id);
+          if (mine && mine.op === 'upsert') this.promote(id, mine.el);
+        }
+        // Ab hier gilt die Reihenfolge des Servers
+        this.sending = this.sending.filter((x) => x !== ops);
+        const refused = new Set((res.rejected || []).map((x) => x.id));
+        if (r.ok) {
+          const taken = ops.filter((o) => !tracked(o) || !refused.has(idOf(o)));
+          this.merge.acked(taken, res.seq);
+          const waiting = this.sending.filter((part) => !this.started.has(part));
+          taken.forEach((o) => {
+            supersede(this.queue, o);
+            supersedeParts(waiting, o);
+          });
+        }
+        const direct = [];
+        const authoritative = (op) => {
+          if (!this.merge.remote(op, res.seq)) direct.push(op);
+        };
+        // Abgelehnt: Neue Elemente verschwinden wieder, geänderte kehren von selbst zum Stand des Servers zurück
+        for (const o of ops) {
+          if (o.op === 'upsert' && refused.has(o.el.id) && !this.merge.known(o.el.id)) authoritative({ op: 'delete', id: o.el.id });
+        }
+        for (const op of res.revert || []) authoritative(op);
         if (res.marks && res.marks.length) this.emit('marks', res.marks);
-        if (res.revert && res.revert.length) this.emit('revert', res.revert);
+        const ids = new Set([...ops.filter(tracked).map(idOf), ...direct.map(idOf)]);
+        const shown = [...ids].map((id) => this.resolved(id)).filter(Boolean);
+        this.emit('apply', [...direct.filter((o) => !this.merge.has(idOf(o))), ...shown]);
+        this.merge.sweep((id) => this.openOps(id).length > 0);
+        if (res.rejected && res.rejected.length) this.emit('rejected', res.rejected);
         // Von der Moderation abgelehnte Sitzungsänderungen (Timer, Abstimmung …): gültigen Zustand übernehmen
         if (res.session && res.session.length) this.emit('ops', { ops: res.session });
         if (res.blocked) this.emit('blocked', res.blocked);
@@ -283,17 +383,18 @@ export class Sync {
         this.retrying = false;
         if (r.ok) this.noteSave(res.save, { own: true });
       })
-      .catch(() => {
+      .catch((err) => {
+        if (settled) return console.error(err);
         // Bei Verbindungsproblemen erneut einreihen – neuere Änderungen am selben Element haben Vorrang
         const rest = [];
         for (const o of ops) {
-          if (o.op === 'upsert') !this.queue.has(o.el.id) && this.queue.set(o.el.id, o);
-          else if (o.op === 'delete') !this.queue.has(o.id) && this.queue.set(o.id, o);
+          if (['upsert', 'patch', 'delete'].includes(o.op)) requeue(this.queue, o);
           else rest.push(o);
         }
-        this.extra.unshift(...rest);
+        this.extra = [...rest, ...this.extra].sort(byStamp);
         this.retrying = true;
-        setTimeout(() => this.schedule(), 1500);
+        // Abgelaufene Sitzung und Drosselung lösen sich nicht in Sekunden; große Pakete nicht unnötig oft neu senden
+        setTimeout(() => this.schedule(), err.slow ? 15000 : 1500);
       })
       .finally(() => {
         this.sending = this.sending.filter((x) => x !== ops);
@@ -310,7 +411,7 @@ export class Sync {
 
   // Noch nicht bestätigte eigene Änderungen (für den Abgleich nach einem Wiederverbinden)
   pendingOps() {
-    return [...this.sending.flat(), ...this.queue.values()].filter((o) => o.op === 'upsert' || o.op === 'delete');
+    return [...this.sending.flat(), ...this.extra, ...this.queue.values()].filter(tracked);
   }
 
   signal(kind, data) {

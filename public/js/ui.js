@@ -783,6 +783,7 @@ function renderCommentPop() {
       }) : null,
       canDelete ? iconBtn('trash', T('Kommentar löschen'), () => {
         commentOp('delete', el.id);
+        app.sync.forget(el.id);
         applyRemoteOp({ op: 'delete', id: el.id });
         closeComment();
       }) : null,

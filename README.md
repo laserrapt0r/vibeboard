@@ -135,6 +135,7 @@ Pasting multi-line text into the board automatically creates one sticky note per
   the page is closed.
 - **Loading indicator:** When a board is opened, a loading indicator appears after a short time, after a few seconds
   with a hint about a possible proxy. The home page shows placeholders, longer requests a progress bar.
+- **No conflicts when editing together:** If several people change the same element at the same moment, everyone ends up with the same result. Changes to different properties (say, colour and text) are both kept; for the same property, the last change to reach the server wins.
 - **Also works in restrictive networks:** No WebSockets are needed. Real-time transmission runs over Server-Sent Events
   (plain HTTP). If these are blocked too or buffered by a proxy, vibeboard switches to long polling after four seconds
   at the latest and remembers this in the browser for seven days – the next board then opens without waiting. With

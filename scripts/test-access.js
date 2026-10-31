@@ -332,6 +332,13 @@ async function operations(people, ids) {
   const owner = await join(people.owner);
   await owner([{ op: 'privateMode', active: true, anonymous: false }]);
   await editor([{ op: 'upsert', el: { id: 'fakeNote', type: 'sticky', x: 0, y: 1100, w: 100, h: 100, text: 'x', author: 'Jemand Anderes', anon: true } }]);
+  // Feldänderungen unterliegen denselben Regeln wie vollständige Elemente
+  await editor([{ op: 'patch', id: 'noteP', set: { x: 1 }, unset: ['text'] }]);
+  check((await state()).includes(SECRET.priv), 'Feldänderung an fremdem privatem Element');
+  const peek = await editor([{ op: 'patch', id: 'noteP', set: { x: 2 }, unset: [] }, { op: 'patch', id: 'noteX', set: { x: 3060 }, unset: [] }, { op: 'patch', id: 'noteP', set: { priv: null, hidden: false }, unset: ['priv'] }]);
+  check(!JSON.stringify(peek).includes(SECRET.priv) && !JSON.stringify(peek).includes(SECRET.concealed), 'Antwort auf Feldänderungen enthält fremde Inhalte');
+  check(!(await people.viewer.call('GET', `${url}/events?client=probe${Math.random().toString(36).slice(2, 12)}&transport=poll`)).text.includes(SECRET.priv), 'Feldänderung macht privates Element sichtbar');
+  await editor([{ op: 'patch', id: 'fakeNote', set: { author: 'Jemand Anderes', anon: true }, unset: [] }]);
   const full = await state();
   check(!/"id":"fakeNote"[^}]*"author":"Jemand Anderes"/.test(full), 'Fremder Name an einem Element');
 }

@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.6.0] – 2026-10-31
+
+### Hinzugefügt
+- **Gleichzeitige Änderungen am selben Element** (REQ-COLLAB-019): Der Server legt die Reihenfolge fest, alle haben danach denselben Stand. Änderungen gehen als einzelne Felder, sodass sich Änderungen an verschiedenen Feldern nicht mehr überschreiben.
+- `npm run test:sync` prüft den Abgleich mit zufälligen Abläufen (auch im CI).
+
+### Behoben
+- Scheiterten mehrere Pakete nacheinander, konnte beim erneuten Senden eine ältere Änderung eine neuere verdrängen, sogar eine Löschung.
+- Ging die Antwort auf eine Tabellenänderung verloren, wurde sie beim erneuten Senden doppelt ausgeführt, eine Zelle dabei womöglich in der falschen Zeile.
+- Zellen- und Zeilenänderungen im selben Paket kamen bei anderen vertauscht an.
+- Scheiterte ein Paket, das nächste aber nicht, überschrieb das ältere beim erneuten Senden die neuere Änderung.
+- Bei abgelaufener Sitzung oder Drosselung gehen Änderungen nicht mehr verloren, sie werden erneut gesendet.
+- Abgelehnte Änderungen an einem vorhandenen Element löschen es beim Absender nicht mehr bis zum Neuladen, und der zurückgegebene Stand enthält das ganze Paket.
+
 ## [4.5.0] – 2026-10-31
 
 ### Hinzugefügt

@@ -4,7 +4,7 @@
  * und Skripte aus dem Zwischenspeicher, Seitenaufrufe zeigen dann die Offline-Seite. Schnittstellen (/api/),
  * Echtzeit-Kanal und Dateien werden nie zwischengespeichert.
  */
-const CACHE = 'vibeboard-shell-v5';
+const CACHE = 'vibeboard-shell-v6';
 const SHELL = ['/offline.html', '/css/app.css', '/favicon.svg', '/icons/icon-192.png', '/manifest.webmanifest', '/js/i18n.js'];
 
 self.addEventListener('install', (e) => {

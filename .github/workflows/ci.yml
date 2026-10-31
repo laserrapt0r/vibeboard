@@ -44,6 +44,8 @@ jobs:
       - name: Syntax prüfen
         run: find server.js lib scripts -name '*.js' -print0 | xargs -0 -n1 node --check
       - run: npm run check:i18n
+      - name: Gleichzeitige Änderungen prüfen
+        run: npm run test:sync
       - run: npm run test:upgrade
         env:
           DATABASE_URL: postgres://vb:vb@localhost:5432/vb_test

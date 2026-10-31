@@ -139,6 +139,7 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
 - **Indicateur de chargement :** À l'ouverture d'un tableau, un indicateur de chargement apparaît après un court
   instant et, après quelques secondes, avec une indication sur un éventuel proxy. La page d'accueil affiche des
   espaces réservés, les requêtes plus longues une barre de progression.
+- **Pas de conflit en éditant à plusieurs :** Si plusieurs personnes modifient le même élément au même moment, toutes obtiennent le même résultat. Les modifications de propriétés différentes (par exemple la couleur et le texte) sont conservées ; pour une même propriété, la dernière modification arrivée au serveur l'emporte.
 - **Fonctionne aussi dans les réseaux restrictifs :** Aucun WebSocket n'est nécessaire. La transmission en temps réel passe par
   Server-Sent Events (HTTP normal). Si ceux-ci sont aussi bloqués ou mis en mémoire tampon par un proxy, vibeboard passe
   au long polling au plus tard après quatre secondes et le mémorise dans le navigateur pendant sept jours : le tableau
