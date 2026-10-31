@@ -511,8 +511,14 @@ export function applyRemoteTableOp(op) {
     const ed = app.editing;
     if (ed && ed.id === op.id && ed.cell) {
       const m = TableOps.mapCell(op, ed.cell[0], ed.cell[1]);
-      if (m) ed.cell = m;
-      else abortEdit();
+      if (m) {
+        ed.cell = m;
+        // Eine angefangene Formel zeigt weiter auf dieselben Zellen; die nächste Taste überschriebe sonst die Anpassung
+        if (formulaEditing()) {
+          const count = Math.max(1, op.count | 0 || 1);
+          editor.value = Formula.adjust(editor.value, op.action, op.at | 0, count);
+        }
+      } else abortEdit();
     }
     const cs = app.cellSel;
     if (cs && cs.id === op.id) {
@@ -794,6 +800,30 @@ function connectTargetAt(e, w, excludeId) {
 }
 let draftRect = null;
 
+// Formel in Arbeit: Spalten- und Zeilennamen an der Tabelle, Bezüge farbig markiert
+function formulaOverlay(z) {
+  const el = getEl(app.editing.id);
+  if (!el) return '';
+  const { xs, ys, rows, cols } = tableLayout(el);
+  const fs = 11 / z, tag = 16 / z;
+  const label = (x, y, w, h, text) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#4262ff"/><text x="${x + w / 2}" y="${y + h / 2 + fs * 0.36}" font-size="${fs}" font-weight="bold" fill="#fff" text-anchor="middle" font-family="Helvetica, Arial, sans-serif">${text}</text>`;
+  let out = '';
+  for (let c = 0; c < cols; c++) out += label(xs[c], ys[0] - tag, xs[c + 1] - xs[c], tag, Formula.refName(0, c).replace(/\d+$/, ''));
+  for (let r = 0; r < rows; r++) out += label(xs[0] - tag * 1.6, ys[r], tag * 1.6, ys[r + 1] - ys[r], r + 1);
+  const colors = ['#e03131', '#2f9e44', '#f08c00', '#7048e8', '#1098ad'];
+  let i = 0;
+  const text = editor.value.replace(/"(?:[^"]|"")*"/g, '');
+  for (const m of text.matchAll(/(?<![A-Za-z0-9_$.])(\$?[A-Za-z]{1,2}\$?\d{1,3})(?::(\$?[A-Za-z]{1,2}\$?\d{1,3}))?(?![A-Za-z0-9_.(])/g)) {
+    const a = Formula.parseRef(m[1]), b = Formula.parseRef(m[2] || m[1]);
+    if (!a || !b) continue;
+    const r0 = Math.min(a.r, b.r), r1 = Math.min(rows - 1, Math.max(a.r, b.r)), c0 = Math.min(a.c, b.c), c1 = Math.min(cols - 1, Math.max(a.c, b.c));
+    if (r0 >= rows || c0 >= cols) continue;
+    const col = colors[i++ % colors.length];
+    out += `<rect x="${xs[c0]}" y="${ys[r0]}" width="${xs[c1 + 1] - xs[c0]}" height="${ys[r1 + 1] - ys[r0]}" fill="${col}" fill-opacity="0.12" stroke="${col}" stroke-width="${2 / z}"/>`;
+  }
+  return out;
+}
+
 function renderOverlay() {
   const z = app.view.z;
   const sw = 1.5 / z;
@@ -821,6 +851,7 @@ function renderOverlay() {
         `<text x="${labelAt.x + 4 / z}" y="${labelAt.y - 3 / z - lh * 0.3}" font-size="${fs}" font-weight="bold" fill="#fff" font-family="Helvetica, Arial, sans-serif">${escXml(label)}</text></g>`;
     }
   }
+  if (formulaEditing()) out += formulaOverlay(z);
   // Suchtreffer
   app.searchHits.forEach((id, i) => {
     const el = getEl(id);
@@ -973,6 +1004,7 @@ export function startEdit(id, opts = {}) {
   }
   begin();
   app.editing = { id, field, cell, isNew: !!opts.isNew, drop: !!opts.drop };
+  if (cell) scheduleRender(true);
   if (el.mind && !loadPref('mindHint', false)) {
     savePref('mindHint', true);
     toast(T('Mindmap: Enter legt den nächsten Knoten an, Tab einen Unterknoten, Esc beendet.'), 6000);
@@ -1100,6 +1132,7 @@ editor.addEventListener('input', () => {
   ed.dirty = true;
   if (ed.cell) {
     tablePatch(el, { cells: [[ed.cell[0], ed.cell[1], editor.value]] });
+    scheduleRender(true);
   } else {
     setEl(autoHeight({ ...el, [ed.field]: editor.value }));
   }
@@ -1112,6 +1145,12 @@ editor.addEventListener('keydown', (e) => {
   if (!ed) return;
   // Neue Mindmap-Knoten und Tab-Notizen: Leer weiterzugehen ergäbe nur eine Kette leerer Objekte
   const blank = () => ed.drop && !String(getEl(ed.id)?.[ed.field] ?? '').trim();
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    finishEdit();
+    app.emit('openPalette');
+    return;
+  }
   if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
     e.preventDefault();
     finishEdit();
@@ -1312,6 +1351,7 @@ const afterCreate = () => {
 export function setTool(t) {
   if (app.viewOnly && !['select', 'hand', 'laser'].includes(t) && !(t === 'comment' && app.canComment)) return;
   if (t !== app.tool) app.toolHeld = false;
+  if (t !== 'select') stopBrush();
   app.tool = t;
   stage.dataset.tool = t;
   if (t !== 'select') {
@@ -1362,11 +1402,17 @@ function snapV(v) {
 }
 
 stage.addEventListener('pointerdown', onDown);
+// Formel: Der Klick auf eine Zelle fügt einen Bezug ein und darf der Eingabe den Fokus nicht nehmen
+stage.addEventListener('mousedown', (e) => {
+  if (drag && drag.mode === 'formula') e.preventDefault();
+});
 window.addEventListener('pointermove', onMove);
 window.addEventListener('pointerup', onUp);
 window.addEventListener('pointercancel', onUp);
 
 function onDown(e) {
+  if (app.brushing && pointers.size === 0 && e.button === 0 && brushClick(e)) return;
+  if (e.button === 0 && formulaClick(e)) return;
   if (e.target === editor) return;
   // Verhindert, dass das folgende mousedown einem gerade geöffneten Editor den Fokus nimmt
   e.preventDefault();
@@ -1689,6 +1735,11 @@ function onMove(e) {
     case 'laser':
       app.emit('laser', w, true);
       return;
+    case 'formula': {
+      const el = getEl(drag.id);
+      if (el) formulaSetRef(drag.pick, cellAt(el, w.x, w.y));
+      return;
+    }
     case 'move': {
       if (!drag.moved && !far) return;
       if (!drag.moved) {
@@ -2073,6 +2124,23 @@ function bestSnap(vals, cands, thr) {
     }
   }
   return best;
+}
+
+// Formel: Klick oder Ziehen über Zellen derselben Tabelle fügt Bezug oder Bereich ein, statt die Eingabe zu beenden
+function formulaClick(e) {
+  if (drag && drag.mode === 'formula') return true; // zweiter Finger
+  if (!formulaEditing()) return false;
+  const hit = hitInfo(e.target);
+  if (!hit || hit.el.id !== app.editing.id || !formulaWantsRef()) return false;
+  e.preventDefault();
+  const w = toWorld(e.clientX, e.clientY);
+  const cell = cellAt(hit.el, w.x, w.y);
+  const pick = { anchor: cell, start: editor.selectionStart, end: editor.selectionEnd };
+  formulaSetRef(pick, cell);
+  // Den Fokus behält die Eingabe, auch wenn der Browser ihn beim Klick wegnimmt
+  setTimeout(() => editor.focus(), 0);
+  drag = { mode: 'formula', start: { cx: e.clientX, cy: e.clientY, w }, pick, id: hit.el.id };
+  return true;
 }
 
 // Kanban auf dem Board: Wer eine Karte in eine Spalte zieht, setzt ihren Status. Name der Spalte ist ihre Überschrift.
@@ -2511,6 +2579,175 @@ export function formatCells(patch) {
   if (app.editing && app.editing.cell) layoutEditor();
 }
 
+/* ---------------- Format übertragen ---------------- */
+
+const TEXT_FORMAT = ['fontSize', 'bold', 'italic', 'underline', 'strike', 'align', 'valign'];
+// Was sich je Elementart übertragen lässt. Über Arten hinweg gilt die Bedeutung: Fläche, Linie, Textfarbe, Schrift.
+const FORMAT_KEYS = {
+  sticky: ['fill', ...TEXT_FORMAT],
+  shape: ['fill', 'stroke', 'strokeWidth', 'dash', 'textColor', ...TEXT_FORMAT],
+  text: ['fill', 'textColor', ...TEXT_FORMAT],
+  connector: ['stroke', 'strokeWidth', 'dash', 'routing', 'arrowStart', 'arrowEnd'],
+  frame: ['fill'],
+  card: ['fill'],
+  table: ['fill', 'stroke', 'headerFill', 'textColor', 'fontSize'],
+};
+const formatField = (type, key) => {
+  if (type === 'card' && key === 'fill') return 'color';
+  if (type === 'text' && key === 'textColor') return 'color';
+  return key;
+};
+let copiedFormat = null;
+
+export const canCopyFormat = (el) => !!el && !!FORMAT_KEYS[el.type];
+export const hasCopiedFormat = () => !!copiedFormat;
+
+export function copyFormat() {
+  const el = selectedEls().find(canCopyFormat);
+  if (!el) return false;
+  copiedFormat = { type: el.type, style: {} };
+  for (const k of FORMAT_KEYS[el.type]) copiedFormat.style[k] = el[formatField(el.type, k)];
+  return true;
+}
+
+function formatted(el) {
+  const keys = (FORMAT_KEYS[el.type] || []).filter((k) => FORMAT_KEYS[copiedFormat.type].includes(k));
+  const patch = {};
+  for (const k of keys) {
+    const v = copiedFormat.style[k];
+    // Ohne eigene Farbe gibt es nichts zu übertragen: Sonst verlöre eine Notiz ihre Farbe an einen Text ohne Hintergrund
+    if (v === undefined && ['fill', 'stroke', 'textColor'].includes(k)) continue;
+    // Karten brauchen eine Farbe, Tabellen und Texte eine feste Schriftgröße, Linien ein sichtbares Aussehen
+    if (el.type === 'card' && (!v || v === 'transparent')) continue;
+    if (k === 'fontSize' && v === 'auto' && el.type !== 'sticky' && el.type !== 'shape') continue;
+    if (k === 'stroke' && v === 'none' && el.type === 'connector') continue;
+    patch[formatField(el.type, k)] = v;
+  }
+  return Object.keys(patch).length ? patch : null;
+}
+
+function applyFormatTo(list) {
+  let done = 0, locked = 0;
+  act(() => {
+    for (const el of list) {
+      if (isLocked(el)) {
+        locked++;
+        continue;
+      }
+      const patch = formatted(el);
+      if (!patch) continue;
+      setEl(autoHeight({ ...el, ...patch }));
+      done++;
+    }
+  });
+  if (!done) toast(locked ? T('Gesperrte Elemente bleiben unverändert') : T('Für dieses Element gibt es nichts zu übertragen'));
+  return done;
+}
+
+export function pasteFormat() {
+  if (!copiedFormat) return toast(T('Zuerst ein Format kopieren'));
+  applyFormatTo(selectedEls());
+  app.emit('selection');
+}
+
+// Pinsel: Der nächste Klick überträgt das Format; dauerhaft (Doppelklick) bis Esc
+export function startBrush(hold = false) {
+  if (app.viewOnly || !copyFormat()) return;
+  setTool('select');
+  app.brushing = true;
+  app.brushHold = hold;
+  stage.dataset.brush = '1';
+  app.emit('selection');
+  toast(hold ? T('Format aufgenommen – Elemente anklicken, Esc beendet') : T('Format aufgenommen – Element anklicken'), 3000);
+}
+
+export function stopBrush() {
+  if (!app.brushing) return;
+  app.brushing = false;
+  app.brushHold = false;
+  delete stage.dataset.brush;
+  app.emit('selection');
+}
+
+function brushClick(e) {
+  const hit = hitInfo(e.target);
+  // Klick ins Leere oder in die Fläche eines Frames trifft kein Ziel: Der gehaltene Pinsel bleibt, der einfache endet
+  if (!hit || (hit.el.type === 'frame' && !hit.frameTitle)) {
+    if (app.brushHold) return true;
+    stopBrush();
+    return false;
+  }
+  applyFormatTo([hit.el]);
+  if (!app.brushHold) stopBrush();
+  return true;
+}
+
+/* ---------------- Formeln in Tabellen ---------------- */
+
+const Formula = globalThis.TableFormula;
+
+// Solange in einer Zelle eine Formel entsteht, zeigt die Tabelle Spalten- und Zeilennamen, und ein Klick fügt den Bezug ein
+export function formulaEditing() {
+  const ed = app.editing;
+  return !!(ed && ed.cell && editor.value[0] === '=');
+}
+
+// Bezug nur dort einfügen, wo einer stehen kann: nach „=“, „(“, Rechenzeichen oder Trennzeichen. Sonst beendet der Klick die Eingabe.
+function formulaWantsRef() {
+  return formulaEditing() && /[=(+\-*/^;,:<>]\s*$/.test(editor.value.slice(0, editor.selectionStart));
+}
+
+function formulaSetRef(pick, cell) {
+  const [r0, c0] = pick.anchor, [r1, c1] = cell;
+  const a = Formula.refName(Math.min(r0, r1), Math.min(c0, c1)), b = Formula.refName(Math.max(r0, r1), Math.max(c0, c1));
+  const text = a === b ? a : `${a}:${b}`;
+  editor.setRangeText(text, pick.start, pick.end, 'end');
+  pick.end = pick.start + text.length;
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  scheduleRender(true);
+}
+
+// Summe, Mittelwert … aus der Zellauswahl: unter jede Spalte oder, bei einer einzelnen Zeile, rechts daneben.
+// Ist dort nichts frei, kommt eine neue Zeile oder Spalte dazu. Eine einzelne leere Zelle nimmt die Zahlen darüber bzw. links daneben.
+export function tableAggregate(name) {
+  const rg = tableRange();
+  if (!rg || rg.whole) return toast(T('Zuerst Zellen auswählen'));
+  const t = rg.t;
+  const px = (list, n, total) => TableOps.fractions(list, n).map((f) => f * total);
+  const avg = (list) => list.reduce((x, y) => x + y, 0) / list.length;
+  const isNum = (r, c) => Formula.cellNumber(t.cells?.[r]?.[c]) !== null || Formula.isFormula(t.cells?.[r]?.[c]);
+  const empty = (r, c) => !String(t.cells?.[r]?.[c] ?? '').trim();
+  const fx = (a, b) => `=${name}(${Formula.refName(...a)}:${Formula.refName(...b)})`;
+  if (rg.r0 === rg.r1 && rg.c0 === rg.c1) {
+    const { r0: r, c0: c } = rg;
+    if (!empty(r, c)) return toast(T('Zuerst Zellen auswählen'));
+    let top = r, left = c;
+    while (top > 0 && isNum(top - 1, c)) top--;
+    while (left > 0 && isNum(r, left - 1)) left--;
+    if (top === r && left === c) return toast(T('Keine Zahlen in der Nähe dieser Zelle'));
+    const formula = top < r ? fx([top, c], [r - 1, c]) : fx([r, left], [r, c - 1]);
+    return act(() => tablePatch(t, { cells: [[r, c, formula]] }));
+  }
+  const byRow = rg.r0 === rg.r1;
+  act(() => {
+    let table = t;
+    const at = byRow ? rg.c1 + 1 : rg.r1 + 1;
+    const free = byRow
+      ? at < t.cols && Array.from({ length: rg.r1 - rg.r0 + 1 }, (_, i) => empty(rg.r0 + i, at)).every(Boolean)
+      : at < t.rows && Array.from({ length: rg.c1 - rg.c0 + 1 }, (_, i) => empty(at, rg.c0 + i)).every(Boolean);
+    if (!free) {
+      table = byRow
+        ? tableStruct(t, { action: 'insertCols', at, count: 1, size: avg(px(t.colW, t.cols, t.w)) })
+        : tableStruct(t, { action: 'insertRows', at, count: 1, size: avg(px(t.rowH, t.rows, t.h)) });
+      if (!table) return;
+    }
+    const cells = [];
+    if (byRow) cells.push([rg.r0, at, fx([rg.r0, rg.c0], [rg.r0, rg.c1])]);
+    else for (let c = rg.c0; c <= rg.c1; c++) cells.push([at, c, fx([rg.r0, c], [rg.r1, c])]);
+    tablePatch(table, { cells });
+  });
+}
+
 export function tableAction(action) {
   const rg = tableRange();
   if (!rg) return;
@@ -2827,6 +3064,10 @@ window.addEventListener('keydown', (e) => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('button, a, summary')) return;
   const mod = e.ctrlKey || e.metaKey;
   const key = e.key.toLowerCase();
+  if (e.key === 'Escape' && app.brushing) {
+    stopBrush();
+    return;
+  }
   // Zuerst Module (z. B. Präsentation) reagieren lassen, damit dort auch die Leertaste ankommt
   app.emit('key', e);
   if (e.defaultPrevented) return;
@@ -2861,6 +3102,12 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     if (e.shiftKey) ungroupSel();
     else groupSel();
+    return;
+  }
+  if (mod && e.altKey && (e.code === 'KeyC' || e.code === 'KeyV')) {
+    e.preventDefault();
+    if (e.code === 'KeyV') pasteFormat();
+    else if (copyFormat()) toast(T('Format kopiert'));
     return;
   }
   if (mod && key === 'l') {

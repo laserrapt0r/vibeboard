@@ -17,6 +17,8 @@ aktualisieren → testen.
 - Datenbank-Migrationen: `MIGRATIONS` in `lib/db.js` (nur anhängen). Upgrade-Ablauf: `lib/version.js`.
 - Echtzeit: Server-Sent Events mit Long-Polling-Rückfall (`lib/boards.js`, `public/js/sync.js`).
 - Ändernde API-Aufrufe brauchen den Header `X-Vibeboard: 1`; im Frontend immer `api()` aus `public/js/util.js` verwenden.
+- Formeln in Tabellen: `public/js/table-formula.js` (eigener Parser, nur beim Anzeigen gerechnet; `npm run test:formula`).
+- Abgleich gleichzeitiger Änderungen: `public/js/merge.js` (`npm run test:sync`).
 - Board-Elemente werden in `lib/sanitize.js` (Server) und `safeEl()` in `public/js/render.js` (Darstellung) geprüft.
 - Uploads (Bilder als Data-URL) laufen durch `lib/uploads.js` (Dateityp + ClamAV).
 - Content-Security-Policy erlaubt keine Inline-Skripte und keine fremden Quellen.

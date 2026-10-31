@@ -9,6 +9,8 @@
 (function (root) {
   'use strict';
 
+  const Formula = typeof module !== 'undefined' && module.exports ? require('./table-formula.js') : root.TableFormula;
+
   // Diese Eigenschaften dürfen per Patch geändert werden (Zellinhalte und -formate laufen separat)
   const PROPS = ['x', 'y', 'w', 'h', 'z', 'colW', 'rowH', 'header', 'headerFill', 'stroke', 'fill', 'fontSize', 'textColor', 'locked', 'groupId', 'link'];
 
@@ -116,6 +118,8 @@
       default:
         return null;
     }
+    // Formeln zeigen weiter auf dieselben Zellen
+    g.cells = g.cells.map((row) => row.map((v) => Formula.adjust(v, s.action, s.at | 0, count)));
     return rebuild(t, g);
   }
 

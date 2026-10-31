@@ -22,6 +22,7 @@ import {
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
   tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment, togglePin, deleteFramesWithContent, holdTool,
+  canCopyFormat, copyFormat, pasteFormat, hasCopiedFormat, startBrush, stopBrush, tableAggregate,
   setBusy, clearBusy,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
@@ -179,6 +180,7 @@ app.on('tool', (t) => {
 /* ================================================================== */
 
 const ctxbar = $('#ctxbar');
+let lastBrushClick = 0;
 let ctxHidden = false;
 
 function applySel(patch, filter) {
@@ -315,6 +317,10 @@ export function buildCtx() {
       if (one) items.push(actBtn('edit', T('Code bearbeiten (Enter)'), () => startEdit(one.id, { selectAll: false })));
       if (one) items.push(actBtn('copy', T('Code kopieren'), () => navigator.clipboard.writeText(one.text || '').then(() => toast(T('Code kopiert')), () => toast(T('Kopieren nicht möglich')))));
     } else if (only === 'table' && one) {
+      const sum = actBtn('sigma', T('Summe und mehr aus der Zellauswahl'), () => menu(sum, [
+        [T('SUMME'), T('Summe')], [T('MITTELWERT'), T('Mittelwert')], [T('ANZAHL'), T('Anzahl')], ['MIN', T('Kleinster Wert')], ['MAX', T('Größter Wert')],
+      ].map(([name, label]) => ({ label, onClick: () => tableAggregate(name) })).concat(['-', { label: T('Formeln: Zelle mit = beginnen, z. B. =B2*C2'), disabled: true }]), { placement: 'top' }));
+      items.push(sum);
       // Formatierung gilt für die ausgewählten Zellen – ohne Zellauswahl für die ganze Tabelle
       const rg = tableRange();
       const st = cellStyle(one, rg.r0, rg.c0);
@@ -409,6 +415,20 @@ export function buildCtx() {
   }
   // Erweiterungen anderer Module (Retro, Dateien, Schlagwörter, verborgene Bereiche)
   app.emit('ctxItems', items, sel, { locked, one, only, actBtn, toggleBtn, sep });
+  if (sel.some(canCopyFormat)) {
+    // Doppelklick selbst erkennen: Die Leiste baut sich beim ersten Klick neu auf, ein dblclick träfe einen entfernten Knopf
+    const brush = actBtn('brush', T('Format übertragen (Doppelklick: mehrfach)'), () => {
+      const again = Date.now() - lastBrushClick < 400;
+      lastBrushClick = Date.now();
+      if (again) {
+        stopBrush();
+        startBrush(true);
+      } else if (app.brushing) stopBrush();
+      else startBrush(false);
+    }, app.brushing ? 'active' : '');
+    brush.setAttribute('aria-pressed', String(!!app.brushing));
+    items.push(brush);
+  }
   if (!locked) {
     items.push(actBtn('comment', T('Kommentieren'), () => {
       const b = selectionBounds();
@@ -419,6 +439,8 @@ export function buildCtx() {
       { label: T('In den Vordergrund'), icon: 'front', hint: T('Strg+]'), onClick: bringToFront },
       { label: T('In den Hintergrund'), icon: 'back', hint: T('Strg+['), onClick: sendToBack },
       { label: T('Auswahl einpassen'), icon: 'fit', hint: T('Umschalt+2'), onClick: () => fitTo(selectionBounds(), { maxZ: 2 }) },
+      { label: T('Format kopieren'), icon: 'brush', hint: T('Strg+Alt+C'), disabled: !sel.some(canCopyFormat), onClick: () => copyFormat() && toast(T('Format kopiert')) },
+      { label: T('Format einfügen'), icon: 'brush', hint: T('Strg+Alt+V'), disabled: !hasCopiedFormat(), onClick: pasteFormat },
       { label: T('Größe kopieren'), icon: 'copy', onClick: copySize },
       { label: T('Größe übernehmen'), icon: 'fit', disabled: !hasCopiedSize(), onClick: () => pasteSize('both') },
       { label: T('Nur Breite übernehmen'), icon: 'alignCenterH', disabled: !hasCopiedSize(), onClick: () => pasteSize('w') },
@@ -1001,7 +1023,7 @@ export function openTemplates() {
   }, { showBlank: false }), { wide: true });
 }
 
-function insertTemplate(t) {
+export function insertTemplate(t) {
   if (!placeElements(t.build())) return;
   markTemplateUsed(t);
   toast(T`Vorlage „${t.name}“ eingefügt`);
@@ -1235,7 +1257,7 @@ function openSettings(anchor) {
 export function openShortcuts() {
   const groups = [
     [T('Werkzeuge'), [['V', T('Auswählen')], [T('H / Leertaste'), T('Verschieben')], ['N', T('Sticky Note')], ['T', T('Text')], ['S', T('Form')], ['R / O', T('Rechteck / Ellipse')], ['L', T('Verbindungslinie')], ['P', T('Stift')], ['E', T('Radierer')], ['F', T('Frame')], ['K', T('Karte')], ['M', T('Mindmap')], ['C', T('Kommentar')], ['X', T('Laserpointer')]]],
-    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
+    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
     [T('Tabellen'), [[T('Klick in ausgewählte Tabelle'), T('Zelle wählen')], [T('Umschalt + Klick / Pfeil'), T('Bereich wählen')], [T('Pfeiltasten'), T('Zellauswahl bewegen')], [T('Enter / F2'), T('Zelle bearbeiten')], [T('Tippen'), T('Zelle überschreiben')], [T('Entf'), T('Inhalt leeren')], ['Tab', T('Nächste Zelle (beim Bearbeiten)')], [T('Linie ziehen'), T('Spaltenbreite / Zeilenhöhe')]]],
     [T('Verbinder'), [[T('Linie ziehen'), T('Biegen (Knickpunkt)')], [T('◦ auf der Linie ziehen'), T('Knickpunkt einfügen')], [T('Doppelklick auf ▪'), T('Knickpunkt entfernen')], [T('Beschriftung ziehen'), T('Entlang der Linie verschieben')], [T('Ende an Rand ziehen'), T('Fester Andockpunkt')], [T('Ende in Formmitte'), T('Automatisch andocken')]]],
     [T('Mindmap'), [['Tab', T('Unterknoten hinzufügen')], [T('Enter (beim Tippen)'), T('Geschwisterknoten')], [T('Umschalt+Enter'), T('Geschwisterknoten')]]],
@@ -1251,6 +1273,10 @@ export function openShortcuts() {
 /* ================================================================== */
 
 const searchBox = $('#search-box');
+
+export function elementText(el) {
+  return textOf(el);
+}
 
 function textOf(el) {
   return [el.text, el.title, el.description, el.label, el.assignee, el.status, ...(el.thread || []).map((m) => m.text), ...(el.cells || []).flat()].filter(Boolean).join(' ');
@@ -1526,6 +1552,7 @@ function buildTopbar() {
     iconBtn('activity', T('Aktivität – wer hat was geändert?'), () => toggleSidePanel('activity'), { 'data-panel': 'activity' }),
     app.viewOnly ? null : iconBtn('history', T('Versionsverlauf'), () => toggleSidePanel('versions'), { 'data-panel': 'versions' }),
     iconBtn('search', T('Suchen (Strg+F)'), openSearch),
+    iconBtn('command', T('Befehle (Strg+K)'), () => app.emit('openPalette')),
     iconBtn('list', T('Elementliste'), openElementList),
     iconBtn('download', T('Exportieren & Importieren'), (e) => openExportMenu(e.currentTarget)),
   );

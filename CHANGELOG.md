@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.9.0] – 2026-10-31
+
+### Hinzugefügt
+- **Befehlspalette** (REQ-EDIT-013): Strg+K sucht in Befehlen, Einstellungen, Frames, Vorlagen und Board-Inhalten.
+- **Format übertragen** (REQ-EDIT-014): Pinsel in der Kontextleiste, Doppelklick für mehrere Ziele, Strg+Alt+C und Strg+Alt+V über die Tastatur.
+- **Formeln in Tabellen** (REQ-ELEM-021): Eine Zelle mit „=“ rechnet, etwa `=SUMME(B2:B5)` oder `=B2*C2`. Beim Tippen zeigt die Tabelle Spalten- und Zeilennamen, ein Klick fügt den Bezug ein. Die Schaltfläche Σ erzeugt Summe, Mittelwert und mehr aus der Zellauswahl.
+- `npm run test:formula` prüft die Formeln (auch im CI).
+
+### Geändert
+- Beim Einfügen und Löschen von Zeilen und Spalten passen sich Bezüge in Formeln an. Diagramme und der PowerPoint-Export verwenden die berechneten Werte.
+
 ## [4.8.0] – 2026-10-31
 
 ### Hinzugefügt

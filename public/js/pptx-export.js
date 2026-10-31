@@ -1,6 +1,6 @@
 // Export nach PowerPoint: Jeder Frame wird eine Folie. Text, Formen, Linien, Bilder und Tabellen bleiben in PowerPoint
 // bearbeitbar, alles andere (Karten, Diagramme, Code, Zeichnungen) kommt als Bild.
-import { connectorGeom, textLayout, elBounds } from './render.js';
+import { connectorGeom, textLayout, elBounds, shownCells } from './render.js';
 import { pngDataUrl } from './exporter.js';
 import { writeZip } from './zip.js';
 
@@ -68,7 +68,7 @@ class Slide {
   }
   table(b, el, size) {
     const id = this.nextId++;
-    const rows = el.cells || [];
+    const rows = shownCells(el);
     const cols = Math.max(1, ...rows.map((r) => r.length));
     const colW = el.colW && el.colW.length === cols ? el.colW : Array(cols).fill(1);
     const sum = colW.reduce((s, v) => s + v, 0) || 1;

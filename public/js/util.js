@@ -514,6 +514,9 @@ const I = (d, extra = '') =>
 
 export const ICONS = {
   select: I('<path d="M4 3l7 17 2.5-7.5L21 10z"/>'),
+  brush: I('<path d="M14 4l6 6-8 8H6v-6z"/><path d="M12 6l6 6"/><path d="M6 18c-1 2-2 3-3 3"/>'),
+  command: I('<path d="M4 5h16v14H4z"/><path d="M8 10l3 2-3 2M13 15h4"/>'),
+  sigma: I('<path d="M18 5H6l6 7-6 7h12"/>'),
   hand: I('<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.9-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/>'),
   sticky: I('<path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5z"/><path d="M15 3v6h6"/>'),
   text: I('<path d="M4 7V4h16v3M9 20h6M12 4v16"/>'),

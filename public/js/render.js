@@ -1009,6 +1009,7 @@ export function pressurePath(points, sw) {
 
 // „1.234,5“, „1,234.5“, „12 %“, „3 €“ – Zahlen, wie sie in Tabellen stehen
 export function cellNumber(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   // Nur Zahlen mit Währung oder Prozent: „1e3“ oder „1,5k“ sind Text, Klammern stehen für negativ
   let raw = String(v ?? '').trim().replace(/[%€$£¥\s\u00a0]|\b(EUR|USD|CHF|GBP)\b/gi, '');
   const negative = /^\(.*\)$/.test(raw);
@@ -1026,8 +1027,23 @@ export function cellNumber(v) {
   return Number.isFinite(n) ? (negative ? -n : n) : null;
 }
 
+// Angezeigte Inhalte einer Tabelle: Formeln als Ergebnis. Diagramme bekommen Zahlen, damit nichts an Tausendertrennern hängt.
+const Formula = () => globalThis.TableFormula;
+
+export function shownCells(table, { numbers = false } = {}) {
+  const F = Formula();
+  const cells = table.cells || [];
+  if (!F || !cells.some((r) => Array.isArray(r) && r.some(F.isFormula))) return cells;
+  const calc = F.compute(table);
+  return cells.map((row, r) => (Array.isArray(row) ? row : []).map((v, c) => {
+    if (!F.isFormula(v)) return v;
+    const n = calc.value(r, c);
+    return numbers && typeof n === 'number' ? n : calc.text(r, c, LOCALE);
+  }));
+}
+
 export function chartData(table) {
-  const rows = (table.cells || []).filter((r) => r.some((c) => String(c).trim()));
+  const rows = shownCells(table, { numbers: true }).filter((r) => r.some((c) => String(c).trim()));
   if (rows.length < 2) return null;
   const head = rows[0], body = rows.slice(1);
   const series = [];
@@ -1522,9 +1538,10 @@ function renderBody(el, env) {
       for (let r = 1; r < rows; r++) out += `<line x1="${x}" y1="${r1(ys[r])}" x2="${x + w}" y2="${r1(ys[r])}" stroke="${line}"/>`;
       for (let c = 1; c < cols; c++) out += `<line x1="${r1(xs[c])}" y1="${y}" x2="${r1(xs[c])}" y2="${y + h}" stroke="${line}"/>`;
       out += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${el.stroke || '#b9b9b9'}"/>`;
+      const shown = shownCells(el);
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          const t = el.cells?.[r]?.[c];
+          const t = shown[r]?.[c];
           if (!t || (env.editingCell && env.editingCell[0] === r && env.editingCell[1] === c)) continue;
           const st = cellStyle(el, r, c);
           const box = { x: xs[c] + 8, y: ys[r] + 6, w: xs[c + 1] - xs[c] - 16, h: ys[r + 1] - ys[r] - 12 };

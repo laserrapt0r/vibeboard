@@ -111,6 +111,8 @@ Pasting multi-line text into the board automatically creates one sticky note per
 - **Smart duplicate:** Ctrl+D repeats the most recently used offset.
 - Cluster sticky notes by color
 - Working quickly: Tab while typing adds the next note or shape alongside, double-clicking a tool keeps it active, and the shape menu shows recently used shapes. In templates, labels can be edited directly while backgrounds stay locked; retro and brainstorming templates offer their matching flow or timer. Dragging a card into a Kanban column on the board sets its status, and a frame can be deleted together with its content.
+- Command palette (Ctrl+K) for commands, settings, frames, templates and board content; format painter (brush in the context bar, Ctrl+Alt+C/V).
+- Formulas in tables: `=SUM(B2:B5)`, `=B2*C2`, and more; click a cell to insert its reference, or use Σ on selected cells.
 - Group, lock, layers (front and back), duplicate (also by Alt-dragging); a second click in a group selects a single
   element for editing
 - Copy and paste, also between boards

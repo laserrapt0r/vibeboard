@@ -109,3 +109,21 @@
 - **Akzeptanzkriterien:**
   - Doppelklick aufs Werkzeug hält Notiz, Form, Text, Frame, Karte, Tabelle, Code und Mindmap aktiv, sichtbar am Rahmen der Schaltfläche. Werkzeuge mit Taste gehen auch mit Umschalt+Taste. Esc oder ein anderes Werkzeug beendet das.
   - Das Formen-Menü zeigt bis zu sechs zuletzt verwendete Formen; die Auswahl bleibt im Browser gespeichert.
+
+### REQ-EDIT-013 Befehlspalette
+- **Seit:** 4.9.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Strg+K (oder die Schaltfläche in der Kopfleiste) öffnet eine Suche über alles, was gerade erreichbar ist.
+- **Akzeptanzkriterien:**
+  - Gefunden werden die sichtbaren Werkzeuge und Schaltflächen, Aktionen für die Auswahl, Einstellungen, Frames und, ab zwei Zeichen, Vorlagen und Inhalte auf dem Board. Was jemand nicht darf oder was gerade deaktiviert ist, erscheint nicht, auch keine Aktionen für eine vollständig gesperrte Auswahl.
+  - Neue Schaltflächen erscheinen ohne Zutun, da die Palette sie zur Laufzeit einsammelt.
+  - Zuletzt verwendete Befehle stehen oben. Die Suche ignoriert Groß- und Kleinschreibung und Akzente; alle Wörter müssen vorkommen.
+  - Strg+K wirkt auch während der Eingabe auf dem Board. In Eingabefeldern von Dialogen und im Namen des Boards bleibt die Taste dem Browser überlassen.
+  - Vollständig per Tastatur und mit Bildschirmleser bedienbar: Pfeiltasten wählen, Enter führt aus, Esc schließt. Der Fokus kehrt danach zurück.
+
+### REQ-EDIT-014 Format übertragen
+- **Seit:** 4.9.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Der Pinsel in der Kontextleiste nimmt das Format des ausgewählten Elements auf, der nächste Klick überträgt es. Ein Klick ins Leere beendet ihn. Doppelklick auf den Pinsel hält ihn für mehrere Ziele, bis Esc ihn beendet.
+  - Über die Tastatur: Strg+Alt+C kopiert das Format, Strg+Alt+V wendet es auf die Auswahl an. Beides steht auch im Menü „Mehr“.
+  - Übertragen wird nach Bedeutung, auch zwischen Elementarten: Fläche (bei Karten die Farbe), Linie, Textfarbe, Schrift und Ausrichtung, bei Verbindern auch Linienverlauf und Enden. Text, Größe und Lage bleiben. Tabellen übertragen ihr Gesamtformat, nicht das einzelner Zellen.
+  - Hat das Ausgangselement keine eigene Farbe, behält das Ziel seine. Gesperrte und fixierte Elemente bleiben unverändert. Das Übertragen lässt sich rückgängig machen.

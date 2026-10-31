@@ -105,6 +105,7 @@
   - Geändert in 3.5.0 – Zeilen, Spalten, Linien:
     - Zeilen und Spalten lassen sich an der Auswahl einfügen (oberhalb/unterhalb, links/rechts) und löschen, auch mehrere; Inhalte und Formate der übrigen Zellen bleiben erhalten.
     - Inhalt leeren, Formatierung entfernen, Spaltenbreiten bzw. Zeilenhöhen angleichen.
+  - Geändert in 4.9.0: Beim Einfügen und Löschen von Zeilen und Spalten passen sich Bezüge in Formeln an ([REQ-ELEM-021](#req-elem-021-formeln-in-tabellen)).
     - Farben von Kopfzeile und Linien sind wählbar.
     - Spaltenbreiten und Zeilenhöhen lassen sich durch Ziehen an den inneren Linien ändern; beim Vergrößern der Tabelle bleiben die Verhältnisse erhalten.
   - Formate, Breiten und Höhen werden auf dem Server geprüft (nur bekannte Werte, gültige Farben).
@@ -194,6 +195,7 @@
   - Aus einer Tabelle entsteht ein Balken-, Linien- oder Tortendiagramm. Erste Zeile: Reihen, erste Spalte: Beschriftung.
   - Das Diagramm folgt Änderungen der Tabelle sofort. Zahlen dürfen Tausendertrenner, Dezimalkomma, Prozent- und Währungszeichen enthalten.
   - Diagrammart und Titel sind änderbar; Kopien behalten die Verbindung zur mitkopierten Tabelle. Ohne Zahlen erscheint ein Hinweis.
+  - Geändert in 4.9.0: Zellen mit Formeln fließen mit ihrem Ergebnis ein.
 
 ### REQ-ELEM-019 Bilder zuschneiden
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -205,3 +207,19 @@
 - **Akzeptanzkriterien:**
   - Druckempfindliche Stifte erzeugen Linien, deren Breite dem Druck folgt; Maus und Finger bleiben gleichmäßig.
   - Ausgewählte Freihandlinien lassen sich in Linie, Kreis, Rechteck, Dreieck oder Raute umwandeln. Ohne eindeutiges Ergebnis bleibt die Linie unverändert.
+
+### REQ-ELEM-021 Formeln in Tabellen
+- **Seit:** 4.9.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Zellen, die mit „=“ beginnen, rechnen. Gespeichert wird die Formel, angezeigt das Ergebnis; zum Bearbeiten erscheint wieder die Formel.
+- **Akzeptanzkriterien:**
+  - Grundrechenarten, Klammern, `^`, `%`, Vergleiche, Bezüge wie `B2` und `$B$2`, Bereiche wie `B2:B5`.
+  - Funktionen in vier Sprachen: Summe (`SUMME`, `SUM`, `SUMA`, `SOMME`), Mittelwert (`MITTELWERT`, `AVERAGE`, `AVG`, `PROMEDIO`, `MOYENNE`), `MIN`, `MAX`, Anzahl (`ANZAHL`, `COUNT`, `CONTAR`, `NB`), Anzahl nicht leerer Zellen (`ANZAHL2`, `COUNTA`, `CONTARA`, `NBVAL`), Runden (`RUNDEN`, `ROUND`, `REDONDEAR`, `ARRONDI`), `ABS` und Bedingung (`WENN`, `IF`, `SI`).
+  - Argumente trennt `;` oder `,`. Ein Komma zwischen Ziffern ist ein Dezimalkomma, wenn die Formel `;` oder eine deutsche, spanische oder französische Funktion enthält oder außerhalb von Klammern steht. Sonst gilt es als Trennzeichen, etwa in `=MAX(1,5)`. Das Ergebnis hängt nicht von der Sprache der Oberfläche ab, nur seine Schreibweise.
+  - Zellinhalte gelten auch mit Tausendertrennern und Währung als Zahl, „19 %“ als 0,19. Ein Datum oder „1.2.3“ ist keine Zahl. In Bereichen werden Text und Leeres übergangen, beim direkten Rechnen ergibt Text `#VALUE!`. Eine leere Zelle gleicht je nach Vergleich dem leeren Text oder der Null.
+  - Fehler erscheinen in der Zelle: `#DIV/0!`, `#VALUE!`, `#NAME?`, `#REF!`, `#CYCLE!`, `#NUM!`. Text mit „=“ am Anfang, der keine gültige Formel ist, bleibt Text, sodass bestehende Tabellen unverändert aussehen.
+  - Während eine Formel entsteht, zeigt die Tabelle Spalten- und Zeilennamen und markiert die Bezüge farbig. Wo ein Bezug stehen kann, fügt ein Klick auf eine Zelle ihn ein, Ziehen einen Bereich.
+  - Die Schaltfläche Σ erzeugt aus der Zellauswahl Summe, Mittelwert, Anzahl, Minimum oder Maximum: unter jeder Spalte oder, bei einer einzelnen Zeile, rechts daneben, wenn nötig in einer neuen Zeile oder Spalte. Eine einzelne leere Zelle nimmt die Zahlen darüber oder links davon.
+  - Beim Einfügen und Löschen von Zeilen und Spalten passen sich Bezüge an, gelöschte werden zu `#REF!`. Beim Kopieren von Zellen bleiben sie unverändert.
+  - Bezüge gelten innerhalb derselben Tabelle. Diagramme und Exporte nutzen die Ergebnisse. Die Suche findet die Formel, nicht das Ergebnis.
+  - Formeln werden nie als Code ausgeführt. Berechnungen sind begrenzt, damit gegenseitige Bezüge ein Board nicht einfrieren. Eine zu tiefe oder zu große Berechnung zeigt `#NUM!`, die Tabelle bleibt sichtbar.
+  - Grenze: Schreibt jemand eine Zelle, während eine andere Person im selben Moment davor eine Zeile einfügt, bezieht sich die Zelle auf die alte Position. Alle sehen denselben Stand; er lässt sich rückgängig machen oder korrigieren.

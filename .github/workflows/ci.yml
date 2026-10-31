@@ -46,6 +46,8 @@ jobs:
       - run: npm run check:i18n
       - name: Gleichzeitige Änderungen prüfen
         run: npm run test:sync
+      - name: Formeln prüfen
+        run: npm run test:formula
       - run: npm run test:upgrade
         env:
           DATABASE_URL: postgres://vb:vb@localhost:5432/vb_test

@@ -14,6 +14,7 @@ import './retro.js';
 import './polls.js';
 import './files.js';
 import './reviews.js';
+import './palette.js';
 import './board-tools.js';
 import './card-views.js';
 import './tracker-ui.js';
