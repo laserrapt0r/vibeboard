@@ -54,3 +54,13 @@
 - **Beschreibung:** Zoom und Position werden pro Board im Browser gespeichert und beim nächsten Öffnen wiederhergestellt.
 - **Akzeptanzkriterien:**
   - Beim ersten Öffnen eines Boards werden alle Inhalte eingepasst angezeigt.
+
+### REQ-CANVAS-008 Gliederung und gemerkte Ansichten
+- **Seit:** 4.10.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Auf großen Boards helfen Überschriften und gemerkte Stellen, sich zurechtzufinden.
+- **Akzeptanzkriterien:**
+  - Das Frames-Panel listet Textelemente ab Schriftgröße 28 als Überschriften, von oben nach unten. Ein Klick springt dorthin. Texte, die einem Frame-Titel gleichen, entfallen.
+  - Die aktuelle Ansicht lässt sich unter einem Namen merken, bis zu 30 je Board; gleicher Name ersetzt sie an ihrem Platz. Ein Klick oder Alt+1 bis Alt+9 springt zurück, in einer Präsentation wirkt Alt+Ziffer nicht. Gemerkte Ansichten lassen sich entfernen.
+  - Unter Linux belegen Browser Alt+Ziffer mit dem Tabwechsel; ohne gemerkte Ansicht auf dieser Ziffer bleibt es dabei.
+  - Gemerkte Ansichten liegen nur im eigenen Browser und werden nicht geteilt.
+  - Überschriften und gemerkte Ansichten sind auch über die Befehlspalette erreichbar.

@@ -115,6 +115,7 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
 - Travailler vite : Tab en tapant ajoute la note ou forme suivante à côté, un double-clic garde un outil actif et le menu des formes montre celles récemment utilisées. Dans les modèles, les libellés se modifient directement et les fonds restent verrouillés ; les modèles de rétro et de brainstorming proposent leur déroulé ou minuteur. Glisser une carte dans une colonne Kanban définit son statut, et un cadre peut être supprimé avec son contenu.
 - Palette de commandes (Ctrl+K) pour les commandes, réglages, cadres, modèles et contenus du tableau ; reproduction du format (pinceau dans la barre contextuelle, Ctrl+Alt+C/V).
 - Formules dans les tableaux : `=SOMME(B2:B5)`, `=B2*C2` et plus ; un clic sur une cellule insère sa référence, Σ calcule sur les cellules sélectionnées.
+- Orientation : un tableau vide propose comment démarrer, le panneau des cadres affiche titres et vues enregistrées (Alt+1–9), et le filtre couvre aussi le statut des cartes. Les grands tableaux ne dessinent que ce qui est proche de la vue.
 - Grouper, verrouiller, calques (premier plan et arrière-plan), dupliquer (aussi par glissement avec Alt) ; un deuxième
   clic dans un groupe sélectionne un seul élément pour le modifier
 - Copier et coller, y compris entre tableaux

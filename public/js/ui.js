@@ -23,7 +23,7 @@ import {
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
   tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment, togglePin, deleteFramesWithContent, holdTool,
   canCopyFormat, copyFormat, pasteFormat, hasCopiedFormat, startBrush, stopBrush, tableAggregate,
-  setBusy, clearBusy,
+  setBusy, clearBusy, stageRect,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
 
@@ -536,7 +536,7 @@ function positionCtx() {
     return;
   }
   ctxbar.style.visibility = '';
-  const sr = stage.getBoundingClientRect();
+  const sr = stageRect();
   const p1 = toScreen(b.x, b.y), p2 = toScreen(b.x + b.w, b.y + b.h);
   const cw = ctxbar.offsetWidth, ch = ctxbar.offsetHeight;
   let x = sr.left + (p1.x + p2.x) / 2 - cw / 2;
@@ -876,7 +876,7 @@ function positionComment() {
   if (!commentPop) return;
   const el = getEl(commentPop.id);
   if (!el) return closeComment();
-  const sr = stage.getBoundingClientRect();
+  const sr = stageRect();
   const p = toScreen(el.x, el.y);
   const box = commentPop.box;
   let x = sr.left + p.x + 44, y = sr.top + p.y - 40;
@@ -970,6 +970,7 @@ export function renderSidePanel() {
         iconBtn('chevDown', T('Nach unten'), (e) => { e.stopPropagation(); moveFrame(list, i, 1); }, { disabled: i === list.length - 1 }))));
     });
     side.append(ul);
+    app.emit('framesPanel', side);
   } else if (sidePanel === 'comments') {
     const all = [...app.els.values()].filter((e) => e.type === 'comment' && (e.thread || []).length);
     const open = all.filter((e) => !e.resolved);
@@ -1202,6 +1203,7 @@ function openExportMenu(anchor) {
 function openShare() {
   openShareDialog(app.boardId, { me: app.me });
 }
+app.on('openShare', () => openShareDialog(app.boardId, { me: app.me }));
 
 // Profil wurde gespeichert: Anzeige und Echtzeit-Identität aktualisieren
 function profileSaved(user) {
@@ -1257,7 +1259,7 @@ function openSettings(anchor) {
 export function openShortcuts() {
   const groups = [
     [T('Werkzeuge'), [['V', T('Auswählen')], [T('H / Leertaste'), T('Verschieben')], ['N', T('Sticky Note')], ['T', T('Text')], ['S', T('Form')], ['R / O', T('Rechteck / Ellipse')], ['L', T('Verbindungslinie')], ['P', T('Stift')], ['E', T('Radierer')], ['F', T('Frame')], ['K', T('Karte')], ['M', T('Mindmap')], ['C', T('Kommentar')], ['X', T('Laserpointer')]]],
-    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
+    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], ['Alt+1 … 9', T('Gemerkte Ansichten')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
     [T('Tabellen'), [[T('Klick in ausgewählte Tabelle'), T('Zelle wählen')], [T('Umschalt + Klick / Pfeil'), T('Bereich wählen')], [T('Pfeiltasten'), T('Zellauswahl bewegen')], [T('Enter / F2'), T('Zelle bearbeiten')], [T('Tippen'), T('Zelle überschreiben')], [T('Entf'), T('Inhalt leeren')], ['Tab', T('Nächste Zelle (beim Bearbeiten)')], [T('Linie ziehen'), T('Spaltenbreite / Zeilenhöhe')]]],
     [T('Verbinder'), [[T('Linie ziehen'), T('Biegen (Knickpunkt)')], [T('◦ auf der Linie ziehen'), T('Knickpunkt einfügen')], [T('Doppelklick auf ▪'), T('Knickpunkt entfernen')], [T('Beschriftung ziehen'), T('Entlang der Linie verschieben')], [T('Ende an Rand ziehen'), T('Fester Andockpunkt')], [T('Ende in Formmitte'), T('Automatisch andocken')]]],
     [T('Mindmap'), [['Tab', T('Unterknoten hinzufügen')], [T('Enter (beim Tippen)'), T('Geschwisterknoten')], [T('Umschalt+Enter'), T('Geschwisterknoten')]]],
@@ -1421,11 +1423,15 @@ stage.addEventListener('contextmenu', (e) => {
 const mini = $('#minimap canvas');
 const mctx = mini.getContext('2d');
 let miniState = null;
+let miniSize = null;
+new ResizeObserver(() => (miniSize = null)).observe(mini);
 
 const drawMinimap = throttle(() => {
   if ($('#minimap').classList.contains('hidden')) return;
-  const W = mini.width = mini.clientWidth * devicePixelRatio;
-  const H = mini.height = mini.clientHeight * devicePixelRatio;
+  // Größe nur nach Änderungen abfragen: clientWidth erzwingt sonst bei jedem Zeichnen ein neues Layout
+  miniSize = miniSize || { w: mini.clientWidth, h: mini.clientHeight };
+  const W = mini.width = miniSize.w * devicePixelRatio;
+  const H = mini.height = miniSize.h * devicePixelRatio;
   const vr = visibleRect();
   const all = unionRect([...[...app.els.values()].map(bounds), vr]);
   const pad = Math.max(all.w, all.h) * 0.05;
@@ -1469,7 +1475,7 @@ function miniNavigate(e) {
   const r = mini.getBoundingClientRect();
   const px = (e.clientX - r.left) * devicePixelRatio, py = (e.clientY - r.top) * devicePixelRatio;
   const wx = (px - miniState.ox) / miniState.s, wy = (py - miniState.oy) / miniState.s;
-  const sr = stage.getBoundingClientRect();
+  const sr = stageRect();
   app.view.x = sr.width / 2 - wx * app.view.z;
   app.view.y = sr.height / 2 - wy * app.view.z;
   applyView();
@@ -1509,7 +1515,7 @@ function buildZoom() {
     }),
   );
   pct.onclick = () => menu(pct, [25, 50, 100, 150, 200, 400].map((p) => ({ label: p + ' %', onClick: () => {
-    const r = stage.getBoundingClientRect();
+    const r = stageRect();
     zoomAt(r.left + r.width / 2, r.top + r.height / 2, p / 100);
   } })).concat(['-', { label: T('Alles anzeigen'), onClick: () => fitAll() }]), { placement: 'top' });
   app.on('view', () => (pct.textContent = Math.round(app.view.z * 100) + ' %'));

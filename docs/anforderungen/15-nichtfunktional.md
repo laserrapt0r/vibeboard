@@ -65,3 +65,11 @@
   - Meldungen und Änderungen der Auswahl werden Bildschirmlesern angesagt; `lang` folgt der Sprache der Oberfläche.
   - Die Elementliste bietet den Boardinhalt als Text; ein gewähltes Element lässt sich per Tastatur verschieben, bearbeiten und löschen.
   - Bekannte Grenze: Freies Zeichnen und das Anordnen auf der Zeichenfläche bleiben visuell. Ein Test mit echten Bildschirmlesern steht noch aus.
+
+### REQ-NFR-010 Große Boards
+- **Seit:** 4.10.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Auch Boards mit Tausenden Elementen lassen sich flüssig bedienen.
+- **Akzeptanzkriterien:**
+  - Ab 300 Elementen zeichnet der Browser nur, was in der Ansicht oder innerhalb einer Bildschirmgröße darum liegt. Exporte, Minimap, Suche und Abgleich arbeiten weiter mit allen Elementen.
+  - Die Lage der Zeichenfläche wird zwischengespeichert: Abfragen beim Browser erzwingen ein neues Layout und dürfen nicht je Bild anfallen.
+  - Herausgezoomt, wenn alles sichtbar ist, bleibt der Aufwand proportional zur Elementzahl.

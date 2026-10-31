@@ -113,6 +113,7 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
 - Trabajo rápido: Tab al escribir añade la siguiente nota o forma al lado, un doble clic mantiene activa una herramienta y el menú de formas muestra las usadas recientemente. En las plantillas, las etiquetas se editan directamente y los fondos siguen bloqueados; las plantillas de retro y brainstorming ofrecen su flujo o temporizador. Arrastrar una tarjeta a una columna Kanban fija su estado, y un marco se puede eliminar con su contenido.
 - Paleta de comandos (Ctrl+K) para comandos, ajustes, marcos, plantillas y contenido del tablero; copiar formato (pincel en la barra contextual, Ctrl+Alt+C/V).
 - Fórmulas en tablas: `=SUMA(B2:B5)`, `=B2*C2` y más; un clic en una celda inserta su referencia, y Σ calcula sobre las celdas seleccionadas.
+- Orientación: un tablero vacío sugiere cómo empezar, el panel de marcos muestra títulos y vistas guardadas (Alt+1–9) y el filtro incluye el estado de las tarjetas. Los tableros grandes solo dibujan lo que está cerca de la vista.
 - Agrupar notas adhesivas por color
 - Agrupar, bloquear, capas (primer plano y fondo), duplicar (también arrastrando con Alt); un segundo clic en un grupo
   selecciona un solo elemento para editarlo

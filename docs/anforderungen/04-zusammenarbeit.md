@@ -156,6 +156,7 @@
   - Sticky Notes, Karten und Formen erhalten bis zu acht Schlagwörter (Kontextleiste, Etikett-Symbol; Vorschläge aus dem Board). Auf Sticky Notes erscheinen sie oben links.
   - Der Filter (Trichter-Symbol) blendet nicht passende Elemente ab – nur in der eigenen Ansicht: nach Schlagwort, Farbe, Person (nicht bei anonymen Beiträgen), „nur mit Reaktionen“, „nur Maßnahmen“. Innerhalb einer Gruppe genügt ein Treffer, zwischen Gruppen müssen alle passen.
   - Ein Hinweis zeigt, wie viele Elemente passen, und hebt den Filter mit einem Klick auf.
+  - Geändert in 4.10.0: Der Filter kennt auch den Status von Karten.
 
 ### REQ-COLLAB-017 Chat-Anbindung per Webhook
 - **Seit:** 4.1.0 · **Priorität:** Kann · **Status:** umgesetzt

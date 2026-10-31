@@ -5,7 +5,7 @@ import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util
 import {
   app, $, stage, getEl, isAnonymous, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
   loadElements, applyRemoteOp, applyRemoteTableOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
-  BUSY_TTL, resendBusy,
+  BUSY_TTL, resendBusy, stageRect,
 } from './core.js';
 import { throttle } from './util.js';
 import { menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
@@ -136,7 +136,7 @@ const sendChat = throttle((text) => app.sync.signal('chat', { text }), 120);
 function openCursorChat() {
   if (chatBox) return;
   const p = toScreen(lastPointer().x, lastPointer().y);
-  const sr = stage.getBoundingClientRect();
+  const sr = stageRect();
   const input = h('input', { type: 'text', maxlength: 120, placeholder: T('Nachricht an alle …'), 'aria-label': T('Cursor-Chat') });
   chatBox = h('div', { class: 'cursor-chat-input', style: { left: Math.min(innerWidth - 260, sr.left + p.x + 18) + 'px', top: Math.min(innerHeight - 60, sr.top + p.y + 22) + 'px', background: app.user.color } }, input);
   document.body.append(chatBox);

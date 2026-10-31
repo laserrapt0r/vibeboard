@@ -37,10 +37,9 @@ jobs:
           node-version: 22
       # Ohne Installationsskripte: Sie sind der übliche Weg von Schadcode aus manipulierten Paketen
       - run: npm ci --ignore-scripts
-      # Bis zu drei Versuche: Die Registry liefert ihre öffentlichen Schlüssel nicht immer vollständig (EMISSINGSIGNATUREKEY).
-      # Eine ungültige Signatur scheitert bei jedem Versuch.
+      # Wiederholt ohne Cache: Siehe Kommentar im Skript. Eine ungültige Signatur scheitert bei jedem Versuch.
       - name: Herkunft der Pakete prüfen
-        run: npm audit signatures || { sleep 20; npm audit signatures; } || { sleep 40; npm audit signatures; }
+        run: sh scripts/verify-packages.sh
       - name: Syntax prüfen
         run: find server.js lib scripts -name '*.js' -print0 | xargs -0 -n1 node --check
       - run: npm run check:i18n

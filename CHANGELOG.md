@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.10.0] – 2026-10-31
+
+### Hinzugefügt
+- **Einstieg** (REQ-EDIT-015): Ein leeres Board bietet Notiz, Vorlage und Einladen an. Beim ersten Benutzen erklären kurze Hinweise Tab bei Notizen und Formeln in Tabellen.
+- **Orientierung** (REQ-CANVAS-008): Das Frames-Panel zeigt Überschriften als Gliederung und gemerkte Ansichten, erreichbar über Alt+1 bis Alt+9 und die Befehlspalette.
+- Der Filter kennt den Status von Karten (REQ-COLLAB-016).
+
+### Geändert
+- Große Boards laufen ruhiger (REQ-NFR-010): Ab 300 Elementen zeichnet der Browser nur noch, was in der Nähe der Ansicht liegt.
+
+### Behoben
+- CI: Die Paketprüfung wiederholt jetzt ohne npm-Cache und protokolliert beim Scheitern, was die Registry geliefert hat. Eine zwischengespeicherte Antwort ist die vermutete Ursache des zeitweiligen Fehlers EMISSINGSIGNATUREKEY; bestätigt ist das nicht.
+
 ## [4.9.0] – 2026-10-31
 
 ### Hinzugefügt

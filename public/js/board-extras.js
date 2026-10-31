@@ -79,13 +79,15 @@ function tagEditor(anchor, sel) {
 /* Filter: nicht passende Elemente abblenden (nur in der eigenen Ansicht) */
 /* ================================================================== */
 
-const filter = { tags: new Set(), colors: new Set(), authors: new Set(), reactions: false, actions: false };
-const active = () => filter.tags.size || filter.colors.size || filter.authors.size || filter.reactions || filter.actions;
+const filter = { tags: new Set(), colors: new Set(), authors: new Set(), statuses: new Set(), reactions: false, actions: false };
+const statusOf = (el) => String(el.status || '').trim();
+const active = () => filter.tags.size || filter.colors.size || filter.authors.size || filter.statuses.size || filter.reactions || filter.actions;
 
 function matches(el) {
   if (filter.tags.size && !cardTags(el).some((t) => filter.tags.has(t.toLowerCase()))) return false;
   if (filter.colors.size && !filter.colors.has(String(el.fill || el.color || '').toLowerCase())) return false;
   if (filter.authors.size && !(el.author && !el.anon && filter.authors.has(el.author))) return false;
+  if (filter.statuses.size && !(el.type === 'card' && filter.statuses.has(statusOf(el)))) return false;
   if (filter.reactions && !(el.reactions && Object.keys(el.reactions).length)) return false;
   if (filter.actions && !(el.type === 'card' && el.action)) return false;
   return true;
@@ -116,6 +118,7 @@ function reset() {
   filter.tags.clear();
   filter.colors.clear();
   filter.authors.clear();
+  filter.statuses.clear();
   filter.reactions = false;
   filter.actions = false;
   applyFilter();
@@ -146,6 +149,11 @@ app.on('renderPanel', (kind, side, close) => {
     side.append(h('div', { class: 'filter-group' }, h('div', { class: 'label' }, T('Erstellt von')),
       h('div', { class: 'tag-chips' }, authors.map((a) => h('button', { class: 'tag-chip' + (filter.authors.has(a) ? ' active' : ''), onclick: () => toggle(filter.authors, a) }, a)))));
   }
+  const statuses = [...new Set([...app.els.values()].filter((e) => e.type === 'card' && !e.hidden).map(statusOf).filter(Boolean))].sort();
+  if (statuses.length) {
+    side.append(h('div', { class: 'filter-group' }, h('div', { class: 'label' }, T('Status (Karten)')),
+      h('div', { class: 'tag-chips' }, statuses.map((s) => h('button', { class: 'tag-chip' + (filter.statuses.has(s) ? ' active' : ''), onclick: () => toggle(filter.statuses, s) }, s)))));
+  }
   side.append(h('div', { class: 'filter-group' }, h('div', { class: 'label' }, T('Weitere')),
     h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: filter.reactions, onchange: (e) => { filter.reactions = e.target.checked; applyFilter(); renderSidePanel(); } }), T('Nur mit Reaktionen')),
     h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: filter.actions, onchange: (e) => { filter.actions = e.target.checked; applyFilter(); renderSidePanel(); } }), T('Nur Maßnahmen'))));
@@ -155,7 +163,7 @@ app.on('renderPanel', (kind, side, close) => {
 app.on('render', () => app.filter && renderFilterBanner());
 
 app.on('buildCollabTools', (box) => {
-  const b = h('button', { class: 'icon-btn', id: 'btn-filter', title: T('Filter (Schlagwörter, Farbe, Person)'), html: ICONS.filter, 'data-panel': 'filter', onclick: () => toggleSidePanel('filter') });
+  const b = h('button', { class: 'icon-btn', id: 'btn-filter', title: T('Filter (Schlagwörter, Farbe, Person, Status)'), html: ICONS.filter, 'data-panel': 'filter', onclick: () => toggleSidePanel('filter') });
   box.append(b);
 });
 

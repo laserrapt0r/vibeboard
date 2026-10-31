@@ -70,8 +70,20 @@ export const now = () => Date.now() + app.serverOffset;
 /* Ansicht                                                             */
 /* ================================================================== */
 
+// Lage der Zeichenfläche zwischengespeichert: Jede Abfrage beim Browser erzwingt ein neues Layout. Auf großen Boards
+// kostete das beim Verschieben mehr als alles andere zusammen.
+let stageBox = null;
+export function stageRect() {
+  if (!stageBox) stageBox = stage.getBoundingClientRect();
+  return stageBox;
+}
+const forgetStageRect = () => (stageBox = null);
+window.addEventListener('resize', forgetStageRect);
+window.addEventListener('scroll', forgetStageRect, true);
+new ResizeObserver(forgetStageRect).observe(stage);
+
 export function toWorld(cx, cy) {
-  const r = stage.getBoundingClientRect();
+  const r = stageRect();
   return { x: (cx - r.left - app.view.x) / app.view.z, y: (cy - r.top - app.view.y) / app.view.z };
 }
 
@@ -80,7 +92,7 @@ export function toScreen(wx, wy) {
 }
 
 export function visibleRect() {
-  const r = stage.getBoundingClientRect();
+  const r = stageRect();
   return { x: -app.view.x / app.view.z, y: -app.view.y / app.view.z, w: r.width / app.view.z, h: r.height / app.view.z };
 }
 
@@ -107,7 +119,7 @@ export function applyView(fromRemote = false) {
 }
 
 export function zoomAt(cx, cy, z) {
-  const r = stage.getBoundingClientRect();
+  const r = stageRect();
   z = clamp(z, 0.01, 8);
   const px = cx - r.left, py = cy - r.top;
   const wx = (px - app.view.x) / app.view.z, wy = (py - app.view.y) / app.view.z;
@@ -118,7 +130,7 @@ export function zoomAt(cx, cy, z) {
 }
 
 export function zoomBy(f) {
-  const r = stage.getBoundingClientRect();
+  const r = stageRect();
   zoomAt(r.left + r.width / 2, r.top + r.height / 2, app.view.z * f);
 }
 
@@ -132,7 +144,7 @@ export function animateView(target, ms = 280) {
     const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
     // Zoom logarithmisch interpolieren, damit es gleichmäßig wirkt
     const z = from.z * (target.z / from.z) ** e;
-    const r = stage.getBoundingClientRect();
+    const r = stageRect();
     const cxFrom = (r.width / 2 - from.x) / from.z, cyFrom = (r.height / 2 - from.y) / from.z;
     const cxTo = (r.width / 2 - target.x) / target.z, cyTo = (r.height / 2 - target.y) / target.z;
     const cx = cxFrom + (cxTo - cxFrom) * e, cy = cyFrom + (cyTo - cyFrom) * e;
@@ -144,7 +156,7 @@ export function animateView(target, ms = 280) {
 }
 
 export function viewFor(rect, pad = 80, maxZ = 2) {
-  const r = stage.getBoundingClientRect();
+  const r = stageRect();
   // Auf kleinen Bildschirmen darf der Rand nicht den ganzen Platz einnehmen
   pad = Math.min(pad, r.width * 0.12, r.height * 0.12);
   const z = clamp(Math.min((r.width - pad * 2) / Math.max(rect.w, 1), (r.height - pad * 2) / Math.max(rect.h, 1)), 0.01, maxZ);
@@ -165,7 +177,7 @@ export function fitAll(animate = true) {
   const b = unionRect([...app.els.values()].filter((e) => !isOrphan(e, getEl)).map(bounds));
   if (b) fitTo(b, { animate, maxZ: 1 });
   else {
-    const r = stage.getBoundingClientRect();
+    const r = stageRect();
     app.view = { x: r.width / 2, y: r.height / 2, z: 1 };
     applyView();
   }
@@ -231,12 +243,45 @@ function flushRender() {
     dirty.clear();
     overlayDirty = true;
   }
+  updateCulling();
   if (orderDirty) reorder();
   if (overlayDirty) {
     overlayDirty = false;
     renderOverlay();
   }
   app.emit('render');
+}
+
+// Große Boards: Was weit außerhalb der Ansicht liegt, zeichnet der Browser nicht mit. Die Knoten bleiben erhalten; Exporte und
+// Minimap arbeiten ohnehin mit den Daten. Der Puffer von einer Bildschirmbreite hält das Verschieben ruhig, neu berechnet wird
+// erst, wenn die Ansicht seinem Rand nahekommt oder sich der Zoom deutlich ändert.
+const CULL_FROM = 300;
+let cullBox = null, cullZoom = 1;
+
+const inCullBox = (el) => {
+  const b = bounds(el);
+  return rectsIntersect(b, cullBox);
+};
+
+function updateCulling() {
+  if (app.els.size < CULL_FROM) {
+    if (cullBox) {
+      cullBox = null;
+      for (const g of nodes.values()) g.style.display = '';
+    }
+    return;
+  }
+  const v = visibleRect();
+  // Etwas Abstand zum Rand: Elemente ragen über ihre Maße hinaus (Reaktionen, Kommentar-Pins)
+  const near = { x: v.x - v.w / 4, y: v.y - v.h / 4, w: v.w * 1.5, h: v.h * 1.5 };
+  const keep = cullBox && app.view.z > cullZoom * 0.7 && app.view.z < cullZoom * 1.4 && rectContains(cullBox, near);
+  if (keep) return;
+  cullBox = { x: v.x - v.w, y: v.y - v.h, w: v.w * 3, h: v.h * 3 };
+  cullZoom = app.view.z;
+  for (const [id, g] of nodes) {
+    const el = app.els.get(id);
+    if (el) g.style.display = inCullBox(el) ? '' : 'none';
+  }
 }
 
 function renderNode(id, env) {
@@ -265,6 +310,7 @@ function renderNode(id, env) {
   if (app.discussFocus && app.discussFocus === id) cls += T(' discuss-current');
   if (app.editing && app.editing.id === id && !app.editing.cell) cls += T(' editing');
   g.setAttribute('class', cls);
+  if (cullBox) g.style.display = inCullBox(el) ? '' : 'none';
   try {
     g.innerHTML = renderElement(el, env);
   } catch (e) {
@@ -981,6 +1027,13 @@ function renderOverlay() {
 /* Textbearbeitung                                                     */
 /* ================================================================== */
 
+// Kleine Hinweise erscheinen beim ersten Benutzen und danach nie wieder
+function hintOnce(key, text) {
+  if (loadPref(key, false)) return;
+  savePref(key, true);
+  toast(text, 6000);
+}
+
 export function canEdit(el) {
   return el && (!isLocked(el) || textOpen(el)) && !el.hidden && ['sticky', 'shape', 'text', 'frame', 'connector', 'table', 'code'].includes(el.type);
 }
@@ -1005,10 +1058,9 @@ export function startEdit(id, opts = {}) {
   begin();
   app.editing = { id, field, cell, isNew: !!opts.isNew, drop: !!opts.drop };
   if (cell) scheduleRender(true);
-  if (el.mind && !loadPref('mindHint', false)) {
-    savePref('mindHint', true);
-    toast(T('Mindmap: Enter legt den nächsten Knoten an, Tab einen Unterknoten, Esc beendet.'), 6000);
-  }
+  if (el.mind) hintOnce('mindHint', T('Mindmap: Enter legt den nächsten Knoten an, Tab einen Unterknoten, Esc beendet.'));
+  else if (el.type === 'sticky') hintOnce('stickyHint', T('Tipp: Tab legt die nächste Notiz daneben an, Esc beendet die Eingabe.'));
+  else if (cell) hintOnce('tableHint', T('Tipp: Eine Zelle mit = rechnet, zum Beispiel =SUMME(B2:B5).'));
   setSelection([id]);
   const val = cell ? el.cells?.[cell[0]]?.[cell[1]] ?? '' : el[field] ?? '';
   editor.value = val;
@@ -3128,7 +3180,7 @@ window.addEventListener('keydown', (e) => {
   if (mod && key === '0') {
     e.preventDefault();
     const c = viewCenter();
-    const r = stage.getBoundingClientRect();
+    const r = stageRect();
     animateView({ z: 1, x: r.width / 2 - c.x, y: r.height / 2 - c.y });
     return;
   }

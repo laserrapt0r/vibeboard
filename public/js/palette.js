@@ -8,6 +8,7 @@ import {
 } from './core.js';
 import { TEMPLATES } from './templates.js';
 import { insertTemplate, elementText, openShortcuts } from './ui.js';
+import { savedViews, goToView, saveCurrentView, headings, goToHeading } from './guide.js';
 
 const SOURCES = [['#tools', () => T('Werkzeug')], ['#topbar', () => T('Board')], ['#topright', () => T('Board')], ['#bottom-left', () => T('Board')], ['#zoomctl', () => T('Ansicht')], ['#ctxbar', () => T('Auswahl')]];
 const MAX_SHOWN = 40;
@@ -88,8 +89,11 @@ function boardTexts() {
 
 function fromBoard(q, texts) {
   const out = frames().filter((f) => !f.hidden).map((f) => ({ id: 'f:' + f.id, label: f.title || T('Frame'), group: T('Frame'), run: () => jump(f.id) }));
-  // Inhalte und Vorlagen nur bei einer Suche: Sonst überdecken sie die Befehle
+  out.push({ id: 'view:new', label: T('Aktuelle Ansicht merken'), group: T('Ansicht'), run: saveCurrentView });
+  savedViews().forEach((v, i) => out.push({ id: 'view:' + v.name, label: v.name, group: T('Gemerkte Ansicht'), hint: i < 9 ? `Alt+${i + 1}` : '', run: () => goToView(v) }));
+  // Überschriften, Inhalte und Vorlagen nur bei einer Suche: Sonst überdecken sie die Befehle
   if (q.length >= 2) {
+    for (const el of headings()) out.push({ id: 'h:' + el.id, label: el.text, group: T('Überschrift'), run: () => goToHeading(el) });
     if (!app.viewOnly) for (const t of TEMPLATES) if (t.id !== 'blank') out.push({ id: 't:' + t.id, label: t.name, group: T('Vorlage'), run: () => insertTemplate(t) });
     out.push(...texts());
   }

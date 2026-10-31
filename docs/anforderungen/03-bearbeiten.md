@@ -116,6 +116,7 @@
 - **Akzeptanzkriterien:**
   - Gefunden werden die sichtbaren Werkzeuge und Schaltflächen, Aktionen für die Auswahl, Einstellungen, Frames und, ab zwei Zeichen, Vorlagen und Inhalte auf dem Board. Was jemand nicht darf oder was gerade deaktiviert ist, erscheint nicht, auch keine Aktionen für eine vollständig gesperrte Auswahl.
   - Neue Schaltflächen erscheinen ohne Zutun, da die Palette sie zur Laufzeit einsammelt.
+  - Geändert in 4.10.0: Gemerkte Ansichten und „Aktuelle Ansicht merken“ erscheinen immer, Überschriften ab zwei Zeichen.
   - Zuletzt verwendete Befehle stehen oben. Die Suche ignoriert Groß- und Kleinschreibung und Akzente; alle Wörter müssen vorkommen.
   - Strg+K wirkt auch während der Eingabe auf dem Board. In Eingabefeldern von Dialogen und im Namen des Boards bleibt die Taste dem Browser überlassen.
   - Vollständig per Tastatur und mit Bildschirmleser bedienbar: Pfeiltasten wählen, Enter führt aus, Esc schließt. Der Fokus kehrt danach zurück.
@@ -127,3 +128,10 @@
   - Über die Tastatur: Strg+Alt+C kopiert das Format, Strg+Alt+V wendet es auf die Auswahl an. Beides steht auch im Menü „Mehr“.
   - Übertragen wird nach Bedeutung, auch zwischen Elementarten: Fläche (bei Karten die Farbe), Linie, Textfarbe, Schrift und Ausrichtung, bei Verbindern auch Linienverlauf und Enden. Text, Größe und Lage bleiben. Tabellen übertragen ihr Gesamtformat, nicht das einzelner Zellen.
   - Hat das Ausgangselement keine eigene Farbe, behält das Ziel seine. Gesperrte und fixierte Elemente bleiben unverändert. Das Übertragen lässt sich rückgängig machen.
+
+### REQ-EDIT-015 Einstieg
+- **Seit:** 4.10.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Neue Personen sehen auf einem leeren Board, womit sie anfangen können.
+- **Akzeptanzkriterien:**
+  - Ein leeres Board bietet Personen mit Bearbeitungsrecht an: Notiz schreiben, Vorlage wählen und für Besitzer Personen einladen. Das Angebot lässt sich schließen und verschwindet mit dem ersten Element, auch wenn es jemand anderes anlegt, sowie solange ein Werkzeug gewählt ist. Beim Hereinziehen einer Datei schließt es sich, damit sie auf der Zeichenfläche landet.
+  - Beim ersten Bearbeiten einer Notiz, einer Tabellenzelle und eines Mindmap-Knotens erscheint je einmal ein kurzer Hinweis. Betrachter sehen nichts davon.
