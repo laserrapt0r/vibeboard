@@ -11,6 +11,11 @@ const PAGE_GAP = 200;
 
 function parseStyle(s) {
   const out = {};
+  // Eingebettete Bilder enthalten selbst ein „;“, das sonst den Stil zerteilt
+  s = String(s || '').replace(/image=data:image\/(png|jpe?g|gif|webp)(?:;base64)?,([A-Za-z0-9+/=]+)/, (m, type, data) => {
+    out.imageData = `data:image/${type};base64,${data}`;
+    return '';
+  });
   for (const part of String(s || '').split(';')) {
     if (!part) continue;
     const i = part.indexOf('=');
@@ -59,9 +64,7 @@ function vertex(st, value, g) {
   const fs = Number(st.fontSize) || 14;
   if (st.text) return { ...base, type: 'text', text, fontSize: fs, textColor: color(st.fontColor), align: st.align || 'left' };
   if (st.swimlane) return { ...base, type: 'frame', title: text };
-  if (st.shape === 'image' || st.image) {
-    if (/^data:image\/(png|jpe?g|gif|webp);base64,/.test(st.image || '')) return { ...base, type: 'image', src: st.image };
-  }
+  if (st.imageData) return { ...base, type: 'image', src: st.imageData };
   const key = st.shape || Object.keys(st).find((k) => SHAPES[k]);
   const shape = SHAPES[key] || (st.rounded === '1' ? 'roundrect' : 'rect');
   return {
@@ -71,9 +74,14 @@ function vertex(st, value, g) {
   };
 }
 
+// Mit Zusatzdaten steckt die Zelle in <object> oder <UserObject>: Kennung und Beschriftung stehen dann dort
+const wrapper = (c) => (['object', 'UserObject'].includes(c.parentNode.nodeName) ? c.parentNode : null);
+const cellId = (c) => c.getAttribute('id') || wrapper(c)?.getAttribute('id');
+const cellValue = (c) => c.getAttribute('value') ?? wrapper(c)?.getAttribute('label') ?? '';
+
 async function readPage(model, offsetX) {
   const cells = [...model.querySelectorAll('mxCell')];
-  const info = new Map(cells.map((c) => [c.getAttribute('id'), c]));
+  const info = new Map(cells.map((c) => [cellId(c), c]));
   const out = [];
   const ids = new Map();
   // Kinder geben ihre Position relativ zum Eltern-Element an
@@ -89,13 +97,14 @@ async function readPage(model, offsetX) {
   for (const c of vertices) {
     const st = parseStyle(c.getAttribute('style'));
     if (st.edgeLabel) {
-      labels.set(c.getAttribute('parent'), plain(c.getAttribute('value')));
+      labels.set(c.getAttribute('parent'), plain(cellValue(c)));
       continue;
     }
-    const pos = origin(c.getAttribute('id'));
-    const el = vertex(st, c.getAttribute('value'), { ...geometry(c), x: pos.x + offsetX, y: pos.y });
+    if (st.group) continue; // Gruppen sind nur Klammern um ihre Kinder
+    const pos = origin(cellId(c));
+    const el = vertex(st, cellValue(c), { ...geometry(c), x: pos.x + offsetX, y: pos.y });
     el.id = uid();
-    ids.set(c.getAttribute('id'), el.id);
+    ids.set(cellId(c), el.id);
     out.push(el);
   }
   for (const c of cells.filter((x) => x.getAttribute('edge') === '1')) {
@@ -108,12 +117,12 @@ async function readPage(model, offsetX) {
     };
     out.push({
       id: uid(), type: 'connector', from: end('source', g.source), to: end('target', g.target),
-      routing: st.edgeStyle ? (st.curved === '1' ? 'curved' : 'elbow') : 'straight',
+      routing: st.edgeStyle ? (st.curved === '1' ? 'curve' : 'elbow') : 'straight',
       waypoints: g.points.map((p) => ({ x: p.x + offsetX, y: p.y })),
       stroke: color(st.strokeColor) || '#1a1a1a', strokeWidth: Number(st.strokeWidth) || 2,
       arrowEnd: st.endArrow === 'none' ? false : true, arrowStart: st.startArrow && st.startArrow !== 'none' ? true : undefined,
       dash: st.dashed === '1' ? 'dashed' : undefined,
-      label: plain(c.getAttribute('value')) || labels.get(c.getAttribute('id')) || undefined,
+      label: plain(cellValue(c)) || labels.get(cellId(c)) || undefined,
     });
   }
   return out;

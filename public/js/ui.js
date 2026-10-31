@@ -4,7 +4,7 @@ import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
   initials, relTime, rectsIntersect, throttle, uid, api,
 } from './util.js';
-import { SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
+import { sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery, markTemplateUsed } from './gallery.js';
 import { popover, closePop, menu } from './menu.js';
@@ -578,6 +578,7 @@ app.on('editCard', (id) => {
   });
   const form = h('form', { class: 'form', onsubmit: (e) => {
     e.preventDefault();
+    if (start.value && due.value && start.value > due.value) return toast(T('Der Beginn muss vor der Fälligkeit liegen.'));
     act(() => updateEl(id, {
       title: title.value, description: desc.value, assignee: assignee.value.trim(), assigneeId: assigneeId || undefined, due: due.value, start: start.value || undefined, status: status.value.trim(), color,
       key: key.value.trim() || undefined, priority: prio.value || undefined, points: points.value.trim() || undefined,
@@ -1074,11 +1075,14 @@ async function exportPptx() {
   toast(T('PowerPoint-Datei wird erstellt …'));
   try {
     const { buildPptx } = await import('./pptx-export.js');
-    const all = [...app.els.values()].filter((e) => !e.hidden && e.type !== 'comment');
-    const list = frames();
+    // Die Datei verlässt die Anwendung: Privates und verborgene Bereiche bleiben außen vor
+    const hidden = globalThis.ConcealOps ? globalThis.ConcealOps.concealedIds([...app.els.values()]) : new Set();
+    const usable = (e) => !e.hidden && !e.priv && !hidden.has(e.id) && e.type !== 'comment';
+    const all = [...app.els.values()].filter(usable);
+    const list = frames().filter(usable);
     const withLines = (els) => {
       const ids = new Set(els.map((e) => e.id));
-      return sortForRender([...els.filter((e) => e.type !== 'comment' && !e.hidden), ...all.filter((e) => e.type === 'connector' && e.from.id && e.to.id && ids.has(e.from.id) && ids.has(e.to.id) && !ids.has(e.id))]);
+      return sortForRender([...els.filter(usable), ...all.filter((e) => e.type === 'connector' && e.from.id && e.to.id && ids.has(e.from.id) && ids.has(e.to.id) && !ids.has(e.id))]);
     };
     const slides = list.length
       ? list.map((f) => ({ bounds: { x: f.x, y: f.y, w: f.w, h: f.h }, elements: withLines(frameChildren(f)) }))
@@ -1243,6 +1247,7 @@ function openElementList() {
     m.close();
     setSelection([el.id]);
     fitTo(bounds(el), { maxZ: 1.5, pad: 200 });
+    stage.focus({ preventScroll: true }); // Pfeiltasten und Eingabe wirken jetzt auf das Element
   } }, describeEl(el)))));
   const m = modal(T('Elementliste'), h('div', { class: 'form' },
     h('p', { class: 'muted' }, els.length ? T('Wähle ein Element aus. Danach verschieben es die Pfeiltasten, Eingabe bearbeitet den Text, Entf löscht es.') : T('Dieses Board ist noch leer.')), list));

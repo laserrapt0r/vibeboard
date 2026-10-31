@@ -165,8 +165,8 @@
 ### REQ-COLLAB-018 Freigaben
 - **Seit:** 4.4.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
-  - Frames und Dateien lassen sich ausgewählten Personen mit Zugriff auf das Board vorlegen, mit Hinweis und Termin. Gäste und verborgene Bereiche sind ausgeschlossen.
-  - Prüfende brauchen nur das Recht zu kommentieren; eine Ablehnung braucht eine Begründung. Der Server prüft, wer entscheiden darf.
+  - Frames und Dateien lassen sich ausgewählten Personen mit Zugriff auf das Board vorlegen, mit Hinweis und Termin. Gäste, private Inhalte und verborgene Bereiche sind ausgeschlossen.
+  - Prüfende brauchen mindestens das Recht zu kommentieren, die Rolle Ansehen reicht nicht; eine Ablehnung braucht eine Begründung. Der Server prüft, wer entscheiden darf.
   - Status: in Prüfung, freigegeben, abgelehnt, geändert nach Freigabe. Eine Freigabe gilt für den geprüften Stand: Ändert sich der Inhalt, verfällt sie. Kommentare und das Verschieben des Frames ändern den Stand nicht.
   - Prüfende und Anfordernde werden benachrichtigt; Status erscheint live am Element und im Panel „Freigaben“; das Protokoll hält die Entscheidungen fest.
   - Wer angefordert hat und der Besitzer können erneut vorlegen oder entfernen.

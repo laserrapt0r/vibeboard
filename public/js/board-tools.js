@@ -3,6 +3,7 @@ import { T } from './i18n.js';
 import { h, toast, modal } from './util.js';
 import { app, getEl, act, updateEl, setEl, deleteEls, addElements, makeElement, bounds, selectedEls, frameChildren, setSelection } from './core.js';
 import { menu } from './menu.js';
+import { buildCtx } from './ui.js';
 import { layered, tree, lanes } from './layout.js';
 
 /* ---------------- Automatisch anordnen ---------------- */
@@ -35,15 +36,13 @@ const edgesOf = (list) => {
   return connectors().filter((c) => ids.has(c.from.id) && ids.has(c.to.id)).map((c) => ({ from: c.from.id, to: c.to.id, id: c.id }));
 };
 
-function apply(positions, edges) {
-  act(() => {
-    for (const [id, p] of positions) {
-      const el = getEl(id);
-      if (el && !el.locked) updateEl(id, { x: Math.round(p.x), y: Math.round(p.y) });
-    }
-    // Von Hand gesetzte Zwischenpunkte passen nach dem Umordnen nicht mehr
-    for (const e of edges) if (getEl(e.id)?.waypoints?.length) updateEl(e.id, { waypoints: undefined });
-  });
+function place(positions, edges) {
+  for (const [id, p] of positions) {
+    const el = getEl(id);
+    if (el && !el.locked) updateEl(id, { x: Math.round(p.x), y: Math.round(p.y) });
+  }
+  // Von Hand gesetzte Zwischenpunkte passen nach dem Umordnen nicht mehr
+  for (const e of edges) if (getEl(e.id)?.waypoints?.length) updateEl(e.id, { waypoints: undefined });
 }
 
 function arrange(list, mode) {
@@ -52,11 +51,12 @@ function arrange(list, mode) {
   if (nodes.length < 2) return toast(T('Für das Anordnen braucht es mindestens zwei Elemente.'));
   let result;
   if (mode === 'tree') {
+    if (!edges.length) return toast(T('Für eine Mindmap müssen die Elemente verbunden sein.'));
     const heads = new Set(edges.map((e) => e.to));
     const root = nodes.find((n) => app.sel.has(n.id) && !heads.has(n.id)) || nodes.find((n) => !heads.has(n.id)) || nodes[0];
     result = tree(nodes, edges, root.id);
   } else result = layered(nodes, edges, mode);
-  apply(result, edges);
+  act(() => place(result, edges));
   setSelection(list.map((e) => e.id));
 }
 
@@ -80,6 +80,7 @@ function editLanes(frame) {
     const titles = text.value.split('\n').map((s) => s.trim()).filter(Boolean).slice(0, 12);
     act(() => updateEl(frame.id, { lanes: titles.length ? titles.map((title) => ({ title })) : undefined }));
     m.close();
+    buildCtx();
   } },
   h('label', {}, T('Bahnen (eine je Zeile, z. B. Rolle oder Abteilung)'), text),
   h('p', { class: 'muted small' }, T('Leer lassen entfernt die Bahnen.')),
@@ -115,19 +116,23 @@ function arrangeLanes(frame) {
     }
     cx += g.colW[c] + g.GAP_LAYER;
   }
-  act(() => updateEl(frame.id, { w: Math.max(frame.w, width), h: laneH * n }));
-  apply(positions, edges);
+  act(() => {
+    updateEl(frame.id, { w: Math.max(frame.w, width), h: laneH * n });
+    place(positions, edges);
+  });
 }
 
 /* ---------------- Diagramme aus Tabellen ---------------- */
 
 function addChart(table, chartKind) {
-  const b = bounds(table);
+  const b = bounds(latest(table));
   const el = { ...makeElement('chart', 0, 0, { sourceId: table.id, chartKind, title: '' }), x: b.x + b.w + 40, y: b.y, w: 520, h: 340 };
   addElements([el]);
 }
 
 const KINDS = () => [['bar', T('Balkendiagramm')], ['line', T('Liniendiagramm')], ['pie', T('Tortendiagramm')]];
+
+const latest = (el) => getEl(el.id) || el;
 
 function chartMenu(anchor, pick, current) {
   menu(anchor, [{ header: T('Diagramm') }, ...KINDS().map(([k, label]) => ({ label, checked: current ? current === k : undefined, onClick: () => pick(k) }))]);
@@ -181,7 +186,7 @@ function cropImage(el) {
   }
   // Zahlenfelder: dieselbe Funktion ohne Maus
   const percent = (k, label) => {
-    const input = h('input', { type: 'number', min: 0, max: 95, step: 1 });
+    const input = h('input', { type: 'number', min: 0, max: 98, step: 1 });
     input.addEventListener('input', () => set(k, k === 'l' || k === 't' ? input.value / 100 : 1 - input.value / 100));
     fields[k] = input;
     return h('label', {}, label, input);
@@ -189,12 +194,17 @@ function cropImage(el) {
   const form = h('form', { class: 'form', onsubmit: (e) => {
     e.preventDefault();
     const next = { x: box.l, y: box.t, w: box.r - box.l, h: box.b - box.t };
-    const fullW = el.w / c.w, fullH = el.h / c.h;
-    act(() => updateEl(el.id, {
+    // Der aktuelle Stand zählt: Während der Dialog offen war, kann das Bild verschoben worden sein
+    const cur = getEl(el.id);
+    if (!cur) return m.close();
+    const had = cur.crop || { x: 0, y: 0, w: 1, h: 1 };
+    const fullW = cur.w / had.w, fullH = cur.h / had.h;
+    act(() => updateEl(cur.id, {
       crop: next.w > 0.995 && next.h > 0.995 ? undefined : next,
-      x: el.x + (next.x - c.x) * fullW, y: el.y + (next.y - c.y) * fullH, w: fullW * next.w, h: fullH * next.h,
+      x: cur.x + (next.x - had.x) * fullW, y: cur.y + (next.y - had.y) * fullH, w: fullW * next.w, h: fullH * next.h,
     }));
     m.close();
+    buildCtx();
   } }, stage,
   h('div', { class: 'form-row' }, percent('l', T('Links (%)')), percent('r', T('Rechts (%)')), percent('t', T('Oben (%)')), percent('b', T('Unten (%)'))),
   h('div', { class: 'form-actions' },
@@ -210,6 +220,7 @@ function cropImage(el) {
 
 /* ---------------- Skizzen zu Formen ---------------- */
 
+const SHARP_TURN = 0.9; // etwa 50 Grad
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
 // Punkte auf die wesentlichen Ecken verringern (Douglas-Peucker)
@@ -231,12 +242,12 @@ function simplify(pts, eps) {
 }
 
 // Ecken eines geschlossenen Umrisses: Punkte auf einer geraden Strecke zählen nicht
-function cornersOf(ring, size) {
-  const list = simplify(ring, size * 0.09).slice(0, -1);
+function cornersOf(line, size, minTurn = 0.45) {
+  const list = simplify(line, size * 0.09).slice(0, -1);
   return list.filter((p, i) => {
     const a = list[(i - 1 + list.length) % list.length], b = list[(i + 1) % list.length];
     const turn = Math.abs(Math.atan2(b[1] - p[1], b[0] - p[0]) - Math.atan2(p[1] - a[1], p[0] - a[0]));
-    return Math.min(turn, Math.PI * 2 - turn) > 0.45;
+    return Math.min(turn, Math.PI * 2 - turn) > minTurn;
   });
 }
 
@@ -258,7 +269,6 @@ export function recognize(points) {
   const rotated = closed.slice(Math.floor(closed.length / 8)).concat(closed.slice(1, Math.floor(closed.length / 8) + 1));
   const s = cornersOf(rotated, size);
   const corners = s.length;
-  if (corners <= 2) return { kind: 'ellipse' };
   if (corners === 3) return { kind: 'triangle' };
   if (corners === 4) {
     const dx = Math.min(...xs), dy = Math.min(...ys);
@@ -266,7 +276,19 @@ export function recognize(points) {
     const mid = s.filter((p) => Math.abs(p[0] - dx - w / 2) < w * 0.22 || Math.abs(p[1] - dy - h2 / 2) < h2 * 0.22).length;
     return { kind: mid >= 3 ? 'diamond' : 'rect' };
   }
-  return { kind: 'ellipse' };
+  return roundShape(pts, ring(xs, ys, w, h2)) ? { kind: 'ellipse' } : null;
+}
+
+const ring = (xs, ys, w, h) => ({ cx: Math.min(...xs) + w / 2, cy: Math.min(...ys) + h / 2, w: w || 1, h: h || 1 });
+
+// Rund heißt: gleichmäßiger Abstand zur Mitte und keine klaren Ecken. Stern, Acht oder Kritzel bleiben Linien.
+function roundShape(pts, c) {
+  const unit = pts.map((p) => [(p[0] - c.cx) / c.w, (p[1] - c.cy) / c.h]);
+  const r = unit.map((p) => Math.hypot(p[0], p[1]));
+  const mean = r.reduce((a, v) => a + v, 0) / r.length;
+  const spread = Math.sqrt(r.reduce((a, v) => a + (v - mean) ** 2, 0) / r.length) / mean;
+  if (spread > 0.12) return false;
+  return cornersOf([...unit, unit[0]], 0.45, SHARP_TURN).length < 3;
 }
 
 function shapeFrom(pens) {
@@ -300,18 +322,18 @@ app.on('ctxItems', (items, sel, { locked, one, actBtn }) => {
     items.push(b);
   }
   if (one?.type === 'frame' && one.kind !== 'topic') {
-    items.push(actBtn('lanes', T('Swimlanes'), () => editLanes(one)));
-    if (one.lanes?.length) items.push(actBtn('sitemap', T('In den Bahnen anordnen'), () => arrangeLanes(one)));
+    items.push(actBtn('lanes', T('Swimlanes'), () => editLanes(latest(one))));
+    if (one.lanes?.length) items.push(actBtn('sitemap', T('In den Bahnen anordnen'), () => arrangeLanes(latest(one))));
   }
   if (one?.type === 'table') {
     const b = actBtn('chart', T('Diagramm aus Tabelle'), () => chartMenu(b, (k) => addChart(one, k)));
     items.push(b);
   }
   if (one?.type === 'chart') {
-    const b = actBtn('chart', T('Diagrammart'), () => chartMenu(b, (k) => act(() => updateEl(one.id, { chartKind: k })), one.chartKind));
-    items.push(b, actBtn('edit', T('Titel des Diagramms'), () => chartTitle(one)));
+    const b = actBtn('chart', T('Diagrammart'), () => chartMenu(b, (k) => act(() => updateEl(one.id, { chartKind: k })), latest(one).chartKind));
+    items.push(b, actBtn('edit', T('Titel des Diagramms'), () => chartTitle(latest(one))));
   }
-  if (one?.type === 'image' && one.src) items.push(actBtn('crop', T('Zuschneiden'), () => cropImage(one)));
+  if (one?.type === 'image' && one.src) items.push(actBtn('crop', T('Zuschneiden'), () => cropImage(latest(one))));
   if (sel.length && sel.every((e) => e.type === 'pen')) items.push(actBtn('magic', T('In Form umwandeln'), () => shapeFrom(selectedEls())));
 });
 

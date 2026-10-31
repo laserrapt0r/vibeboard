@@ -26,6 +26,25 @@ function rememberTransport(mode) {
   }
 }
 
+// Der Server nimmt je Anfrage höchstens 40 MB an: Große Änderungen (viele Bilder) gehen in mehreren Paketen
+const MAX_PACKET = 20 * 1024 * 1024;
+function packets(ops) {
+  const out = [];
+  let part = [], size = 0;
+  for (const op of ops) {
+    const n = JSON.stringify(op).length;
+    if (part.length && size + n > MAX_PACKET) {
+      out.push(part);
+      part = [];
+      size = 0;
+    }
+    part.push(op);
+    size += n;
+  }
+  if (part.length) out.push(part);
+  return out;
+}
+
 export class Sync {
   constructor(boardId, user, { viewOnly = false, canComment = false } = {}) {
     this.boardId = boardId;
@@ -225,9 +244,11 @@ export class Sync {
     this.flushTimer = null;
     const ops = this.take();
     if (!ops.length) return this.inflight;
-    this.sending.push(ops);
-    // Reihenfolge der Pakete sicherstellen
-    this.inflight = this.inflight.then(() => this.post(ops));
+    for (const part of packets(ops)) {
+      this.sending.push(part);
+      // Reihenfolge der Pakete sicherstellen
+      this.inflight = this.inflight.then(() => this.post(part));
+    }
     return this.inflight;
   }
 
@@ -284,8 +305,7 @@ export class Sync {
   flushNow() {
     clearTimeout(this.flushTimer);
     this.flushTimer = null;
-    const ops = this.take();
-    if (ops.length) this.post(ops);
+    for (const part of packets(this.take())) this.post(part);
   }
 
   // Noch nicht bestätigte eigene Änderungen (für den Abgleich nach einem Wiederverbinden)

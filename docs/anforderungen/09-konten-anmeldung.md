@@ -128,4 +128,4 @@
 - **Akzeptanzkriterien:**
   - SCIM 2.0 für Benutzer: anlegen, lesen, suchen (`userName eq`), ändern (PUT, PATCH), sperren. Standardmäßig aus.
   - Zugriff nur mit Token aus der Administration; gespeichert wird nur sein Hash, angezeigt wird es einmal.
-  - DELETE sperrt, statt zu löschen: Boards bleiben, Sitzungen enden sofort. Das letzte lokale Admin-Konto lässt sich nicht sperren. Gruppen werden nicht übertragen.
+  - DELETE sperrt, statt zu löschen: Boards bleiben, Sitzungen enden sofort. Das letzte lokale Admin-Konto lässt sich nicht sperren, die Adresse lokaler Admins nicht ändern. Gruppen werden nicht übertragen.

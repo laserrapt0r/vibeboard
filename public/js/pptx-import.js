@@ -1,4 +1,5 @@
 // Import von PowerPoint (.pptx): Jede Folie wird ein Frame, Texte, Formen, Bilder, Linien und Tabellen bleiben bearbeitbar
+import { T } from './i18n.js';
 import { uid } from './util.js';
 import { readZip } from './zip.js';
 
@@ -48,10 +49,26 @@ function xfrmOf(spPr) {
   };
 }
 
+// Farben des Designs (dk1, lt1, accent1 …), gilt für die gerade gelesene Datei
+let scheme = new Map();
+const SCHEME_ALIAS = { tx1: 'dk1', tx2: 'dk2', bg1: 'lt1', bg2: 'lt2' };
+
+function readScheme(text) {
+  scheme = new Map();
+  const clr = text && q(xml(text), 'a', 'clrScheme');
+  for (const c of clr ? kids(clr) : []) {
+    const v = kids(c)[0];
+    if (v) scheme.set(c.localName, v.getAttribute('val') === 'windowText' ? '000000' : v.getAttribute('lastClr') || v.getAttribute('val'));
+  }
+}
+
 const solid = (node) => {
   const fill = child(node, 'solidFill');
   const rgb = fill && child(fill, 'srgbClr');
-  return rgb ? '#' + rgb.getAttribute('val') : undefined;
+  if (rgb) return '#' + rgb.getAttribute('val');
+  const name = fill && child(fill, 'schemeClr')?.getAttribute('val');
+  const hex = name && scheme.get(SCHEME_ALIAS[name] || name);
+  return hex ? '#' + hex : undefined;
 };
 
 function textOf(txBody) {
@@ -159,7 +176,10 @@ async function readShapes(zip, tree, map, ctx, tx) {
       out.push({ id: uid(), type: 'table', ...place(box), rows: rows.length, cols, cells: rows.map((r) => [...r, ...Array(cols - r.length).fill('')]), header: true, fontSize: 14, ...(widths.length === cols ? { colW: widths.map((w) => w / sum) } : {}) });
     } else if (kind === 'grpSp') {
       const pr = child(child(node, 'grpSpPr'), 'xfrm');
-      if (!pr) continue;
+      if (!pr) {
+        ctx.skipped.other++;
+        continue;
+      }
       const n = (el, k) => +el.getAttribute(k) / EMU;
       const off = child(pr, 'off'), ext = child(pr, 'ext'), chOff = child(pr, 'chOff'), chExt = child(pr, 'chExt');
       const sx = n(ext, 'cx') / (n(chExt, 'cx') || 1), sy = n(ext, 'cy') / (n(chExt, 'cy') || 1);
@@ -179,6 +199,7 @@ export async function parsePptx(buffer) {
   const presText = await zip.text(presPath);
   if (!presText) throw new Error('pptx');
   const pres = xml(presText);
+  readScheme(await zip.text('ppt/theme/theme1.xml'));
   const size = q(pres, 'p', 'sldSz');
   const w = +size.getAttribute('cx') / EMU, h = +size.getAttribute('cy') / EMU;
   const presRels = await rels(zip, presPath);
@@ -200,7 +221,7 @@ export async function parsePptx(buffer) {
     const x = index * (w + SLIDE_GAP);
     const title = all(doc, 'p', 'sp').map((sp) => (q(sp, 'p', 'ph')?.getAttribute('type') || '').toLowerCase().includes('title') ? textOf(child(sp, 'txBody')).text : '').find(Boolean);
     index++;
-    out.push({ id: uid(), type: 'frame', x, y: 0, w, h, title: title || `Slide ${index}`, order: index, fill: '#ffffff' });
+    out.push({ id: uid(), type: 'frame', x, y: 0, w, h, title: title || T`Folie ${index}`, order: index, fill: '#ffffff' });
     out.push(...await readShapes(zip, shapeTree(doc), map, { x, y: 0, layout, master, skipped }, { sx: 1, sy: 1, ox: 0, oy: 0 }));
   }
   return { elements: out.map((e, i) => ({ ...e, z: i + 1 })), skipped };

@@ -22,6 +22,13 @@ Schemaversion 10.
 
 ### Geändert
 - Neue Abhängigkeit `@node-saml/node-saml`.
+- Große Änderungen werden in mehreren Paketen gesendet; Dialogschaltflächen und Kontextleiste reagieren auf Eingabe und Leertaste.
+
+### Sicherheit
+- Lange Adressen beim Teilen und Einladen können den Server nicht mehr blockieren (Fehler bestand schon vorher).
+- Private und verborgene Inhalte bleiben aus Freigaben, Tickets und dem PowerPoint-Export heraus.
+- SCIM ändert die Adresse lokaler Administratoren nicht.
+- Entpacken von Office-Dateien ist auch bei gefälschten Größenangaben begrenzt.
 
 ## [4.3.2] – 2026-10-31
 

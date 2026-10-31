@@ -5,7 +5,7 @@ import {
   debounce, throttle, toast, contrastText, STICKY_COLORS, api,
 } from './util.js';
 import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
-  outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions, SHAPE_DEFAULTS, labelBelow, labelOutside } from './render.js';
+  outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions, SHAPE_DEFAULTS, labelBelow, labelOutside, setElementLookup } from './render.js';
 import { THEMES } from './highlight.js';
 import { Sync } from './sync.js';
 
@@ -62,6 +62,7 @@ const editor = $('#editor');
 $('#defs').innerHTML = defsMarkup();
 
 export const getEl = (id) => app.els.get(id);
+setElementLookup(getEl);
 export const bounds = (el) => elBounds(el, getEl);
 export const now = () => Date.now() + app.serverOffset;
 
@@ -225,9 +226,7 @@ function flushRender() {
     }
     const env = renderEnv();
     // Diagramme zeigen die Werte ihrer Tabelle
-    if ([...dirty].some((id) => app.els.get(id)?.type === 'table')) {
-      for (const el of app.els.values()) if (el.type === 'chart' && dirty.has(el.sourceId)) dirty.add(el.id);
-    }
+    for (const el of app.els.values()) if (el.type === 'chart' && dirty.has(el.sourceId)) dirty.add(el.id);
     for (const id of dirty) renderNode(id, env);
     dirty.clear();
     overlayDirty = true;
@@ -1488,7 +1487,9 @@ function startMove(e, start) {
     const el = getEl(id);
     if (el && el.type === 'frame') withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
   }
-  ids = [...ids].filter((id) => getEl(id) && !isLocked(getEl(id)));
+  // Dokumentseiten sind gegen Verrutschen gesperrt, gehören aber fest zu ihrem Frame
+  const moved = (id) => app.sel.has(id) || !getEl(id).fileRef;
+  ids = [...ids].filter((id) => getEl(id) && (!isLocked(getEl(id)) || (!moved(id) && !getEl(id).modLock)));
   // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit
   const idSet = new Set(ids);
   for (const c of app.els.values()) {
@@ -2625,6 +2626,8 @@ const TOOL_KEYS = { v: 'select', h: 'hand', n: 'sticky', t: 'text', s: 'shape', 
 window.addEventListener('keydown', (e) => {
   if (isTyping(e) || app.editing) return;
   if (document.querySelector('.modal-back')) return;
+  // Schaltflächen und Links reagieren selbst auf die Tastatur
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('button, a, summary')) return;
   const mod = e.ctrlKey || e.metaKey;
   const key = e.key.toLowerCase();
   // Zuerst Module (z. B. Präsentation) reagieren lassen, damit dort auch die Leertaste ankommt

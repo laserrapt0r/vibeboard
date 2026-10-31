@@ -7,6 +7,31 @@ async function pipe(data, stream) {
   return new Uint8Array(await new Response(out).arrayBuffer());
 }
 
+// Die Größenangabe im Archiv ist frei wählbar: Beim Entpacken selbst mitzählen und abbrechen
+async function inflateLimited(data, budget) {
+  const reader = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > budget.left) {
+      await reader.cancel();
+      throw new Error('Archiv zu groß');
+    }
+    chunks.push(value);
+  }
+  budget.left -= size;
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.length;
+  }
+  return out;
+}
+
 export async function readZip(buffer) {
   const bytes = new Uint8Array(buffer);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -37,12 +62,13 @@ export async function readZip(buffer) {
     entries.set(name, { method, compSize, offset });
     at += 46 + nameLen + extra + comment;
   }
+  const budget = { left: MAX_TOTAL };
   const read = async (name) => {
     const e = entries.get(name);
     if (!e) return null;
     const start = e.offset + 30 + view.getUint16(e.offset + 26, true) + view.getUint16(e.offset + 28, true);
     const raw = bytes.subarray(start, start + e.compSize);
-    return e.method === 0 ? raw : pipe(raw, new DecompressionStream('deflate-raw'));
+    return e.method === 0 ? raw : inflateLimited(raw, budget);
   };
   return { names: [...entries.keys()], read, text: async (name) => {
     const d = await read(name);
@@ -109,5 +135,5 @@ export async function writeZip(files) {
 }
 
 export async function inflateRaw(bytes) {
-  return pipe(bytes, new DecompressionStream('deflate-raw'));
+  return inflateLimited(bytes, { left: 50 * 1024 * 1024 });
 }

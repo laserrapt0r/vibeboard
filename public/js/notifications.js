@@ -14,6 +14,7 @@ function paint() {
     badge.textContent = state.unread > 99 ? '99+' : String(state.unread);
     badge.classList.toggle('hidden', !state.unread);
     b.title = state.unread === 1 ? T('1 ungelesene Benachrichtigung') : state.unread ? T`${state.unread} ungelesene Benachrichtigungen` : T('Benachrichtigungen');
+    b.setAttribute('aria-label', b.title);
   }
 }
 
@@ -45,7 +46,7 @@ export function push(item, { onOpen } = {}) {
 // open(item): Navigation zum Kommentar (im Board ggf. ohne Neuladen)
 export function bellButton({ open } = {}) {
   const b = h('button', { class: 'icon-btn bell', title: T('Benachrichtigungen'), 'aria-label': T('Benachrichtigungen') },
-    h('span', { html: ICONS.bell }), h('span', { class: 'bell-badge hidden', 'aria-hidden': 'true' }, '0'));
+    h('span', { html: ICONS.bell }), h('span', { class: 'bell-badge hidden' }, '0'));
   buttons.add(b);
   b.onclick = async () => {
     await refresh();

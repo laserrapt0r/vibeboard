@@ -90,6 +90,9 @@ The assertion consumer URL is `https://board.example.org/api/auth/saml/acs`, the
 Enter the provider's sign-in URL (HTTP redirect binding) and signing certificate. Assertions must be signed. Set the names
 of the attributes for address, name and groups; they default to `email`, `displayName` and `groups`.
 
+Keycloak sends roles in the attribute `Role` by default, and it applies only one role list mapper. Enter `Role` as the group
+attribute, or remove the default `role_list` scope from the client before adding your own mapper.
+
 The browser binding needs HTTPS. Tested with Keycloak as identity provider.
 
 ## SCIM 2.0
@@ -101,7 +104,7 @@ SCIM lets your identity provider create, change and disable accounts.
    must be the e-mail address.
 
 `DELETE` disables an account instead of removing it, so boards stay. Sessions end at once. Groups are not transferred, and
-the last local administrator can't be disabled. Accounts get their rights through the group mapping of a sign-in method.
+the last local administrator can't be disabled, and SCIM can't change a local administrator's address. Accounts get their rights through the group mapping of a sign-in method.
 
 Tested against the SCIM protocol directly, including the spelling Microsoft Entra ID uses, but not against Entra or Okta.
 

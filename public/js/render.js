@@ -1011,9 +1011,13 @@ export function pressurePath(points, sw) {
 export function cellNumber(v) {
   let s = String(v ?? '').replace(/[^\d.,\-]/g, '');
   if (!/\d/.test(s)) return null;
-  const c = s.lastIndexOf(','), d = s.lastIndexOf('.');
-  if (c >= 0 && d >= 0) s = c > d ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
-  else if (c >= 0) s = s.replace(',', '.');
+  const dots = (s.match(/\./g) || []).length, commas = (s.match(/,/g) || []).length;
+  if (dots && commas) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  else if (dots + commas > 1) s = s.replace(/[.,]/g, ''); // nur Tausendertrenner: 1.234.567
+  else if (dots + commas === 1) {
+    // Genau drei Stellen dahinter sind in Tabellen ein Tausendertrenner: 2.000, 1,234 – aber 0.125 nicht
+    s = /^-?[1-9]\d{0,2}[.,]\d{3}$/.test(s) ? s.replace(/[.,]/, '') : s.replace(',', '.');
+  }
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
 }
@@ -1028,6 +1032,12 @@ export function chartData(table) {
     if (values.some((v) => v !== null)) series.push({ name: String(head[c] || ''), values: values.map((v) => v ?? 0) });
   }
   return series.length ? { labels: body.map((r) => String(r[0] ?? '')), series } : null;
+}
+
+// Teilexporte (Auswahl, Folien) enthalten die Tabelle eines Diagramms nicht unbedingt: Das Board kennt sie trotzdem
+let lookup = () => null;
+export function setElementLookup(fn) {
+  lookup = fn;
 }
 
 const CHART_COLORS = ['#4262ff', '#12b886', '#f59f00', '#e64980', '#7048e8', '#1098ad', '#f03e3e', '#5c940d'];
@@ -1058,7 +1068,8 @@ function chartLegend(names, x, y, w) {
 function pieSvg(data, x, y, w, h) {
   const s = data.series[0];
   const values = s.values.map((v) => Math.max(0, v));
-  const sum = values.reduce((a, v) => a + v, 0) || 1;
+  const sum = values.reduce((a, v) => a + v, 0);
+  if (!sum) return chartText(x + w / 2, y + h / 2, T('Torten brauchen positive Werte'), { size: 14, anchor: 'middle', color: '#868e96' });
   const r = Math.max(10, Math.min(w * 0.55, h) / 2 - 6);
   const cx = x + r + 6, cy = y + h / 2;
   let out = '', a = -Math.PI / 2;
@@ -1118,7 +1129,7 @@ function axisChart(el, data, x, y, w, h) {
 function chartSvg(el, get) {
   const { x = 0, y = 0, w = 0, h = 0 } = el;
   let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#ffffff" stroke="#e3e3e3" filter="url(#shadow-sm)"/>`;
-  const table = el.sourceId ? get(el.sourceId) : null;
+  const table = el.sourceId ? get(el.sourceId) || lookup(el.sourceId) : null;
   const data = table && table.type === 'table' && !table.hidden ? chartData(table) : null;
   if (!data) return out + chartText(x + w / 2, y + h / 2, T('Keine Zahlen in der Tabelle'), { size: 14, anchor: 'middle', color: '#868e96' });
   let top = y + 12;

@@ -92,6 +92,7 @@ picker.addEventListener('change', () => {
 
 const OFFICE = /\.(docx?|xlsx?|pptx?|odt|ods|odp)$/i;
 const MAX_PAGES = 50;
+const MAX_PAGE_BYTES = 2 * 1024 * 1024;
 const PAGE_WIDTH = 900;
 const PAGES_PER_ROW = 4;
 const PAGE_GAP = 40;
@@ -112,7 +113,7 @@ async function placePages(el) {
   try {
     doc = await openPdf(await pdfBytes(el));
   } catch (e) {
-    return toast(e.message, 6000);
+    return toast(e.name === 'InvalidPDFException' ? T('Die PDF-Datei konnte nicht gelesen werden.') : e.message, 6000);
   }
   const pages = Math.min(doc.numPages, MAX_PAGES);
   const images = [];
@@ -127,7 +128,10 @@ async function placePages(el) {
       y += rowH + PAGE_GAP;
       rowH = 0;
     }
-    images.push({ ...makeElement('image', 0, 0, { src: c.toDataURL('image/jpeg', 0.85), name: T`Seite ${n}`, fileRef: el.fileId, locked: true }), x, y, w: PAGE_WIDTH, h: dispH });
+    // Seiten mit vielen Bildern sparsamer speichern
+    let src = c.toDataURL('image/jpeg', 0.85);
+    if (src.length > MAX_PAGE_BYTES) src = c.toDataURL('image/jpeg', 0.6);
+    images.push({ ...makeElement('image', 0, 0, { src, name: T`Seite ${n}`, fileRef: el.fileId, locked: true }), x, y, w: PAGE_WIDTH, h: dispH });
     x += PAGE_WIDTH + PAGE_GAP;
     rowH = Math.max(rowH, dispH);
     width = Math.max(width, x - PAGE_GAP);
@@ -143,7 +147,7 @@ async function placePages(el) {
   addElements([frame, ...images]);
   setSelection([frame.id]);
   fitTo({ x: frame.x, y: frame.y, w: frame.w, h: frame.h }, { maxZ: 1 });
-  toast(doc.numPages > pages ? T`Die ersten ${pages} von ${doc.numPages} Seiten liegen auf dem Board.` : T`${pages} Seiten liegen auf dem Board.`, 5000);
+  toast(doc.numPages > pages ? T`Die ersten ${pages} von ${doc.numPages} Seiten liegen auf dem Board.` : pages === 1 ? T('1 Seite liegt auf dem Board.') : T`${pages} Seiten liegen auf dem Board.`, 5000);
 }
 
 app.on('pickFile', () => picker.click());
@@ -190,7 +194,7 @@ app.on('openFile', async (id) => {
       body.append(h('pre', { class: 'file-text' }, txt.slice(0, 200000) + (txt.length > 200000 ? '\n…' : '')));
     } else {
       body.append(h('div', { class: 'file-noprev' }, h('span', { class: 'file-kind big', style: { background: color } }, label),
-        h('p', { class: 'muted' }, converter && OFFICE.test(el.name || '') ? T('Über „Seiten auf das Board legen“ wird die Datei umgewandelt und lässt sich direkt auf dem Board prüfen.') : T('Für Office-Dateien gibt es im Browser keine Vorschau. Lade die Datei herunter und öffne sie mit deinem Office-Programm.'))));
+        h('p', { class: 'muted' }, converter && !app.viewOnly && OFFICE.test(el.name || '') ? T('Über „Seiten auf das Board legen“ wird die Datei umgewandelt und lässt sich direkt auf dem Board prüfen.') : T('Für Office-Dateien gibt es im Browser keine Vorschau. Lade die Datei herunter und öffne sie mit deinem Office-Programm.'))));
     }
   } catch (e) {
     body.innerHTML = '';

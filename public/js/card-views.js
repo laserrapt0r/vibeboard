@@ -1,7 +1,7 @@
 // Kanban und Zeitleiste: andere Ansichten derselben Karten. Jede Änderung landet direkt am Element auf dem Board.
 import { T, LOCALE } from './i18n.js';
-import { h, modal, initials, readableOn, throttle } from './util.js';
-import { app, getEl, act, updateEl, bounds, fitTo, setSelection } from './core.js';
+import { h, modal, toast, initials, readableOn, throttle } from './util.js';
+import { app, getEl, act, updateEl, bounds, fitTo, setSelection, isLocked } from './core.js';
 import { DONE_RE } from './planning.js';
 
 const DAY = 86400000;
@@ -39,16 +39,16 @@ function kanban(close, added, rerender) {
     const inCol = list.filter((c) => statusOf(c) === col);
     const body = h('div', { class: 'kanban-body' });
     for (const c of inCol) {
-      const move = h('select', { 'aria-label': T`Status von „${c.title || T('Neue Karte')}“`, disabled: app.viewOnly, onchange: (e) => setStatus(c.id, e.target.value) },
+      const move = h('select', { 'aria-label': T`Status von „${c.title || T('Neue Karte')}“`, disabled: readOnly(c), onchange: (e) => setStatus(c.id, e.target.value) },
         cols.map((s) => h('option', { value: s, selected: s === col }, s || T('Ohne Status'))));
-      const card = h('article', { class: 'kanban-card', draggable: app.viewOnly ? null : 'true', style: { borderTopColor: c.color || '#4262ff' } },
+      const card = h('article', { class: 'kanban-card', draggable: readOnly(c) ? null : 'true', style: { borderTopColor: c.color || '#4262ff' } },
         c.key ? h('div', { class: 'muted small' }, c.key) : null,
         h('button', { class: 'kanban-title', title: T('Auf dem Board zeigen'), onclick: () => jump(c.id, close) }, c.title || T('Neue Karte')),
         h('div', { class: 'kanban-meta' },
           c.assignee ? h('span', { class: 'avatar xs', title: c.assignee }, initials(c.assignee)) : null,
           c.due ? h('span', { class: 'muted small' }, new Date(c.due + 'T00:00').toLocaleDateString(LOCALE)) : null,
           h('span', { class: 'spacer' }),
-          app.viewOnly ? null : h('button', { class: 'btn small', onclick: () => app.emit('editCard', c.id) }, T('Bearbeiten'))),
+          readOnly(c) ? null : h('button', { class: 'btn small', onclick: () => app.emit('editCard', c.id) }, T('Bearbeiten'))),
         move);
       card.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/x-card', c.id);
@@ -59,16 +59,20 @@ function kanban(close, added, rerender) {
     const column = h('section', { class: 'kanban-col', 'aria-label': col || T('Ohne Status') },
       h('h3', {}, col || T('Ohne Status'), ' ', h('span', { class: 'muted small' }, inCol.length)), body);
     if (!app.viewOnly) {
+      column.addEventListener('dragenter', (e) => e.preventDefault());
       column.addEventListener('dragover', (e) => {
         e.preventDefault();
         column.classList.add('over');
       });
-      column.addEventListener('dragleave', () => column.classList.remove('over'));
+      column.addEventListener('dragleave', (e) => {
+        if (!column.contains(e.relatedTarget)) column.classList.remove('over');
+      });
       column.addEventListener('drop', (e) => {
         e.preventDefault();
         column.classList.remove('over');
         const id = e.dataTransfer.getData('text/x-card');
-        if (id && statusOf(getEl(id) || {}) !== col) setStatus(id, col);
+        const target = id && getEl(id);
+        if (target && !isLocked(target) && statusOf(target) !== col) setStatus(id, col);
       });
     }
     board.append(column);
@@ -80,18 +84,20 @@ function kanban(close, added, rerender) {
       const v = input.value.trim();
       if (v && !added.includes(v)) added.push(v);
       rerender();
+      document.querySelector('.kanban-add input')?.focus();
     } }, input, h('button', { class: 'btn small', type: 'submit' }, T('Hinzufügen'))));
   }
   return board;
 }
 
-const toDay = (s) => Math.round(new Date(s + 'T12:00Z').getTime() / DAY);
+const readOnly = (c) => app.viewOnly || isLocked(c);
+const toDay = (s) => Math.floor(new Date(s + 'T12:00Z').getTime() / DAY);
 const fromDay = (d) => new Date(d * DAY).toISOString().slice(0, 10);
 
 function timeline(close) {
   const list = cards().sort((a, b) => String(a.start || a.due || '9999').localeCompare(String(b.start || b.due || '9999')));
   const dated = list.flatMap((c) => [c.start, c.due]).filter(Boolean).map(toDay);
-  const today = Math.round(Date.now() / DAY);
+  const today = Math.floor(Date.now() / DAY);
   const first = (dated.length ? Math.min(...dated, today) : today) - 3;
   const last = (dated.length ? Math.max(...dated, today) : today + 30) + 7;
   const days = last - first + 1;
@@ -106,15 +112,24 @@ function timeline(close) {
   }
   const rows = h('div', { class: 'tl-rows' });
   for (const c of list) {
-    const start = h('input', { type: 'date', value: c.start || '', disabled: app.viewOnly, 'aria-label': T`Beginn von „${c.title || T('Neue Karte')}“`, onchange: (e) => act(() => updateEl(c.id, { start: e.target.value || undefined })) });
-    const due = h('input', { type: 'date', value: c.due || '', disabled: app.viewOnly, 'aria-label': T`Fälligkeit von „${c.title || T('Neue Karte')}“`, onchange: (e) => act(() => updateEl(c.id, { due: e.target.value })) });
+    const dates = (patch, input) => {
+      const s = 'start' in patch ? patch.start : c.start, d = 'due' in patch ? patch.due : c.due;
+      if (s && d && s > d) {
+        toast(T('Der Beginn muss vor der Fälligkeit liegen.'));
+        input.value = input === start ? c.start || '' : c.due || '';
+        return;
+      }
+      act(() => updateEl(c.id, patch));
+    };
+    const start = h('input', { type: 'date', value: c.start || '', disabled: readOnly(c), 'aria-label': T`Beginn von „${c.title || T('Neue Karte')}“`, onchange: (e) => dates({ start: e.target.value || undefined }, start) });
+    const due = h('input', { type: 'date', value: c.due || '', disabled: readOnly(c), 'aria-label': T`Fälligkeit von „${c.title || T('Neue Karte')}“`, onchange: (e) => dates({ due: e.target.value }, due) });
     const track = h('div', { class: 'tl-track', style: { width: width + 'px' } }, h('span', { class: 'tl-today', style: { left: (today - first) * dayW + 'px' } }));
     const a = c.start || c.due, b = c.due || c.start;
     if (a) {
       const from = toDay(a), to = Math.max(from, toDay(b));
       const color = c.color || '#4262ff';
       const bar = h('div', { class: 'tl-bar', title: `${a} – ${b}`, style: { left: (from - first) * dayW + 'px', width: Math.max(dayW, (to - from + 1) * dayW) + 'px', background: color, color: readableOn(color) } }, c.title || '');
-      if (!app.viewOnly) {
+      if (!readOnly(c)) {
         const grip = h('span', { class: 'tl-grip' });
         bar.append(grip);
         // Ziehen verschiebt die Karte, der rechte Griff ändert nur die Fälligkeit
@@ -133,7 +148,7 @@ function timeline(close) {
             bar.removeEventListener('pointermove', move);
             if (!shift) return;
             if (end) act(() => updateEl(c.id, { due: fromDay(Math.max(from, to + shift)) }));
-            else act(() => updateEl(c.id, { ...(c.start ? { start: fromDay(from + shift) } : {}), due: c.due ? fromDay(to + shift) : c.due }));
+            else act(() => updateEl(c.id, { ...(c.start ? { start: fromDay(from + shift) } : {}), ...(c.due ? { due: fromDay(toDay(c.due) + shift) } : {}) }));
           };
           bar.addEventListener('pointermove', move);
           bar.addEventListener('pointerup', up, { once: true });
@@ -152,20 +167,29 @@ app.on('openCardViews', () => {
   const body = h('div', { class: 'card-views' });
   const added = [];
   let sig = '';
-  const tab = (id, label) => h('button', { role: 'tab', 'aria-selected': String(view === id), class: 'tpl-cat' + (view === id ? ' active' : ''), onclick: () => {
+  const show = (id) => {
     view = id;
     render();
     body.querySelector('[aria-selected=true]')?.focus();
-  } }, label);
+  };
+  const tab = (id, label) => h('button', { role: 'tab', id: 'view-tab-' + id, 'aria-selected': String(view === id), 'aria-controls': 'view-panel', tabindex: view === id ? '0' : '-1', class: 'tpl-cat' + (view === id ? ' active' : ''), onclick: () => show(id),
+    onkeydown: (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      show(view === 'kanban' ? 'timeline' : 'kanban');
+    } }, label);
   const render = () => {
     sig = signature();
     const scroller = body.querySelector('.kanban, .tl-scroll');
     const pos = scroller ? [scroller.scrollLeft, scroller.scrollTop] : null;
+    // Nach dem Neuaufbau bleibt der Fokus auf demselben Feld
+    const label = document.activeElement?.getAttribute?.('aria-label');
     body.innerHTML = '';
     body.append(h('div', { class: 'row', role: 'tablist', 'aria-label': T('Ansicht') }, tab('kanban', T('Kanban')), tab('timeline', T('Zeitleiste'))),
-      view === 'kanban' ? kanban(() => m.close(), added, render) : timeline(() => m.close()));
+      h('div', { id: 'view-panel', role: 'tabpanel', 'aria-labelledby': 'view-tab-' + view, class: 'view-panel' }, view === 'kanban' ? kanban(() => m.close(), added, render) : timeline(() => m.close())));
     const next = body.querySelector('.kanban, .tl-scroll');
     if (next && pos) [next.scrollLeft, next.scrollTop] = pos;
+    if (label) [...body.querySelectorAll('[aria-label]')].find((e) => e.getAttribute('aria-label') === label)?.focus();
   };
   const m = modal(T('Kanban und Zeitleiste'), body, { wide: true, onClose: () => app.off?.('render', watch) });
   m.box.classList.add('views');
@@ -173,9 +197,11 @@ app.on('openCardViews', () => {
   // Änderungen anderer erscheinen sofort, außer es wird gerade ein Feld bearbeitet
   const watch = throttle(() => {
     if (!body.isConnected || signature() === sig) return;
+    // Beim Tippen in ein Feld nicht dazwischenfunken; der Stand folgt, sobald es verlassen wird
     const ae = document.activeElement;
-    if (ae && body.contains(ae) && ['INPUT', 'SELECT'].includes(ae.tagName)) return;
+    if (ae && body.contains(ae) && ae.tagName === 'INPUT') return;
     render();
   }, 500);
   app.on('render', watch);
+  body.addEventListener('focusout', () => setTimeout(watch, 0));
 });
