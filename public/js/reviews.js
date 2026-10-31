@@ -129,8 +129,14 @@ app.on('renderPanel', (kind, side, close) => {
   if (kind === 'reviews') renderPanel(side, close);
 });
 
+const reviewable = (el) => !!el && ['frame', 'file'].includes(el.type) && !app.viewOnly && !app.guest && el.kind !== 'topic';
+const reviewLabel = (el) => (app.reviews?.get(el.id) ? T('Freigabe anzeigen') : T('Freigabe anfordern'));
+const openReview = (el) => (app.reviews?.get(el.id) ? toggleReviews(true) : requestReview(el));
+
 app.on('ctxItems', (items, sel, { one, actBtn }) => {
-  if (!one || !['frame', 'file'].includes(one.type) || app.viewOnly || app.guest || one.kind === 'topic') return;
-  const r = app.reviews?.get(one.id);
-  items.push(actBtn('check', r ? T('Freigabe anzeigen') : T('Freigabe anfordern'), () => (r ? toggleReviews(true) : requestReview(one))));
+  if (reviewable(one)) items.push(actBtn('check', reviewLabel(one), () => openReview(one)));
+});
+
+app.on('contextItems', (items, sel) => {
+  if (sel.length === 1 && reviewable(sel[0])) items.push({ label: reviewLabel(sel[0]) + ' …', onClick: () => openReview(sel[0]) });
 });

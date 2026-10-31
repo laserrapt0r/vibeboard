@@ -177,6 +177,7 @@
   - Status: in Prüfung, freigegeben, abgelehnt, geändert nach Freigabe. Eine Freigabe gilt für den geprüften Stand: Ändert sich der Inhalt, auch an Verbindungen, verfällt sie. Kommentare und das Verschieben des Frames ändern den Stand nicht.
   - Prüfende und Anfordernde werden benachrichtigt; Status erscheint live am Element und im Panel „Freigaben“; das Protokoll hält die Entscheidungen fest.
   - Wer angefordert hat und der Besitzer können erneut vorlegen oder entfernen.
+  - Geändert in 4.11.2: Freigaben lassen sich auch im Kontextmenü anfordern und anzeigen.
 
 ### REQ-COLLAB-019 Gleichzeitige Änderungen am selben Element
 - **Seit:** 4.6.0 · **Priorität:** Muss · **Status:** umgesetzt

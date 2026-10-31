@@ -4,6 +4,11 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.11.2] – 2026-11-01
+
+### Behoben
+- Das Panel „Freigaben“ verwies aufs Kontextmenü, dort fehlte der Eintrag aber. Freigaben lassen sich jetzt per Rechtsklick auf Frames und Dateien anfordern.
+
 ## [4.11.1] – 2026-10-31
 
 ### Behoben

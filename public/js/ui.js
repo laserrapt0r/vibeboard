@@ -1396,6 +1396,9 @@ stage.addEventListener('contextmenu', (e) => {
   const w = toWorld(e.clientX, e.clientY);
   if (el && !app.sel.has(el.id)) setSelection([el.id]);
   const has = app.sel.size > 0;
+  // Erweiterungen anderer Module (Freigaben)
+  const extra = [];
+  if (has) app.emit('contextItems', extra, selectedEls());
   const items = has ? [
     { label: T('Kopieren'), hint: T('Strg+C'), onClick: () => document.execCommand('copy') },
     { label: T('Duplizieren'), hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) },
@@ -1408,6 +1411,7 @@ stage.addEventListener('contextmenu', (e) => {
     selectedEls().some((x) => x.groupId) ? { label: T('Gruppierung aufheben'), onClick: ungroupSel } : null,
     { label: T('Kommentar hinzufügen'), onClick: () => newComment(w) },
     el && app.sel.size === 1 ? { label: T('Reagieren …'), onClick: () => app.emit('reactMenu', el, e) } : null,
+    ...extra,
     '-',
     selectedEls().some(canCopyFormat) ? { label: T('Format übertragen'), onClick: () => startBrush(false) } : null,
     selectedEls().some(canCopyFormat) ? { label: T('Format kopieren'), hint: T('Strg+Alt+C'), onClick: () => copyFormat() && toast(T('Format kopiert')) } : null,
