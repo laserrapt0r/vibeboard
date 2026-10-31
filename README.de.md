@@ -320,7 +320,7 @@ Die Tabellen werden beim Start automatisch angelegt und migriert.
 
 ### Auf Kubernetes
 
-Die Manifeste liegen unter [deploy/kubernetes](deploy/kubernetes/README.md). Die Anwendung muss mit genau einer Instanz laufen.
+Es gibt ein [Helm-Chart](deploy/helm/README.md) und Manifeste unter [deploy/kubernetes](deploy/kubernetes/README.md). Die Anwendung muss mit genau einer Instanz laufen.
 
 ## Konfiguration
 

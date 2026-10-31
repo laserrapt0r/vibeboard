@@ -319,7 +319,7 @@ The tables are created and migrated automatically on startup.
 
 ### On Kubernetes
 
-Manifests are in [deploy/kubernetes](deploy/kubernetes/README.md). The app must run with exactly one replica.
+Use the [Helm chart](deploy/helm/README.md) or the manifests in [deploy/kubernetes](deploy/kubernetes/README.md). The app must run with exactly one replica.
 
 ## Configuration
 

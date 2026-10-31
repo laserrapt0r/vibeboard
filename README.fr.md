@@ -327,7 +327,7 @@ Les tables sont créées et migrées automatiquement au démarrage.
 
 ### Sur Kubernetes
 
-Les manifestes se trouvent dans [deploy/kubernetes](deploy/kubernetes/README.md). L'application doit tourner avec exactement une réplique.
+Il existe un [chart Helm](deploy/helm/README.md) et des manifestes dans [deploy/kubernetes](deploy/kubernetes/README.md). L'application doit tourner avec exactement une réplique.
 
 ## Configuration
 

@@ -52,6 +52,25 @@ jobs:
         env:
           DATABASE_URL: postgres://vb:vb@localhost:5432/vb_access
 
+  manifests:
+    name: Kubernetes und Helm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Manifeste erzeugen und prüfen
+        run: |
+          helm="docker run --rm -v $PWD/deploy:/deploy:ro alpine/helm:3.16.4@sha256:9b25e60ae264940b276e32866d37e3088e70c4e2d1784b964dc3f90346281a74"
+          $helm lint /deploy/helm/vibeboard --set publicUrl=https://board.example.org
+          mkdir out
+          docker run --rm -v $PWD/deploy:/deploy:ro registry.k8s.io/kustomize/kustomize:v5.6.0@sha256:b5f56e6becd1ba93a1a775a149763e3841a177beb10191624100bed81b44d297 build /deploy/kubernetes > out/kustomize.yaml
+          $helm template vb /deploy/helm/vibeboard --set publicUrl=https://board.example.org > out/standard.yaml
+          $helm template vb /deploy/helm/vibeboard --set publicUrl=https://board.example.org --set ingress.enabled=true --set gotenberg.enabled=true --set kerberos.enabled=true --set kerberos.keytabSecret=k --set kerberos.configMap=c > out/voll.yaml
+          $helm template vb /deploy/helm/vibeboard --set publicUrl=https://board.example.org --set postgres.enabled=false --set postgres.external.host=db --set clamav.enabled=false --set auth.existingSecret=s > out/extern.yaml
+          docker run --rm -v $PWD/out:/in:ro ghcr.io/yannh/kubeconform:v0.6.7@sha256:0925177fb05b44ce18574076141b5c3d83235e1904d3f952182ac99ddc45762c -strict -summary -ignore-missing-schemas -kubernetes-version 1.33.0 /in
+
   docker:
     name: Docker-Image
     runs-on: ubuntu-latest

@@ -324,7 +324,7 @@ Las tablas se crean y migran automáticamente al arrancar.
 
 ### En Kubernetes
 
-Los manifiestos están en [deploy/kubernetes](deploy/kubernetes/README.md). La aplicación debe ejecutarse con exactamente una réplica.
+Hay un [chart de Helm](deploy/helm/README.md) y manifiestos en [deploy/kubernetes](deploy/kubernetes/README.md). La aplicación debe ejecutarse con exactamente una réplica.
 
 ## Configuración
 

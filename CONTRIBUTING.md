@@ -56,7 +56,7 @@ Rechte werden nicht im Einzelfall geprüft und gehofft, sondern automatisch abge
 - **`npm run test:access`** läuft bei jedem Push: Jede Route wird automatisch aus dem Router gelesen und mit jeder Rolle aufgerufen. Neue
   Routen sind damit ohne Zutun erfasst. Eine Route, die ohne Anmeldung oder für Fremde etwas liefert, lässt den Test fehlschlagen,
   bis sie bewusst in `scripts/test-access.js` eingetragen und begründet ist. Geheime Testmarken in privaten und verborgenen Inhalten
-  dürfen in keiner Antwort auftauchen.
+  dürfen in keiner Antwort auftauchen. Regeln innerhalb einzelner Board-Operationen (`lib/boards.js`) deckt der Test nicht ab.
 
 ## Upgrade-Test ausführen
 
