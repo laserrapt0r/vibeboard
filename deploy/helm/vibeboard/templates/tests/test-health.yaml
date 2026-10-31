@@ -10,6 +10,7 @@ metadata:
 spec:
   restartPolicy: Never
   automountServiceAccountToken: false
+  {{- include "vibeboard.scheduling" . | nindent 2 }}
   securityContext:
     runAsNonRoot: true
     runAsUser: 1000

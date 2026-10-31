@@ -50,7 +50,15 @@ export async function requestReview(el) {
       err.textContent = T('Bitte wähle mindestens eine prüfende Person aus.');
       return err.classList.remove('hidden');
     }
-    await send(() => api(base(), { method: 'POST', body: { elementId: el.id, reviewers, note: note.value, due: due.value } }), T('Freigabe angefordert'));
+    try {
+      await api(base(), { method: 'POST', body: { elementId: el.id, reviewers, note: note.value, due: due.value } });
+    } catch (ex) {
+      // Dialog bleibt offen, damit Hinweis und Datum nicht verloren gehen
+      err.textContent = ex.message;
+      return err.classList.remove('hidden');
+    }
+    toast(T('Freigabe angefordert'));
+    await loadReviews();
     m.close();
     toggleReviews(true);
   } },

@@ -1009,8 +1009,12 @@ export function pressurePath(points, sw) {
 
 // „1.234,5“, „1,234.5“, „12 %“, „3 €“ – Zahlen, wie sie in Tabellen stehen
 export function cellNumber(v) {
-  let s = String(v ?? '').replace(/[^\d.,\-]/g, '');
-  if (!/\d/.test(s)) return null;
+  // Nur Zahlen mit Währung oder Prozent: „1e3“ oder „1,5k“ sind Text, Klammern stehen für negativ
+  let raw = String(v ?? '').trim().replace(/[%€$£¥\s\u00a0]|\b(EUR|USD|CHF|GBP)\b/gi, '');
+  const negative = /^\(.*\)$/.test(raw);
+  if (negative) raw = raw.slice(1, -1);
+  if (!/^-?[\d.,]*\d[\d.,]*$/.test(raw)) return null;
+  let s = raw;
   const dots = (s.match(/\./g) || []).length, commas = (s.match(/,/g) || []).length;
   if (dots && commas) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
   else if (dots + commas > 1) s = s.replace(/[.,]/g, ''); // nur Tausendertrenner: 1.234.567
@@ -1019,7 +1023,7 @@ export function cellNumber(v) {
     s = /^-?[1-9]\d{0,2}[.,]\d{3}$/.test(s) ? s.replace(/[.,]/, '') : s.replace(',', '.');
   }
   const n = Number(s);
-  return Number.isFinite(n) ? n : null;
+  return Number.isFinite(n) ? (negative ? -n : n) : null;
 }
 
 export function chartData(table) {

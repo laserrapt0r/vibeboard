@@ -74,11 +74,11 @@ spec:
             - name: ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef: { name: vibeboard-secrets, key: admin-password, optional: true }
-          # Upgrades run database migrations and a backup before the server starts listening
+          # Upgrades run a backup and migrations before the server listens. The backup may take up to 15 minutes.
           startupProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 5
-            failureThreshold: 120
+            failureThreshold: 240
           readinessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 10

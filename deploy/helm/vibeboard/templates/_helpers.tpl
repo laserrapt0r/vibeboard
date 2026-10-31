@@ -47,3 +47,29 @@ app.kubernetes.io/name: {{ .name | quote }}
 {{- .Values.clamav.external.host -}}
 {{- end -}}
 {{- end -}}
+
+{{/* Pods ohne Versions-Label: Sonst startet ein Chart-Update auch Dienste neu, die sich nicht geändert haben */}}
+{{- define "vibeboard.podLabels" -}}
+app.kubernetes.io/instance: {{ .Release.Name | quote }}
+app.kubernetes.io/part-of: vibeboard
+{{- end -}}
+
+{{/* Für alle Pods gleich: Registry-Zugang und Platzierung */}}
+{{- define "vibeboard.scheduling" -}}
+{{- with .Values.imagePullSecrets }}
+imagePullSecrets:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.affinity }}
+affinity:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end -}}

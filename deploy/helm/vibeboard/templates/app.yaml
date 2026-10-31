@@ -54,7 +54,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "vibeboard.labels" . | nindent 8 }}
+        {{- include "vibeboard.podLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ $selector.name | quote }}
       annotations:
         # Restart when the configuration changes
@@ -64,11 +64,8 @@ spec:
         {{- end }}
     spec:
       automountServiceAccountToken: false
+      {{- include "vibeboard.scheduling" . | nindent 6 }}
       terminationGracePeriodSeconds: 30
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -103,11 +100,11 @@ spec:
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-          # Upgrades run database migrations and a backup before the server starts listening
+          # Upgrades run a backup and migrations before the server listens. The backup may take up to 15 minutes.
           startupProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 5
-            failureThreshold: 120
+            failureThreshold: 240
           readinessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 10
@@ -153,15 +150,3 @@ spec:
           configMap:
             name: {{ required "kerberos.configMap is required" .Values.kerberos.configMap }}
         {{- end }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}

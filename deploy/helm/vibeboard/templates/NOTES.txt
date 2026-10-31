@@ -2,7 +2,7 @@ vibeboard {{ .Chart.AppVersion }} is being installed.
 
   Address: {{ .Values.publicUrl }}
   Status:  kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "vibeboard.fullname" . }}
-{{- if not .Values.auth.adminEmail }}
+{{- if not (or .Values.auth.adminEmail .Values.auth.existingSecret) }}
 
 The first person to register becomes the administrator. Do this before others can reach the address.
 {{- end }}

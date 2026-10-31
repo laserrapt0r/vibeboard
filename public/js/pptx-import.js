@@ -62,13 +62,40 @@ function readScheme(text) {
   }
 }
 
+// Aufhellen und Abdunkeln wie im Design („Akzent 2, heller 60 %“): lumMod und lumOff in Tausendstel-Prozent
+function shade(hex, node) {
+  const mod = child(node, 'lumMod'), off = child(node, 'lumOff');
+  if (!mod && !off) return '#' + hex;
+  const m = mod ? +mod.getAttribute('val') / 1e5 : 1, o = off ? +off.getAttribute('val') / 1e5 : 0;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  const h = d === 0 ? 0 : max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  l = Math.min(1, l * m + o);
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h % 2) - 1)), low = l - c / 2;
+  const rgb = [[c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x]][Math.floor(h) % 6];
+  return '#' + rgb.map((v) => Math.round((v + low) * 255).toString(16).padStart(2, '0')).join('');
+}
+
+function colorOf(node) {
+  const rgb = child(node, 'srgbClr');
+  if (rgb) return shade(rgb.getAttribute('val'), rgb);
+  const sc = child(node, 'schemeClr');
+  const hex = sc && scheme.get(SCHEME_ALIAS[sc.getAttribute('val')] || sc.getAttribute('val'));
+  return hex ? shade(hex, sc) : undefined;
+}
+
 const solid = (node) => {
-  const fill = child(node, 'solidFill');
-  const rgb = fill && child(fill, 'srgbClr');
-  if (rgb) return '#' + rgb.getAttribute('val');
-  const name = fill && child(fill, 'schemeClr')?.getAttribute('val');
-  const hex = name && scheme.get(SCHEME_ALIAS[name] || name);
-  return hex ? '#' + hex : undefined;
+  const fill = node && child(node, 'solidFill');
+  return fill ? colorOf(fill) : undefined;
+};
+
+// Standardformen aus PowerPoint erhalten Füllung und Linie über ihren Stil
+const styled = (sp, name) => {
+  const ref = child(child(sp, 'style'), name);
+  return ref && +ref.getAttribute('idx') > 0 ? colorOf(ref) : undefined;
 };
 
 function textOf(txBody) {
@@ -138,13 +165,18 @@ async function readShapes(zip, tree, map, ctx, tx) {
       if (!box) continue;
       const t = textOf(child(node, 'txBody'));
       const geom = child(spPr, 'prstGeom')?.getAttribute('prst');
-      const fill = solid(spPr);
+      const noFill = !!child(spPr, 'noFill');
+      const fill = solid(spPr) || (noFill ? undefined : styled(node, 'fillRef'));
       const ln = child(spPr, 'ln');
+      const line = (ln && solid(ln)) || (ln && child(ln, 'noFill') ? undefined : styled(node, 'lnRef'));
       const isText = node.getElementsByTagNameNS(NS.p, 'cNvSpPr')[0]?.getAttribute('txBox') === '1' || (!geom && !fill) || (geom === 'rect' && !fill && !solid(ln || spPr) && t.text);
-      if (!t.text && !fill && !ln) continue;
+      if (!t.text && !fill && !line) {
+        ctx.skipped.other++;
+        continue;
+      }
       const fontSize = Math.round(t.size || 18);
       if (isText) out.push({ id: uid(), type: 'text', ...place(box), text: t.text, fontSize, bold: t.bold || undefined, textColor: t.color, align: t.align || 'left', autoHeight: false });
-      else out.push({ id: uid(), type: 'shape', shape: GEOM[geom] || 'rect', ...place(box), text: t.text, fontSize, bold: t.bold || undefined, textColor: t.color, fill: fill || 'transparent', stroke: (ln && solid(ln)) || (fill ? 'transparent' : '#1a1a1a'), strokeWidth: 2 });
+      else out.push({ id: uid(), type: 'shape', shape: GEOM[geom] || 'rect', ...place(box), text: t.text, fontSize, bold: t.bold || undefined, textColor: t.color, fill: fill || 'transparent', stroke: line || (fill ? 'transparent' : '#1a1a1a'), strokeWidth: 2 });
     } else if (kind === 'pic') {
       const box = xfrmOf(child(node, 'spPr'));
       const id = q(node, 'a', 'blip')?.getAttributeNS(NS.r, 'embed');

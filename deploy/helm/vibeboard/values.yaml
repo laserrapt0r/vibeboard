@@ -14,7 +14,8 @@ imagePullSecrets: []
 # Required: public address, used for links in e-mails and SSO redirects
 publicUrl: ""
 
-# Number of proxies in front of the app, or a list of addresses and networks
+# Number of proxies in front of the app, or a list of addresses and networks.
+# With service.type LoadBalancer and no proxy, set it to 0: otherwise clients can forge their address.
 trustProxy: "1"
 
 logging:
@@ -28,9 +29,11 @@ auth:
   # Name of an existing Secret with the keys postgres-password and, optionally, admin-email and admin-password.
   # Recommended for production: keeps passwords out of the Helm values.
   existingSecret: ""
-  # Used only without existingSecret. Empty: a random password is generated once and kept on upgrades.
+  # Used only without existingSecret. Empty: a random password is generated once, kept on upgrades and left in
+  # place by helm uninstall. Required with an external database. With GitOps tools use existingSecret instead.
   postgresPassword: ""
-  # Optional: creates the first administrator on the first start
+  # Optional: creates the first administrator on the first start. The password must meet the rules of the
+  # application (at least 12 characters); otherwise the app doesn't start.
   adminEmail: ""
   adminPassword: ""
 
@@ -71,6 +74,7 @@ postgres:
     digest: ""
   database: vibeboard
   username: vibeboard
+  # size and storageClass can't be changed after the first install
   size: 10Gi
   storageClass: ""
   resources:

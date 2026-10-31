@@ -225,6 +225,8 @@ const FONT_SIZES = [[10, '10'], [12, '12'], [14, '14'], [16, '16'], [18, '18'], 
 const STROKE_W = [[0, T('Ohne')], [1, T('1 px')], [2, T('2 px')], [3, T('3 px')], [4, T('4 px')], [6, T('6 px')], [8, T('8 px')], [12, T('12 px')]];
 
 export function buildCtx() {
+  // Nach dem Neuaufbau bleibt der Tastaturfokus auf demselben Knopf
+  const focused = ctxbar.contains(document.activeElement) ? document.activeElement.title : null;
   ctxbar.innerHTML = '';
   const sel = selectedEls();
   if (!sel.length || app.viewOnly || app.tool !== 'select') {
@@ -427,6 +429,7 @@ export function buildCtx() {
   }
   ctxbar.append(...items);
   ctxbar.classList.remove('hidden');
+  if (focused) [...ctxbar.querySelectorAll('button')].find((b) => b.title === focused)?.focus();
   positionCtx();
 }
 
@@ -579,11 +582,14 @@ app.on('editCard', (id) => {
   const form = h('form', { class: 'form', onsubmit: (e) => {
     e.preventDefault();
     if (start.value && due.value && start.value > due.value) return toast(T('Der Beginn muss vor der Fälligkeit liegen.'));
-    act(() => updateEl(id, {
+    const next = {
       title: title.value, description: desc.value, assignee: assignee.value.trim(), assigneeId: assigneeId || undefined, due: due.value, start: start.value || undefined, status: status.value.trim(), color,
       key: key.value.trim() || undefined, priority: prio.value || undefined, points: points.value.trim() || undefined,
       tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 8),
-    }));
+    };
+    // Nur Geändertes schreiben: Sonst überschriebe der offene Dialog, was andere inzwischen an der Karte geändert haben
+    const patch = Object.fromEntries(Object.entries(next).filter(([k, v]) => JSON.stringify(v ?? '') !== JSON.stringify(el[k] ?? '')));
+    if (Object.keys(patch).length) act(() => updateEl(id, patch));
     m.close();
     buildCtx();
   } },
@@ -1077,9 +1083,11 @@ async function exportPptx() {
     const { buildPptx } = await import('./pptx-export.js');
     // Die Datei verlässt die Anwendung: Privates und verborgene Bereiche bleiben außen vor
     const hidden = globalThis.ConcealOps ? globalThis.ConcealOps.concealedIds([...app.els.values()]) : new Set();
-    const usable = (e) => !e.hidden && !e.priv && !hidden.has(e.id) && e.type !== 'comment';
+    const open = (e) => !e.hidden && !e.priv && !hidden.has(e.id);
+    // Ein Diagramm trägt die Werte seiner Tabelle
+    const usable = (e) => open(e) && e.type !== 'comment' && !(e.type === 'chart' && getEl(e.sourceId) && !open(getEl(e.sourceId)));
     const all = [...app.els.values()].filter(usable);
-    const list = frames().filter(usable);
+    const list = frames().filter((f) => usable(f) && !f.concealed);
     const withLines = (els) => {
       const ids = new Set(els.map((e) => e.id));
       return sortForRender([...els.filter(usable), ...all.filter((e) => e.type === 'connector' && e.from.id && e.to.id && ids.has(e.from.id) && ids.has(e.to.id) && !ids.has(e.id))]);
@@ -1500,6 +1508,13 @@ function buildTopbar() {
     iconBtn('download', T('Exportieren & Importieren'), (e) => openExportMenu(e.currentTarget)),
   );
   const right = $('#topright');
+  // Die Leiste links darf rechts nichts verdecken: Passt nicht alles hinein, lässt sie sich waagerecht scrollen
+  const fitTop = () => {
+    const stacked = getComputedStyle(right).top !== getComputedStyle(top).top;
+    top.style.maxWidth = stacked ? '' : `calc(100vw - ${right.offsetWidth + 44}px)`;
+  };
+  new ResizeObserver(fitTop).observe(right);
+  addEventListener('resize', fitTop);
   const tools = h('div', { class: 'collab-tools' });
   append(right, tools, h('div', { id: 'avatars' }),
     app.guest ? null : bellButton({ open: (n) => app.emit('openNotification', n) }),

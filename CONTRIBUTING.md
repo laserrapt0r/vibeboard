@@ -51,10 +51,11 @@ der nächsten Version ins CHANGELOG. Wer eine Änderung ohne Dependabot macht, b
 
 Rechte werden nicht im Einzelfall geprüft und gehofft, sondern automatisch abgesichert:
 
-- **Sichtbarkeit von Elementen** entscheidet nur `boards.canSeeElement(b, el, uid, role)`. Elemente in `b.elements` sind ungeschwärzt.
-  Das Feld `hidden` gibt es nur im Browser, im Server ist es nie gesetzt.
-- **`npm run test:access`** läuft bei jedem Push: Jede Route wird automatisch aus dem Router gelesen und mit jeder Rolle aufgerufen. Neue
-  Routen sind damit ohne Zutun erfasst. Eine Route, die ohne Anmeldung oder für Fremde etwas liefert, lässt den Test fehlschlagen,
+- **Sichtbarkeit von Elementen** entscheidet in neuem Code `boards.canSeeElement(b, el, uid, role)`. Elemente in `b.elements` sind
+  ungeschwärzt. Das Feld `hidden` tragen nur geschwärzte Kopien für den Browser, im Speicher des Servers ist es nie gesetzt.
+- **`npm run test:access`** läuft bei jedem Push auf `main` und jedem Pull Request: Jede Route wird automatisch aus dem Router gelesen und
+  mit echten Gegenständen aufgerufen (ohne Anmeldung, fremd, Ansehen, Kommentieren, Gast; Bearbeiten für Besitzerrechte). Neue Routen sind
+  damit ohne Zutun erfasst. Eine Route, die ohne Anmeldung oder für Fremde etwas liefert, lässt den Test fehlschlagen,
   bis sie bewusst in `scripts/test-access.js` eingetragen und begründet ist. Geheime Testmarken in privaten und verborgenen Inhalten
   dürfen in keiner Antwort auftauchen. Regeln innerhalb einzelner Board-Operationen (`lib/boards.js`) deckt der Test nicht ab.
 

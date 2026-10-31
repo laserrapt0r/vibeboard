@@ -24,7 +24,7 @@ kubectl -n vibeboard create secret generic vibeboard-secrets \
   --from-literal=admin-email=admin@example.org \
   --from-literal=admin-password="$(openssl rand -base64 24)"
 
-helm install board deploy/helm/vibeboard -n vibeboard \
+helm install board deploy/helm/vibeboard -n vibeboard --wait --timeout 15m \
   --set image.repository=registry.example.org/vibeboard \
   --set publicUrl=https://board.example.org \
   --set auth.existingSecret=vibeboard-secrets \
@@ -33,7 +33,13 @@ helm install board deploy/helm/vibeboard -n vibeboard \
 helm test board -n vibeboard
 ```
 
-Without `auth.existingSecret`, the chart creates a Secret with a random database password and keeps it across upgrades.
+TLS needs the Secret named in `ingress.tls.secretName`, for example from cert-manager. `--wait` matters for `helm test`: the
+test fails while the app is still starting, and the first ClamAV start takes several minutes.
+
+Without `auth.existingSecret`, the chart creates a Secret with a random database password. It survives upgrades and
+`helm uninstall`, as the database volume does. Remove the Secret and the volume together, or neither. GitOps tools such as Argo CD
+render templates without cluster access and would create a new password each time, so use `auth.existingSecret` there. An external
+database always needs `auth.postgresPassword` or `auth.existingSecret`.
 
 ## Common settings
 
@@ -68,10 +74,14 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-buffer-size: "64k"
 ```
 
+The namespace isn't part of the chart. To enforce Pod Security Standards, label it `baseline`: ClamAV's image starts as root.
+
 ## Upgrades and removal
 
-`helm upgrade` restarts the app, and migrations run automatically. `helm uninstall` removes the app but keeps the database volume and
-the backup volume, so delete those yourself if you really want to. Schedule regular database backups: the dump written before an
+`helm upgrade` restarts the app, and migrations run automatically. `postgres.size` and `postgres.storageClass` can't be changed
+afterwards. `helm rollback` to an older app version fails at startup, because the database is already newer: restore the backup
+written before the upgrade instead. `helm uninstall` removes the app but keeps the Secret, the database volume and the backup volume,
+so delete those yourself if you really want to. Schedule regular database backups: the dump written before an
 upgrade doesn't replace them.
 
 Don't change the major version of `postgres.image.tag` on an existing database: PostgreSQL can't read a data directory of an older

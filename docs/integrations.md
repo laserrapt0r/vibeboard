@@ -20,7 +20,9 @@ Azure DevOps, and for Jira if you want to create tickets from cards.
 
 **What happens:** The sync runs every five minutes or on demand.
 
-- Query results become cards. Title, description, status, due date, priority and labels sync both ways.
+- Query results become cards. Title, description, status, due date, priority and labels sync both ways. Azure DevOps work item
+  types without a date field keep their date on the card only, and the sync reports it. A card holds eight labels at most; further
+  labels stay on the ticket.
 - Assignees sync only from the ticket to the card.
 - If both changed, the ticket wins and the sync reports a conflict.
 - Jira status changes use allowed transitions. An unreachable status is reported, and the card returns to the ticket's status.

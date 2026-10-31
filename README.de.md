@@ -16,7 +16,7 @@ Rechte pro Board und eine Administrationsoberfläche. Die Daten liegen in Postgr
 - Automatische Upgrades mit Sicherung: Neue Versionen aktualisieren die Datenbank beim Start selbst.
 - Alle Funktionen sind als Anforderungen dokumentiert: [docs/anforderungen](docs/anforderungen/README.md).
 - Frontend in reinem JavaScript und SVG, ohne Build-Schritt.
-- Backend in Node.js mit nur vier Abhängigkeiten (`pg`, `nodemailer`, `uqr`, `pdfjs-dist`).
+- Backend in Node.js mit wenigen Abhängigkeiten (`pg`, `nodemailer`, `uqr`, `pdfjs-dist`, `ldapts`, `@node-saml/node-saml`, optional `kerberos`).
 - Oberfläche auf Englisch, Deutsch, Spanisch und Französisch – die Sprache folgt dem Browser, Standard ist Englisch.
 
 ![Zusammenarbeit in Echtzeit: Mauszeiger mit Namen, Auswahl einer anderen Person und Cursor-Chat](docs/screenshots/zusammenarbeit.png)

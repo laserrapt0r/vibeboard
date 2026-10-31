@@ -109,6 +109,7 @@ export function facilitatorItems(p) {
 }
 
 const REASONS = {
+  privateMode: T('Den privaten Modus beendet, wer ihn gestartet hat, der Besitzer oder die Moderation.'),
   concealed: T('Dieser Bereich ist verborgen. Nur der Besitzer oder die Moderation kann hier etwas ändern.'),
   editLock: T('Die Moderation hat das Bearbeiten gerade gesperrt.'),
   modLock: T('Dieses Element hat die Moderation für Teilnehmende gesperrt.'),

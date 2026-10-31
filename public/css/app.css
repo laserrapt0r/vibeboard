@@ -294,6 +294,9 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
   position: fixed; top: 12px; left: 12px; height: 48px; display: flex; align-items: center; gap: 4px;
   padding: 0 6px; z-index: 50; max-width: calc(100vw - 24px);
 }
+#topbar { overflow-x: auto; scrollbar-width: thin; }
+#topbar > * { flex-shrink: 0; }
+#topbar #board-name { flex: 0 1 auto; min-width: 90px; }
 #topbar .brand { width: 40px; }
 #board-name {
   border: 1px solid transparent; background: transparent; font-weight: 600; font-size: 15px; padding: 6px 8px;

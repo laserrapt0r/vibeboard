@@ -15,7 +15,7 @@ permissions per board and an administration interface. The data is stored in Pos
 - Automatic upgrades with backup: new versions update the database themselves on startup.
 - All features are documented as requirements: [docs/anforderungen](docs/anforderungen/README.md) (the requirements documents are in German).
 - Frontend in plain JavaScript and SVG, without a build step.
-- Backend in Node.js with only four dependencies (`pg`, `nodemailer`, `uqr`, `pdfjs-dist`).
+- Backend in Node.js with few dependencies (`pg`, `nodemailer`, `uqr`, `pdfjs-dist`, `ldapts`, `@node-saml/node-saml`, optionally `kerberos`).
 - Interface in English, German, Spanish and French – the language follows the browser, the default is English.
 
 ![Real-time collaboration: mouse pointers with names, another person's selection and cursor chat](docs/screenshots/zusammenarbeit.png)
@@ -336,6 +336,8 @@ Environment variables (with Docker in the `.env`):
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | – | Creates this administrator during initial setup – only if there is no active administrator yet and no account with that address (`ADMIN_USERNAME` is still accepted as the name) |
 | `TRUST_PROXY` | `0` | Reverse proxy in front: `1` (one proxy), `2` … (several in a row) or a list of proxy addresses/networks, e.g. `127.0.0.1, 172.16.0.0/12`. Then evaluates `X-Forwarded-For` and `X-Forwarded-Proto` – see “Real IP addresses” |
 | `CLAMAV_HOST`, `CLAMAV_PORT` | `clamav`, `3310` (Docker) | clamd service for the virus scan; empty = no scanner |
+| `OFFICE_CONVERTER_URL` | – | Gotenberg service for Office files, see [integrations](docs/integrations.md) |
+| `KRB5_KTNAME` | `/etc/krb5.keytab` | Keytab for Kerberos, see [sign-in](docs/authentication.md) |
 | `BACKUP_DIR` | `/backups` (Docker) | Directory for backups before database upgrades; empty = no backup |
 | `BACKUP_KEEP` | `10` | Number of backups kept |
 | `BACKUP_BEFORE_UPGRADE` | `1` | `0` skips the backup (not recommended) |

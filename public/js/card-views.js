@@ -39,11 +39,11 @@ function kanban(close, added, rerender) {
     const inCol = list.filter((c) => statusOf(c) === col);
     const body = h('div', { class: 'kanban-body' });
     for (const c of inCol) {
-      const move = h('select', { 'aria-label': T`Status von „${c.title || T('Neue Karte')}“`, disabled: readOnly(c), onchange: (e) => setStatus(c.id, e.target.value) },
+      const move = h('select', { 'data-focus': c.id + ':status', 'aria-label': T`Status von „${c.title || T('Neue Karte')}“`, disabled: readOnly(c), onchange: (e) => setStatus(c.id, e.target.value) },
         cols.map((s) => h('option', { value: s, selected: s === col }, s || T('Ohne Status'))));
       const card = h('article', { class: 'kanban-card', draggable: readOnly(c) ? null : 'true', style: { borderTopColor: c.color || '#4262ff' } },
         c.key ? h('div', { class: 'muted small' }, c.key) : null,
-        h('button', { class: 'kanban-title', title: T('Auf dem Board zeigen'), onclick: () => jump(c.id, close) }, c.title || T('Neue Karte')),
+        h('button', { 'data-focus': c.id + ':title', class: 'kanban-title', title: T('Auf dem Board zeigen'), onclick: () => jump(c.id, close) }, c.title || T('Neue Karte')),
         h('div', { class: 'kanban-meta' },
           c.assignee ? h('span', { class: 'avatar xs', title: c.assignee }, initials(c.assignee)) : null,
           c.due ? h('span', { class: 'muted small' }, new Date(c.due + 'T00:00').toLocaleDateString(LOCALE)) : null,
@@ -121,8 +121,8 @@ function timeline(close) {
       }
       act(() => updateEl(c.id, patch));
     };
-    const start = h('input', { type: 'date', value: c.start || '', disabled: readOnly(c), 'aria-label': T`Beginn von „${c.title || T('Neue Karte')}“`, onchange: (e) => dates({ start: e.target.value || undefined }, start) });
-    const due = h('input', { type: 'date', value: c.due || '', disabled: readOnly(c), 'aria-label': T`Fälligkeit von „${c.title || T('Neue Karte')}“`, onchange: (e) => dates({ due: e.target.value }, due) });
+    const start = h('input', { 'data-focus': c.id + ':start', type: 'date', value: c.start || '', disabled: readOnly(c), 'aria-label': T`Beginn von „${c.title || T('Neue Karte')}“`, onblur: (e) => e.target.value !== (c.start || '') && dates({ start: e.target.value || undefined }, start) });
+    const due = h('input', { 'data-focus': c.id + ':due', type: 'date', value: c.due || '', disabled: readOnly(c), 'aria-label': T`Fälligkeit von „${c.title || T('Neue Karte')}“`, onblur: (e) => e.target.value !== (c.due || '') && dates({ due: e.target.value }, due) });
     const track = h('div', { class: 'tl-track', style: { width: width + 'px' } }, h('span', { class: 'tl-today', style: { left: (today - first) * dayW + 'px' } }));
     const a = c.start || c.due, b = c.due || c.start;
     if (a) {
@@ -183,13 +183,14 @@ app.on('openCardViews', () => {
     const scroller = body.querySelector('.kanban, .tl-scroll');
     const pos = scroller ? [scroller.scrollLeft, scroller.scrollTop] : null;
     // Nach dem Neuaufbau bleibt der Fokus auf demselben Feld
-    const label = document.activeElement?.getAttribute?.('aria-label');
+    const ae = document.activeElement;
+    const key = ae && body.contains(ae) ? ae.dataset.focus || (ae.getAttribute('role') === 'tab' ? 'tab' : 'other') : null;
     body.innerHTML = '';
     body.append(h('div', { class: 'row', role: 'tablist', 'aria-label': T('Ansicht') }, tab('kanban', T('Kanban')), tab('timeline', T('Zeitleiste'))),
       h('div', { id: 'view-panel', role: 'tabpanel', 'aria-labelledby': 'view-tab-' + view, class: 'view-panel' }, view === 'kanban' ? kanban(() => m.close(), added, render) : timeline(() => m.close())));
     const next = body.querySelector('.kanban, .tl-scroll');
     if (next && pos) [next.scrollLeft, next.scrollTop] = pos;
-    if (label) [...body.querySelectorAll('[aria-label]')].find((e) => e.getAttribute('aria-label') === label)?.focus();
+    if (key) (body.querySelector(`[data-focus="${key}"]`) || body.querySelector('[aria-selected=true]'))?.focus();
   };
   const m = modal(T('Kanban und Zeitleiste'), body, { wide: true, onClose: () => app.off?.('render', watch) });
   m.box.classList.add('views');

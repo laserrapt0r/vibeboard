@@ -111,8 +111,10 @@ BSI IT-Grundschutz.
 ### REQ-SEC-014 Automatische Prüfung der Zugriffsrechte
 - **Seit:** 4.5.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
-  - Bei jedem Push wird jede Route aus dem Router gelesen und ohne Anmeldung, als fremde Person, Gast, Ansehen, Kommentieren und Bearbeiten aufgerufen. Neue Routen sind ohne Zutun erfasst.
+  - Bei jedem Push auf `main` und jedem Pull Request wird jede Route aus dem Router gelesen und mit echten Gegenständen aufgerufen: ohne Anmeldung, als fremde Person, mit den Rollen Ansehen, Kommentieren und Gast; Bearbeiten für die Rechte des Besitzers und die Administration. Neue Routen sind ohne Zutun erfasst.
+  - Eine Gegenprobe stellt für jede Leseroute sicher, dass Berechtigte sie erreichen. Abbrüche gelten als Fehler, Ablehnen zählt nur mit 401, 403, 404, 405, 409 oder 410.
+  - Kopien (Board duplizieren, Version kopieren) dürfen keine verborgenen Inhalte und Dateien mitnehmen.
   - Öffentliche Routen stehen mit Begründung in einer Liste; alles andere muss ohne Anmeldung scheitern. Die Administration ist nur für Administratoren erreichbar.
   - Testmarken in privaten Elementen, verborgenen Bereichen, Dateien und Geheimnissen dürfen in keiner Antwort an Unberechtigte stehen. Gegenproben stellen sicher, dass Berechtigte sie sehen.
-  - Sichtbarkeit von Elementen entscheidet allein `boards.canSeeElement`; Prüfungen auf das im Server nie gesetzte Feld `hidden` lassen den Test fehlschlagen.
+  - Neuer Code entscheidet die Sichtbarkeit von Elementen mit `boards.canSeeElement`; Prüfungen auf das Feld `hidden`, das nur geschwärzte Kopien haben, lassen den Test fehlschlagen.
   - Grenze: Der Test prüft HTTP-Antworten. Regeln innerhalb einzelner Board-Operationen brauchen eigene Prüfungen.

@@ -62,6 +62,14 @@ function menuKeys(list) {
   });
 }
 
+// Auch Popups, in denen kein Eintrag den Fokus hat (Farbauswahl)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && openPop) {
+    e.stopPropagation();
+    closePop();
+  }
+}, true);
+
 document.addEventListener('pointerdown', (e) => {
   if (openPop && !openPop.el.contains(e.target) && !openPop.anchor.contains(e.target)) closePop();
 }, true);

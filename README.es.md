@@ -16,7 +16,7 @@ opcional, permisos por tablero y una interfaz de administración. Los datos se g
 - Actualizaciones automáticas con copia de seguridad: las versiones nuevas actualizan la base de datos por sí mismas al arrancar.
 - Todas las funciones están documentadas como requisitos: [docs/anforderungen](docs/anforderungen/README.md) (los documentos de requisitos están en alemán).
 - Frontend en JavaScript y SVG puros, sin paso de compilación.
-- Backend en Node.js con solo cuatro dependencias (`pg`, `nodemailer`, `uqr`, `pdfjs-dist`).
+- Backend en Node.js con pocas dependencias (`pg`, `nodemailer`, `uqr`, `pdfjs-dist`, `ldapts`, `@node-saml/node-saml`, opcionalmente `kerberos`).
 - Interfaz en inglés, alemán, español y francés: el idioma sigue al navegador y, por defecto, es el inglés.
 
 ![Colaboración en tiempo real: punteros del ratón con nombres, selección de otra persona y chat del cursor](docs/screenshots/zusammenarbeit.png)

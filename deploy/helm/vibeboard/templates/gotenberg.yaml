@@ -28,10 +28,11 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "vibeboard.labels" . | nindent 8 }}
+        {{- include "vibeboard.podLabels" . | nindent 8 }}
         app.kubernetes.io/name: {{ $selector.name | quote }}
     spec:
       automountServiceAccountToken: false
+      {{- include "vibeboard.scheduling" . | nindent 6 }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001

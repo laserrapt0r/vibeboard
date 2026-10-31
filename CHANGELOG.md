@@ -8,11 +8,27 @@ die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (s
 
 ### Hinzugefügt
 - **Helm-Chart** (REQ-OPS-013) unter `deploy/helm/vibeboard`.
-- **Automatischer Rechte-Test** (REQ-SEC-014): `npm run test:access` ruft jede Route mit jeder Rolle auf und läuft bei jedem Push.
+- **Automatischer Rechte-Test** (REQ-SEC-014): `npm run test:access` liest alle Routen aus dem Router und ruft sie mit echten Gegenständen und den Rollen ohne Anmeldung, fremd, Ansehen, Kommentieren und Gast auf; läuft bei Pushes auf `main` und Pull Requests.
 
 ### Sicherheit
-- Dateien in verborgenen Bereichen und privaten Elementen sind nicht mehr über ihre Kennung abrufbar (Datei, Vorschau, Name, PDF).
-- Sichtbarkeit wird zentral in `boards.canSeeElement` entschieden.
+- Dateien in verborgenen Bereichen und privaten Elementen sind nicht mehr über ihre Kennung abrufbar (Datei, Vorschau, Name, PDF), auch nicht über eine Kopie des Boards oder einer Version.
+- Der Name an Elementen kommt vom Server; „anonym“ lässt sich nicht mehr selbst setzen.
+- Die Moderationssperre gilt auch für das Löschen eigener Kommentare.
+- Sichtbarkeit wird für neuen Code zentral in `boards.canSeeElement` entschieden.
+
+### Geändert
+- Privaten Modus beendet, wer ihn gestartet hat, der Besitzer oder die Moderation.
+
+### Behoben
+- Azure DevOps: Die Fälligkeit geht ans Work Item, Typen ohne Datumsfeld ergeben einen Hinweis statt eines Fehlers.
+- Kopien eines Boards sind nicht mehr mit denselben Tickets verbunden.
+- Kopfleiste verdeckt auf schmaleren Bildschirmen keine Knöpfe mehr, sie lässt sich bei Bedarf scrollen.
+- Freigaben: Alle Änderungen an Verbindungen zählen, Rechenungenauigkeiten beim Ziehen entwerten nichts mehr.
+- Dokumentseiten gehen auch mit, wenn der Frame per Tastatur oder in einer Mehrfachauswahl bewegt wird.
+- Der Kartendialog überschreibt nur noch, was tatsächlich geändert wurde.
+- PowerPoint-Import: Farben aus Formatvorlagen und aufgehellte Designfarben.
+- Diagramme: „1e3“ gilt als Text, Klammern als negativ.
+- Kanban und Zeitleiste: Fokus bleibt erhalten, Datumsfelder übernehmen erst beim Verlassen.
 
 ## [4.4.1] – 2026-10-31
 

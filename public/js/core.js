@@ -1479,6 +1479,12 @@ function startMarquee(e, start, pendingSelect) {
   }
 }
 
+// Dokumentseiten sind gegen Verrutschen gesperrt, gehören aber fest zu ihrem Frame
+function pageOfMovedFrame(el) {
+  if (!el.fileRef || el.modLock) return false;
+  return selectedEls().some((f) => f.type === 'frame' && frameChildren(f).some((c) => c.id === el.id));
+}
+
 function startMove(e, start) {
   begin();
   let ids = new Set(app.sel);
@@ -1487,9 +1493,7 @@ function startMove(e, start) {
     const el = getEl(id);
     if (el && el.type === 'frame') withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
   }
-  // Dokumentseiten sind gegen Verrutschen gesperrt, gehören aber fest zu ihrem Frame
-  const moved = (id) => app.sel.has(id) || !getEl(id).fileRef;
-  ids = [...ids].filter((id) => getEl(id) && (!isLocked(getEl(id)) || (!moved(id) && !getEl(id).modLock)));
+  ids = [...ids].filter((id) => getEl(id) && (!isLocked(getEl(id)) || pageOfMovedFrame(getEl(id))));
   // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit
   const idSet = new Set(ids);
   for (const c of app.els.values()) {
@@ -2609,7 +2613,7 @@ export function nudge(dx, dy) {
   for (const c of app.els.values()) {
     if (c.type === 'connector' && !ids.has(c.id) && waypointsOf(c).length && c.from.id && c.to.id && ids.has(c.from.id) && ids.has(c.to.id)) ids.add(c.id);
   }
-  act(() => [...ids].map(getEl).filter((e) => e && !isLocked(e)).forEach((el) => setEl(translated(el, dx, dy))));
+  act(() => [...ids].map(getEl).filter((e) => e && (!isLocked(e) || pageOfMovedFrame(e))).forEach((el) => setEl(translated(el, dx, dy))));
 }
 
 /* ================================================================== */

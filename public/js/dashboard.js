@@ -762,7 +762,6 @@ importInput.addEventListener('change', async () => {
     // draw.io und PowerPoint: Der Dateiname wird zum Namen des Boards
     const foreign = /\.(drawio|pptx)$/i.test(f.name) ? await (await import('./import-file.js')).readForeign(f) : null;
     if (foreign && !foreign.elements.length) return toast(T('Keine Elemente gefunden'));
-    if (foreign?.skipped) toast(T`${foreign.elements.length} Elemente importiert, ${foreign.skipped} nicht übernommen (z. B. Diagramme oder SmartArt)`, 5000);
     const d = foreign ? { name: f.name.replace(/\.[a-z]+$/i, ''), elements: foreign.elements } : JSON.parse(await f.text());
     const elements = Array.isArray(d) ? d : Array.isArray(d.elements) ? d.elements : Object.values(d.elements || {});
     const b = await api('/api/boards', { method: 'POST', body: { name: d.name || f.name.replace(/\.((dlz|vibe)board\.)?json$/, ''), elements } });
@@ -770,6 +769,11 @@ importInput.addEventListener('change', async () => {
       toast(T`${b.rejected.length} Bild(er) wurden nicht übernommen: ${b.rejected[0].reason}`, 6000);
       setTimeout(() => (location.href = '/board/' + b.id), 4000);
       return;
+    }
+    // Lange genug zu lesen, bevor das Board öffnet
+    if (foreign?.skipped) {
+      toast(T`${foreign.elements.length} Elemente importiert, ${foreign.skipped} nicht übernommen (z. B. Diagramme oder SmartArt)`, 4000);
+      await new Promise((r) => setTimeout(r, 3500));
     }
     location.href = '/board/' + b.id;
   } catch (e) {

@@ -69,6 +69,7 @@ jobs:
           $helm template vb /deploy/helm/vibeboard --set publicUrl=https://board.example.org > out/standard.yaml
           $helm template vb /deploy/helm/vibeboard --set publicUrl=https://board.example.org --set ingress.enabled=true --set gotenberg.enabled=true --set kerberos.enabled=true --set kerberos.keytabSecret=k --set kerberos.configMap=c > out/voll.yaml
           $helm template vb /deploy/helm/vibeboard --set publicUrl=https://board.example.org --set postgres.enabled=false --set postgres.external.host=db --set clamav.enabled=false --set auth.existingSecret=s > out/extern.yaml
+          $helm template vb /deploy/helm/vibeboard --set publicUrl=https://board.example.org --set httpRoute.enabled=true --set 'httpRoute.parentRefs[0].name=gw' > out/gateway.yaml
           docker run --rm -v $PWD/out:/in:ro ghcr.io/yannh/kubeconform:v0.6.7@sha256:0925177fb05b44ce18574076141b5c3d83235e1904d3f952182ac99ddc45762c -strict -summary -ignore-missing-schemas -kubernetes-version 1.33.0 /in
 
   docker:
