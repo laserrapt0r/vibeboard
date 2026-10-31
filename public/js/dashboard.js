@@ -5,7 +5,7 @@ import { TEMPLATES } from './templates.js';
 import { templateGallery, loadCustom, byRecent, loadTemplate, markTemplateUsed, fillPreview } from './gallery.js';
 import { menu } from './menu.js';
 import { openShareDialog } from './share.js';
-import { openProfileDialog, accountMenuItems } from './account.js';
+import { openProfileDialog, accountMenuItems, webhooksEnabled } from './account.js';
 import { legalFooter } from './footer.js';
 import { bellButton, refresh as refreshBell } from './notifications.js';
 
@@ -622,7 +622,7 @@ async function openTeamDialog(id) {
     body.append(h('div', {}, h('div', { class: 'label' }, T`Mitglieder (${t.members.length})`), list));
     body.append(h('p', { class: 'muted small' }, T('Boards ordnest du über „Teilen“ → „Team“ zu. Dort legst du auch fest, ob das Team bearbeiten, kommentieren oder nur ansehen darf.')));
     if (admin) {
-      body.append(h('div', { class: 'form-actions' }, h('button', { class: 'btn', onclick: () => import('./webhooks-ui.js').then((mod) => mod.openWebhooks({ teamId: id, teamName: t.name })) }, T('Chat-Anbindung …')), h('span', { class: 'spacer' }), h('button', { class: 'btn danger', onclick: async () => {
+      body.append(h('div', { class: 'form-actions' }, h('button', { class: 'btn', disabled: !webhooksEnabled(), title: webhooksEnabled() ? null : T('abgeschaltet'), onclick: () => import('./webhooks-ui.js').then((mod) => mod.openWebhooks({ teamId: id, teamName: t.name })) }, T('Chat-Anbindung …')), h('span', { class: 'spacer' }), h('button', { class: 'btn danger', onclick: async () => {
         if (!(await confirmDialog(T('Team löschen'), T`Das Team „${t.name}“ wird gelöscht. Die Boards bleiben bei ihren Besitzern erhalten, sind aber nicht mehr für das Team freigegeben.`, T('Löschen'), true))) return;
         try {
           await api('/api/teams/' + id, { method: 'DELETE' });

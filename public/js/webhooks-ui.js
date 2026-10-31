@@ -1,6 +1,6 @@
 // Verwaltung der Chat-Anbindung (Webhooks) – für die eigene Person (Profil) oder ein Team (Team-Verwaltung)
 import { T } from './i18n.js';
-import { h, api, toast, modal, relTime, confirmDialog } from './util.js';
+import { h, append, api, toast, modal, relTime, confirmDialog } from './util.js';
 
 const FORMAT_LABEL = { teams: T('Microsoft Teams'), slack: T('Slack / Mattermost / Rocket.Chat'), matrix: T('Matrix (Hookshot)'), generic: T('Allgemein (JSON)') };
 
@@ -74,7 +74,7 @@ export async function openWebhooks({ teamId = null, teamName = '' } = {}) {
   h('div', {}, h('div', { class: 'label' }, T('Senden bei')), h('div', { class: 'check-grid' }, checks.map((c) => h('label', { class: 'check' }, c.cb, c.label)))),
   h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, T('Einrichten'))));
 
-  body.append(
+  append(body,
     meta.enabled ? null : h('p', { class: 'notice warn' }, T('Webhooks sind in dieser Installation abgeschaltet. Eine Administratorin oder ein Administrator kann sie unter „Zusammenarbeit“ einschalten.')),
     h('p', { class: 'muted' }, teamId
       ? T('Neue Boards im Team und Retro-Zusammenfassungen erscheinen im Chat-Kanal des Teams.')

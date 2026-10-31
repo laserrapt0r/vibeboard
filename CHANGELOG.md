@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.3.1] – 2026-10-31
+
+### Behoben
+- Chat-Anbindung: Unter dem Dialog stand „null“, solange Webhooks abgeschaltet sind.
+
+### Geändert
+- Sind Webhooks abgeschaltet, ist der Menüpunkt „Chat-Anbindung“ deaktiviert, auch in der Team-Verwaltung (REQ-COLLAB-017).
+
 ## [4.3.0] – 2026-10-31
 
 Schemaversion 9.

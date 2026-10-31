@@ -4,7 +4,13 @@ import { h, api, modal, toast, initials, USER_COLORS, logout, relTime, fmtDate, 
 import { passwordMeter } from './pwmeter.js';
 
 let minLength = 12;
-api('/api/config').then((c) => (minLength = c.passwordMinLength || 12)).catch(() => {});
+let webhooks = true;
+api('/api/config').then((c) => {
+  minLength = c.passwordMinLength || 12;
+  webhooks = c.webhooks;
+}).catch(() => {});
+
+export const webhooksEnabled = () => webhooks;
 
 function colorPicker(current, onPick) {
   const sw = h('div', { class: 'swatches' }, USER_COLORS.map((c) => h('button', {
@@ -255,7 +261,7 @@ export function accountMenuItems(me, onSaved) {
     { header: me.displayName + (me.email ? ` · ${me.email}` : '') },
     { label: T('Profil bearbeiten'), icon: 'users', onClick: () => openProfileDialog(me, onSaved) },
     { label: T('Sicherheit & Geräte'), icon: 'lock', onClick: () => openSecurityDialog(me, onSaved) },
-    { label: T('Chat-Anbindung (Webhooks)'), icon: 'bell', onClick: () => import('./webhooks-ui.js').then((m) => m.openWebhooks()) },
+    { label: T('Chat-Anbindung (Webhooks)'), icon: 'bell', disabled: !webhooks, hint: webhooks ? null : T('abgeschaltet'), onClick: () => import('./webhooks-ui.js').then((m) => m.openWebhooks()) },
     // nur, wenn der Browser die Installation anbietet (siehe pwa.js)
     globalThis.vibeboardInstall ? { label: T('App installieren'), icon: 'install', onClick: () => globalThis.vibeboardInstall() } : null,
     { label: T('Alle Boards'), icon: 'home', onClick: () => (location.href = '/') },
