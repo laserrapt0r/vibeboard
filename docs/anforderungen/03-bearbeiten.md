@@ -127,8 +127,8 @@
 - **Akzeptanzkriterien:**
   - Der Pinsel in der Kontextleiste nimmt das Format des ausgewählten Elements auf, der nächste Klick überträgt es. Ein Klick ins Leere beendet ihn. Doppelklick auf den Pinsel hält ihn für mehrere Ziele, bis Esc ihn beendet.
   - Über die Tastatur: Strg+Alt+C kopiert das Format, Strg+Alt+V wendet es auf die Auswahl an. Beides steht auch im Menü „Mehr“ und im Kontextmenü, dort auch „Format übertragen“.
-  - Übertragen wird nach Bedeutung, auch zwischen Elementarten: Fläche (bei Karten die Farbe), Linie, Textfarbe, Schrift und Ausrichtung, bei Verbindern auch Linienverlauf und Enden. Text, Größe und Lage bleiben. Tabellen übertragen ihr Gesamtformat, nicht das einzelner Zellen.
-  - Hat das Ausgangselement keine eigene Farbe, behält das Ziel seine. Gesperrte und fixierte Elemente bleiben unverändert. Das Übertragen lässt sich rückgängig machen.
+  - Übertragen wird nach Bedeutung, auch zwischen Elementarten: Fläche (bei Karten die Farbe), Linie, Textfarbe, Schrift und Ausrichtung, zwischen Formen auch die Form, bei Verbindern auch Linienverlauf und Enden. Haben zwei Elementarten nicht alles gemeinsam, zum Beispiel eine Notiz ohne Rahmen, weist ein Hinweis darauf hin. Text, Größe und Lage bleiben. Tabellen übertragen ihr Gesamtformat, nicht das einzelner Zellen.
+  - Hat das Ausgangselement keine eigene Fläche oder Linie, behält das Ziel seine. Die automatische Schriftfarbe wird dagegen mit übertragen; nur Textelemente behalten ihre feste Farbe. Notizen haben dafür auch eine Schaltfläche für die Textfarbe. Gesperrte und fixierte Elemente bleiben unverändert. Das Übertragen lässt sich rückgängig machen.
 
 ### REQ-EDIT-015 Einstieg
 - **Seit:** 4.10.0 · **Priorität:** Soll · **Status:** umgesetzt

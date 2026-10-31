@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.11.1] – 2026-10-31
+
+### Behoben
+- Format übertragen nimmt zwischen Formen auch die Form mit und überträgt die Schriftfarbe auch auf Notizen und von Quellen mit automatischer Farbe. Haben zwei Elementarten nicht alles gemeinsam, weist ein Hinweis darauf hin.
+- Notizen haben eine Schaltfläche für die Textfarbe.
+
 ## [4.11.0] – 2026-10-31
 
 ### Hinzugefügt

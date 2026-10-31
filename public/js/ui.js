@@ -2,8 +2,7 @@
 import { T, LOCALE, guestName } from './i18n.js';
 import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
-  initials, relTime, rectsIntersect, throttle, uid, api,
-} from './util.js';
+  initials, relTime, rectsIntersect, throttle, uid, api, contrastText } from './util.js';
 import { sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery, markTemplateUsed } from './gallery.js';
@@ -261,6 +260,7 @@ export function buildCtx() {
   if (!locked) {
     if (only === 'sticky') {
       items.push(colorBtn(f.fill, T('Farbe'), STICKY_COLORS, (c) => applySel({ fill: c })));
+      items.push(colorBtn(f.textColor || contrastText(f.fill), T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
       items.push(selectBtn(f.fontSize ?? 'auto', [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
       items.push(...textStyleBtns(f));
       items.push(alignBtn(f.align || 'center'));

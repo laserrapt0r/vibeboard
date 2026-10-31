@@ -2636,8 +2636,8 @@ export function formatCells(patch) {
 const TEXT_FORMAT = ['fontSize', 'bold', 'italic', 'underline', 'strike', 'align', 'valign'];
 // Was sich je Elementart übertragen lässt. Über Arten hinweg gilt die Bedeutung: Fläche, Linie, Textfarbe, Schrift.
 const FORMAT_KEYS = {
-  sticky: ['fill', ...TEXT_FORMAT],
-  shape: ['fill', 'stroke', 'strokeWidth', 'dash', 'textColor', ...TEXT_FORMAT],
+  sticky: ['fill', 'textColor', ...TEXT_FORMAT],
+  shape: ['shape', 'fill', 'stroke', 'strokeWidth', 'dash', 'textColor', ...TEXT_FORMAT],
   text: ['fill', 'textColor', ...TEXT_FORMAT],
   connector: ['stroke', 'strokeWidth', 'dash', 'routing', 'arrowStart', 'arrowEnd'],
   frame: ['fill'],
@@ -2667,8 +2667,10 @@ function formatted(el) {
   const patch = {};
   for (const k of keys) {
     const v = copiedFormat.style[k];
-    // Ohne eigene Farbe gibt es nichts zu übertragen: Sonst verlöre eine Notiz ihre Farbe an einen Text ohne Hintergrund
-    if (v === undefined && ['fill', 'stroke', 'textColor'].includes(k)) continue;
+    // Ohne eigene Farbe gibt es nichts zu übertragen: Sonst verlöre eine Notiz ihre Farbe an einen Text ohne Hintergrund.
+    // Anders die Schriftfarbe von Notizen und Formen: Fehlt sie, gilt die automatische, und die übernimmt auch das Ziel.
+    // Texte brauchen dagegen eine feste Farbe.
+    if (v === undefined && (k === 'fill' || k === 'stroke' || (k === 'textColor' && el.type === 'text'))) continue;
     // Karten brauchen eine Farbe, Tabellen und Texte eine feste Schriftgröße, Linien ein sichtbares Aussehen
     if (el.type === 'card' && (!v || v === 'transparent')) continue;
     if (k === 'fontSize' && v === 'auto' && el.type !== 'sticky' && el.type !== 'shape') continue;
@@ -2693,6 +2695,8 @@ function applyFormatTo(list) {
     }
   });
   if (!done) toast(locked ? T('Gesperrte Elemente bleiben unverändert') : T('Für dieses Element gibt es nichts zu übertragen'));
+  // Sonst wirkt es wie ein Fehler, wenn etwa eine Notiz keinen Rahmen übernimmt
+  else if (list.some((el) => el.type !== copiedFormat.type && !isLocked(el))) toast(T('Übertragen wurde, was beide Elementarten gemeinsam haben'), 3500);
   return done;
 }
 
