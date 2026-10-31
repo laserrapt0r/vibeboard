@@ -211,8 +211,21 @@ Pasting multi-line text into the board automatically creates one sticky note per
   - Optionally the cards are arranged as Kanban columns by status.
 - **Direct links** to individual elements: `/board/<id>#el=<elementId>`
 
+### Reviews and work items
+- **Review documents on the board:** Put all pages of a PDF on the board as a frame, then comment and draw on them. Office files work with the optional converter.
+- **Approvals:** Submit frames and files to reviewers. Approving needs only the comment role, changes invalidate an approval, and the status shows on the element.
+- **Kanban and timeline:** Other views of the same cards, usable without a mouse.
+- **Jira and Azure DevOps:** Cards and tickets stay in sync in both directions.
+- **Automatic layout and swimlanes:** Arrange connected elements or a mind map with one click.
+- **Charts from tables:** Bar, line and pie charts that follow the table.
+- **Images and sketches:** Crop images, pen pressure, turn sketches into clean shapes.
+
+More: [docs/integrations.md](docs/integrations.md).
+
 ### Export and import
 - PNG (whole board or selection) and SVG
+- PowerPoint: one slide per frame, with editable text and shapes
+- Import from draw.io and PowerPoint
 - PDF with one frame per page (via the browser's print dialog)
 - JSON as a backup; import into the board or as a new board
 - Cards from CSV/tables, diagrams from text (see above)
@@ -372,7 +385,7 @@ You make all further settings in the administration.
 
 ### External sign-in
 
-Besides local accounts, vibeboard can use **Keycloak**, **LDAP/Active Directory** and **Kerberos single sign-on**. All are optional and configured under *Administration → Sign-in*; LDAP is preset for Active Directory. Several methods can be active at once, and local administrators always keep an emergency access. Setup: [docs/authentication.md](docs/authentication.md).
+Besides local accounts, vibeboard can use **Keycloak**, **SAML**, **LDAP/Active Directory** and **Kerberos single sign-on**, and accounts can be managed through **SCIM**. All are optional and configured under *Administration → Sign-in*; LDAP is preset for Active Directory. Several methods can be active at once, and local administrators always keep an emergency access. Setup: [docs/authentication.md](docs/authentication.md).
 
 ## Permissions on boards
 

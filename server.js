@@ -36,6 +36,7 @@ const CSRF_HEADER = 'x-vibeboard';
 const router = new Router();
 require('./lib/routes/auth').register(router);
 require('./lib/routes/sso').register(router);
+const scim = require('./lib/routes/scim');
 require('./lib/routes/boards').register(router);
 require('./lib/routes/collab').register(router);
 require('./lib/routes/files').register(router);
@@ -149,8 +150,11 @@ async function handle(req, res, reqId) {
     const url = new URL(req.url, 'http://localhost');
     // Gastlink-Tokens stehen im Pfad – im Protokoll maskieren
     pathname = url.pathname.replace(/^(\/g\/|\/api\/guest\/)(?!join$)[^/]+/, '$1***');
+    // SCIM kommt vom Identitätsanbieter und hat ein eigenes Token
+    if (url.pathname.startsWith('/scim/v2')) return await scim.handle(req, res, url);
     if (url.pathname.startsWith('/api/') || url.pathname === '/healthz') {
-      if (req.method !== 'GET' && req.method !== 'HEAD' && req.headers[CSRF_HEADER] !== '1') {
+      // Die Antwort des SAML-Dienstes ist ein Formular einer fremden Seite und durch ihre Signatur geschützt
+      if (req.method !== 'GET' && req.method !== 'HEAD' && req.headers[CSRF_HEADER] !== '1' && url.pathname !== '/api/auth/saml/acs') {
         throw new HttpError(403, 'Anfrage abgelehnt (CSRF-Schutz).');
       }
       const m = router.match(req.method, url.pathname);

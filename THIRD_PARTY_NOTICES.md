@@ -117,6 +117,7 @@ Diese Pakete sind nicht im Repository enthalten. Sie werden bei der Installation
 | split2, pg-int8 | ISC |
 | [nodemailer](https://nodemailer.com) | MIT-0 |
 | [ldapts](https://github.com/ldapts/ldapts) | MIT |
+| [@node-saml/node-saml](https://github.com/node-saml/node-saml) mit xml-crypto, xml-encryption, xml2js, xmlbuilder, xpath, @xmldom/xmldom, @xmldom/is-dom-node | MIT |
 | strict-event-emitter-types (von ldapts) | ISC |
 | [kerberos](https://github.com/mongodb-js/kerberos) (optional, verwendet die Bibliothek MIT Kerberos) | Apache-2.0 |
 | node-addon-api, prebuild-install und dessen Abhängigkeiten (von kerberos, zum Bauen) | MIT, ISC, BSD, Apache-2.0 |

@@ -21,13 +21,15 @@ const SECTIONS = [
   ['settings', T('Allgemein'), 'settings'],
   ['security', T('Sicherheit'), 'lock'],
   ['signin', T('Anmeldung'), 'unlock'],
+  ['integrations', T('Anbindungen'), 'link'],
+  ['brand', T('Design & Vorlagen'), 'template'],
   ['collab', T('Zusammenarbeit'), 'team'],
   ['mail', T('Mailserver'), 'comment'],
   ['legal', T('Rechtliches'), 'edit'],
   ['audit', T('Protokoll'), 'layers'],
 ];
 
-const PROVIDER = { oidc: 'Keycloak', ldap: 'LDAP', kerberos: 'Kerberos' };
+const PROVIDER = { oidc: 'Keycloak', ldap: 'LDAP', kerberos: 'Kerberos', saml: 'SAML' };
 
 const STATUS = { active: [T('Aktiv'), 'ok'], pending: [T('Wartet auf Freigabe'), 'warn'], disabled: [T('Deaktiviert'), 'off'] };
 const LINK = { private: T('Privat'), view: T('Link: ansehen'), comment: T('Link: kommentieren'), edit: T('Link: bearbeiten') };
@@ -63,7 +65,7 @@ function route() {
   for (const [id, label, icon] of SECTIONS) {
     nav.append(h('a', { href: '#' + id, class: 'admin-nav-item' + (id === cur ? ' active' : '') }, h('span', { html: ICONS[icon] }), label));
   }
-  ({ overview, users, boards, settings, security, signin, collab, mail, legal, audit }[cur] || overview)().catch((e) => {
+  ({ overview, users, boards, settings, security, signin, integrations, brand, collab, mail, legal, audit }[cur] || overview)().catch((e) => {
     if (e.code === 'mfa_required') {
       section(T('Zwei-Faktor-Anmeldung erforderlich'),
         h('p', {}, e.message),
@@ -553,7 +555,7 @@ function testButton(provider, loginInput) {
 
 async function signin() {
   const all = await api('/api/admin/settings');
-  const { auth, oidc, ldap, kerberos } = all;
+  const { auth, oidc, ldap, kerberos, saml, scim } = all;
   const err = errorBox();
   const text = (value, attrs = {}) => h('input', { type: 'text', value, spellcheck: 'false', autocomplete: 'off', ...attrs });
   const box = (checked) => h('input', { type: 'checkbox', checked });
@@ -562,7 +564,7 @@ async function signin() {
     localLogin: select(auth.localLogin, [['all', T('Alle lokalen Konten')], ['admins', T('Nur Administratoren (Notzugang)')]]),
     provision: select(auth.provision, [['active', T('Konto automatisch anlegen und freischalten')], ['pending', T('Konto anlegen, Freigabe durch Admin')], ['off', T('Kein neues Konto – nur vorhandene Adressen')]]),
     sessionHours: h('input', { type: 'number', min: 1, max: 720, value: auth.sessionHours }),
-    autoSso: select(auth.autoSso, [['', T('Nein, Anmeldeseite zeigen')], ['oidc', 'Keycloak'], ['kerberos', 'Kerberos']]),
+    autoSso: select(auth.autoSso, [['', T('Nein, Anmeldeseite zeigen')], ['oidc', 'Keycloak'], ['saml', 'SAML'], ['kerberos', 'Kerberos']]),
   };
   const o = {
     enabled: box(oidc.enabled), label: text(oidc.label, { maxlength: 40 }), issuer: text(oidc.issuer, { placeholder: 'https://sso.example.org/realms/firma' }), clientId: text(oidc.clientId),
@@ -579,6 +581,13 @@ async function signin() {
     nestedGroups: box(ldap.nestedGroups), requiredGroup: text(ldap.requiredGroup), adminGroup: text(ldap.adminGroup),
   };
   const k = { enabled: box(kerberos.enabled), label: text(kerberos.label, { maxlength: 40 }), realm: text(kerberos.realm, { placeholder: 'EXAMPLE.ORG' }), servicePrincipal: text(kerberos.servicePrincipal, { placeholder: 'HTTP/board.example.org' }), emailDomain: text(kerberos.emailDomain) };
+  const sa = {
+    enabled: box(saml.enabled), label: text(saml.label, { maxlength: 40 }), entryPoint: text(saml.entryPoint, { placeholder: 'https://idp.example.org/saml/sso' }), issuer: text(saml.issuer),
+    idpCert: h('textarea', { rows: 4, spellcheck: 'false', placeholder: '-----BEGIN CERTIFICATE-----' }, saml.idpCert),
+    attrEmail: text(saml.attrEmail), attrName: text(saml.attrName), attrGroups: text(saml.attrGroups), requiredGroup: text(saml.requiredGroup), adminGroup: text(saml.adminGroup),
+  };
+  const scimOn = box(scim.enabled);
+  const scimOut = h('div', { role: 'status' });
   const values = (fields) => Object.fromEntries(Object.entries(fields).map(([key, el]) => [key, el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) : el.value]));
   const form = h('form', { class: 'form admin-form', onsubmit: async (e) => {
     e.preventDefault();
@@ -586,7 +595,7 @@ async function signin() {
     if (auth.localLogin === 'all' && a.localLogin.value === 'admins'
       && !(await confirmDialog(T('Lokale Anmeldung einschränken'), T('Personen mit lokalem Kennwort können sich dann nicht mehr damit anmelden. Sie brauchen ein Konto beim Anmeldedienst mit derselben E-Mail-Adresse. Administratoren behalten den Notzugang.'), T('Einschränken'), true))) return;
     try {
-      await api('/api/admin/settings', { method: 'PUT', body: { oidc: values(o), ldap: values(l), kerberos: values(k), auth: values(a) } });
+      await api('/api/admin/settings', { method: 'PUT', body: { oidc: values(o), ldap: values(l), kerberos: values(k), saml: values(sa), scim: { enabled: scimOn.checked }, auth: values(a) } });
       toast(T('Einstellungen gespeichert'));
       signin();
     } catch (ex) {
@@ -622,6 +631,28 @@ async function signin() {
     h('div', { class: 'form-row' }, adField(T('Nötige Gruppe (DN, optional)'), l.requiredGroup), adField(T('Gruppe für Adminrechte (DN, optional)'), l.adminGroup)),
     h('label', { class: 'check' }, l.nestedGroups, T('Verschachtelte Gruppen auflösen (nur Active Directory)')),
     testButton('ldap', text(''))),
+  h('fieldset', {}, h('legend', {}, 'SAML 2.0'),
+    h('label', { class: 'check' }, sa.enabled, T('Anmeldung über SAML einschalten')),
+    h('p', { class: 'muted small' }, T`Metadaten für den Identitätsanbieter: ${location.origin}/api/auth/saml/metadata · Antwortadresse (ACS): ${location.origin}/api/auth/saml/acs`),
+    adField(T('Anmeldeadresse des Identitätsanbieters (SSO-URL)'), sa.entryPoint), adField(T('Zertifikat des Identitätsanbieters (PEM)'), sa.idpCert),
+    h('div', { class: 'form-row' }, adField(T('Eigene Kennung (Entity ID, optional)'), sa.issuer), adField(T('Text auf der Schaltfläche'), sa.label)),
+    h('div', { class: 'form-row' }, adField(T('Attribut für die E-Mail-Adresse'), sa.attrEmail), adField(T('Attribut für den Namen'), sa.attrName)),
+    h('div', { class: 'form-row' }, adField(T('Attribut für Gruppen'), sa.attrGroups), adField(T('Nötige Gruppe (optional)'), sa.requiredGroup)),
+    adField(T('Gruppe für Adminrechte (optional)'), sa.adminGroup),
+    testButton('saml')),
+  h('fieldset', {}, h('legend', {}, 'SCIM 2.0'),
+    h('label', { class: 'check' }, scimOn, T('Konten automatisch über SCIM anlegen und sperren')),
+    h('p', { class: 'muted small' }, T`Der Identitätsanbieter verwaltet die Konten über ${location.origin}/scim/v2. Gesperrt wird statt gelöscht, Boards bleiben erhalten. Gruppen werden nicht übertragen.`),
+    h('div', {}, h('button', { type: 'button', class: 'btn', onclick: async () => {
+      if (scim.hasToken && !(await confirmDialog(T('Neues Token erzeugen'), T('Das bisherige Token verliert sofort seine Gültigkeit.'), T('Erzeugen'), true))) return;
+      try {
+        const r = await api('/api/admin/scim/token', { method: 'POST' });
+        scimOut.textContent = '';
+        scimOut.append(h('p', {}, T('Das Token wird nur jetzt angezeigt:')), h('pre', { class: 'codes' }, r.token));
+      } catch (ex) {
+        toast(ex.message);
+      }
+    } }, scim.hasToken ? T('Neues Token erzeugen') : T('Token erzeugen'))), scimOut),
   h('fieldset', {}, h('legend', {}, 'Kerberos (SSO)'),
     h('label', { class: 'check' }, k.enabled, T('Einmalanmeldung per Kerberos einschalten')),
     h('p', { class: 'muted small' }, T('Braucht eine Keytab-Datei für den Dienst (KRB5_KTNAME) und im Browser die Freigabe dieser Adresse. Ist LDAP eingeschaltet, kommen Adresse, Name und Gruppen aus dem Verzeichnis.')),
@@ -692,6 +723,100 @@ async function collab() {
   err.el,
   h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, T('Speichern'))));
   section(T('Zusammenarbeit'), form);
+}
+
+/* ---------------- Anbindungen ---------------- */
+
+async function integrations() {
+  const { connections } = await api('/api/admin/trackers');
+  const list = h('div', { class: 'form' });
+  const test = async (c, out) => {
+    out.textContent = T('Wird geprüft …');
+    try {
+      const r = await api(`/api/admin/trackers/${c.id}/test`, { method: 'POST' });
+      out.textContent = r.ok ? T('✓ Verbindung funktioniert') : `✗ ${r.error}`;
+    } catch (e) {
+      out.textContent = e.message;
+    }
+  };
+  for (const c of connections) {
+    const out = h('span', { class: 'small', role: 'status' });
+    list.append(h('div', { class: 'row wrap' }, h('b', {}, c.name), h('span', { class: 'muted small' }, `${c.kind === 'azure' ? 'Azure DevOps' : 'Jira'} · ${c.baseUrl}`), h('span', { class: 'spacer' }), out,
+      h('button', { class: 'btn small', onclick: () => test(c, out) }, T('Testen')),
+      h('button', { class: 'btn small danger', onclick: async () => {
+        if (!(await confirmDialog(T('Verbindung löschen'), T`„${c.name}“ wird gelöscht. Boards verlieren ihre Verbindung, die Karten bleiben.`, T('Löschen'), true))) return;
+        await api('/api/admin/trackers/' + c.id, { method: 'DELETE' }).catch((e) => toast(e.message));
+        integrations();
+      } }, T('Löschen'))));
+  }
+  const err = errorBox();
+  const kind = h('select', {}, h('option', { value: 'jira' }, 'Jira'), h('option', { value: 'azure' }, 'Azure DevOps'));
+  const name = h('input', { type: 'text', required: true, maxlength: 80 });
+  const baseUrl = h('input', { type: 'url', required: true, placeholder: 'https://firma.atlassian.net' });
+  const username = h('input', { type: 'text', autocomplete: 'off' });
+  const secret = h('input', { type: 'password', required: true, autocomplete: 'new-password' });
+  const form = h('form', { class: 'form admin-form', onsubmit: async (e) => {
+    e.preventDefault();
+    err.hide();
+    try {
+      await api('/api/admin/trackers', { method: 'POST', body: { kind: kind.value, name: name.value, baseUrl: baseUrl.value, username: username.value, secret: secret.value } });
+      toast(T('Verbindung gespeichert'));
+      integrations();
+    } catch (ex) {
+      err.show(ex.message);
+    }
+  } },
+  h('fieldset', {}, h('legend', {}, T('Neue Verbindung')),
+    h('div', { class: 'form-row' }, h('label', {}, T('Dienst'), kind), h('label', {}, T('Name'), name)),
+    h('label', {}, T('Adresse'), baseUrl, h('span', { class: 'field-hint' }, T('Jira: Adresse der Instanz. Azure DevOps: https://dev.azure.com/organisation'))),
+    h('div', { class: 'form-row' }, h('label', {}, T('Benutzer (Jira Cloud: E-Mail-Adresse, sonst leer)'), username), h('label', {}, T('API-Token oder persönliches Zugriffstoken'), secret)),
+    h('p', { class: 'muted small' }, T('Alle, die ein Board bearbeiten dürfen, können über diese Verbindung Tickets lesen und ändern. Gib dem Token daher nur Zugriff auf die nötigen Projekte.')),
+    err.el,
+    h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, T('Speichern')))));
+  section(T('Anbindungen'), h('h2', {}, T('Jira und Azure DevOps')), connections.length ? list : h('p', { class: 'muted' }, T('Noch keine Verbindung eingerichtet.')), form);
+}
+
+/* ---------------- Design und zentrale Vorlagen ---------------- */
+
+async function brand() {
+  const all = await api('/api/admin/settings');
+  const d = all.design;
+  const err = errorBox();
+  const accent = h('input', { type: 'text', value: d.accent, placeholder: '#4262ff', spellcheck: 'false', maxlength: 7 });
+  const picker = h('input', { type: 'color', value: d.accent || '#4262ff', 'aria-label': T('Akzentfarbe wählen'), oninput: (e) => (accent.value = e.target.value) });
+  const palette = h('textarea', { rows: 2, spellcheck: 'false', placeholder: '#1a1a1a #4262ff #12b886' }, d.palette);
+  const sticky = h('textarea', { rows: 2, spellcheck: 'false', placeholder: '#fff9b1 #a6ccf5 #93d275' }, d.stickyColors);
+  const hideBuiltin = h('input', { type: 'checkbox', checked: d.hideBuiltin });
+  const form = h('form', { class: 'form admin-form', onsubmit: async (e) => {
+    e.preventDefault();
+    err.hide();
+    try {
+      await api('/api/admin/settings', { method: 'PUT', body: { design: { accent: accent.value, palette: palette.value, stickyColors: sticky.value, hideBuiltin: hideBuiltin.checked } } });
+      toast(T('Einstellungen gespeichert'));
+      location.reload();
+    } catch (ex) {
+      err.show(ex.message);
+    }
+  } },
+  h('fieldset', {}, h('legend', {}, T('Designvorgaben')),
+    h('label', {}, T('Akzentfarbe'), h('div', { class: 'row' }, picker, accent), h('span', { class: 'field-hint' }, T('Schrift auf Akzentfarbe und Links passen sich an, damit der Kontrast stimmt. Leer = Standard.'))),
+    h('label', {}, T('Farben für Formen und Text'), palette, h('span', { class: 'field-hint' }, T('Hexwerte, getrennt durch Leerzeichen. Nur diese Farben stehen dann zur Auswahl. Leer = Standard.'))),
+    h('label', {}, T('Farben für Haftnotizen'), sticky),
+    h('p', { class: 'muted small' }, T('Die Vorgaben gelten für neue Inhalte. Bestehende Elemente behalten ihre Farbe.'))),
+  h('fieldset', {}, h('legend', {}, T('Vorlagen')),
+    h('label', { class: 'check' }, hideBuiltin, T('Nur zentrale und eigene Vorlagen anbieten (mitgelieferte ausblenden)')),
+    h('p', { class: 'muted small' }, T('Zentrale Vorlagen legst du im Board an: Exportieren & Importieren → Board als Vorlage speichern → Sichtbar für alle. Sie erscheinen bei allen unter „Unsere Vorlagen“.'))),
+  err.el,
+  h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, T('Speichern'))));
+  const { templates } = await api('/api/templates');
+  const org = templates.filter((t) => t.scope === 'org');
+  section(T('Design & Vorlagen'), form, h('h2', {}, T('Zentrale Vorlagen')),
+    org.length ? h('table', { class: 'admin-table' }, h('tbody', {}, org.map((t) => h('tr', {}, h('td', {}, `${t.icon} ${t.name}`), h('td', { class: 'muted' }, t.description), h('td', { class: 'actions' },
+      h('button', { class: 'btn small danger', onclick: async () => {
+        if (!(await confirmDialog(T('Vorlage löschen'), T`Die Vorlage „${t.name}“ wird gelöscht. Boards, die daraus entstanden sind, bleiben erhalten.`, T('Löschen'), true))) return;
+        await api('/api/templates/' + t.id, { method: 'DELETE' }).catch((ex) => toast(ex.message));
+        brand();
+      } }, T('Löschen'))))))) : h('p', { class: 'muted' }, T('Noch keine zentralen Vorlagen.')));
 }
 
 /* ---------------- Mailserver ---------------- */

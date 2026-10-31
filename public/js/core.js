@@ -206,6 +206,7 @@ function renderEnv() {
     get: getEl,
     zoom: app.view.z,
     showAuthor: app.settings.showAuthor,
+    reviews: app.reviews,
     placeholders: true,
     me: app.user && app.user.id,
     boardId,
@@ -223,6 +224,10 @@ function flushRender() {
       if (el.type === 'connector' && ((el.from && el.from.id && dirty.has(el.from.id)) || (el.to && el.to.id && dirty.has(el.to.id)))) dirty.add(el.id);
     }
     const env = renderEnv();
+    // Diagramme zeigen die Werte ihrer Tabelle
+    if ([...dirty].some((id) => app.els.get(id)?.type === 'table')) {
+      for (const el of app.els.values()) if (el.type === 'chart' && dirty.has(el.sourceId)) dirty.add(el.id);
+    }
     for (const id of dirty) renderNode(id, env);
     dirty.clear();
     overlayDirty = true;
@@ -635,7 +640,7 @@ function scaleEl(o, ob, nb, singleCorner) {
   }
   if (o.type === 'comment') return { ...o, x: mx(o.x), y: my(o.y) };
   const n = { ...o, x: mx(o.x), y: my(o.y), w: Math.max(4, o.w * fx), h: Math.max(4, o.h * fy) };
-  if (o.type === 'pen') n.points = o.points.map(([px, py]) => [px * fx, py * fy]);
+  if (o.type === 'pen') n.points = o.points.map(([px, py, ...p]) => [px * fx, py * fy, ...p]);
   if (o.type === 'code') return autoHeight(n);
   if (o.type === 'text') {
     if (singleCorner && typeof o.fontSize === 'number') n.fontSize = Math.max(6, Math.round(o.fontSize * fy * 10) / 10);
@@ -1438,7 +1443,7 @@ function onDown(e) {
       return;
     }
     case 'pen': case 'highlighter':
-      drag = { mode: 'draw', start, points: [[w.x, w.y]] };
+      drag = { mode: 'draw', start, points: [[w.x, w.y, ...stylusPressure(e)]] };
       drawDraft();
       return;
     case 'eraser':
@@ -1829,7 +1834,7 @@ function onMove(e) {
     case 'draw': {
       const last = drag.points[drag.points.length - 1];
       if (Math.hypot(w.x - last[0], w.y - last[1]) * app.view.z < 2) return;
-      drag.points.push([w.x, w.y]);
+      drag.points.push([w.x, w.y, ...stylusPressure(e)]);
       drawDraft();
       return;
     }
@@ -2043,7 +2048,7 @@ function onUp(e) {
       const el = {
         id: uid(), type: 'pen', z: nextZ(), x: minX, y: minY,
         w: Math.max(1, Math.max(...xs) - minX), h: Math.max(1, Math.max(...ys) - minY),
-        points: pts.map(([px, py]) => [Math.round((px - minX) * 10) / 10, Math.round((py - minY) * 10) / 10]),
+        points: pts.map(([px, py, ...p]) => [Math.round((px - minX) * 10) / 10, Math.round((py - minY) * 10) / 10, ...p]),
         stroke: hl ? app.toolOpts.hlColor : app.toolOpts.penColor,
         strokeWidth: hl ? Math.max(12, app.toolOpts.penWidth * 4) : app.toolOpts.penWidth,
         opacity: hl ? 0.45 : 1,
@@ -2078,6 +2083,9 @@ function drawConnectorDraft() {
   const tmp = { id: '_draft', type: 'connector', from: d.from, to: d.to, stroke: '#4262ff', strokeWidth: 2, routing: app.toolOpts.routing, arrowEnd: true };
   layerDraft.innerHTML = renderElement(tmp, { get: getEl });
 }
+
+// Nur Stifte liefern echten Druck; die Maus meldet immer denselben Wert
+const stylusPressure = (e) => (e.pointerType === 'pen' && e.pressure > 0 ? [Math.round(e.pressure * 100) / 100] : []);
 
 function eraseAt(e) {
   const t = document.elementFromPoint(e.clientX, e.clientY);
@@ -2219,6 +2227,8 @@ export function duplicateEls(list, dx = 20, dy = 20, select = true) {
       const n = translated(clone(o), dx, dy);
       delete n.priv;
       delete n.privName;
+      delete n.ext; // Die Kopie ist nicht mit demselben Ticket verbunden
+      if (n.type === 'chart' && idMap.has(n.sourceId)) n.sourceId = idMap.get(n.sourceId);
       // nur lokal benötigt (Auswahl beim Alt-Ziehen) – nicht aufzählbar, wird also nie gespeichert oder gesendet
       Object.defineProperty(n, '_src', { value: o.id, enumerable: false, configurable: true });
       n.id = idMap.get(o.id);
@@ -2392,7 +2402,7 @@ export function tableAction(action) {
 // Neue Größe für ein Element (Freihandlinien skalieren ihre Punkte mit)
 function resized(el, w, h) {
   const n = { ...el, w: Math.max(4, w), h: Math.max(4, h) };
-  if (el.type === 'pen') n.points = (el.points || []).map(([px, py]) => [px * (n.w / (el.w || 1)), py * (n.h / (el.h || 1))]);
+  if (el.type === 'pen') n.points = (el.points || []).map(([px, py, ...p]) => [px * (n.w / (el.w || 1)), py * (n.h / (el.h || 1)), ...p]);
   return autoHeight(n);
 }
 

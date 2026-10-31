@@ -79,3 +79,9 @@
   - Rechtsklick öffnet ein Kontextmenü (Auswahl bzw. freie Fläche).
   - Strg+F durchsucht Texte, Titel, Beschreibungen, Beschriftungen, Kommentare und Tabellenzellen; Treffer werden hervorgehoben und angesprungen.
   - Eine Übersicht aller Tastenkürzel öffnet sich mit `?`.
+
+### REQ-EDIT-009 Automatisches Layout und Swimlanes
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Verbundene oder ausgewählte Elemente lassen sich von links nach rechts, von oben nach unten oder als Mindmap anordnen. Zyklen stören nicht, gesperrte Elemente bleiben stehen.
+  - Frames lassen sich in benannte Bahnen teilen. „In den Bahnen anordnen“ ordnet Spalten nach der Abfolge, jedes Element bleibt in seiner Bahn, der Frame wächst bei Bedarf.

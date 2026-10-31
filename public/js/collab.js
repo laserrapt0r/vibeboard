@@ -807,6 +807,7 @@ export function initCollab() {
   s.on('error', (err) => toast(err, 5000));
   s.on('blocked', (why) => app.emit('blocked', why));
   s.on('recordings', () => app.emit('recordingsChanged'));
+  s.on('reviews', () => app.emit('reviewsChanged'));
   // Benachrichtigung in Echtzeit (z. B. @Erwähnung): Glocke aktualisieren, Hinweis mit Sprung zum Kommentar
   s.on('notify', (msg) => bell.push(msg.item, { onOpen: openNotification }));
   let checking = false;

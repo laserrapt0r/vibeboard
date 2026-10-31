@@ -3,7 +3,7 @@ import { T, guestName } from './i18n.js';
 import { h, api, ICONS, relTime, toast, initials } from './util.js';
 import { popover, closePop } from './menu.js';
 
-const KIND = { mention: T('hat dich erwähnt'), reply: T('hat geantwortet'), task: T('hat dir einen Kommentar zugewiesen'), team_invite: T('lädt dich in ein Team ein') };
+const KIND = { review: T('bittet dich um eine Freigabe'), review_result: T('hat über deine Freigabe entschieden'), mention: T('hat dich erwähnt'), reply: T('hat geantwortet'), task: T('hat dir einen Kommentar zugewiesen'), team_invite: T('lädt dich in ein Team ein') };
 
 let state = { unread: 0, items: [] };
 const buttons = new Set();
@@ -45,7 +45,7 @@ export function push(item, { onOpen } = {}) {
 // open(item): Navigation zum Kommentar (im Board ggf. ohne Neuladen)
 export function bellButton({ open } = {}) {
   const b = h('button', { class: 'icon-btn bell', title: T('Benachrichtigungen'), 'aria-label': T('Benachrichtigungen') },
-    h('span', { html: ICONS.bell }), h('span', { class: 'bell-badge hidden' }, '0'));
+    h('span', { html: ICONS.bell }), h('span', { class: 'bell-badge hidden', 'aria-hidden': 'true' }, '0'));
   buttons.add(b);
   b.onclick = async () => {
     await refresh();

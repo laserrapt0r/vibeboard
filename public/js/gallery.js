@@ -1,11 +1,13 @@
 // Vorlagen-Galerie (wird im Board und im Dashboard verwendet)
 import { T } from './i18n.js';
-import { h, api, toast, confirmDialog } from './util.js';
+import { h, api, toast, confirmDialog, design } from './util.js';
 import { renderSvgDocument } from './render.js';
 import { TEMPLATES, CATEGORIES } from './templates.js';
 
 const previewCache = new Map();
+const hideBuiltin = () => !!design().hideBuiltin;
 const OWN = 'Eigene Vorlagen';
+const ORG = 'Unsere Vorlagen';
 
 export function templatePreview(t, els) {
   if (!previewCache.has(t.id)) {
@@ -22,8 +24,8 @@ export async function loadCustom() {
     return {
       recent: r.recent,
       custom: r.templates.map((t) => ({
-        id: 'u' + t.id, remoteId: t.id, name: t.name, icon: t.icon || '⭐', category: OWN, custom: true, canDelete: t.canDelete,
-        description: (t.description || (t.scope === 'team' ? T`Team „${t.teamName}“` : T('Persönliche Vorlage'))) + (t.by ? T` · von ${t.by}` : ''),
+        id: 'u' + t.id, remoteId: t.id, name: t.name, icon: t.icon || '⭐', category: t.scope === 'org' ? ORG : OWN, custom: true, canDelete: t.canDelete,
+        description: (t.description || (t.scope === 'org' ? T('Zentrale Vorlage') : t.scope === 'team' ? T`Team „${t.teamName}“` : T('Persönliche Vorlage'))) + (t.by ? T` · von ${t.by}` : ''),
       })),
     };
   } catch {
@@ -79,10 +81,13 @@ export function templateGallery(onPick, { showBlank = true } = {}) {
   };
   const render = () => {
     cats.innerHTML = '';
-    const list = custom.length ? [CATEGORIES[0], OWN, ...CATEGORIES.slice(1)] : CATEGORIES;
-    list.forEach((c) => cats.append(h('button', { class: 'tpl-cat' + (c === cat ? ' active' : ''), onclick: () => { cat = c; render(); } }, c === OWN ? `⭐ ${T(c)} (${custom.length})` : T(c))));
+    const count = (c) => custom.filter((t) => t.category === c).length;
+    const special = [ORG, OWN].filter(count);
+    const builtin = hideBuiltin() ? [] : CATEGORIES.slice(1);
+    const list = [CATEGORIES[0], ...special, ...builtin];
+    list.forEach((c) => cats.append(h('button', { class: 'tpl-cat' + (c === cat ? ' active' : ''), onclick: () => { cat = c; render(); } }, special.includes(c) ? `⭐ ${T(c)} (${count(c)})` : T(c))));
     grid.innerHTML = '';
-    const all = byRecent([...custom, ...TEMPLATES], recent);
+    const all = byRecent([...custom, ...(hideBuiltin() ? TEMPLATES.filter((t) => t.id === 'blank') : TEMPLATES)], recent);
     all.filter((t) => (showBlank || t.id !== 'blank') && (cat === 'Alle' || t.category === cat) && (!q || (t.name + ' ' + t.description).toLowerCase().includes(q))).forEach((t) => {
       const prev = h('div', { class: 'tpl-prev' });
       fillPreview(prev, t);
@@ -92,7 +97,7 @@ export function templateGallery(onPick, { showBlank = true } = {}) {
         try {
           await api('/api/templates/' + t.remoteId, { method: 'DELETE' });
           custom = custom.filter((x) => x !== t);
-          if (!custom.length && cat === OWN) cat = 'Alle';
+          if (![ORG, OWN].some((c) => c === cat && custom.some((x) => x.category === c)) && [ORG, OWN].includes(cat)) cat = 'Alle';
           render();
         } catch (ex) {
           toast(ex.message);

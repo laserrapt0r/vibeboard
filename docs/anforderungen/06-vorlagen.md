@@ -55,3 +55,9 @@
   - Nicht übernommen werden Kommentare, Dateianhänge, Reaktionen, Autorennamen, Zuweisungen, Sperren und private Inhalte. Bilder werden geprüft. Höchstens 10 MB und 100 Vorlagen je Person bzw. Team.
   - Die Galerie (Startseite und Board) zeigt sie unter „Eigene Vorlagen“ mit Vorschau. Team-Vorlagen sehen alle Mitglieder.
   - Löschen dürfen, wer sie angelegt hat, und bei Team-Vorlagen die Team-Verwaltung.
+
+### REQ-TPL-008 Zentrale Vorlagen
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Administratoren speichern Vorlagen für die ganze Installation; sie erscheinen bei allen unter „Unsere Vorlagen“. Nur die Administration legt sie an und löscht sie (serverseitig geprüft).
+  - Auf Wunsch werden nur zentrale und eigene Vorlagen angeboten.

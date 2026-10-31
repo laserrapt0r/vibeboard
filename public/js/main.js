@@ -13,6 +13,10 @@ import './recording.js';
 import './retro.js';
 import './polls.js';
 import './files.js';
+import './reviews.js';
+import './board-tools.js';
+import './card-views.js';
+import './tracker-ui.js';
 import './board-extras.js';
 
 // Ladeanzeige ausblenden, sobald der Stand des Boards da ist

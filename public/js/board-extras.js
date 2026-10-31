@@ -195,13 +195,13 @@ app.on('saveTemplate', async (selectionOnly) => {
   const name = h('input', { type: 'text', required: true, maxlength: 80, value: selectionOnly ? '' : app.name });
   const desc = h('input', { type: 'text', maxlength: 200, placeholder: T('Wofür ist die Vorlage gedacht?') });
   const icon = h('input', { type: 'text', maxlength: 4, value: '⭐', style: { width: '64px' } });
-  const scope = h('select', {}, h('option', { value: '' }, T('Nur für mich')), teams.map((t) => h('option', { value: t.id }, T`Team „${t.name}“`)));
+  const scope = h('select', {}, h('option', { value: '' }, T('Nur für mich')), app.me?.role === 'admin' ? h('option', { value: 'org' }, T('Alle in dieser Installation (zentrale Vorlage)')) : null, teams.map((t) => h('option', { value: t.id }, T`Team „${t.name}“`)));
   const form = h('form', { class: 'form', onsubmit: async (e) => {
     e.preventDefault();
     try {
       // Inhalte ohne Autorschaft, Reaktionen und Zuweisungen speichern
       const clean = usable.map(({ reactions, author, anon, task, modLock, concealed, ...rest }) => rest);
-      await api('/api/templates', { method: 'POST', body: { name: name.value.trim(), description: desc.value.trim(), icon: icon.value.trim(), teamId: scope.value || null, elements: clean } });
+      await api('/api/templates', { method: 'POST', body: { name: name.value.trim(), description: desc.value.trim(), icon: icon.value.trim(), teamId: scope.value === 'org' ? null : scope.value || null, org: scope.value === 'org', elements: clean } });
       m.close();
       toast(T`Vorlage „${name.value.trim()}“ gespeichert – sie erscheint in der Vorlagengalerie unter „Eigene Vorlagen“`, 4500);
     } catch (ex) {

@@ -73,6 +73,13 @@ const SEEDS = {
     await c.query(`INSERT INTO pending_invites (email, team_id, role, invited_by, token_hash, expires_at) VALUES ('neu@example.org', 1, 'member', 1, 'h2', now() + interval '30 days')`);
     await c.query(`UPDATE users SET locale = 'en' WHERE id = 1`);
   },
+  10: async (c) => {
+    await c.query(`INSERT INTO reviews (board_id, element_id, created_by) VALUES ('b1', 'e1', 1)`);
+    await c.query(`INSERT INTO review_people (review_id, user_id) VALUES (1, 1)`);
+    await c.query(`INSERT INTO tracker_connections (kind, name, base_url, secret) VALUES ('jira', 'Jira', 'https://jira.example.org', 'x')`);
+    await c.query(`INSERT INTO board_trackers (board_id, connection_id, query) VALUES ('b1', 1, 'project = VB')`);
+    await c.query(`INSERT INTO user_templates (name, data, org) VALUES ('Zentral', '[]', true)`);
+  },
   9: async (c) => {
     await c.query(`INSERT INTO user_identities (provider, external_id, user_id) VALUES ('ldap', 'abc123', 1)`);
     await c.query(`UPDATE users SET recent_templates = '["kanban", "u1"]', external_link_ok = true WHERE id = 1`);

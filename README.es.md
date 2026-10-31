@@ -218,6 +218,17 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
   - Opcionalmente las tarjetas se ordenan como columnas kanban según el estado.
 - **Enlaces directos** a elementos individuales: `/board/<id>#el=<elementId>`
 
+### Revisión y tareas
+- **Revisar documentos en el tablero:** Coloca todas las páginas de un PDF como marco y comenta o dibuja sobre ellas. Los archivos de Office funcionan con el conversor opcional.
+- **Aprobaciones:** Presenta marcos y archivos a personas revisoras. Basta con el rol de comentar, los cambios invalidan una aprobación y el estado se muestra en el elemento.
+- **Kanban y cronología:** Otras vistas de las mismas tarjetas, también sin ratón.
+- **Jira y Azure DevOps:** Tarjetas y tickets sincronizados en ambas direcciones.
+- **Diseño automático y carriles:** Ordena elementos conectados o mapas mentales con un clic.
+- **Gráficos a partir de tablas:** Barras, líneas y circular, que siguen a la tabla.
+- **Imágenes y bocetos:** Recorte de imágenes, presión del lápiz y bocetos convertidos en formas.
+
+Más información: [docs/integrations.md](docs/integrations.md) (en inglés).
+
 ### Exportación e importación
 - PNG (todo el tablero o la selección) y SVG
 - PDF con un marco por página (mediante el cuadro de impresión del navegador)
@@ -382,7 +393,7 @@ Todos los demás ajustes los haces en la administración.
 
 ### Inicio de sesión externo
 
-Además de las cuentas locales, vibeboard puede usar **Keycloak**, **LDAP/Active Directory** e **inicio de sesión único con Kerberos**. Todo es opcional y se configura en *Administración → Inicio de sesión*; LDAP viene predefinido para Active Directory. Pueden estar activos varios métodos a la vez, y los administradores locales conservan siempre un acceso de emergencia. Configuración: [docs/authentication.md](docs/authentication.md) (en inglés).
+Además de las cuentas locales, vibeboard puede usar **Keycloak**, **SAML**, **LDAP/Active Directory** e **inicio de sesión único con Kerberos**, y las cuentas pueden gestionarse mediante **SCIM**. Todo es opcional y se configura en *Administración → Inicio de sesión*; LDAP viene predefinido para Active Directory. Pueden estar activos varios métodos a la vez, y los administradores locales conservan siempre un acceso de emergencia. Configuración: [docs/authentication.md](docs/authentication.md) (en inglés).
 
 ## Permisos en los tableros
 

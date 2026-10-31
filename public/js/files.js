@@ -1,8 +1,8 @@
 // Dateianhänge: hochladen (Werkzeug oder Ablegen auf dem Board), Vorschau der ersten PDF-Seite, Betrachter
 // (PDF über pdf.js, Text direkt) und Download. Geprüft wird alles auf dem Server (Typ, Größe, Virenscan).
 import { T } from './i18n.js';
-import { h, ICONS, toast, modal } from './util.js';
-import { app, getEl, act, updateEl, addElements, makeElement, viewCenter } from './core.js';
+import { h, api, ICONS, toast, modal } from './util.js';
+import { app, getEl, act, updateEl, addElements, makeElement, viewCenter, fitTo, setSelection } from './core.js';
 import { fileKind, fileSize } from './render.js';
 
 const ACCEPT = '.pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp,.doc,.xls,.ppt,.txt,.md,.csv,.json';
@@ -88,6 +88,64 @@ picker.addEventListener('change', () => {
   picker.value = '';
 });
 
+/* ---------------- Seiten auf das Board legen ---------------- */
+
+const OFFICE = /\.(docx?|xlsx?|pptx?|odt|ods|odp)$/i;
+const MAX_PAGES = 50;
+const PAGE_WIDTH = 900;
+const PAGES_PER_ROW = 4;
+const PAGE_GAP = 40;
+let converter = false;
+api('/api/config', { quiet: true }).then((c) => (converter = !!c.officeConverter)).catch(() => {});
+
+async function pdfBytes(el) {
+  const pdf = /\.pdf$/i.test(el.name || '');
+  const r = await fetch(fileUrl(el) + (pdf ? '' : '/pdf'), { credentials: 'same-origin' });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || T('Die Datei ist auf diesem Board nicht vorhanden.'));
+  return new Uint8Array(await r.arrayBuffer());
+}
+
+// Jede Seite wird ein gesperrtes Bild in einem Frame: Darauf lässt sich kommentieren, zeichnen und der Frame kann zur Freigabe
+async function placePages(el) {
+  toast(T`„${el.name}“ wird vorbereitet …`, 3000);
+  let doc;
+  try {
+    doc = await openPdf(await pdfBytes(el));
+  } catch (e) {
+    return toast(e.message, 6000);
+  }
+  const pages = Math.min(doc.numPages, MAX_PAGES);
+  const images = [];
+  let rowH = 0, x = 0, y = 0, width = 0, height = 0;
+  for (let n = 1; n <= pages; n++) {
+    const page = await doc.getPage(n);
+    const vp = page.getViewport({ scale: 1 });
+    const c = await renderPage(doc, n, PAGE_WIDTH);
+    const dispH = Math.round(vp.height * (PAGE_WIDTH / vp.width));
+    if ((n - 1) % PAGES_PER_ROW === 0 && n > 1) {
+      x = 0;
+      y += rowH + PAGE_GAP;
+      rowH = 0;
+    }
+    images.push({ ...makeElement('image', 0, 0, { src: c.toDataURL('image/jpeg', 0.85), name: T`Seite ${n}`, fileRef: el.fileId, locked: true }), x, y, w: PAGE_WIDTH, h: dispH });
+    x += PAGE_WIDTH + PAGE_GAP;
+    rowH = Math.max(rowH, dispH);
+    width = Math.max(width, x - PAGE_GAP);
+    height = y + rowH;
+  }
+  const pad = 40;
+  const at = { x: el.x + el.w + 80, y: el.y };
+  const frame = { ...makeElement('frame', 0, 0, { title: el.name }), x: at.x, y: at.y, w: width + pad * 2, h: height + pad * 2 };
+  for (const img of images) {
+    img.x += at.x + pad;
+    img.y += at.y + pad;
+  }
+  addElements([frame, ...images]);
+  setSelection([frame.id]);
+  fitTo({ x: frame.x, y: frame.y, w: frame.w, h: frame.h }, { maxZ: 1 });
+  toast(doc.numPages > pages ? T`Die ersten ${pages} von ${doc.numPages} Seiten liegen auf dem Board.` : T`${pages} Seiten liegen auf dem Board.`, 5000);
+}
+
 app.on('pickFile', () => picker.click());
 app.on('dropFile', (f, at) => upload(f, at));
 
@@ -132,7 +190,7 @@ app.on('openFile', async (id) => {
       body.append(h('pre', { class: 'file-text' }, txt.slice(0, 200000) + (txt.length > 200000 ? '\n…' : '')));
     } else {
       body.append(h('div', { class: 'file-noprev' }, h('span', { class: 'file-kind big', style: { background: color } }, label),
-        h('p', { class: 'muted' }, T('Für Office-Dateien gibt es im Browser keine Vorschau. Lade die Datei herunter und öffne sie mit deinem Office-Programm.'))));
+        h('p', { class: 'muted' }, converter && OFFICE.test(el.name || '') ? T('Über „Seiten auf das Board legen“ wird die Datei umgewandelt und lässt sich direkt auf dem Board prüfen.') : T('Für Office-Dateien gibt es im Browser keine Vorschau. Lade die Datei herunter und öffne sie mit deinem Office-Programm.'))));
     }
   } catch (e) {
     body.innerHTML = '';
@@ -145,6 +203,9 @@ app.on('openFile', async (id) => {
 app.on('ctxItems', (items, sel, { one, actBtn }) => {
   if (!one || one.type !== 'file') return;
   items.push(actBtn('search', T('Öffnen / Vorschau (Doppelklick)'), () => app.emit('openFile', one.id)));
+  if (one.fileId && !app.viewOnly && (/\.pdf$/i.test(one.name || '') || (converter && OFFICE.test(one.name || '')))) {
+    items.push(actBtn('layers', T('Seiten auf das Board legen'), () => placePages(one)));
+  }
   if (one.fileId) {
     items.push(actBtn('download', T('Herunterladen'), () => {
       const a = h('a', { href: fileUrl(one), download: one.name || 'datei' });

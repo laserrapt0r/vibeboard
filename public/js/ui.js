@@ -565,6 +565,7 @@ app.on('editCard', (id) => {
     who.value = '';
   });
   const due = h('input', { type: 'date', value: el.due || '' });
+  const start = h('input', { type: 'date', value: el.start || '' });
   const status = h('input', { type: 'text', value: el.status || '', placeholder: T('z. B. In Arbeit'), list: 'status-list' });
   const key = h('input', { type: 'text', value: el.key || '', placeholder: T('z. B. VB-42'), maxlength: 40 });
   const prio = h('select', {}, h('option', { value: '' }, T('Ohne')), Object.entries(PRIORITIES).map(([k, p]) => h('option', { value: k, selected: el.priority === k }, `${p.icon} ${p.label}`)));
@@ -578,7 +579,7 @@ app.on('editCard', (id) => {
   const form = h('form', { class: 'form', onsubmit: (e) => {
     e.preventDefault();
     act(() => updateEl(id, {
-      title: title.value, description: desc.value, assignee: assignee.value.trim(), assigneeId: assigneeId || undefined, due: due.value, status: status.value.trim(), color,
+      title: title.value, description: desc.value, assignee: assignee.value.trim(), assigneeId: assigneeId || undefined, due: due.value, start: start.value || undefined, status: status.value.trim(), color,
       key: key.value.trim() || undefined, priority: prio.value || undefined, points: points.value.trim() || undefined,
       tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 8),
     }));
@@ -587,7 +588,7 @@ app.on('editCard', (id) => {
   } },
   h('label', {}, T('Titel'), title),
   h('label', {}, T('Beschreibung'), desc),
-  h('div', { class: 'form-row' }, h('label', {}, T('Zuständig'), who, assignee), h('label', {}, T('Fällig am'), due)),
+  h('div', { class: 'form-row' }, h('label', {}, T('Zuständig'), who, assignee), h('div', { class: 'form' }, h('label', {}, T('Beginn'), start), h('label', {}, T('Fällig am'), due))),
   h('div', { class: 'form-row' }, h('label', {}, T('Status'), status), h('label', {}, T('Priorität'), prio)),
   h('div', { class: 'form-row' }, h('label', {}, T('Schlüssel / Ticket'), key), h('label', {}, T('Story Points'), points)),
   h('label', {}, T('Labels (durch Komma getrennt)'), tags),
@@ -1053,7 +1054,44 @@ async function exportPdf() {
   }
 }
 
-const importInput = h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' } });
+// Datei aus draw.io oder PowerPoint: wird zu normalen, bearbeitbaren Elementen
+async function importForeign(file) {
+  if (app.viewOnly) return toast(T('Du darfst dieses Board nur ansehen.'));
+  toast(T`„${file.name}“ wird importiert …`);
+  try {
+    const { readForeign } = await import('./import-file.js');
+    const { elements, skipped } = await readForeign(file);
+    if (!elements.length) return toast(T('Keine Elemente gefunden'));
+    pasteElements(elements, viewCenter());
+    fitTo(selectionBounds(), { maxZ: 1 });
+    toast(skipped ? T`${elements.length} Elemente importiert, ${skipped} nicht übernommen (z. B. Diagramme oder SmartArt)` : T`${elements.length} Elemente importiert`, 5000);
+  } catch (e) {
+    toast(e.message, 6000);
+  }
+}
+
+async function exportPptx() {
+  toast(T('PowerPoint-Datei wird erstellt …'));
+  try {
+    const { buildPptx } = await import('./pptx-export.js');
+    const all = [...app.els.values()].filter((e) => !e.hidden && e.type !== 'comment');
+    const list = frames();
+    const withLines = (els) => {
+      const ids = new Set(els.map((e) => e.id));
+      return sortForRender([...els.filter((e) => e.type !== 'comment' && !e.hidden), ...all.filter((e) => e.type === 'connector' && e.from.id && e.to.id && ids.has(e.from.id) && ids.has(e.to.id) && !ids.has(e.id))]);
+    };
+    const slides = list.length
+      ? list.map((f) => ({ bounds: { x: f.x, y: f.y, w: f.w, h: f.h }, elements: withLines(frameChildren(f)) }))
+      : [{ bounds: unionRect(all.map(bounds)), elements: sortForRender(all) }];
+    if (!all.length) return toast(T('Nichts zu exportieren'));
+    download(safeName(app.name) + '.pptx', await buildPptx(slides, getEl));
+    toast(T`${slides.length} Folien exportiert`);
+  } catch (e) {
+    toast(T('Export fehlgeschlagen: ') + e.message);
+  }
+}
+
+const importInput = h('input', { type: 'file', accept: '.json,application/json,.drawio,.pptx', style: { display: 'none' } });
 document.body.append(importInput);
 importInput.addEventListener('change', () => {
   if (importInput.files[0]) importFile(importInput.files[0]);
@@ -1062,6 +1100,7 @@ importInput.addEventListener('change', () => {
 
 async function importFile(file) {
   if (app.viewOnly) return toast(T('Du darfst dieses Board nur ansehen.'));
+  if (/\.(drawio|pptx)$/i.test(file.name)) return importForeign(file);
   try {
     const data = JSON.parse(await file.text());
     const list = Array.isArray(data) ? data : Array.isArray(data.elements) ? data.elements : Object.values(data.elements || {});
@@ -1085,11 +1124,13 @@ function openExportMenu(anchor) {
     { label: T('Auswahl als PNG'), icon: 'image', disabled: !app.sel.size, onClick: () => exportPng(true) },
     { label: T('Als SVG-Vektorgrafik'), icon: 'shape', onClick: exportSvg },
     { label: T('Als PDF (Frames als Seiten)'), icon: 'present', onClick: exportPdf },
+    { label: T('Als PowerPoint-Datei'), icon: 'present', onClick: exportPptx },
     { label: T('Als JSON-Datei (Backup)'), icon: 'download', onClick: exportJson },
     '-',
     { header: T('Importieren') },
-    { label: T('JSON-Datei importieren'), icon: 'upload', disabled: app.viewOnly, onClick: () => importInput.click() },
+    { label: T('Datei importieren (JSON, draw.io, PowerPoint)'), icon: 'upload', disabled: app.viewOnly, onClick: () => importInput.click() },
     { label: T('Karten aus CSV / Jira-Export …'), icon: 'card', disabled: app.viewOnly, onClick: () => app.emit('openCsvImport') },
+    { label: T('Jira / Azure DevOps verbinden …'), icon: 'link', disabled: app.viewOnly || app.guest, onClick: () => app.emit('openTracker') },
     { label: T('Diagramm aus Text (Mermaid) …'), icon: 'diagram', disabled: app.viewOnly, onClick: () => app.emit('openDiagramText') },
     { label: T('Bild hochladen'), icon: 'image', disabled: app.viewOnly, onClick: () => fileInput.click() },
     { label: T('Datei anhängen (PDF, Office, Text)'), icon: 'file', disabled: app.viewOnly, onClick: () => app.emit('pickFile') },
@@ -1188,7 +1229,7 @@ function textOf(el) {
 /* ================================================================== */
 
 const TYPE_NAMES = {
-  sticky: T('Haftnotiz'), text: T('Text'), shape: T('Form'), connector: T('Verbindung'), image: T('Bild'), pen: T('Zeichnung'), highlighter: T('Markierung'),
+  chart: T('Diagramm'), sticky: T('Haftnotiz'), text: T('Text'), shape: T('Form'), connector: T('Verbindung'), image: T('Bild'), pen: T('Zeichnung'), highlighter: T('Markierung'),
   frame: T('Frame'), comment: T('Kommentar'), card: T('Karte'), table: T('Tabelle'), code: T('Code'), emoji: T('Emoji'), file: T('Datei'), mindmap: T('Mindmap-Knoten'),
 };
 const describeEl = (el) => {
@@ -1445,6 +1486,8 @@ function buildTopbar() {
     iconBtn('frame', T('Frames & Präsentation'), () => toggleSidePanel('frames'), { 'data-panel': 'frames' }),
     iconBtn('comment', T('Kommentare'), () => toggleSidePanel('comments'), { 'data-panel': 'comments' }),
     iconBtn('tasks', T('Aufgaben auf diesem Board'), () => toggleSidePanel('tasks'), { 'data-panel': 'tasks' }),
+    iconBtn('kanban', T('Kanban und Zeitleiste'), () => app.emit('openCardViews')),
+    app.guest ? null : iconBtn('check', T('Freigaben'), () => toggleSidePanel('reviews'), { 'data-panel': 'reviews' }),
     iconBtn('activity', T('Aktivität – wer hat was geändert?'), () => toggleSidePanel('activity'), { 'data-panel': 'activity' }),
     app.viewOnly ? null : iconBtn('history', T('Versionsverlauf'), () => toggleSidePanel('versions'), { 'data-panel': 'versions' }),
     iconBtn('search', T('Suchen (Strg+F)'), openSearch),

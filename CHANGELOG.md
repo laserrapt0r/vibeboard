@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.4.0] – 2026-10-31
+
+Schemaversion 10.
+
+### Hinzugefügt
+- **Dokumente auf dem Board prüfen** (REQ-UPL-006): Alle Seiten einer PDF-Datei als Bilder in einem Frame; Office-Dateien mit dem optionalen Dienst Gotenberg.
+- **Freigaben** (REQ-COLLAB-018): Frames und Dateien vorlegen, entscheiden, Status am Element. Änderungen entwerten eine Freigabe.
+- **Jira und Azure DevOps** (REQ-PROJ-008, REQ-ADMIN-013): Abgleich der Karten in beide Richtungen.
+- **Automatisches Layout und Swimlanes** (REQ-EDIT-009).
+- **Kanban und Zeitleiste** (REQ-PROJ-007) als Ansichten derselben Karten, mit Beginn-Datum.
+- **Diagramme aus Tabellen** (REQ-ELEM-018): Balken, Linien, Torte.
+- **Bilder zuschneiden, Stiftdruck, Skizzen zu Formen** (REQ-ELEM-019, REQ-ELEM-020).
+- **Import aus draw.io und PowerPoint, Export nach PowerPoint** (REQ-IO).
+- **SAML und SCIM** (REQ-AUTH-014, REQ-AUTH-015).
+- **Designvorgaben und zentrale Vorlagen** (REQ-ADMIN-012, REQ-TPL-008).
+
+### Geändert
+- Neue Abhängigkeit `@node-saml/node-saml`.
+
 ## [4.3.2] – 2026-10-31
 
 ### Hinzugefügt

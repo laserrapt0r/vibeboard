@@ -48,6 +48,8 @@ services:
       # Virenscan hochgeladener Dateien über den ClamAV-Dienst
       CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
       CLAMAV_PORT: 3310
+      # Office-Dateien auf dem Board prüfen (optional, siehe Dienst gotenberg)
+      OFFICE_CONVERTER_URL: ${OFFICE_CONVERTER_URL:-}
       # Vor jedem Datenbank-Upgrade wird eine Sicherung nach /backups geschrieben (die letzten 10 bleiben erhalten)
       BACKUP_KEEP: ${BACKUP_KEEP:-10}
       # Protokollierung (siehe .env.example); ansehen mit: docker compose logs -f app
@@ -76,6 +78,15 @@ services:
     restart: unless-stopped
     volumes:
       - clamav:/var/lib/clamav
+    security_opt:
+      - no-new-privileges:true
+
+  # Optional: wandelt Office-Dateien in PDF um, damit ihre Seiten auf dem Board geprüft werden können.
+  # Starten mit: docker compose --profile office up -d   und in der .env OFFICE_CONVERTER_URL=http://gotenberg:3000 setzen
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    profiles: ["office"]
+    restart: unless-stopped
     security_opt:
       - no-new-privileges:true
 

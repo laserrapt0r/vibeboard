@@ -186,3 +186,21 @@
   - Das Element zeigt Dateityp, Name und Größe, bei PDFs die erste Seite als Vorschau.
   - Doppelklick öffnet den Betrachter – auch für Betrachter und Gäste: PDF-Seiten (bis 50), Text direkt, Office-Dateien mit Hinweis; jederzeit Download.
   - Kopien eines Boards und Versionskopien übernehmen die Dateien. Dateien ohne Verweis aus Elementen oder Versionen werden nach sieben Tagen entfernt; mit dem Board werden sie gelöscht.
+
+### REQ-ELEM-018 Diagramme aus Tabellen
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Aus einer Tabelle entsteht ein Balken-, Linien- oder Tortendiagramm. Erste Zeile: Reihen, erste Spalte: Beschriftung.
+  - Das Diagramm folgt Änderungen der Tabelle sofort. Zahlen dürfen Tausendertrenner, Dezimalkomma, Prozent- und Währungszeichen enthalten.
+  - Diagrammart und Titel sind änderbar; Kopien behalten die Verbindung zur mitkopierten Tabelle. Ohne Zahlen erscheint ein Hinweis.
+
+### REQ-ELEM-019 Bilder zuschneiden
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Zuschneiden per Griffen oder Zahlenfeldern, jederzeit umkehrbar; das Original bleibt erhalten.
+
+### REQ-ELEM-020 Stift und Skizzen
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Druckempfindliche Stifte erzeugen Linien, deren Breite dem Druck folgt; Maus und Finger bleiben gleichmäßig.
+  - Ausgewählte Freihandlinien lassen sich in Linie, Kreis, Rechteck, Dreieck oder Raute umwandeln. Ohne eindeutiges Ergebnis bleibt die Linie unverändert.

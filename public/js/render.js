@@ -635,7 +635,8 @@ export function safeEl(el) {
     else delete o[k];
   }
   if (o.type === 'shape' && !SHAPE_KEYS.has(o.shape)) o.shape = 'rect';
-  if (o.type === 'pen') o.points = Array.isArray(o.points) ? o.points.map((p) => [fin(p && p[0]), fin(p && p[1])]) : [];
+  if (o.type === 'pen') o.points = Array.isArray(o.points) ? o.points.map((p) => (p && p.length > 2 ? [fin(p[0]), fin(p[1]), fin(p[2])] : [fin(p && p[0]), fin(p && p[1])])) : [];
+  if (o.type === 'image' && o.crop) o.crop = { x: fin(o.crop.x), y: fin(o.crop.y), w: fin(o.crop.w) || 1, h: fin(o.crop.h) || 1 };
   if (o.type === 'connector') {
     const anchor = (e) => (Number.isFinite(Number(e.ax)) && Number.isFinite(Number(e.ay)) ? { ax: Math.max(-1, Math.min(1, Number(e.ax))), ay: Math.max(-1, Math.min(1, Number(e.ay))) } : {});
     const end = (e) => (e && e.id ? { id: String(e.id), side: e.side, ...anchor(e) } : { x: fin(e && e.x), y: fin(e && e.y), side: e && e.side });
@@ -990,6 +991,177 @@ export function penPath(points) {
   return d + ` L${r1(l[0])},${r1(l[1])}`;
 }
 
+// Linie mit Stiftdruck: gefüllter Umriss, dessen Breite dem Druck folgt
+export function pressurePath(points, sw) {
+  if (points.length < 2) return penPath(points);
+  const left = [], right = [];
+  points.forEach((p, i) => {
+    const a = points[Math.max(0, i - 1)], b = points[Math.min(points.length - 1, i + 1)];
+    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
+    const r = sw * (0.2 + (p[2] ?? 0.5) * 1.1) / 2;
+    left.push([p[0] - (dy / len) * r, p[1] + (dx / len) * r]);
+    right.unshift([p[0] + (dy / len) * r, p[1] - (dx / len) * r]);
+  });
+  return `${penPath(left)} ${penPath(right).replace(/^M/, 'L')} Z`;
+}
+
+/* ---------------- Diagramme aus Tabellen ---------------- */
+
+// „1.234,5“, „1,234.5“, „12 %“, „3 €“ – Zahlen, wie sie in Tabellen stehen
+export function cellNumber(v) {
+  let s = String(v ?? '').replace(/[^\d.,\-]/g, '');
+  if (!/\d/.test(s)) return null;
+  const c = s.lastIndexOf(','), d = s.lastIndexOf('.');
+  if (c >= 0 && d >= 0) s = c > d ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  else if (c >= 0) s = s.replace(',', '.');
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function chartData(table) {
+  const rows = (table.cells || []).filter((r) => r.some((c) => String(c).trim()));
+  if (rows.length < 2) return null;
+  const head = rows[0], body = rows.slice(1);
+  const series = [];
+  for (let c = 1; c < head.length; c++) {
+    const values = body.map((r) => cellNumber(r[c]));
+    if (values.some((v) => v !== null)) series.push({ name: String(head[c] || ''), values: values.map((v) => v ?? 0) });
+  }
+  return series.length ? { labels: body.map((r) => String(r[0] ?? '')), series } : null;
+}
+
+const CHART_COLORS = ['#4262ff', '#12b886', '#f59f00', '#e64980', '#7048e8', '#1098ad', '#f03e3e', '#5c940d'];
+const chartColor = (i) => CHART_COLORS[i % CHART_COLORS.length];
+const chartText = (x, y, text, { size = 12, anchor = 'start', color = '#495057', bold = false } = {}) => `<text x="${r1(x)}" y="${r1(y)}" font-family="${esc(FONT)}" font-size="${size}"${bold ? ' font-weight="bold"' : ''} text-anchor="${anchor}" fill="${color}">${esc(String(text))}</text>`;
+const fmtNum = (n) => (Math.abs(n) >= 1000 ? Math.round(n).toLocaleString() : String(Math.round(n * 100) / 100));
+
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const p = 10 ** Math.floor(Math.log10(v)), f = v / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+
+function chartLegend(names, x, y, w) {
+  let out = '', cx = x, cy = y;
+  names.forEach((n, i) => {
+    const tw = measure(n, 12) + 26;
+    if (cx + tw > x + w && cx > x) {
+      cx = x;
+      cy += 18;
+    }
+    out += `<rect x="${r1(cx)}" y="${r1(cy - 9)}" width="11" height="11" rx="2" fill="${chartColor(i)}"/>` + chartText(cx + 15, cy, n);
+    cx += tw;
+  });
+  return out;
+}
+
+function pieSvg(data, x, y, w, h) {
+  const s = data.series[0];
+  const values = s.values.map((v) => Math.max(0, v));
+  const sum = values.reduce((a, v) => a + v, 0) || 1;
+  const r = Math.max(10, Math.min(w * 0.55, h) / 2 - 6);
+  const cx = x + r + 6, cy = y + h / 2;
+  let out = '', a = -Math.PI / 2;
+  values.forEach((v, i) => {
+    const b = a + (v / sum) * Math.PI * 2;
+    if (v >= sum) out += `<circle cx="${r1(cx)}" cy="${r1(cy)}" r="${r1(r)}" fill="${chartColor(i)}"/>`;
+    else if (v > 0) out += `<path d="M${r1(cx)},${r1(cy)} L${r1(cx + r * Math.cos(a))},${r1(cy + r * Math.sin(a))} A${r1(r)},${r1(r)} 0 ${b - a > Math.PI ? 1 : 0} 1 ${r1(cx + r * Math.cos(b))},${r1(cy + r * Math.sin(b))} Z" fill="${chartColor(i)}" stroke="#ffffff" stroke-width="1.5"/>`;
+    a = b;
+  });
+  const lx = cx + r + 16;
+  data.labels.slice(0, 14).forEach((l, i) => {
+    const ly = y + 14 + i * 20;
+    out += `<rect x="${r1(lx)}" y="${r1(ly - 10)}" width="11" height="11" rx="2" fill="${chartColor(i)}"/>` + chartText(lx + 16, ly, `${l} (${Math.round((values[i] / sum) * 100)} %)`);
+  });
+  return out;
+}
+
+function axisChart(el, data, x, y, w, h) {
+  const legend = data.series.length > 1 ? 24 : 0;
+  const left = 46, bottom = 24, top = 8;
+  const px = x + left, pw = Math.max(10, w - left - 8), py = y + top, ph = Math.max(10, h - top - bottom - legend);
+  const all = data.series.flatMap((s) => s.values);
+  const low = Math.min(0, ...all);
+  const max = niceMax(Math.max(...all, 0));
+  const range = max - low || 1;
+  const yOf = (v) => py + ph - ((v - low) / range) * ph;
+  let out = '';
+  for (let i = 0; i <= 4; i++) {
+    const v = low + (range * i) / 4, ly = yOf(v);
+    out += `<line x1="${r1(px)}" y1="${r1(ly)}" x2="${r1(px + pw)}" y2="${r1(ly)}" stroke="#e9ecef"/>` + chartText(px - 6, ly + 4, fmtNum(v), { size: 11, anchor: 'end' });
+  }
+  const n = data.labels.length, band = pw / n;
+  const step = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(pw / 70))));
+  data.labels.forEach((l, i) => {
+    if (i % step === 0) out += chartText(px + band * (i + 0.5), py + ph + 16, String(l).slice(0, 14), { size: 11, anchor: 'middle' });
+  });
+  if (el.chartKind === 'line') {
+    data.series.forEach((s, si) => {
+      const pts = s.values.map((v, i) => [px + band * (i + 0.5), yOf(v)]);
+      out += `<polyline points="${pts.map((p) => `${r1(p[0])},${r1(p[1])}`).join(' ')}" fill="none" stroke="${chartColor(si)}" stroke-width="2.5" stroke-linejoin="round"/>`;
+      out += pts.map((p) => `<circle cx="${r1(p[0])}" cy="${r1(p[1])}" r="3.5" fill="${chartColor(si)}"/>`).join('');
+    });
+  } else {
+    const barW = Math.max(1, (band * 0.72) / data.series.length);
+    const zero = yOf(0);
+    data.series.forEach((s, si) => {
+      s.values.forEach((v, i) => {
+        const bx = px + band * 0.14 + band * i + barW * si, by = yOf(Math.max(v, 0)), bh = Math.abs(yOf(v) - zero);
+        out += `<rect x="${r1(bx)}" y="${r1(by)}" width="${r1(Math.max(1, barW - 1))}" height="${r1(Math.max(0.5, bh))}" rx="2" fill="${chartColor(si)}"/>`;
+      });
+    });
+  }
+  if (legend) out += chartLegend(data.series.map((s) => s.name), x + left, y + h - 6, pw);
+  return out;
+}
+
+function chartSvg(el, get) {
+  const { x = 0, y = 0, w = 0, h = 0 } = el;
+  let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#ffffff" stroke="#e3e3e3" filter="url(#shadow-sm)"/>`;
+  const table = el.sourceId ? get(el.sourceId) : null;
+  const data = table && table.type === 'table' && !table.hidden ? chartData(table) : null;
+  if (!data) return out + chartText(x + w / 2, y + h / 2, T('Keine Zahlen in der Tabelle'), { size: 14, anchor: 'middle', color: '#868e96' });
+  let top = y + 12;
+  if (el.title) {
+    out += chartText(x + 14, y + 26, el.title, { size: 16, bold: true, color: '#1a1a1a' });
+    top = y + 38;
+  }
+  const area = [x + 10, top, w - 20, y + h - top - 8];
+  return out + (el.chartKind === 'pie' ? pieSvg(data, ...area) : axisChart(el, data, ...area));
+}
+
+/* ---------------- Swimlanes und Status der Freigabe ---------------- */
+
+function lanesSvg(el) {
+  const { x, y, w, h } = el;
+  const n = el.lanes.length;
+  const lh = h / n, head = 44;
+  let out = `<line x1="${x + head}" y1="${y}" x2="${x + head}" y2="${y + h}" stroke="#adb5bd"/>`;
+  el.lanes.forEach((l, i) => {
+    const ly = y + lh * i, cx = x + head / 2, cy = ly + lh / 2;
+    if (i) out += `<line x1="${x}" y1="${r1(ly)}" x2="${x + w}" y2="${r1(ly)}" stroke="#adb5bd"/>`;
+    const fs = Math.min(15, Math.max(11, lh / Math.max(8, String(l.title).length)));
+    out += `<text transform="rotate(-90 ${r1(cx)} ${r1(cy)})" x="${r1(cx)}" y="${r1(cy + fs / 3)}" text-anchor="middle" font-family="${esc(FONT)}" font-size="${r1(fs)}" font-weight="bold" fill="#495057">${esc(l.title)}</text>`;
+  });
+  return out;
+}
+
+const REVIEW_LOOK = {
+  open: ['#fff4e6', '#a35200', () => T('In Prüfung')], approved: ['#d3f9d8', '#1f6b30', () => T('Freigegeben')], rejected: ['#ffe3e3', '#c92a2a', () => T('Abgelehnt')],
+  outdated: ['#fff4e6', '#a35200', () => T('Geändert nach Freigabe')],
+};
+
+function reviewBadgeSvg(el, env) {
+  const r = env.reviews && env.reviews.get(el.id);
+  const look = r && REVIEW_LOOK[r.status];
+  if (!look) return '';
+  const fs = el.type === 'frame' ? Math.max(14, Math.min(40, Math.min(el.w, el.h) / 50)) : 12;
+  const label = look[2]();
+  const tw = measure(label, fs, true) + fs * 1.4, bh = fs * 1.7;
+  const bx = el.x + el.w - tw, by = el.y - bh - 4;
+  return `<rect x="${r1(bx)}" y="${r1(by)}" width="${r1(tw)}" height="${r1(bh)}" rx="${r1(bh / 2)}" fill="${look[0]}"/><text x="${r1(bx + tw / 2)}" y="${r1(by + bh * 0.7)}" text-anchor="middle" font-family="${esc(FONT)}" font-size="${r1(fs)}" font-weight="bold" fill="${look[1]}">${esc(label)}</text>`;
+}
+
 const dashFor = (el) => (el.dash === 'dotted' ? `${el.strokeWidth || 2} ${(el.strokeWidth || 2) * 2}` : el.dash ? `${(el.strokeWidth || 2) * 4} ${(el.strokeWidth || 2) * 3}` : '');
 
 const LINKABLE = new Set(['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame', 'code']);
@@ -1018,7 +1190,7 @@ export function renderElement(el, env = {}) {
   // Vorschaubildern und Exporten ebenfalls verdeckt
   if (el.hidden || (el.priv && env.redactPrivate)) return hiddenMarkup(el);
   const own = el.priv ? privateBadge(el) : '';
-  return renderBody(el, env) + (el.link ? linkBadge(el) : '') + own + (el.type === 'sticky' || el.type === 'shape' ? stickyTags(el) : '') + reactionsMarkup(el, env);
+  return renderBody(el, env) + reviewBadgeSvg(el, env) + (el.link ? linkBadge(el) : '') + own + (el.type === 'sticky' || el.type === 'shape' ? stickyTags(el) : '') + reactionsMarkup(el, env);
 }
 
 // Schlagwörter auf Sticky Notes und Formen: kleine Etiketten oben links (zu lange werden gekürzt)
@@ -1163,7 +1335,7 @@ function renderBody(el, env) {
       const tw = measure(title, ts, true) + 8;
       return `<rect class="frame-body" x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#ffffff'}" stroke="${el.stroke || '#d6d6d6'}" stroke-width="1"/>` +
         `<rect class="frame-title" x="${x}" y="${y - ts * 1.6}" width="${tw}" height="${ts * 1.5}" fill="transparent"/>` +
-        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#6b6b6b">${esc(title)}</text>` + concealMarkup(el, env);
+        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#6b6b6b">${esc(title)}</text>` + (Array.isArray(el.lanes) && el.lanes.length ? lanesSvg(el) : '') + concealMarkup(el, env);
     }
     case 'connector': {
       const g = connectorGeom(el, get);
@@ -1187,8 +1359,13 @@ function renderBody(el, env) {
       }
       return out;
     }
+    case 'chart':
+      return chartSvg(el, get);
     case 'pen': {
       const d = penPath(el.points);
+      if (el.points.some((p) => p.length > 2)) {
+        return `<g transform="translate(${r1(x)},${r1(y)})"><path class="hit" d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(12, (el.strokeWidth || 3) + 8)}" stroke-linecap="round"/><path d="${pressurePath(el.points, el.strokeWidth || 3)}" fill="${el.stroke || '#1a1a1a'}"${el.opacity && el.opacity < 1 ? ` opacity="${el.opacity}"` : ''}/></g>`;
+      }
       return `<g transform="translate(${r1(x)},${r1(y)})"><path class="hit" d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(12, (el.strokeWidth || 3) + 8)}" stroke-linecap="round"/>` +
         `<path d="${d}" fill="none" stroke="${el.stroke || '#1a1a1a'}" stroke-width="${el.strokeWidth || 3}" stroke-linecap="round" stroke-linejoin="round"${el.opacity && el.opacity < 1 ? T` stroke-opacity="${el.opacity}"` : ''}/></g>`;
     }
@@ -1214,6 +1391,10 @@ function renderBody(el, env) {
     }
     case 'image': {
       if (!el.src) return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#eee" stroke="#ccc"/>`;
+      if (el.crop) {
+        const c = el.crop;
+        return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff"/><svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${c.x} ${c.y} ${c.w} ${c.h}" preserveAspectRatio="none"><image href="${esc(el.src)}" x="0" y="0" width="1" height="1" preserveAspectRatio="none"/></svg>`;
+      }
       return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff"/><image href="${esc(el.src)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice"/>`;
     }
     case 'emoji': {

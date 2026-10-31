@@ -46,6 +46,50 @@ export const clone = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
 
 /* ---------------- Farben ---------------- */
 
+/* ---------------- Designvorgaben der Installation ---------------- */
+
+let designState = {};
+export const design = () => designState;
+
+function shades(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+// Akzent als Schrift so weit abdunkeln, dass er auf hellem Grund lesbar bleibt
+function readableAccent(hex) {
+  let c = shades(hex);
+  const lum = (v) => {
+    const [r, g, b] = v.map((x) => {
+      const s = x / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  for (let i = 0; i < 40 && 1.05 / (lum(c) + 0.05) < 5.6; i++) c = c.map((x) => Math.round(x * 0.92));
+  return `rgb(${c.join(', ')})`;
+}
+
+function replaceList(list, values) {
+  if (values && values.length) list.splice(0, list.length, ...values);
+}
+
+function applyDesign(d) {
+  designState = d || {};
+  const accent = designState.accent;
+  if (accent) {
+    const root = document.documentElement.style;
+    root.setProperty('--accent', accent);
+    root.setProperty('--accent-soft', `rgba(${shades(accent).join(', ')}, 0.12)`);
+    root.setProperty('--accent-text', readableAccent(accent));
+    root.setProperty('--on-accent', readableOn(accent));
+  }
+  replaceList(PALETTE, designState.palette && ['transparent', ...designState.palette]);
+  replaceList(STICKY_COLORS, designState.stickyColors);
+}
+
+export const designReady = fetch('/api/config', { credentials: 'same-origin' }).then((r) => r.json()).then((c) => applyDesign(c.design)).catch(() => {});
+
 export const STICKY_COLORS = [
   '#fff9b1', '#f5d128', '#d5f692', '#c9df56', '#93d275', '#67c6c0',
   '#a6ccf5', '#6cd8fa', '#c9b2e8', '#ffcee0', '#f99fb1', '#ff9d48',
@@ -503,6 +547,12 @@ export const ICONS = {
   search: I('<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>'),
   settings: I('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   present: I('<path d="M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M7 21l5-5 5 5"/>'),
+  chart: I('<path d="M3 3v18h18"/><path d="M8 17v-6M13 17V7M18 17v-3"/>'),
+  kanban: I('<rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/>'),
+  crop: I('<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>'),
+  magic: I('<path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M3 21l9-9M12.2 6.2 11 5"/>'),
+  sitemap: I('<rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/>'),
+  lanes: I('<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9.3h18M3 14.7h18M8 4v16"/>'),
   list: I('<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>'),
   layers: I('<path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>'),
   home: I('<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>'),

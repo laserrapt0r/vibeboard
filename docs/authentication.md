@@ -1,6 +1,6 @@
 # Sign-in methods
 
-vibeboard always has local accounts. Keycloak, LDAP/Active Directory and Kerberos are optional and off by default.
+vibeboard always has local accounts. Keycloak, SAML, LDAP/Active Directory and Kerberos are optional and off by default.
 Configure them under **Administration → Sign-in**. Save first, then use the test button of each method.
 
 ## Which methods can be active?
@@ -34,7 +34,7 @@ up vibeboard's two-factor sign-in; only an administrator can reset it. An accoun
 the code after every method, including Keycloak and Kerberos.
 
 "Administration only with two-factor sign-in" applies to everyone, including LDAP sign-ins, because LDAP checks only a
-password. Purely external accounts signed in with Keycloak or Kerberos are exempt: enforce a second factor there.
+password. Purely external accounts signed in with Keycloak, SAML or Kerberos are exempt: enforce a second factor there.
 
 With an external method enabled, the last active administrator with a local password can't be disabled, demoted or deleted.
 
@@ -81,6 +81,29 @@ For OpenLDAP, adapt the filter, for example `(&(objectClass=inetOrgPerson)(|(uid
 attributes to `entryUUID`, `uid`, `mail`, `cn` and `memberOf`.
 
 Failed attempts are limited to 10 in 15 minutes per directory entry. Keep your domain's lockout threshold above that.
+
+## SAML 2.0
+
+Register vibeboard with your identity provider using the metadata at `https://board.example.org/api/auth/saml/metadata`.
+The assertion consumer URL is `https://board.example.org/api/auth/saml/acs`, the entity ID defaults to the public address.
+
+Enter the provider's sign-in URL (HTTP redirect binding) and signing certificate. Assertions must be signed. Set the names
+of the attributes for address, name and groups; they default to `email`, `displayName` and `groups`.
+
+The browser binding needs HTTPS. Tested with Keycloak as identity provider.
+
+## SCIM 2.0
+
+SCIM lets your identity provider create, change and disable accounts.
+
+1. Enable SCIM under *Administration → Sign-in* and generate a token. It is shown once.
+2. In the identity provider use the base URL `https://board.example.org/scim/v2` and the token as bearer token. `userName`
+   must be the e-mail address.
+
+`DELETE` disables an account instead of removing it, so boards stay. Sessions end at once. Groups are not transferred, and
+the last local administrator can't be disabled. Accounts get their rights through the group mapping of a sign-in method.
+
+Tested against the SCIM protocol directly, including the spelling Microsoft Entra ID uses, but not against Entra or Okta.
 
 ## Kerberos single sign-on
 

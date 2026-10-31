@@ -1,6 +1,6 @@
 // Board-Übersicht (Startseite)
 import { T, LOCALE } from './i18n.js';
-import { h, api, ICONS, toast, modal, promptDialog, confirmDialog, initials, relTime, loadPref, savePref, readableOn } from './util.js';
+import { h, api, ICONS, toast, modal, promptDialog, confirmDialog, initials, relTime, loadPref, savePref, readableOn, design, designReady } from './util.js';
 import { TEMPLATES } from './templates.js';
 import { templateGallery, loadCustom, byRecent, loadTemplate, markTemplateUsed, fillPreview } from './gallery.js';
 import { menu } from './menu.js';
@@ -119,9 +119,11 @@ let templateState = { custom: [], recent: [] };
 
 // Schnellauswahl: leeres Board, zuletzt verwendete Vorlagen, dann die häufigen – immer gleich viele Einträge
 function quickTemplates() {
-  const all = [...templateState.custom, ...TEMPLATES];
+  // Vorgabe der Administration: nur zentrale und eigene Vorlagen
+  const hide = design().hideBuiltin;
+  const all = [...templateState.custom, ...(hide ? TEMPLATES.filter((t) => t.id === 'blank') : TEMPLATES)];
   const known = (id) => all.find((t) => t.id === id);
-  const ids = [...new Set(['blank', ...templateState.recent.filter(known), ...QUICK_TEMPLATES])];
+  const ids = [...new Set(['blank', ...templateState.recent.filter(known), ...(hide ? templateState.custom.map((t) => t.id) : QUICK_TEMPLATES)])];
   return byRecent(ids.slice(0, QUICK_TEMPLATES.length).map(known).filter(Boolean), templateState.recent);
 }
 
@@ -749,7 +751,7 @@ window.addEventListener('hashchange', () => {
   }
 });
 
-const importInput = h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' } });
+const importInput = h('input', { type: 'file', accept: '.json,application/json,.drawio,.pptx', style: { display: 'none' } });
 document.body.append(importInput);
 document.getElementById('dash-import').addEventListener('click', () => importInput.click());
 importInput.addEventListener('change', async () => {
@@ -757,7 +759,9 @@ importInput.addEventListener('change', async () => {
   importInput.value = '';
   if (!f) return;
   try {
-    const d = JSON.parse(await f.text());
+    // draw.io und PowerPoint: Der Dateiname wird zum Namen des Boards
+    const foreign = /\.(drawio|pptx)$/i.test(f.name) ? await (await import('./import-file.js')).readForeign(f) : null;
+    const d = foreign ? { name: f.name.replace(/\.[a-z]+$/i, ''), elements: foreign.elements } : JSON.parse(await f.text());
     const elements = Array.isArray(d) ? d : Array.isArray(d.elements) ? d.elements : Object.values(d.elements || {});
     const b = await api('/api/boards', { method: 'POST', body: { name: d.name || f.name.replace(/\.((dlz|vibe)board\.)?json$/, ''), elements } });
     if (b.rejected && b.rejected.length) {
@@ -781,9 +785,9 @@ importInput.addEventListener('change', async () => {
   }
   renderUser();
   renderTemplates();
-  loadCustom().then((r) => {
+  Promise.all([loadCustom(), designReady]).then(([r]) => {
     templateState = r;
-    if (r.recent.length) renderTemplates();
+    renderTemplates();
   });
   document.getElementById('dash-bell').append(bellButton());
   refreshBell();

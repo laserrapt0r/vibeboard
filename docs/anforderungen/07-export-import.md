@@ -35,3 +35,19 @@
   - Spalten werden über deutsche und englische Namen zugeordnet: Titel/Summary, Beschreibung, Zuständig/Assignee, Status, Fällig/Due Date, Story Points, Priorität, Schlüssel/Issue Key, Labels (auch mehrere Label-Spalten). Ohne erkennbare Kopfzeile wird jede Zeile zu einer Karte.
   - Datumsangaben im Format JJJJ-MM-TT, TT.MM.JJJJ und im Jira-Format werden übernommen; Prioritätsnamen (z. B. Highest, Blocker, Hoch, Low) werden auf die vier Prioritäten abgebildet.
   - Vorschau der erkannten Anzahl; optional Anordnung nach Status in Spalten (Kanban). Höchstens 500 Karten je Import.
+
+### REQ-IO-006 Import aus draw.io
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - `.drawio`-Dateien, auch komprimiert und mit mehreren Seiten, werden zu bearbeitbaren Formen, Texten, Frames und angedockten Verbindungen. Beschriftungen kommen als reiner Text.
+
+### REQ-IO-007 Import aus PowerPoint
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - `.pptx`-Dateien: Jede Folie wird ein Frame; Texte, Formen, Bilder, Linien, Tabellen und Gruppen bleiben bearbeitbar. Nicht Übernommenes wird gezählt. Das alte Format `.ppt` wird nicht unterstützt.
+  - Möglich im Board und auf der Startseite (neues Board). Die Datei wird im Browser gelesen, beschädigte Dateien ergeben eine klare Meldung.
+
+### REQ-IO-008 Export nach PowerPoint
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Jeder Frame wird eine Folie (16:9), ohne Frames das ganze Board. Notizen, Text, Formen, Linien, Bilder und Tabellen bleiben bearbeitbar, alles andere kommt als Bild.

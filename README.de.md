@@ -213,6 +213,17 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   - Optional werden die Karten als Kanban-Spalten nach Status angeordnet.
 - **Direktlinks** auf einzelne Elemente: `/board/<id>#el=<elementId>`
 
+### Prüfen und Aufgaben
+- **Dokumente auf dem Board prüfen:** Alle Seiten eines PDFs als Frame auf das Board legen, darauf kommentieren und zeichnen. Office-Dateien gehen mit dem optionalen Umwandlungsdienst.
+- **Freigaben:** Frames und Dateien Prüfenden vorlegen. Zum Freigeben reicht die Rolle „Kommentieren“, Änderungen entwerten eine Freigabe, der Status steht am Element.
+- **Kanban und Zeitleiste:** Andere Ansichten derselben Karten, auch ohne Maus bedienbar.
+- **Jira und Azure DevOps:** Karten und Tickets bleiben in beide Richtungen abgeglichen.
+- **Automatisches Layout und Swimlanes:** Verbundene Elemente oder Mindmaps mit einem Klick anordnen.
+- **Diagramme aus Tabellen:** Balken, Linien und Torte, die der Tabelle folgen.
+- **Bilder und Skizzen:** Bilder zuschneiden, Stiftdruck, Skizzen zu sauberen Formen umwandeln.
+
+Mehr dazu: [docs/integrations.md](docs/integrations.md) (Englisch).
+
 ### Export und Import
 - PNG (ganzes Board oder Auswahl) und SVG
 - PDF mit einem Frame pro Seite (über den Druckdialog des Browsers)
@@ -376,7 +387,7 @@ Alle weiteren Einstellungen nimmst du in der Administration vor.
 
 ### Externe Anmeldung
 
-Neben lokalen Konten kann vibeboard **Keycloak**, **LDAP/Active Directory** und **Kerberos-Einmalanmeldung** nutzen. Alles ist optional und wird unter *Administration → Anmeldung* eingerichtet; LDAP ist für Active Directory vorbelegt. Mehrere Methoden können gleichzeitig aktiv sein, lokale Administratoren behalten immer einen Notzugang. Einrichtung: [docs/authentication.md](docs/authentication.md) (Englisch).
+Neben lokalen Konten kann vibeboard **Keycloak**, **SAML**, **LDAP/Active Directory** und **Kerberos-Einmalanmeldung** nutzen, Konten lassen sich über **SCIM** verwalten. Alles ist optional und wird unter *Administration → Anmeldung* eingerichtet; LDAP ist für Active Directory vorbelegt. Mehrere Methoden können gleichzeitig aktiv sein, lokale Administratoren behalten immer einen Notzugang. Einrichtung: [docs/authentication.md](docs/authentication.md) (Englisch).
 
 ## Rechte auf Boards
 

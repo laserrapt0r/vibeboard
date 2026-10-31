@@ -221,6 +221,17 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
   - En option, les cartes sont disposées en colonnes Kanban selon le statut.
 - **Liens directs** vers des éléments individuels : `/board/<id>#el=<elementId>`
 
+### Relecture et tâches
+- **Relire des documents sur le tableau :** Placez toutes les pages d'un PDF dans un cadre, puis commentez et dessinez dessus. Les fichiers Office fonctionnent avec le convertisseur facultatif.
+- **Validations :** Soumettez des cadres et des fichiers à la relecture. Le rôle de commentaire suffit, toute modification annule une validation et le statut s'affiche sur l'élément.
+- **Kanban et chronologie :** D'autres vues des mêmes cartes, utilisables sans souris.
+- **Jira et Azure DevOps :** Cartes et tickets synchronisés dans les deux sens.
+- **Mise en page automatique et couloirs :** Organisez des éléments reliés ou des cartes mentales en un clic.
+- **Graphiques à partir de tableaux :** Barres, courbes et secteurs qui suivent les données.
+- **Images et croquis :** Recadrage, pression du stylet et croquis convertis en formes.
+
+Plus d'informations : [docs/integrations.md](docs/integrations.md) (en anglais).
+
 ### Export et import
 - PNG (tableau entier ou sélection) et SVG
 - PDF avec un cadre par page (via la boîte de dialogue d'impression du navigateur)
@@ -385,7 +396,7 @@ Tous les autres paramètres se règlent dans l'administration.
 
 ### Connexion externe
 
-En plus des comptes locaux, vibeboard peut utiliser **Keycloak**, **LDAP/Active Directory** et **l'authentification unique Kerberos**. Tout est facultatif et se configure sous *Administration → Connexion* ; LDAP est prérempli pour Active Directory. Plusieurs méthodes peuvent être actives en même temps, et les administrateurs locaux conservent toujours un accès de secours. Mise en place : [docs/authentication.md](docs/authentication.md) (en anglais).
+En plus des comptes locaux, vibeboard peut utiliser **Keycloak**, **SAML**, **LDAP/Active Directory** et **l'authentification unique Kerberos**, et les comptes peuvent être gérés via **SCIM**. Tout est facultatif et se configure sous *Administration → Connexion* ; LDAP est prérempli pour Active Directory. Plusieurs méthodes peuvent être actives en même temps, et les administrateurs locaux conservent toujours un accès de secours. Mise en place : [docs/authentication.md](docs/authentication.md) (en anglais).
 
 ## Droits sur les tableaux
 

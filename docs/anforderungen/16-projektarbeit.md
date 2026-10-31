@@ -54,3 +54,18 @@
 - **Akzeptanzkriterien:**
   - Zusammenfassung aus Stimmung (Umfragen), Themen mit Stimmen und Beiträgen, Maßnahmen und den Maßnahmen der letzten Retro – als Markdown zum Kopieren, Herunterladen oder Drucken (PDF).
   - Moderierende verschicken sie per E-Mail an die Beteiligten des Boards (höchstens 5-mal je Stunde und Board) oder an den Team-Webhook (REQ-COLLAB-017).
+
+### REQ-PROJ-007 Kanban und Zeitleiste
+- **Seit:** 4.4.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Kanban und Zeitleiste zeigen dieselben Karten wie das Board. Änderungen wirken sofort am Element und erscheinen bei allen.
+  - Kanban: Spalten nach Status, Verschieben per Ziehen oder Auswahlfeld, neue Spalten. Zeitleiste: Balken von Beginn bis Fälligkeit, Verschieben per Ziehen oder Datumsfeld.
+  - Beide Ansichten sind ohne Maus bedienbar.
+
+### REQ-PROJ-008 Abgleich mit Jira und Azure DevOps
+- **Seit:** 4.4.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Ein Board wird mit einer Abfrage (JQL oder WIQL) verbunden; der Abgleich läuft alle fünf Minuten und auf Knopfdruck.
+  - Treffer werden zu Karten. Titel, Beschreibung, Status, Fälligkeit, Priorität und Schlagwörter gehen in beide Richtungen, zuständige Personen nur vom Ticket zur Karte.
+  - Ändern sich Karte und Ticket gleichzeitig, gewinnt das Ticket; der Abgleich meldet die Anzahl. Statuswechsel laufen in Jira über erlaubte Übergänge, nicht erreichbare Status werden gemeldet.
+  - Karten lassen sich als Ticket anlegen. Kopien sind nicht verbunden. Solange ein Ticket zur Abfrage passt, kehrt eine gelöschte Karte zurück.

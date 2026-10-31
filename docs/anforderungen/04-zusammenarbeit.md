@@ -161,3 +161,12 @@
   - Die Adresse wird nach dem Speichern nur gekürzt (Host) angezeigt und nie protokolliert. „Testen“ schickt eine Testnachricht. Nach 20 Fehlern in Folge pausiert ein Webhook, bis ein Test gelingt.
   - Sicherheit: [REQ-SEC-012](11-sicherheit.md).
   - Geändert in 4.3.1: Sind Webhooks abgeschaltet, sind die Menüpunkte für Person und Team deaktiviert.
+
+### REQ-COLLAB-018 Freigaben
+- **Seit:** 4.4.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Frames und Dateien lassen sich ausgewählten Personen mit Zugriff auf das Board vorlegen, mit Hinweis und Termin. Gäste und verborgene Bereiche sind ausgeschlossen.
+  - Prüfende brauchen nur das Recht zu kommentieren; eine Ablehnung braucht eine Begründung. Der Server prüft, wer entscheiden darf.
+  - Status: in Prüfung, freigegeben, abgelehnt, geändert nach Freigabe. Eine Freigabe gilt für den geprüften Stand: Ändert sich der Inhalt, verfällt sie. Kommentare und das Verschieben des Frames ändern den Stand nicht.
+  - Prüfende und Anfordernde werden benachrichtigt; Status erscheint live am Element und im Panel „Freigaben“; das Protokoll hält die Entscheidungen fest.
+  - Wer angefordert hat und der Besitzer können erneut vorlegen oder entfernen.

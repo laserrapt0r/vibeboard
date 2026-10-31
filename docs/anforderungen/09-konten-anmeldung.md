@@ -115,3 +115,17 @@
   - Wird ein unbestätigtes Konto verknüpft, verliert es sein Kennwort, seine Sitzungen und offene Links (Schutz vor vorab angelegten Konten).
   - Solange eine externe Methode aktiv ist, lässt sich das letzte aktive Admin-Konto mit lokalem Kennwort weder deaktivieren noch herabstufen oder löschen.
   - Extern angemeldete Sitzungen gelten einstellbar kürzer (Standard: 7 Tage), damit im Verzeichnis gesperrte Personen herausfallen.
+
+### REQ-AUTH-014 Anmeldung über SAML
+- **Seit:** 4.4.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - SAML 2.0 mit signierten Assertions, `InResponseTo`-Prüfung und Bindung an den Browser. Unsignierte oder wiederholte Antworten werden abgelehnt.
+  - Attribute für Adresse, Name und Gruppen sind einstellbar; Gruppen begrenzen den Zugang und vergeben Adminrechte. Metadaten sind abrufbar.
+  - Für Verknüpfung und Notzugang gilt REQ-AUTH-013.
+
+### REQ-AUTH-015 Konten über SCIM verwalten
+- **Seit:** 4.4.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - SCIM 2.0 für Benutzer: anlegen, lesen, suchen (`userName eq`), ändern (PUT, PATCH), sperren. Standardmäßig aus.
+  - Zugriff nur mit Token aus der Administration; gespeichert wird nur sein Hash, angezeigt wird es einmal.
+  - DELETE sperrt, statt zu löschen: Boards bleiben, Sitzungen enden sofort. Das letzte lokale Admin-Konto lässt sich nicht sperren. Gruppen werden nicht übertragen.

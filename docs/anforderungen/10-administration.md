@@ -102,3 +102,14 @@
   - Geheimnisse werden nie ausgeliefert; ein leeres Feld behält den gespeicherten Wert.
   - Je Methode prüft ein Test die gespeicherten Einstellungen; bei LDAP zeigt er die Zuordnung für eine Beispielperson.
   - Die Benutzerverwaltung zeigt verknüpfte Methoden, gibt Admin-Konten für die Verknüpfung frei und löst Verknüpfungen, sofern ein Kennwort besteht.
+
+### REQ-ADMIN-012 Designvorgaben
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Akzentfarbe sowie die Farben für Formen, Text und Haftnotizen sind einstellbar; die Auswahl zeigt dann nur diese Farben. Bestehende Elemente bleiben unverändert.
+  - Schrift auf der Akzentfarbe und Links passen sich an, damit der Kontrast nach REQ-NFR-009 erhalten bleibt.
+
+### REQ-ADMIN-013 Anbindungen
+- **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Die Administration verwaltet Verbindungen zu Jira und Azure DevOps mit Test. Tokens werden nie ausgeliefert.

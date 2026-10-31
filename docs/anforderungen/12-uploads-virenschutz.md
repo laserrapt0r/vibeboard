@@ -44,3 +44,10 @@
   - Stufen: sauber = `info`, aus dem Zwischenspeicher = `debug`, abgelehnt oder ohne Scanner angenommen = `warn`, Ausfall des Scanners = `error`.
   - Im Sicherheitsprotokoll stehen zusätzlich Funde und abgelehnte Dateitypen („Upload abgelehnt“) sowie Dateien, die bei nicht erreichbarem Scanner ungeprüft angenommen wurden („Upload ungeprüft angenommen“, nur wenn die Administration das erlaubt).
   - Die Übersicht der Administration nennt neben blockierten auch ungeprüft angenommene Uploads der letzten 30 Tage.
+
+### REQ-UPL-006 Dokumente auf dem Board prüfen
+- **Seit:** 4.4.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Bei PDF-Dateien lassen sich alle Seiten (höchstens 50) als gesperrte Bilder in einem Frame auf das Board legen; darauf lässt sich kommentieren und zeichnen, der Frame kann zur Freigabe.
+  - Office-Dateien funktionieren genauso, wenn der optionale Umwandlungsdienst eingerichtet ist (`OFFICE_CONVERTER_URL`). Sonst erscheint die Funktion nicht.
+  - Die Seiten laufen wie alle Bilder durch die Upload-Prüfung.
