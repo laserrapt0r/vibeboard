@@ -4,14 +4,14 @@
 
 # Abhängigkeiten in einer eigenen Stufe bauen: Die Kerberos-Anbindung wird für Alpine kompiliert,
 # die Werkzeuge dafür landen nicht im fertigen Image
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS deps
+FROM node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4 AS deps
 RUN apk add --no-cache python3 make g++ krb5-dev
 WORKDIR /app
 COPY package.json package-lock.json ./
 # Die Canvas-Anbindung von pdf.js für Node wird im Server nicht gebraucht
 RUN npm ci --omit=dev --build-from-source=kerberos && rm -rf node_modules/@napi-rs
 
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+FROM node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4
 
 # pg_dump für die automatische Sicherung vor Datenbank-Upgrades
 # (Version 17 kann auch ältere PostgreSQL-Server sichern)
