@@ -80,6 +80,7 @@
   - Rechtsklick öffnet ein Kontextmenü (Auswahl bzw. freie Fläche).
   - Strg+F durchsucht Texte, Titel, Beschreibungen, Beschriftungen, Kommentare und Tabellenzellen; Treffer werden hervorgehoben und angesprungen.
   - Eine Übersicht aller Tastenkürzel öffnet sich mit `?`.
+  - Geändert in 4.11.0: Das Kontextmenü fügt Fotos und Dateien (PDF, Office, Text) an der Klickstelle ein, auch im Frame und auf Elementen, und bietet Format übertragen, kopieren und einfügen.
 
 ### REQ-EDIT-009 Automatisches Layout und Swimlanes
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -125,7 +126,7 @@
 - **Seit:** 4.9.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Der Pinsel in der Kontextleiste nimmt das Format des ausgewählten Elements auf, der nächste Klick überträgt es. Ein Klick ins Leere beendet ihn. Doppelklick auf den Pinsel hält ihn für mehrere Ziele, bis Esc ihn beendet.
-  - Über die Tastatur: Strg+Alt+C kopiert das Format, Strg+Alt+V wendet es auf die Auswahl an. Beides steht auch im Menü „Mehr“.
+  - Über die Tastatur: Strg+Alt+C kopiert das Format, Strg+Alt+V wendet es auf die Auswahl an. Beides steht auch im Menü „Mehr“ und im Kontextmenü, dort auch „Format übertragen“.
   - Übertragen wird nach Bedeutung, auch zwischen Elementarten: Fläche (bei Karten die Farbe), Linie, Textfarbe, Schrift und Ausrichtung, bei Verbindern auch Linienverlauf und Enden. Text, Größe und Lage bleiben. Tabellen übertragen ihr Gesamtformat, nicht das einzelner Zellen.
   - Hat das Ausgangselement keine eigene Farbe, behält das Ziel seine. Gesperrte und fixierte Elemente bleiben unverändert. Das Übertragen lässt sich rückgängig machen.
 

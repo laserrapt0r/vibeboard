@@ -4,6 +4,11 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.11.0] – 2026-10-31
+
+### Hinzugefügt
+- Das Kontextmenü fügt Fotos, PDF- und Office-Dateien an der Klickstelle ein und bietet Format übertragen, kopieren und einfügen (REQ-EDIT-008).
+
 ## [4.10.1] – 2026-10-31
 
 ### Behoben

@@ -34,6 +34,11 @@ import { download, safeName, svgString, pngDataUrl, printFrames } from './export
 document.addEventListener('pointerdown', (e) => {
   if (ctxMenu && !ctxMenu.contains(e.target)) closeContextMenu();
 }, true);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !ctxMenu) return;
+  e.stopPropagation();
+  closeContextMenu();
+}, true);
 
 const iconBtn = (icon, title, onclick, extra = {}) => h('button', { class: 'icon-btn ' + (extra.class || ''), title, 'aria-label': title, onclick, html: ICONS[icon] || icon, ...extra, class: 'icon-btn ' + (extra.class || '') });
 
@@ -57,8 +62,16 @@ const HL_COLORS = ['#f5d128', '#93d275', '#6cd8fa', '#ffcee0', '#ff9d48', '#c9b2
 // Bilder werden Bild-Elemente, Dokumente (PDF, Office, Text) Dateianhänge
 const fileInput = h('input', { type: 'file', accept: 'image/*,.pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp,.doc,.xls,.ppt,.txt,.md,.csv,.json', multiple: true, style: { display: 'none' } });
 document.body.append(fileInput);
+// Aus dem Kontextmenü landet die Datei an der Klickstelle, sonst in der Mitte der Ansicht
+let uploadAt = null;
+const pickFile = (at = null) => {
+  uploadAt = at;
+  fileInput.click();
+};
+fileInput.addEventListener('cancel', () => (uploadAt = null));
 fileInput.addEventListener('change', () => {
-  const c = viewCenter();
+  const c = uploadAt || viewCenter();
+  uploadAt = null;
   [...fileInput.files].forEach((f, i) => {
     if (f.type.startsWith('image/')) insertImageFile(f, { x: c.x + i * 40, y: c.y + i * 40 });
     else app.emit('dropFile', f, { x: c.x + i * 240, y: c.y });
@@ -84,7 +97,7 @@ function buildTools() {
     const [id, title] = t;
     if (app.viewOnly && !['select', 'hand', 'laser'].includes(id) && !(id === 'comment' && app.canComment)) continue;
     const b = iconBtn(id === 'template' ? 'template' : id, title, () => {
-      if (id === 'image') return fileInput.click();
+      if (id === 'image') return pickFile();
       if (id === 'template') return openTemplates();
       if (id === 'diagram') return app.emit('openDiagramText');
       if (app.tool === id && hasFlyout(id)) return showFlyout(id, b);
@@ -1187,7 +1200,7 @@ function openExportMenu(anchor) {
     { label: T('Karten aus CSV / Jira-Export …'), icon: 'card', disabled: app.viewOnly, onClick: () => app.emit('openCsvImport') },
     { label: T('Jira / Azure DevOps verbinden …'), icon: 'link', disabled: app.viewOnly || app.guest, onClick: () => app.emit('openTracker') },
     { label: T('Diagramm aus Text (Mermaid) …'), icon: 'diagram', disabled: app.viewOnly, onClick: () => app.emit('openDiagramText') },
-    { label: T('Bild hochladen'), icon: 'image', disabled: app.viewOnly, onClick: () => fileInput.click() },
+    { label: T('Bild hochladen'), icon: 'image', disabled: app.viewOnly, onClick: () => pickFile() },
     { label: T('Datei anhängen (PDF, Office, Text)'), icon: 'file', disabled: app.viewOnly, onClick: () => app.emit('pickFile') },
     '-',
     { header: T('Vorlagen') },
@@ -1396,12 +1409,18 @@ stage.addEventListener('contextmenu', (e) => {
     { label: T('Kommentar hinzufügen'), onClick: () => newComment(w) },
     el && app.sel.size === 1 ? { label: T('Reagieren …'), onClick: () => app.emit('reactMenu', el, e) } : null,
     '-',
+    selectedEls().some(canCopyFormat) ? { label: T('Format übertragen'), onClick: () => startBrush(false) } : null,
+    selectedEls().some(canCopyFormat) ? { label: T('Format kopieren'), hint: T('Strg+Alt+C'), onClick: () => copyFormat() && toast(T('Format kopiert')) } : null,
+    hasCopiedFormat() ? { label: T('Format einfügen'), hint: T('Strg+Alt+V'), onClick: pasteFormat } : null,
+    { label: T('Foto oder Datei hier einfügen …'), onClick: () => pickFile(w) },
+    '-',
     { label: T('Löschen'), hint: T('Entf'), danger: true, onClick: () => deleteEls([...app.sel]) },
     selectedEls().some((x) => x.type === 'frame') ? { label: T('Frame samt Inhalt löschen'), danger: true, onClick: deleteFramesWithContent } : null,
   ] : [
     { label: T('Sticky Note hier'), onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
     { label: T('Text hier'), onClick: () => { const s = makeElement('text', w.x, w.y); act(() => setEl(s)); startEdit(s.id, { isNew: true }); } },
     { label: T('Kommentar hier'), onClick: () => newComment(w) },
+    { label: T('Foto oder Datei hier einfügen …'), onClick: () => pickFile(w) },
     { label: T('Vorlage einfügen …'), onClick: openTemplates },
     '-',
     { label: T('Alles auswählen'), hint: T('Strg+A'), onClick: () => setSelection([...app.els.keys()]) },
