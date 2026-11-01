@@ -13,7 +13,9 @@ const FIXTURES = path.join(__dirname, 'fixtures') + path.sep;
 const launch = () => pp.launch({
   executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
   headless: 'new',
-  args: ['--no-sandbox', '--disable-gpu', '--window-size=1280,900', '--js-flags=--max-old-space-size=512'],
+  // Die Prüfungen erwarten die deutsche Oberfläche, unabhängig vom Rechner
+  env: { ...process.env, LANG: 'de_DE.UTF-8', LANGUAGE: 'de' },
+  args: ['--no-sandbox', '--disable-gpu', '--window-size=1280,900', '--js-flags=--max-old-space-size=512', '--lang=de-DE', '--accept-lang=de-DE,de'],
   defaultViewport: { width: 1280, height: 900 },
 });
 
