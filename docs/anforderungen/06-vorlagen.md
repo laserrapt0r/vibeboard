@@ -78,5 +78,5 @@
 - **Seit:** 4.8.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Zieht man Karten auf dem Board in eine andere Kanban-Spalte der Vorlagen „Kanban-Board“ und „Entwicklungs-Kanban“, erhalten sie deren Überschrift als Status, ohne führendes Emoji und ohne Zusatz nach „·“ (z. B. WIP-Limit). Das lässt sich zusammen mit dem Verschieben rückgängig machen. Liegende Karten behalten nach dem Umbenennen einer Spalte ihren Status bis zum nächsten Wechsel.
-  - Züge innerhalb einer Spalte und Karten außerhalb einer Spalte ändern den Status nicht. Karten aus Jira oder Azure DevOps bleiben ausgenommen: Ihr Status kommt aus dem Ticket. Eine Statusänderung in der Kanban-Ansicht verschiebt die Karte auf dem Board nicht.
+  - Züge innerhalb einer Spalte und Karten außerhalb einer Spalte ändern den Status nicht. Karten aus Jira oder Azure DevOps bleiben ausgenommen: Ihr Status kommt aus dem Ticket. Geändert in 4.11.4: Eine Statusänderung in der Kanban-Ansicht verschiebt die Karte in die passende Spalte auf dem Board; Spalten des Boards bleiben dort auch leer sichtbar.
   - Gantt-Diagramm und Zeitstrahl bestehen aus Karten mit Terminen. Die Lage auf dem Board ändert die Termine nicht.

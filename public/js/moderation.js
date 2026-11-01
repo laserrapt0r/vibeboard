@@ -106,7 +106,8 @@ app.on('buildCollabTools', (box) => {
 // Einträge im Menü einer teilnehmenden Person (Avatar)
 export function facilitatorItems(p) {
   const m = mod();
-  if (!m || !app.isFacilitator || !p.userId || p.guest) return [];
+  // Kommentierende und Betrachter könnten mit der Rolle nichts anfangen
+  if (!m || !app.isFacilitator || !p.userId || p.guest || (p.role && !['owner', 'editor'].includes(p.role))) return [];
   const is = (m.facilitators || []).includes(p.userId);
   return [{ label: is ? T('Aus der Moderation entfernen') : T('Zur Moderation hinzufügen'), icon: 'shield', onClick: () => setModeration(is ? { removeFacilitator: p.userId } : { addFacilitator: p.userId }) }];
 }

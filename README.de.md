@@ -85,7 +85,7 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 | **Code-Blöcke** | Quelltext mit Syntaxhervorhebung für 13 Sprachen, Zeilennummern, hellem oder dunklem Schema, Kopieren-Knopf |
 | **Diagramm aus Text** | Fluss- und Sequenzdiagramme in Mermaid-Schreibweise eingeben, mit Live-Vorschau; es entstehen normale, bearbeitbare Formen und Verbindungen |
 | **Tabellen** | Zellen und Bereiche auswählen; je Zelle fett, kursiv, unterstrichen, durchgestrichen, Ausrichtung, Schriftgröße, Text- und Zellenfarbe; Zeilen/Spalten an beliebiger Stelle einfügen und löschen; Spaltenbreiten und Zeilenhöhen ziehen; Tastaturbedienung wie in einer Tabellenkalkulation |
-| **Mindmaps** | Knoten auswählen, dann **Tab** für einen Unterknoten und **Enter** für einen Geschwisterknoten |
+| **Mindmaps** | Knoten auswählen, dann **Tab** für einen Unterknoten und **Umschalt+Enter** für einen Geschwisterknoten; beim Tippen genügt **Enter** |
 | **Bilder** | per Upload, Drag & Drop oder aus der Zwischenablage; große Bilder werden automatisch verkleinert |
 | **Sticker** | Emojis als frei platzierbare Elemente |
 | **Links** | URL an Elemente hängen; ein Link-Symbol öffnet sie |

@@ -214,8 +214,22 @@ export function rerenderAll() {
   scheduleRender(true);
 }
 
+// Inhaltsfarben folgen dem Untergrund: Schwarz auf Weiß, auf dem dunklen Board hell, im weißen Frame wieder dunkel.
+// So bleibt Text für alle lesbar, egal in welchem Design er entstand. Bewusst gewählte Farben bleiben unberührt.
+const AUTO_INK = new Set(['#1a1a1a', '#f1f1f1', '#e6e6e6']);
+
+function inkFor(el, color, frameList) {
+  if (!AUTO_INK.has(String(color).toLowerCase())) return color;
+  if (!app.settings.dark) return '#1a1a1a';
+  const b = bounds(el), cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  const f = frameList.find((r) => r.id !== el.id && cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h);
+  return f ? contrastText(f.fill || '#ffffff') : '#f1f1f1';
+}
+
 function renderEnv() {
+  const frameList = [...app.els.values()].filter((e) => e.type === 'frame');
   return {
+    ink: (el, color) => inkFor(el, color, frameList),
     get: getEl,
     zoom: app.view.z,
     showAuthor: app.settings.showAuthor,
@@ -555,7 +569,15 @@ export function applyRemoteOp(op) {
     app.els.delete(op.id);
     if (app.sel.delete(op.id)) selectionChanged();
     markDirty(op.id);
-    if (app.editing && app.editing.id === op.id) abortEdit();
+    if (app.editing && app.editing.id === op.id) {
+      const typed = app.editing.dirty;
+      abortEdit();
+      // Weiter Getipptes darf nicht als Kürzel Werkzeuge umschalten
+      if (typed) {
+        keysPausedUntil = Date.now() + 1500;
+        toast(T('Dieses Element wurde gerade von jemand anderem gelöscht'), 5000);
+      }
+    }
   }
 }
 
@@ -676,11 +698,11 @@ export function makeElement(type, x, y, o = {}) {
       const d = SHAPE_DEFAULTS[kind] || {};
       const w = d.w || 200, h = d.h || 140;
       // Beschriftung auf dem Board-Hintergrund: im dunklen Design hell, wie beim Textwerkzeug
-      const label = app.settings.dark && labelOutside(kind) ? { textColor: '#f1f1f1' } : {};
+      const label = {};
       return { ...base, shape: kind, fill: '#ffffff', stroke: '#1a1a1a', strokeWidth: 2, text: '', fontSize: 18, ...d, ...label, x: x - w / 2, y: y - h / 2, w, h, ...o };
     }
     case 'text':
-      return autoHeight({ ...base, x: x - 4, y: y - 18, w: 260, h: 38, text: '', fontSize: 24, color: app.settings.dark ? '#f1f1f1' : '#1a1a1a', align: 'left', ...o });
+      return autoHeight({ ...base, x: x - 4, y: y - 18, w: 260, h: 38, text: '', fontSize: 24, color: '#1a1a1a', align: 'left', ...o });
     case 'frame': {
       const n = [...app.els.values()].filter((e) => e.type === 'frame').length + 1;
       return { ...base, x: x - 640, y: y - 360, w: 1280, h: 720, title: T('Frame ') + n, fill: '#ffffff', order: n, ...o };
@@ -698,7 +720,7 @@ export function makeElement(type, x, y, o = {}) {
     case 'comment':
       return { ...base, x, y, thread: [], resolved: false, color: app.user.color, ...o };
     case 'connector':
-      return { ...base, from: { x, y }, to: { x, y }, stroke: app.settings.dark ? '#e6e6e6' : '#1a1a1a', strokeWidth: 2, routing: app.toolOpts.routing, arrowEnd: true, arrowStart: false, label: '', ...o };
+      return { ...base, from: { x, y }, to: { x, y }, stroke: '#1a1a1a', strokeWidth: 2, routing: app.toolOpts.routing, arrowEnd: true, arrowStart: false, label: '', ...o };
   }
   return { ...base, x, y, ...o };
 }
@@ -1132,7 +1154,7 @@ function editorGeometry(el) {
       lay = textLayout(el, box);
       align = el.align || 'center';
       valign = labelBelow(el.shape) ? 'top' : el.valign || 'middle';
-      color = el.textColor || (labelOutside(el.shape) ? '#1a1a1a' : contrastText(el.fill === 'transparent' ? '#ffffff' : el.fill));
+      color = labelOutside(el.shape) ? renderEnv().ink(el, el.textColor || '#1a1a1a') : el.textColor || contrastText(el.fill === 'transparent' ? '#ffffff' : el.fill);
       break;
     case 'text':
       box = { x: el.x + 4, y: el.y + 4, w: el.w - 8, h: Math.max(el.h - 8, 20) };
@@ -1250,6 +1272,15 @@ editor.addEventListener('keydown', (e) => {
   } else if (e.key === 'Enter' && (ed.field === 'title')) {
     e.preventDefault();
     finishEdit();
+  } else if (e.key === 'Enter' && ed.cell && !e.shiftKey) {
+    // Wie in einer Tabellenkalkulation: Enter übernimmt und geht eine Zeile tiefer, Umschalt+Enter macht einen Zeilenumbruch
+    e.preventDefault();
+    const [r, c] = ed.cell, t = getEl(ed.id);
+    finishEdit();
+    const next = Math.min(r + 1, t.rows - 1);
+    app.cellSel = { id: t.id, r0: next, c0: c, r1: next, c1: c };
+    app.emit('selection');
+    scheduleRender(true);
   } else if (e.key === 'Tab') {
     e.preventDefault();
     const el = getEl(ed.id);
@@ -1435,6 +1466,24 @@ export function holdTool(t) {
   app.toolHeld = true;
   app.emit('tool', t);
   toast(T('Werkzeug bleibt aktiv – Esc beendet'), 2500);
+}
+
+const CREATE_AT_CENTER = new Set(['sticky', 'shape', 'frame', 'text', 'card', 'table', 'code']);
+
+function createAtCenter() {
+  const c = viewCenter();
+  if (app.tool === 'comment') {
+    newComment(c);
+    return;
+  }
+  const el = makeElement(app.tool, snapV(c.x), snapV(c.y));
+  act(() => setEl(el));
+  if (app.tool === 'shape') rememberShape(el.shape);
+  afterCreate();
+  setSelection([el.id]);
+  if (['sticky', 'shape', 'text', 'code'].includes(el.type)) startEdit(el.id, { isNew: true });
+  else if (el.type === 'frame') startEdit(el.id);
+  else if (el.type === 'card') app.emit('editCard', el.id);
 }
 
 const afterCreate = () => {
@@ -2242,16 +2291,33 @@ function columnAt(el) {
   const zone = [...app.els.values()]
     .filter((z) => z.statusCol && !z.hidden && c.x >= z.x && c.x <= z.x + z.w && c.y >= z.y && c.y <= z.y + z.h)
     .sort((a, b) => a.w * a.h - b.w * b.h)[0];
-  if (!zone) return '';
+  return zone ? columnNameOf(zone) : '';
+}
+
+function columnNameOf(zone) {
   const head = [...app.els.values()]
     .filter((e) => e.id !== zone.id && e.type === 'shape' && String(e.text ?? '').trim() && e.x >= zone.x - 1 && e.x + e.w <= zone.x + zone.w + 1 && e.y >= zone.y - 1 && e.y < zone.y + 100)
     .sort((a, b) => a.y - b.y)[0];
   return head ? columnName(head.text) : '';
 }
 
+// Spaltennamen des Boards in der Reihenfolge von links nach rechts (für die Kanban-Ansicht)
+export const boardColumns = () => [...app.els.values()].filter((z) => z.statusCol && !z.hidden).sort((a, b) => a.x - b.x).map(columnNameOf).filter(Boolean);
+
 // Spalten beim Start des Ziehens: Nur ein Wechsel setzt den Status, sonst machte ein kleiner Zug eine Änderung aus der
 // Kanban-Ansicht rückgängig. Karten aus Jira oder Azure bleiben außen vor: Ziehen auf dem Board darf kein Ticket umstellen.
 const columnsOfSelection = () => new Map(selectedEls().filter((e) => e.type === 'card').map((e) => [e.id, columnAt(e)]));
+
+// Status aus der Kanban-Ansicht: Die Karte zieht auf dem Board in die passende Spalte, sonst widersprächen sich beide
+export function cardToColumn(id, status) {
+  const card = getEl(id);
+  if (!card || isLocked(card)) return;
+  const zone = [...app.els.values()].find((z) => z.statusCol && !z.hidden && columnNameOf(z) === status);
+  if (!zone || columnAt(card) === status) return;
+  const inside = [...app.els.values()].filter((e) => e.type === 'card' && e.id !== id && columnAt(e) === status);
+  const y = Math.max(zone.y + 90, ...inside.map((e) => e.y + e.h + 16));
+  setEl({ ...card, x: zone.x + (zone.w - card.w) / 2, y: Math.min(y, zone.y + zone.h - card.h) });
+}
 
 function applyColumnStatus(from) {
   let last = '';
@@ -2711,7 +2777,7 @@ const FORMAT_KEYS = {
   connector: ['stroke', 'strokeWidth', 'dash', 'routing', 'arrowStart', 'arrowEnd'],
   frame: ['fill'],
   card: ['fill'],
-  table: ['fill', 'stroke', 'headerFill', 'textColor', 'fontSize'],
+  table: ['fill', 'stroke', 'headerFill', 'textColor', 'fontSize', 'cellStyles'],
 };
 const formatField = (type, key) => {
   if (type === 'card' && key === 'fill') return 'color';
@@ -2728,6 +2794,8 @@ export function copyFormat() {
   if (!el) return false;
   copiedFormat = { type: el.type, style: {} };
   for (const k of FORMAT_KEYS[el.type]) copiedFormat.style[k] = el[formatField(el.type, k)];
+  // Tabellen: Das Format von Kopf und erster Inhaltszeile gilt für die ganze Kopfzeile bzw. den ganzen Inhalt
+  if (el.type === 'table') copiedFormat.style.cellStyles = { head: el.styles?.[0]?.[0] || null, body: el.styles?.[1]?.[0] || null };
   return true;
 }
 
@@ -2757,9 +2825,13 @@ function applyFormatTo(list) {
         locked++;
         continue;
       }
-      const patch = formatted(el);
-      if (!patch) continue;
-      setEl(autoHeight({ ...el, ...patch }));
+      const { cellStyles, ...patch } = formatted(el) || {};
+      if (!Object.keys(patch).length && !cellStyles) continue;
+      if (el.type === 'table' && cellStyles) {
+        const styles = [];
+        for (let r = 0; r < el.rows; r++) for (let c = 0; c < el.cols; c++) styles.push([r, c, r === 0 ? cellStyles.head : cellStyles.body]);
+        tablePatch(el, { styles, props: patch });
+      } else setEl(autoHeight({ ...el, ...patch }));
       done++;
     }
   });
@@ -3182,9 +3254,15 @@ function isTyping(e) {
 
 const TOOL_KEYS = { v: 'select', h: 'hand', n: 'sticky', t: 'text', s: 'shape', l: 'connector', p: 'pen', e: 'eraser', f: 'frame', c: 'comment', k: 'card', m: 'mindmap', x: 'laser' };
 
+let keysPausedUntil = 0;
+
 window.addEventListener('keydown', (e) => {
   if (isTyping(e) || app.editing) return;
   if (document.querySelector('.modal-back')) return;
+  if (Date.now() < keysPausedUntil && e.key.length === 1) {
+    e.preventDefault();
+    return;
+  }
   // Schaltflächen und Links reagieren selbst auf die Tastatur
   if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('button, a, summary')) return;
   const mod = e.ctrlKey || e.metaKey;
@@ -3346,6 +3424,12 @@ window.addEventListener('keydown', (e) => {
     mindAddChild(one);
     return;
   }
+  // Ohne Maus anlegen: Enter setzt das gewählte Werkzeug in die Mitte der Ansicht
+  if (e.key === 'Enter' && !mod && (CREATE_AT_CENTER.has(app.tool) || app.tool === 'comment')) {
+    e.preventDefault();
+    createAtCenter();
+    return;
+  }
   if (e.key === 'Enter' && one) {
     e.preventDefault();
     if (one.mind && e.shiftKey) mindAddSibling(one);
@@ -3422,6 +3506,21 @@ document.addEventListener('paste', (e) => {
   if (!text) return;
   e.preventDefault();
   const at = rectContainsPoint(visibleRect(), lastCursorWorld) ? lastCursorWorld : viewCenter();
+  pasteClipboardText(text, at);
+});
+
+// Aus dem Kontextmenü: Der Browser fragt beim ersten Mal nach der Erlaubnis
+export async function pasteFromClipboard(at) {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) pasteClipboardText(text, at);
+    else toast(T('Die Zwischenablage ist leer'));
+  } catch {
+    toast(T('Der Browser erlaubt das Einfügen hier nicht: Bitte Strg+V drücken'), 4000);
+  }
+}
+
+function pasteClipboardText(text, at) {
   if (text.startsWith(CLIP_PREFIX)) {
     try {
       pasteElements(clipped(JSON.parse(text.slice(CLIP_PREFIX.length))), at);
@@ -3431,7 +3530,7 @@ document.addEventListener('paste', (e) => {
     return;
   }
   pasteText(text, at);
-});
+}
 
 function rectContainsPoint(r, p) {
   return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;

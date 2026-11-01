@@ -37,7 +37,7 @@ function renderStart() {
     choice('sticky', T('Notiz schreiben'), T('Oder irgendwo doppelklicken'), addNote),
     choice('template', T('Vorlage wählen'), T('Retro, Brainstorming, Kanban und mehr'), openTemplates),
     app.role === 'owner' ? choice('share', T('Personen einladen'), T('Gemeinsam auf diesem Board arbeiten'), () => app.emit('openShare')) : null,
-    h('p', { class: 'muted small' }, T('Alle Funktionen findest du mit Strg+K.')),
+    h('p', { class: 'muted small' }, T('Befehle und Inhalte findest du mit Strg+K.')),
     h('button', { class: 'btn small', onclick: () => { startClosed = true; updateStart(); } }, T('Schließen')));
 }
 

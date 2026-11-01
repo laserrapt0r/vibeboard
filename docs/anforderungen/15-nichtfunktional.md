@@ -73,3 +73,11 @@
   - Ab 300 Elementen zeichnet der Browser nur, was in der Ansicht oder innerhalb einer Bildschirmgröße darum liegt. Exporte, Minimap, Suche und Abgleich arbeiten weiter mit allen Elementen.
   - Die Lage der Zeichenfläche wird zwischengespeichert: Abfragen beim Browser erzwingen ein neues Layout und dürfen nicht je Bild anfallen.
   - Herausgezoomt, wenn alles sichtbar ist, bleibt der Aufwand proportional zur Elementzahl.
+
+### REQ-NFR-011 Design und Fenstergrößen
+- **Seit:** 4.11.4 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Standardfarben von Text, Linien und Stift folgen dem Untergrund: auf dem dunklen Board hell, im Frame passend zu dessen Farbe. Bewusst gewählte Farben bleiben. Exporte zeigen Schwarz auf Weiß.
+  - Alle Werkzeuge bleiben ab einer Fensterhöhe von rund 500 px erreichbar, die Kontextleiste bleibt im Fenster.
+  - Auf dem Handy sind Timer, Abstimmung und Moderation in der oberen Leiste erreichbar.
+  - Mit Enter lässt sich mit gewähltem Werkzeug ohne Maus ein Element anlegen. Panels schließen mit Esc.

@@ -36,7 +36,7 @@ export const TEMPLATES = [
   },
   {
     id: 'mindmap', name: T('Mindmap'), category: 'Brainstorming', icon: '🧠',
-    description: T('Gedanken hierarchisch um ein zentrales Thema anordnen. Tipp: Knoten auswählen und Tab (Kind) oder Enter (Geschwister) drücken.'),
+    description: T('Gedanken hierarchisch um ein zentrales Thema anordnen. Tipp: Knoten auswählen und Tab (Kind) oder Umschalt+Enter (Geschwister) drücken.'),
     build: () => {
       const b = new B();
       b.frame(0, 0, 1700, 1000, T('Mindmap'));

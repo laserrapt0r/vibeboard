@@ -4,9 +4,7 @@ import { T, LOCALE } from './i18n.js';
 import { h, api, ICONS, toast, modal } from './util.js';
 import { app, getEl, act, updateEl, rerenderAll, collectForCopy, $ } from './core.js';
 import { popover, closePop, showSidePanel, toggleSidePanel, currentSidePanel, renderSidePanel } from './ui.js';
-import { REACTIONS, cardTags } from './render.js';
-
-const REACT_TYPES = new Set(['sticky', 'card', 'shape', 'text', 'image', 'file', 'code', 'table']);
+import { REACTIONS, REACT_TYPES, cardTags } from './render.js';
 
 /* ================================================================== */
 /* Reaktionen                                                          */

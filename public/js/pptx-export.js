@@ -2,6 +2,7 @@
 // bearbeitbar, alles andere (Karten, Diagramme, Code, Zeichnungen) kommt als Bild.
 import { connectorGeom, textLayout, elBounds, shownCells } from './render.js';
 import { pngDataUrl } from './exporter.js';
+import { contrastText } from './util.js';
 import { writeZip } from './zip.js';
 
 const EMU = 9525;
@@ -26,9 +27,9 @@ function dataBytes(url) {
   return out;
 }
 
-function paragraphs(text, size, { color, bold, align }) {
+function paragraphs(text, size, { color, bold, align, italic, underline, strike }) {
   const pts = Math.round(Math.max(6, Math.min(200, size * 0.75)) * 100);
-  const run = `<a:rPr lang="de-DE" sz="${pts}"${bold ? ' b="1"' : ''}>${hex(color) ? `<a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill>` : ''}</a:rPr>`;
+  const run = `<a:rPr lang="de-DE" sz="${pts}"${bold ? ' b="1"' : ''}${italic ? ' i="1"' : ''}${underline ? ' u="sng"' : ''}${strike ? ' strike="sngStrike"' : ''}>${hex(color) ? `<a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill>` : ''}</a:rPr>`;
   const algn = { center: 'ctr', right: 'r', left: 'l' }[align] || 'l';
   return String(text || '').split('\n').map((l) => `<a:p><a:pPr algn="${algn}"/>${l ? `<a:r>${run}<a:t>${x(l)}</a:t></a:r>` : `<a:endParaRPr lang="de-DE" sz="${pts}"/>`}</a:p>`).join('') || '<a:p/>';
 }
@@ -44,9 +45,9 @@ class Slide {
   box(b) {
     return `<a:xfrm><a:off x="${emu(b.x)}" y="${emu(b.y)}"/><a:ext cx="${emu(Math.max(1, b.w))}" cy="${emu(Math.max(1, b.h))}"/></a:xfrm>`;
   }
-  shape(b, { prst = 'rect', fill, stroke, width = 1, text, size = 18, color, bold, align = 'center', anchor = 'ctr', txBox = false, name = 'Form' }) {
+  shape(b, { prst = 'rect', fill, stroke, width = 1, text, size = 18, color, bold, italic, underline, strike, align = 'center', anchor = 'ctr', txBox = false, name = 'Form' }) {
     const id = this.nextId++;
-    this.xml.push(`<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${x(name)} ${id}"/><p:cNvSpPr${txBox ? ' txBox="1"' : ''}/><p:nvPr/></p:nvSpPr><p:spPr>${this.box(b)}<a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${fillXml(fill)}<a:ln w="${emu(width)}">${fillXml(stroke)}</a:ln></p:spPr><p:txBody><a:bodyPr wrap="square" anchor="${anchor}" lIns="45720" rIns="45720" tIns="45720" bIns="45720"><a:normAutofit/></a:bodyPr><a:lstStyle/>${paragraphs(text, size, { color, bold, align })}</p:txBody></p:sp>`);
+    this.xml.push(`<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${x(name)} ${id}"/><p:cNvSpPr${txBox ? ' txBox="1"' : ''}/><p:nvPr/></p:nvSpPr><p:spPr>${this.box(b)}<a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${fillXml(fill)}<a:ln w="${emu(width)}">${fillXml(stroke)}</a:ln></p:spPr><p:txBody><a:bodyPr wrap="square" anchor="${anchor}" lIns="45720" rIns="45720" tIns="45720" bIns="45720"><a:normAutofit/></a:bodyPr><a:lstStyle/>${paragraphs(text, size, { color, bold, align, italic, underline, strike })}</p:txBody></p:sp>`);
   }
   image(b, dataUrl, crop) {
     const ext = (/^data:image\/(png|jpe?g|gif)/.exec(dataUrl) || [])[1];
@@ -74,7 +75,7 @@ class Slide {
     const sum = colW.reduce((s, v) => s + v, 0) || 1;
     const rowH = b.h / Math.max(1, rows.length);
     const grid = colW.map((w) => `<a:gridCol w="${emu((b.w * w) / sum)}"/>`).join('');
-    const tr = rows.map((r, i) => `<a:tr h="${emu(rowH)}">${Array.from({ length: cols }, (_, c) => `<a:tc><a:txBody><a:bodyPr/><a:lstStyle/>${paragraphs(r[c] || '', size, { bold: el.header && i === 0, align: 'left' })}</a:txBody><a:tcPr><a:lnL w="6350">${fillXml('#adb5bd')}</a:lnL><a:lnR w="6350">${fillXml('#adb5bd')}</a:lnR><a:lnT w="6350">${fillXml('#adb5bd')}</a:lnT><a:lnB w="6350">${fillXml('#adb5bd')}</a:lnB>${el.header && i === 0 ? fillXml('#e9ecef') : ''}</a:tcPr></a:tc>`).join('')}</a:tr>`).join('');
+    const tr = rows.map((r, i) => `<a:tr h="${emu(rowH)}">${Array.from({ length: cols }, (_, c) => `<a:tc><a:txBody><a:bodyPr/><a:lstStyle/>${paragraphs(r[c] || '', size, { bold: el.header && i === 0, align: 'left' })}</a:txBody><a:tcPr><a:lnL w="6350">${fillXml('#adb5bd')}</a:lnL><a:lnR w="6350">${fillXml('#adb5bd')}</a:lnR><a:lnT w="6350">${fillXml('#adb5bd')}</a:lnT><a:lnB w="6350">${fillXml('#adb5bd')}</a:lnB>${el.header && i === 0 && el.headerFill ? fillXml(el.headerFill) : ''}${el.header && i === 0 ? fillXml('#e9ecef') : ''}</a:tcPr></a:tc>`).join('')}</a:tr>`).join('');
     this.xml.push(`<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${id}" name="Tabelle ${id}"/><p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="${emu(b.x)}" y="${emu(b.y)}"/><a:ext cx="${emu(b.w)}" cy="${emu(b.h)}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblGrid>${grid}</a:tblGrid>${tr}</a:tbl></a:graphicData></a:graphic></p:graphicFrame>`);
   }
   render() {
@@ -88,14 +89,18 @@ async function addElement(slide, el, map, s, get) {
   const size = (typeof el.fontSize === 'number' ? el.fontSize : textLayout(el, { x: 0, y: 0, w: el.w, h: el.h }).size || 18) * s;
   switch (el.type) {
     case 'sticky':
-      return slide.shape(b, { fill: el.fill || '#fff9b1', text: el.text, size, color: el.textColor || '#1a1a1a', bold: el.bold, align: el.align || 'center', name: 'Notiz' });
+      return slide.shape(b, { fill: el.fill || '#fff9b1', text: el.text, size, color: el.textColor || contrastText(el.fill || '#fff9b1'), italic: el.italic, underline: el.underline, strike: el.strike, bold: el.bold, align: el.align || 'center', name: 'Notiz' });
     case 'text':
-      return slide.shape(b, { text: el.text, size, color: el.textColor || '#1a1a1a', bold: el.bold, align: el.align || 'left', anchor: 't', txBox: true, name: 'Text' });
+      return slide.shape(b, { text: el.text, size, color: el.color || '#1a1a1a', italic: el.italic, underline: el.underline, strike: el.strike, bold: el.bold, align: el.align || 'left', anchor: 't', txBox: true, name: 'Text' });
     case 'shape':
       if (PRST[el.shape || 'rect']) {
         return slide.shape(b, { prst: PRST[el.shape || 'rect'], fill: el.fill, stroke: el.stroke, width: el.strokeWidth ?? 2, text: el.text, size, color: el.textColor || '#1a1a1a', bold: el.bold, align: el.align || 'center' });
       }
       break;
+    case 'frame':
+      slide.shape(b, { fill: el.fill || '#ffffff', stroke: '#c8ccd2', width: 1 });
+      if (el.title) slide.shape({ x: b.x, y: b.y - size * 1.4, w: b.w, h: size * 1.4 }, { text: el.title, size: Math.min(size, 14), color: '#5b6270', bold: true, align: 'left', anchor: 'b', txBox: true });
+      return undefined;
     case 'image':
       if (el.src && slide.image(b, el.src, el.crop)) return undefined;
       break;

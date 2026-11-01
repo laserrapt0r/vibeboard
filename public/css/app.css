@@ -330,7 +330,18 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
 /* Werkzeugleiste */
 #tools {
   position: fixed; left: 12px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column;
-  gap: 2px; padding: 6px; z-index: 50; max-height: calc(100vh - 150px); overflow-y: auto; scrollbar-width: none;
+  gap: 2px; padding: 6px; z-index: 50; max-height: calc(100vh - 150px); overflow-y: auto; scrollbar-width: thin;
+}
+/* Wenig Höhe: Alle Werkzeuge bleiben sichtbar, statt ohne Zeichen abgeschnitten zu werden */
+@media (min-width: 761px) and (max-height: 900px) {
+  #tools { display: grid; grid-template-columns: repeat(2, 40px); }
+  #tools .tool-sep { grid-column: 1 / -1; width: auto; height: 1px; margin: 4px 6px; }
+}
+@media (min-width: 761px) and (max-height: 620px) {
+  #tools { grid-template-columns: repeat(3, 40px); }
+}
+@media (max-height: 500px) {
+  #minimap { display: none; }
 }
 #tools .icon-btn { width: 40px; height: 40px; }
 #tools .icon-btn::after {
@@ -344,8 +355,9 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
 /* Kontextleiste */
 #ctxbar {
   position: fixed; z-index: 60; display: flex; align-items: center; gap: 2px; padding: 4px; height: 44px;
-  white-space: nowrap;
+  white-space: nowrap; max-width: calc(100vw - 24px); overflow-x: auto; scrollbar-width: thin;
 }
+#ctxbar > * { flex-shrink: 0; }
 .ctx-btn {
   height: 34px; min-width: 34px; border: 0; background: transparent; border-radius: 6px; display: inline-flex;
   align-items: center; justify-content: center; gap: 2px; padding: 0 6px; color: var(--text); font-size: 13px;
@@ -541,7 +553,8 @@ body.dash-page { min-height: 100vh; }
   #topbar { right: 12px; overflow-x: auto; scrollbar-width: none; }
   #board-name { width: 120px; }
   #topright { top: 68px; right: 12px; height: 44px; }
-  .collab-tools { display: none; }
+  #topright { overflow-x: auto; scrollbar-width: none; max-width: calc(100vw - 24px); }
+  #topright > * { flex-shrink: 0; }
   #tools {
     top: auto; bottom: 12px; left: 12px; right: 12px; transform: none; flex-direction: row; overflow-x: auto;
     max-height: none;
@@ -906,7 +919,12 @@ body.dark .badge.guest { background: #4a3d0a; color: #ffe066; }
 #moderation-banner .pm-icon { color: #7048e8; }
 .mod-chip { margin-left: 8px; background: #f3f0ff; color: #5f3dc4; border-radius: 12px; padding: 2px 8px; font-weight: 600; }
 body.dark .mod-chip { background: #2b2350; color: #d0bfff; }
-body:has(#moderation-banner:not(.hidden)) #private-banner { top: 116px; }
+body:has(#moderation-banner:not(.hidden)) #private-banner { top: 124px; }
+body:has(#moderation-banner:not(.hidden)):has(#timer-widget:not(.hidden)) #private-banner { top: 176px; }
+@media (max-width: 760px) {
+  /* Banner gehen über die Breite: schmal gestaucht verdeckten sie das halbe Board */
+  #private-banner, #moderation-banner { left: 12px; right: 12px; transform: none; max-width: none; flex-wrap: wrap; font-size: 12px; }
+}
 body:has(#timer-widget:not(.hidden)) #moderation-banner { top: 124px; }
 #btn-moderation.active { color: #7048e8; }
 
@@ -1279,3 +1297,6 @@ fieldset.plain legend { padding: 0; margin-bottom: 6px; font-size: 13px; font-we
 .outline-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 0; }
 .outline-item { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 8px; }
 .outline-item:hover { background: var(--panel-2); }
+
+/* Lange Menütexte brechen um, statt abgeschnitten zu werden */
+.menu-item .mi-label { white-space: normal; }

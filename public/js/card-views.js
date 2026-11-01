@@ -1,7 +1,7 @@
 // Kanban und Zeitleiste: andere Ansichten derselben Karten. Jede Änderung landet direkt am Element auf dem Board.
 import { T, LOCALE } from './i18n.js';
 import { h, modal, toast, initials, readableOn, throttle } from './util.js';
-import { app, getEl, act, updateEl, bounds, fitTo, setSelection, isLocked } from './core.js';
+import { app, getEl, act, updateEl, bounds, fitTo, setSelection, isLocked, boardColumns, cardToColumn } from './core.js';
 import { DONE_RE } from './planning.js';
 
 const DAY = 86400000;
@@ -28,11 +28,15 @@ function jump(id, close) {
   fitTo(bounds(el), { maxZ: 1.5, pad: 200 });
 }
 
-const setStatus = (id, status) => act(() => updateEl(id, { status: status || undefined }));
+const setStatus = (id, status) => act(() => {
+  updateEl(id, { status: status || undefined });
+  if (status) cardToColumn(id, status);
+});
 
 function kanban(close, added, rerender) {
   const list = cards();
-  const cols = columns(list, added);
+  // Spalten des Boards bleiben auch leer erhalten, sonst ließe sich eine Karte nicht zurückschieben
+  const cols = columns(list, [...boardColumns(), ...added]);
   if (!cols.length) cols.push(NO_STATUS);
   const board = h('div', { class: 'kanban' });
   for (const col of cols) {

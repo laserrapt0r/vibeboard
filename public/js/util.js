@@ -464,7 +464,10 @@ export function modal(title, content, { wide = false, onClose } = {}) {
   const box = h('div', { class: 'modal' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId, tabindex: '-1' },
     h('div', { class: 'modal-head' }, h('h2', { id: titleId }, title), h('button', { class: 'icon-btn', title: T('Schließen'), onclick: close, html: ICONS.close })),
     h('div', { class: 'modal-body' }, content));
-  const back = h('div', { class: 'modal-back', onpointerdown: (e) => e.target === back && close() }, box);
+  const back = h('div', { class: 'modal-back', onpointerdown: (e) => e.target === back && !edited && close() }, box);
+  // Ein Klick neben den Dialog verwirft keine Eingaben: Dafür gibt es Abbrechen, Esc und das Kreuz
+  let edited = false;
+  box.addEventListener('input', () => (edited = true));
   document.body.append(back);
   document.addEventListener('keydown', onKey, true);
   // Erstes Feld des Inhalts, sonst der Dialog selbst; Aufrufer dürfen danach ein bestimmtes Feld fokussieren

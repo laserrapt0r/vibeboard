@@ -1008,6 +1008,11 @@ export function pressurePath(points, sw) {
 /* ---------------- Diagramme aus Tabellen ---------------- */
 
 // „1.234,5“, „1,234.5“, „12 %“, „3 €“ – Zahlen, wie sie in Tabellen stehen
+export const REACT_TYPES = new Set(['sticky', 'card', 'shape', 'text', 'image', 'file', 'code', 'table']);
+
+// Standardfarben von Text, Linien und Stift folgen dem Untergrund (siehe inkFor in core.js); Exporte bleiben bei Schwarz auf Weiß
+const inked = (env, el, color) => (env.ink ? env.ink(el, color) : color === '#f1f1f1' || color === '#e6e6e6' ? '#1a1a1a' : color);
+
 export function cellNumber(v) {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   // Nur Zahlen mit Währung oder Prozent: „1e3“ oder „1,5k“ sind Text, Klammern stehen für negativ
@@ -1326,13 +1331,14 @@ function renderBody(el, env) {
     }
     case 'shape': {
       const fill = el.fill || 'transparent';
-      const stroke = el.stroke || 'none';
+      // Ohne Füllung liegt die Linie direkt auf dem Board und muss zu dessen Farbe passen
+      const stroke = fill === 'transparent' || fill === 'none' ? inked(env, el, el.stroke || 'none') : el.stroke || 'none';
       const sw = el.strokeWidth ?? 2;
       const dash = dashFor(el);
       const kind = el.shape || 'rect';
       // 'none' = ohne Füllung und innen durchklickbar (z. B. Rahmen von Blöcken im Sequenzdiagramm)
       const fillAttr = fill === 'transparent' ? 'rgba(255,255,255,0.001)' : fill;
-      const color = el.textColor || (labelOutside(kind) ? '#1a1a1a' : contrastText(fill === 'transparent' || fill === 'none' ? '#ffffff' : fill));
+      const color = labelOutside(kind) ? inked(env, el, el.textColor || '#1a1a1a') : el.textColor || (contrastText(fill === 'transparent' || fill === 'none' ? '#ffffff' : fill));
       const outline = T`fill="${fillAttr}" stroke="${stroke}" stroke-width="${sw}"${dash ? T` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>`;
       if (kind === 'umlclass') return umlClassSvg(el, x, y, w, h, outline, stroke, sw, color);
       const geo = shapeGeom(kind, x, y, w, h);
@@ -1350,7 +1356,7 @@ function renderBody(el, env) {
       const lay = textLayout(el, box);
       const bg = el.fill && el.fill !== 'transparent' ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill}" rx="4"/>` : `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent" class="hit"/>`;
       const ph = !el.text && env.placeholders ? `<text x="${x + pad}" y="${y + pad + lay.size}" font-family="${esc(FONT)}" font-size="${lay.size}" fill="#999">Text</text>` : '';
-      return bg + textSvg(box, lay, { color: el.color || '#1a1a1a', align: el.align || 'left', valign: 'top', underline: el.underline, strike: el.strike }) + ph;
+      return bg + textSvg(box, lay, { color: inked(env, el, el.color || '#1a1a1a'), align: el.align || 'left', valign: 'top', underline: el.underline, strike: el.strike }) + ph;
     }
     case 'frame': {
       // Themengruppe (Retro): abgerundete, getönte Fläche mit Titel innen
@@ -1371,7 +1377,7 @@ function renderBody(el, env) {
     case 'connector': {
       const g = connectorGeom(el, get);
       if (!g) return '';
-      const color = el.stroke || '#1a1a1a';
+      const color = inked(env, el, el.stroke || '#1a1a1a');
       const sw = el.strokeWidth || 2;
       const dash = dashFor(el);
       const ah = 7 + sw * 2.2;
@@ -1398,7 +1404,7 @@ function renderBody(el, env) {
         return `<g transform="translate(${r1(x)},${r1(y)})"><path class="hit" d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(12, (el.strokeWidth || 3) + 8)}" stroke-linecap="round"/><path d="${pressurePath(el.points, el.strokeWidth || 3)}" fill="${el.stroke || '#1a1a1a'}"${el.opacity && el.opacity < 1 ? ` opacity="${el.opacity}"` : ''}/></g>`;
       }
       return `<g transform="translate(${r1(x)},${r1(y)})"><path class="hit" d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(12, (el.strokeWidth || 3) + 8)}" stroke-linecap="round"/>` +
-        `<path d="${d}" fill="none" stroke="${el.stroke || '#1a1a1a'}" stroke-width="${el.strokeWidth || 3}" stroke-linecap="round" stroke-linejoin="round"${el.opacity && el.opacity < 1 ? T` stroke-opacity="${el.opacity}"` : ''}/></g>`;
+        `<path d="${d}" fill="none" stroke="${inked(env, el, el.stroke || '#1a1a1a')}" stroke-width="${el.strokeWidth || 3}" stroke-linecap="round" stroke-linejoin="round"${el.opacity && el.opacity < 1 ? T` stroke-opacity="${el.opacity}"` : ''}/></g>`;
     }
     case 'file': {
       const [label, color] = fileKind(el.name);
@@ -1545,7 +1551,11 @@ function renderBody(el, env) {
           if (!t || (env.editingCell && env.editingCell[0] === r && env.editingCell[1] === c)) continue;
           const st = cellStyle(el, r, c);
           const box = { x: xs[c] + 8, y: ys[r] + 6, w: xs[c + 1] - xs[c] - 16, h: ys[r + 1] - ys[r] - 12 };
-          out += textSvg(box, { size: st.size, bold: st.bold, italic: st.italic, lines: wrap(t, box.w, st.size, st.bold, st.italic) },
+          // Was nicht in die Zeile passt, läuft nicht über die Nachbarn: Der volle Text steht beim Bearbeiten
+          const fits = Math.max(1, Math.floor(box.h / (st.size * LH)));
+          const all = wrap(t, box.w, st.size, st.bold, st.italic);
+          const lines = all.length > fits ? [...all.slice(0, fits - 1), String(all[fits - 1]).replace(/.{0,2}$/u, '…')] : all;
+          out += textSvg(box, { size: st.size, bold: st.bold, italic: st.italic, lines },
             { align: st.align, valign: st.valign, color: st.color, underline: st.underline, strike: st.strike });
         }
       }

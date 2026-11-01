@@ -281,6 +281,29 @@ function timerRemaining(t) {
 // Nur anwenden, wenn die Änderung auch gesendet wird (sonst liefe z. B. ein Timer nur lokal)
 const mayChangeSession = () => !app.viewOnly || (toast(T('Das Bearbeiten ist gerade gesperrt')), false);
 
+// Hinweis, der einen Neuaufbau überlebt. Bei offener Eingabe bleibt der Text kopierbar, statt verloren zu gehen.
+const NOTE_KEY = 'vibeboard.note';
+
+function noteForNextLoad(text) {
+  try {
+    sessionStorage.setItem(NOTE_KEY, JSON.stringify({ text, typed: app.editing?.dirty ? document.querySelector('#editor')?.value || '' : '' }));
+  } catch {
+    /* Speicher gesperrt – dann eben ohne Hinweis */
+  }
+}
+
+function showNoteFromLastLoad() {
+  try {
+    const raw = sessionStorage.getItem(NOTE_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(NOTE_KEY);
+    const { text, typed } = JSON.parse(raw);
+    toast(text, typed ? 30000 : 8000, typed ? { label: T('Eingabe kopieren'), onClick: () => navigator.clipboard?.writeText(typed) } : undefined);
+  } catch {
+    /* unbrauchbarer Eintrag */
+  }
+}
+
 export function setTimer(t) {
   if (!mayChangeSession()) return;
   app.session.timer = t;
@@ -323,18 +346,19 @@ function renderTimer() {
     timerWidget.append(
       h('span', { class: 'timer-icon', html: ICONS.timer }),
       h('span', { class: 'timer-time' }),
-      h('button', { class: 'icon-btn small', title: T('+1 Minute'), onclick: () => {
+      app.viewOnly ? null : h('button', { class: 'icon-btn small', title: T('+1 Minute'), onclick: () => {
         const c = app.session.timer;
         if (!c) return;
         if (c.running) setTimer({ ...c, endsAt: Math.max(c.endsAt, now()) + 60000, duration: c.duration + 60000 });
         else setTimer({ ...c, remaining: c.remaining + 60000, duration: c.duration + 60000 });
       } }, '+1'),
-      h('button', { class: 'icon-btn small timer-pp' }),
-      h('button', { class: 'icon-btn small', title: T('Timer beenden'), html: ICONS.stop, onclick: () => setTimer(null) }),
+      app.viewOnly ? null : h('button', { class: 'icon-btn small timer-pp' }),
+      app.viewOnly ? null : h('button', { class: 'icon-btn small', title: T('Timer beenden'), html: ICONS.stop, onclick: () => setTimer(null) }),
     );
   }
   timerWidget.querySelector('.timer-time').textContent = fmt(rem);
   const pp = timerWidget.querySelector('.timer-pp');
+  if (!pp) return;
   pp.innerHTML = t.running ? ICONS.pause : ICONS.play;
   pp.title = t.running ? T('Pausieren') : rem > 0 ? T('Fortsetzen') : T('Neu starten');
   pp.onclick = () => {
@@ -653,7 +677,10 @@ export function initCollab() {
   let first = true;
   s.on('hello', (msg) => {
     // Rechte haben sich geändert (z. B. Rolle angepasst) – Oberfläche neu aufbauen
-    if (msg.role && msg.role !== app.role) return location.reload();
+    if (msg.role && msg.role !== app.role) {
+      noteForNextLoad(T('Deine Rolle auf diesem Board wurde geändert.'));
+      return location.reload();
+    }
     app.serverOffset = msg.serverTime - Date.now();
     if (first) app.lastVisit = msg.lastVisit || null;
     // Nach einem Update des Servers: Hinweis zum Neuladen (neue Oberfläche, evtl. geänderte Schnittstellen)
@@ -846,7 +873,10 @@ export function initCollab() {
   s.on('reload', (msg) => {
     s.close();
     if (msg.reason === 'disabled') location.href = '/login';
-    else location.reload();
+    else {
+      if (msg.reason === 'restored') noteForNextLoad(T('Das Board wurde auf einen früheren Stand zurückgesetzt. Der vorige Stand liegt im Versionsverlauf.'));
+      location.reload();
+    }
   });
   s.on('deleted', () => {
     alert(T('Dieses Board wurde gelöscht.'));
@@ -890,6 +920,7 @@ export function initCollab() {
     });
     return true;
   });
+  showNoteFromLastLoad();
   s.on('status', async (ok) => {
     app.emit('status', ok);
     // Verbindung verloren: prüfen, ob Session oder Zugriff weggefallen sind

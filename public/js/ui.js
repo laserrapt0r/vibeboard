@@ -3,7 +3,7 @@ import { T, LOCALE, guestName } from './i18n.js';
 import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
   initials, relTime, rectsIntersect, throttle, uid, api, contrastText } from './util.js';
-import { sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
+import { REACT_TYPES, sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery, markTemplateUsed } from './gallery.js';
 import { popover, closePop, menu } from './menu.js';
@@ -21,7 +21,7 @@ import {
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
   tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment, togglePin, deleteFramesWithContent, holdTool,
-  deleteSelection, canCopyFormat, copyFormat, pasteFormat, hasCopiedFormat, startBrush, stopBrush, tableAggregate,
+  deleteSelection, pasteFromClipboard, canCopyFormat, copyFormat, pasteFormat, hasCopiedFormat, startBrush, stopBrush, tableAggregate,
   setBusy, clearBusy, stageRect,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
@@ -38,6 +38,13 @@ document.addEventListener('keydown', (e) => {
   e.stopPropagation();
   closeContextMenu();
 }, true);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !sidePanel || document.querySelector('.modal-back') || app.editing) return;
+  const kind = sidePanel;
+  toggleSidePanel(kind);
+  document.querySelector(`[data-panel="${kind}"]`)?.focus();
+});
 
 const iconBtn = (icon, title, onclick, extra = {}) => h('button', { class: 'icon-btn ' + (extra.class || ''), title, 'aria-label': title, onclick, html: ICONS[icon] || icon, ...extra, class: 'icon-btn ' + (extra.class || '') });
 
@@ -560,7 +567,8 @@ function positionCtx() {
   if (y + ch > innerHeight - 8) y = Math.max(64, sr.top + p1.y + 8);
   // nicht über die Werkzeugleiste links legen (auf schmalen Bildschirmen liegt sie unten)
   x = Math.max(innerWidth > 760 ? 72 : 8, Math.min(innerWidth - cw - 8, x));
-  ctxbar.style.left = x + 'px';
+  // Nie aus dem Fenster laufen; die Leiste scrollt selbst, wenn sie breiter ist
+  ctxbar.style.left = Math.max(12, Math.min(x, innerWidth - ctxbar.offsetWidth - 12)) + 'px';
   ctxbar.style.top = y + 'px';
 }
 
@@ -653,9 +661,15 @@ app.on('editCard', (id) => {
   showOthers();
   app.on('busy', showOthers);
   setBusy('card', [id]);
+  // Löscht jemand anderes die Karte, sagt der Dialog das, statt beim Speichern still nichts zu tun
+  const gone = () => {
+    if (!getEl(id)) others.textContent = T('Diese Karte wurde gelöscht. Änderungen werden nicht mehr gespeichert.');
+  };
+  app.on('render', gone);
   const m = modal(T('Karte bearbeiten'), form, {
     onClose: () => {
       app.off('busy', showOthers);
+      app.off('render', gone);
       clearBusy('card');
     },
   });
@@ -918,6 +932,8 @@ app.on('render', () => {
 app.on('view', positionComment);
 app.on('overlay', positionComment);
 document.addEventListener('pointerdown', (e) => {
+  // Angefangener Text geht nicht durch einen Klick daneben verloren
+  if (commentPop && [...commentPop.box.querySelectorAll('textarea')].some((t) => t.value.trim())) return;
   if (commentPop && !commentPop.box.contains(e.target) && !(e.target.closest && e.target.closest('.el-comment'))) closeComment();
 }, true);
 
@@ -931,6 +947,8 @@ const side = $('#sidepanel');
 export function toggleSidePanel(kind) {
   sidePanel = sidePanel === kind ? null : kind;
   renderSidePanel();
+  // Wer das Panel per Tastatur öffnet, landet darin
+  if (sidePanel && document.activeElement?.dataset?.panel) document.querySelector('#sidepanel button')?.focus();
 }
 
 export function showSidePanel(kind) {
@@ -1112,7 +1130,7 @@ async function exportPng(selection = false) {
     const els = selection ? collectForCopy([...app.sel]) : [...app.els.values()];
     if (!els.length) return toast(T('Nichts zu exportieren'));
     toast(T('PNG wird erstellt …'));
-    const url = await pngDataUrl(els, { scale: 2, background: app.settings.dark ? '#1e1f24' : '#ffffff' });
+    const url = await pngDataUrl(els, { scale: 2, background: '#ffffff' });
     download(safeName(app.name) + '.png', url);
   } catch (e) {
     toast(T('Export fehlgeschlagen: ') + e.message);
@@ -1293,7 +1311,7 @@ function openSettings(anchor) {
 export function openShortcuts() {
   const groups = [
     [T('Werkzeuge'), [['V', T('Auswählen')], [T('H / Leertaste'), T('Verschieben')], ['N', T('Sticky Note')], ['T', T('Text')], ['S', T('Form')], ['R / O', T('Rechteck / Ellipse')], ['L', T('Verbindungslinie')], ['P', T('Stift')], ['E', T('Radierer')], ['F', T('Frame')], ['K', T('Karte')], ['M', T('Mindmap')], ['C', T('Kommentar')], ['X', T('Laserpointer')]]],
-    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], ['Alt+1 … 9', T('Gemerkte Ansichten')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
+    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], ['Alt+1 … 9', T('Gemerkte Ansichten')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Enter mit gewähltem Werkzeug'), T('Element in der Mitte der Ansicht anlegen')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
     [T('Tabellen'), [[T('Klick in ausgewählte Tabelle'), T('Zelle wählen')], [T('Umschalt + Klick / Pfeil'), T('Bereich wählen')], [T('Pfeiltasten'), T('Zellauswahl bewegen')], [T('Enter / F2'), T('Zelle bearbeiten')], [T('Tippen'), T('Zelle überschreiben')], [T('Entf'), T('Inhalt leeren')], ['Tab', T('Nächste Zelle (beim Bearbeiten)')], [T('Linie ziehen'), T('Spaltenbreite / Zeilenhöhe')]]],
     [T('Verbinder'), [[T('Linie ziehen'), T('Biegen (Knickpunkt)')], [T('◦ auf der Linie ziehen'), T('Knickpunkt einfügen')], [T('Doppelklick auf ▪'), T('Knickpunkt entfernen')], [T('Beschriftung ziehen'), T('Entlang der Linie verschieben')], [T('Ende an Rand ziehen'), T('Fester Andockpunkt')], [T('Ende in Formmitte'), T('Automatisch andocken')]]],
     [T('Mindmap'), [['Tab', T('Unterknoten hinzufügen')], [T('Enter (beim Tippen)'), T('Geschwisterknoten')], [T('Umschalt+Enter'), T('Geschwisterknoten')]]],
@@ -1420,11 +1438,14 @@ stage.addEventListener('contextmenu', (e) => {
   if (!el && app.sel.size) setSelection([]);
   const has = app.sel.size > 0;
   const free = !selectedEls().every(isLocked);
+  const canPaste = !!navigator.clipboard?.readText;
   // Erweiterungen anderer Module (Freigaben)
   const extra = [];
   if (has) app.emit('contextItems', extra, selectedEls());
   const items = has ? [
     { label: T('Kopieren'), hint: T('Strg+C'), onClick: () => document.execCommand('copy') },
+    free ? { label: T('Ausschneiden'), hint: T('Strg+X'), onClick: () => document.execCommand('cut') } : null,
+    canPaste ? { label: T('Einfügen'), hint: T('Strg+V'), onClick: () => pasteFromClipboard(w) } : null,
     free ? { label: T('Duplizieren'), hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) } : null,
     free ? { label: T('In den Vordergrund'), hint: T('Strg+]'), onClick: bringToFront } : null,
     free ? { label: T('In den Hintergrund'), hint: T('Strg+['), onClick: sendToBack } : null,
@@ -1434,7 +1455,7 @@ stage.addEventListener('contextmenu', (e) => {
     app.sel.size > 1 ? { label: T('Gruppieren'), hint: T('Strg+G'), onClick: groupSel } : null,
     selectedEls().some((x) => x.groupId) ? { label: T('Gruppierung aufheben'), onClick: ungroupSel } : null,
     { label: T('Kommentar hinzufügen'), onClick: () => newComment(w) },
-    el && app.sel.size === 1 ? { label: T('Reagieren …'), onClick: () => app.emit('reactMenu', el, e) } : null,
+    el && app.sel.size === 1 && REACT_TYPES.has(el.type) ? { label: T('Reagieren …'), onClick: () => app.emit('reactMenu', el, e) } : null,
     ...extra,
     '-',
     selectedEls().some(canCopyFormat) ? { label: T('Format übertragen'), onClick: () => startBrush(false) } : null,
@@ -1450,6 +1471,7 @@ stage.addEventListener('contextmenu', (e) => {
     { label: T('Kommentar hier'), onClick: () => newComment(w) },
     { label: T('Foto oder Datei hier einfügen …'), onClick: () => pickFile(w) },
     { label: T('Vorlage einfügen …'), onClick: openTemplates },
+    canPaste ? { label: T('Einfügen'), hint: T('Strg+V'), onClick: () => pasteFromClipboard(w) } : null,
     '-',
     { label: T('Alles auswählen'), hint: T('Strg+A'), onClick: () => setSelection([...app.els.keys()]) },
     { label: T('Alles anzeigen'), hint: T('Umschalt+1'), onClick: () => fitAll() },

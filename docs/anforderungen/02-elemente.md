@@ -105,6 +105,7 @@
   - Geändert in 3.5.0 – Zeilen, Spalten, Linien:
     - Zeilen und Spalten lassen sich an der Auswahl einfügen (oberhalb/unterhalb, links/rechts) und löschen, auch mehrere; Inhalte und Formate der übrigen Zellen bleiben erhalten.
     - Inhalt leeren, Formatierung entfernen, Spaltenbreiten bzw. Zeilenhöhen angleichen.
+  - Geändert in 4.11.4: Enter übernimmt die Eingabe und geht eine Zeile tiefer, Umschalt+Enter macht einen Zeilenumbruch. Zu lange Zellen werden gekürzt angezeigt.
   - Geändert in 4.9.0: Beim Einfügen und Löschen von Zeilen und Spalten passen sich Bezüge in Formeln an ([REQ-ELEM-021](#req-elem-021-formeln-in-tabellen)).
     - Farben von Kopfzeile und Linien sind wählbar.
     - Spaltenbreiten und Zeilenhöhen lassen sich durch Ziehen an den inneren Linien ändern; beim Vergrößern der Tabelle bleiben die Verhältnisse erhalten.

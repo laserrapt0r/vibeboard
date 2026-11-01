@@ -4,6 +4,29 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.11.4] – 2026-11-01
+
+Korrekturen aus der Fehlersuche, zweiter Teil: Unerreichbares und sichtbar Falsches.
+
+### Geändert
+- Standardfarben von Text, Linien und Stift folgen dem Untergrund: Inhalte bleiben im hellen und dunklen Design lesbar, auch für andere Personen und in bestehenden Boards. Exporte zeigen immer Schwarz auf Weiß.
+- Enter in einer Tabellenzelle übernimmt und geht eine Zeile tiefer, Umschalt+Enter macht einen Zeilenumbruch.
+- Eine Statusänderung in der Kanban-Ansicht verschiebt die Karte auf dem Board in die passende Spalte; Spalten bleiben auch leer erhalten.
+
+### Hinzugefügt
+- Enter legt mit gewähltem Werkzeug ein Element in der Mitte der Ansicht an, auch ohne Maus.
+- Kontextmenü mit Ausschneiden und Einfügen. Panels schließen mit Esc.
+- Format übertragen wirkt bei Tabellen auch auf das Zellenformat.
+
+### Behoben
+- Bei wenig Fensterhöhe schnitt die Werkzeugleiste Werkzeuge ohne jeden Hinweis ab; die Kontextleiste lief aus dem Fenster.
+- Auf dem Handy fehlten Timer, Abstimmung, Moderation und Co.
+- Klicks neben Dialog oder Kommentar verwerfen keine Eingaben mehr. Wird ein Element oder eine Karte beim Bearbeiten gelöscht, sagt das ein Hinweis, und weiter Getipptes schaltet keine Werkzeuge um. Beim Wiederherstellen oder Rollenwechsel erklärt ein Hinweis das Neuladen, offener Text bleibt kopierbar.
+- Timer, Abstimmung und Name gingen bei einer Verbindungsstörung für die handelnde Person verloren.
+- PowerPoint-Export: Textfarbe, kursiv, unterstrichen, durchgestrichen, Frames und Kopfzeilenfarbe stimmen. Der Tabellenexport zeigt lange Zellen gekürzt, statt sie über die Nachbarzeilen laufen zu lassen.
+- Betrachter sehen keine Timer-Knöpfe mehr, „Zur Moderation hinzufügen“ fehlt bei Rollen ohne Bearbeitungsrecht, „Reagieren“ nur bei Elementen, die das können. Banner überdecken einander nicht mehr.
+- Die Mindmap-Beschreibung nennt die richtige Taste.
+
 ## [4.11.3] – 2026-11-01
 
 Korrekturen aus einer gezielten Fehlersuche, erster Teil: Datenverlust und Blocker.

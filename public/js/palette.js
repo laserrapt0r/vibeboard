@@ -22,8 +22,9 @@ function fromButtons() {
     const root = document.querySelector(selector);
     if (!root) continue;
     for (const b of root.querySelectorAll('button')) {
-      const title = b.title || b.getAttribute('aria-label') || '';
-      if (!title || b.disabled || b.offsetParent === null) continue;
+      const title = b.title || b.getAttribute('aria-label') || b.textContent.trim();
+      // Auf dem Handy liegen Kollaborations-Knöpfe im Scrollbereich: sichtbar ist, was im Layout steckt
+      if (!title || b.disabled || (b.offsetParent === null && getComputedStyle(b).position !== 'fixed')) continue;
       // „Suchen (Strg+F)“ → Name und Tastenkürzel
       const m = /^(.*?)\s*\(([^()]{1,24})\)$/.exec(title);
       const label = m ? m[1] : title;
