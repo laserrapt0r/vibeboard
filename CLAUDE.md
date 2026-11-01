@@ -20,6 +20,7 @@ aktualisieren → testen.
 - Formeln in Tabellen: `public/js/table-formula.js` (eigener Parser, nur beim Anzeigen gerechnet; `npm run test:formula`).
 - Abgleich gleichzeitiger Änderungen: `public/js/merge.js` (`npm run test:sync`).
 - Gemeinsames Tippen: `public/js/text-ops.js` (Umrechnen), `lib/text-log.js` (Server), `public/js/text-sync.js` (Browser) (`npm run test:text`).
+- Browsertests: `scripts/browser/` (`npm run test:browser`, einzeln mit `-- name`), Lasttest: `npm run test:load`.
 - Board-Elemente werden in `lib/sanitize.js` (Server) und `safeEl()` in `public/js/render.js` (Darstellung) geprüft.
 - Uploads (Bilder als Data-URL) laufen durch `lib/uploads.js` (Dateityp + ClamAV).
 - Content-Security-Policy erlaubt keine Inline-Skripte und keine fremden Quellen.

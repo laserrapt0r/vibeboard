@@ -57,6 +57,38 @@ jobs:
         env:
           DATABASE_URL: postgres://vb:vb@localhost:5432/vb_access
 
+  browser:
+    name: Browsertests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: vb_browser
+          POSTGRES_USER: vb
+          POSTGRES_PASSWORD: vb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vb -d vb_browser"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      # Chrome bringt das Runner-Abbild mit
+      - run: npm run test:browser
+        env:
+          DATABASE_URL: postgres://vb:vb@localhost:5432/vb_browser
+          CHROME_PATH: /usr/bin/google-chrome
+
   manifests:
     name: Kubernetes und Helm
     runs-on: ubuntu-latest

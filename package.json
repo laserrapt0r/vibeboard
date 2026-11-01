@@ -11,6 +11,8 @@
     "test:sync": "node scripts/test-sync.js",
     "test:formula": "node scripts/test-formula.js",
     "test:text": "node scripts/test-text.js",
+    "test:browser": "node scripts/browser/run.js",
+    "test:load": "node scripts/load-test.js",
     "check:i18n": "node scripts/check-i18n.js"
   },
   "engines": {
@@ -29,7 +31,8 @@
   },
   "devDependencies": {
     "acorn": "^8.19.0",
-    "acorn-walk": "^8.3.5"
+    "acorn-walk": "^8.3.5",
+    "puppeteer-core": "^23.11.1"
   },
   "optionalDependencies": {
     "kerberos": "7.0.0"
