@@ -47,6 +47,7 @@
     - Position und Größe am Raster ausrichten.
     - Größe kopieren und auf andere Elemente übernehmen (auch nur Breite oder Höhe).
     - Strg+D wiederholt den Versatz, um den die letzte Kopie verschoben wurde (z. B. für Reihen gleicher Balken).
+  - Geändert in 4.11.3: Gruppen werden als Einheit behandelt, Frames nehmen ihren Inhalt mit, Kommentare und Linien bleiben unberührt.
 
 ### REQ-EDIT-005 Gruppieren, Sperren, Ebenen
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -56,6 +57,7 @@
     - Eine Gruppe bewegt sich immer vollständig: beim Ziehen an jedem Element (auch an einer Verbindungslinie der Gruppe), mit Pfeiltasten, beim Kopieren und wenn ein Frame verschoben wird, der nur einen Teil der Gruppe enthält.
     - Ein erneuter Klick auf ein Element der bereits ausgewählten Gruppe wählt nur dieses Element. Es lässt sich dann einzeln bearbeiten (Farbe, Größe, Position, Biegen einer Linie), ohne die Gruppe aufzulösen; ein Klick daneben wählt wieder die ganze Gruppe.
   - Geändert in 4.8.0: Neben der Sperre gibt es die Fixierung ([REQ-EDIT-010](#req-edit-010-position-fixieren)); gesperrte Teile wandern mit ihrem Frame mit.
+  - Geändert in 4.11.3: Die Sperre gilt für alle Wege: Entf, Strg+X, Kontextmenü, Papierkorb, Radierer, Farben bei gemischter Auswahl. Ausdrücklich ausgenommen ist „Frame samt Inhalt löschen“.
   - Sperren (Strg+L) verhindert Verschieben, Größenänderung, Bearbeiten und Löschen. Geändert in 3.3.0: Ein Doppelklick auf ein gesperrtes Element erklärt, wie es sich entsperren lässt.
   - In den Vorder-/Hintergrund (Strg+] / Strg+[).
 
@@ -72,6 +74,7 @@
   - Strg+Z / Strg+Y bzw. Strg+Umschalt+Z; bis zu 300 Schritte; eine Zieh- oder Tippaktion ist ein Schritt.
   - Die Historie bleibt auch dann intakt, wenn ein gerade bearbeitetes Element von anderen gelöscht wird oder während des Ziehens eine Zwei-Finger-Geste beginnt.
   - Während eines laufenden Ziehvorgangs wird Rückgängig ignoriert.
+  - Geändert in 4.11.3: Rückgängig und Wiederholen setzen nur die Felder zurück, die dieser Schritt geändert hat. In Tabellen gilt das je Zelle. Hat man selbst Zeilen oder Spalten geändert und andere haben inzwischen geschrieben, bleibt die Struktur stehen und ein Hinweis erklärt das.
 
 ### REQ-EDIT-008 Kontextleiste, Kontextmenü, Suche, Tastenkürzel
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt

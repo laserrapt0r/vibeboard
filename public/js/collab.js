@@ -1,7 +1,7 @@
 // Zusammenarbeit: Teilnehmer, Cursor, Folgen, Timer, Abstimmung, Reaktionen, Laser, Präsentation
 import { T } from './i18n.js';
 import { applyPatch, equal, idOf } from './merge.js';
-import { h, append, api, ICONS, esc, toast, modal, initials, FONT } from './util.js';
+import { h, append, api, ICONS, esc, toast, modal, initials, FONT, onAuthLost } from './util.js';
 import {
   app, $, stage, getEl, isAnonymous, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
   loadElements, applyRemoteOp, applyRemoteTableOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
@@ -882,6 +882,14 @@ export function initCollab() {
   });
   s.on('saveState', (st) => app.emit('saveState', st));
   s.on('actionsChanged', () => app.emit('actionsChanged'));
+  onAuthLost(() => {
+    if (!s.unsaved) return false;
+    toast(T('Du wurdest abgemeldet. Deine Änderungen warten hier: Melde dich in einem neuen Tab an, danach geht es von selbst weiter.'), 60000, {
+      label: T('Anmelden'),
+      onClick: () => window.open('/login', '_blank', 'noopener'),
+    });
+    return true;
+  });
   s.on('status', async (ok) => {
     app.emit('status', ok);
     // Verbindung verloren: prüfen, ob Session oder Zugriff weggefallen sind

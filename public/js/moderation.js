@@ -56,7 +56,10 @@ function apply() {
       h('span', { class: 'pm-icon', html: ICONS.shield }),
       h('span', {}, h('b', {}, T('Moderation')), names.length ? ` · ${names.join(', ')}` : '',
         locked ? h('span', { class: 'mod-chip' }, T('🔒 Bearbeiten gesperrt')) : m.editLock ? h('span', { class: 'mod-chip' }, T('🔒 Teilnehmende können nicht bearbeiten')) : null,
-        m.reserveTools ? h('span', { class: 'muted small' }, T(' · Timer, Abstimmung & Co. nur für Moderierende')) : null));
+        m.reserveTools ? h('span', { class: 'muted small' }, T(' · Timer, Abstimmung & Co. nur für Moderierende')) : null),
+      // Alle Moderierenden sind weg: Sonst weiß niemand, wie die Sperre endet
+      !names.length ? h('span', { class: 'muted small' }, T` · gestartet von ${m.by || T('Jemand')}, gerade nicht da`) : null,
+      !names.length && (app.role === 'editor' || app.role === 'owner') ? h('button', { class: 'btn small', onclick: () => app.sync.op({ op: 'moderation', active: false }) }, T('Moderation beenden')) : null);
   }
   scheduleRender(true);
   app.emit('moderation');

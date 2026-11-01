@@ -409,6 +409,13 @@ export function deleteEl(id) {
   app.sync.remove(id, prev);
 }
 
+// Löschen aus der Oberfläche: Gesperrtes bleibt stehen, wie bei Entf
+export function deleteSelection() {
+  const ids = [...app.sel].filter((id) => !isLocked(getEl(id)));
+  if (ids.length < app.sel.size) toast(T('Gesperrte Elemente bleiben unverändert'));
+  if (ids.length) deleteEls(ids);
+}
+
 export function deleteEls(ids) {
   act(() => {
     const set = new Set(ids);
@@ -420,36 +427,66 @@ export function deleteEls(ids) {
   selectionChanged();
 }
 
-// Rückgängig bei Tabellen: nur die selbst geänderten Zellen, Formate und Eigenschaften zurücksetzen,
-// damit gleichzeitige Eingaben anderer erhalten bleiben (bei geänderter Zeilen-/Spaltenzahl die ganze Tabelle)
+// Rückgängig bei Tabellen: nur die selbst geänderten Zellen, Formate und Eigenschaften zurücksetzen, und nur dort, wo noch der
+// eigene Stand steht. Hat man selbst Zeilen oder Spalten geändert und andere haben inzwischen geschrieben, lässt sich das nicht
+// sauber zurückrechnen: Dann lieber nichts tun, als fremde Inhalte zu löschen.
+const BLOCKED = Symbol('blocked');
+
 function tableUndoPatch(target, other, cur) {
   if (!other || !cur || cur.type !== 'table' || target.type !== 'table' || other.type !== 'table') return null;
-  if (target.rows !== other.rows || target.cols !== other.cols || cur.rows !== target.rows || cur.cols !== target.cols) return null;
+  if (target.rows !== other.rows || target.cols !== other.cols) {
+    const untouched = JSON.stringify(cur.cells) === JSON.stringify(other.cells) && cur.rows === other.rows && cur.cols === other.cols;
+    return untouched ? null : BLOCKED;
+  }
   const p = { cells: [], styles: [], props: {} };
+  const here = (r, c) => r < cur.rows && c < cur.cols;
   for (let r = 0; r < target.rows; r++) {
     for (let c = 0; c < target.cols; c++) {
       const tv = target.cells?.[r]?.[c] ?? '', ov = other.cells?.[r]?.[c] ?? '';
-      if (tv !== ov) p.cells.push([r, c, tv]);
+      if (tv !== ov && here(r, c) && (cur.cells?.[r]?.[c] ?? '') === ov) p.cells.push([r, c, tv]);
       const ts = target.styles?.[r]?.[c] || null, os = other.styles?.[r]?.[c] || null;
-      if (JSON.stringify(ts) !== JSON.stringify(os)) p.styles.push([r, c, ts]);
+      if (JSON.stringify(ts) !== JSON.stringify(os) && here(r, c)) p.styles.push([r, c, ts]);
     }
   }
-  for (const k of TableOps.PROPS) if (JSON.stringify(target[k]) !== JSON.stringify(other[k])) p.props[k] = target[k] === undefined ? null : target[k];
+  for (const k of TableOps.PROPS) {
+    if (['rowH', 'colW', 'h', 'w'].includes(k) && (cur.rows !== target.rows || cur.cols !== target.cols)) continue;
+    if (JSON.stringify(target[k]) !== JSON.stringify(other[k])) p.props[k] = target[k] === undefined ? null : target[k];
+  }
   return p;
+}
+
+// Nur die Felder zurücksetzen, die dieser Schritt geändert hat. Was andere inzwischen an anderen Feldern gemacht haben, bleibt.
+function withOwnChanges(target, other, cur) {
+  const out = { ...cur };
+  for (const k of new Set([...Object.keys(target), ...Object.keys(other)])) {
+    if (k === 'priv' || k === 'privName' || JSON.stringify(target[k]) === JSON.stringify(other[k])) continue;
+    if (k in target) out[k] = clone(target[k]);
+    else delete out[k];
+  }
+  return out;
 }
 
 function applySnapshot(map, opposite = new Map()) {
   const removed = new Set();
+  let blocked = false;
   for (const [id, el] of map) {
-    const tp = el && tableUndoPatch(el, opposite.get(id), app.els.get(id));
+    const cur = app.els.get(id), other = opposite.get(id);
+    const tp = el && tableUndoPatch(el, other, cur);
+    if (tp === BLOCKED) {
+      blocked = true;
+      continue;
+    }
     if (tp) {
-      tablePatch(app.els.get(id), tp);
+      tablePatch(cur, tp);
       continue;
     }
     if (el) {
+      if (cur && other) {
+        setEl(withOwnChanges(el, other, cur));
+        continue;
+      }
       // Privat-Kennzeichen bestimmt der Server – den aktuellen Stand behalten statt den aus der Historie
       const n = clone(el);
-      const cur = app.els.get(id);
       delete n.priv;
       delete n.privName;
       if (cur && cur.priv) Object.assign(n, { priv: cur.priv, privName: cur.privName });
@@ -459,6 +496,7 @@ function applySnapshot(map, opposite = new Map()) {
       removed.add(id);
     }
   }
+  if (blocked) toast(T('Die Tabelle wurde inzwischen von anderen geändert: Ihre Struktur bleibt, damit nichts verloren geht'), 5000);
   // Verbindungen, die inzwischen an gelöschte Elemente gehängt wurden, ebenfalls entfernen
   if (removed.size) {
     for (const el of [...app.els.values()]) {
@@ -475,6 +513,8 @@ export function undo() {
   if (drag || tx) return;
   const e = undoStack.pop();
   if (!e) return;
+  // Wird ein Element wieder entfernt, merkt sich Wiederholen dessen aktuellen Stand: auch Änderungen anderer daran
+  for (const [id, b] of e.before) if (!b && app.els.has(id)) e.after.set(id, clone(app.els.get(id)));
   applySnapshot(e.before, e.after);
   redoStack.push(e);
   app.emit('history');
@@ -485,6 +525,7 @@ export function redo() {
   if (drag || tx) return;
   const e = redoStack.pop();
   if (!e) return;
+  for (const [id, a] of e.after) if (!a && app.els.has(id)) e.before.set(id, clone(app.els.get(id)));
   applySnapshot(e.after, e.before);
   undoStack.push(e);
   app.emit('history');
@@ -1702,7 +1743,7 @@ function startMarquee(e, start, pendingSelect) {
 // Sonst fiele eine Vorlage beim Verschieben auseinander. Was die Moderation sperrt, bleibt stehen.
 function pageOfMovedFrame(el) {
   if (el.modLock) return false;
-  return selectedEls().some((f) => f.type === 'frame' && frameChildren(f).some((c) => c.id === el.id));
+  return selectedEls().some((f) => f.type === 'frame' && !isLocked(f) && frameChildren(f).some((c) => c.id === el.id));
 }
 
 function startMove(e, start) {
@@ -1711,7 +1752,7 @@ function startMove(e, start) {
   // Frames nehmen ihren Inhalt mit – Gruppen darin bleiben vollständig zusammen
   for (const id of app.sel) {
     const el = getEl(id);
-    if (el && el.type === 'frame') withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
+    if (el && el.type === 'frame' && !isLocked(el)) withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
   }
   ids = [...ids].filter((id) => getEl(id) && (!isLocked(getEl(id)) || pageOfMovedFrame(getEl(id))));
   // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit
@@ -1758,7 +1799,7 @@ function onMove(e) {
     }
     return;
   }
-  const s = drag.start;
+  const s = drag.start || {}; // Zwei Finger (pinch) haben keinen Startpunkt
   const dxs = e.clientX - s.cx, dys = e.clientY - s.cy;
   const far = Math.hypot(dxs, dys) > 4;
   switch (drag.mode) {
@@ -2378,7 +2419,7 @@ const stylusPressure = (e) => (e.pointerType === 'pen' && e.pressure > 0 ? [Math
 function eraseAt(e) {
   const t = document.elementFromPoint(e.clientX, e.clientY);
   const hit = hitInfo(t);
-  if (hit && hit.el.type === 'pen') deleteEl(hit.el.id);
+  if (hit && hit.el.type === 'pen' && !isLocked(hit.el)) deleteEl(hit.el.id);
 }
 
 const OPPOSITE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
@@ -2516,6 +2557,7 @@ export function duplicateEls(list, dx = 20, dy = 20, select = true) {
       delete n.priv;
       delete n.privName;
       delete n.ext; // Die Kopie ist nicht mit demselben Ticket verbunden
+      delete n.reactions; // Reaktionen galten dem Original
       if (n.type === 'chart' && idMap.has(n.sourceId)) n.sourceId = idMap.get(n.sourceId);
       // nur lokal benötigt (Auswahl beim Alt-Ziehen) – nicht aufzählbar, wird also nie gespeichert oder gesendet
       Object.defineProperty(n, '_src', { value: o.id, enumerable: false, configurable: true });
@@ -2526,8 +2568,11 @@ export function duplicateEls(list, dx = 20, dy = 20, select = true) {
         n.groupId = groupMap.get(n.groupId);
       }
       if (n.type === 'connector') {
-        if (n.from.id) n.from = idMap.has(n.from.id) ? { ...n.from, id: idMap.get(n.from.id) } : null;
-        if (n.to.id) n.to = idMap.has(n.to.id) ? { ...n.to, id: idMap.get(n.to.id) } : null;
+        // Liegt das Ziel nicht mit in der Kopie, wird das Ende frei, an derselben Stelle
+        const poly = connectorGeom(o, getEl)?.poly;
+        const end = (e, p) => (!e.id ? e : idMap.has(e.id) ? { ...e, id: idMap.get(e.id) } : p ? { x: p.x + dx, y: p.y + dy } : null);
+        n.from = end(n.from, poly?.[0]);
+        n.to = end(n.to, poly?.at(-1));
         if (!n.from || !n.to) return null;
       }
       return n;
@@ -2539,6 +2584,17 @@ export function duplicateEls(list, dx = 20, dy = 20, select = true) {
     setSelection(out.map((n) => n.id));
   }
   return out;
+}
+
+// Dateien gehören zu ihrem Board, Diagramme zu ihrer Tabelle: In einem anderen Board wären sie kaputt, deshalb klar sagen, was fehlt
+function clipped(data) {
+  const list = Array.isArray(data) ? data : data.els || [];
+  if (Array.isArray(data) || data.from === boardId) return list;
+  const kept = list.filter((e) => e.type !== 'file');
+  if (kept.length < list.length) toast(T('Dateien lassen sich nicht in andere Boards kopieren: bitte dort neu hochladen'), 5000);
+  const ids = new Set(kept.map((e) => e.id));
+  if (kept.some((e) => e.type === 'chart' && !ids.has(e.sourceId))) toast(T('Diagramm ohne Tabelle kopiert: Tabelle bitte mitkopieren'), 5000);
+  return kept;
 }
 
 export function pasteElements(list, at) {
@@ -2556,48 +2612,61 @@ export function pasteElements(list, at) {
 /* Ausrichten, Anordnen, Ebenen, Gruppen                               */
 /* ================================================================== */
 
+// Einheiten zum Ausrichten: Gruppen bleiben zusammen, Frames nehmen ihren Inhalt mit, Kommentare und Linien folgen nicht
+function arrangeUnits(list = selectedEls()) {
+  const free = list.filter((e) => e.type !== 'connector' && e.type !== 'comment' && !isLocked(e));
+  const held = new Set(free.filter((e) => e.type === 'frame').flatMap((f) => frameChildren(f).map((c) => c.id)));
+  const groups = new Map();
+  for (const el of free) {
+    if (held.has(el.id)) continue;
+    const key = el.groupId || el.id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(el);
+  }
+  return [...groups.values()].map((els) => ({ els, box: unionRect(els.map(bounds)) }));
+}
+
+function moveUnits(moves) {
+  const done = new Set();
+  act(() => moves.forEach(({ unit, dx, dy }) => unit.els.forEach((el) => moveWithContent(getEl(el.id), dx, dy, done))));
+}
+
 export function alignSel(kind) {
-  const sel = selectedEls().filter((e) => e.type !== 'connector' && !isLocked(e));
-  if (sel.length < 2) return;
-  const b = unionRect(sel.map(bounds));
-  act(() => {
-    for (const el of sel) {
-      const n = { ...el };
-      if (kind === 'left') n.x = b.x;
-      if (kind === 'right') n.x = b.x + b.w - el.w;
-      if (kind === 'centerH') n.x = b.x + (b.w - el.w) / 2;
-      if (kind === 'top') n.y = b.y;
-      if (kind === 'bottom') n.y = b.y + b.h - el.h;
-      if (kind === 'middle') n.y = b.y + (b.h - el.h) / 2;
-      setEl(n);
-    }
-  });
+  const units = arrangeUnits();
+  if (units.length < 2) return;
+  const b = unionRect(units.map((u) => u.box));
+  moveUnits(units.map((unit) => {
+    const { box } = unit;
+    const x = { left: b.x, right: b.x + b.w - box.w, centerH: b.x + (b.w - box.w) / 2 }[kind] ?? box.x;
+    const y = { top: b.y, bottom: b.y + b.h - box.h, middle: b.y + (b.h - box.h) / 2 }[kind] ?? box.y;
+    return { unit, dx: x - box.x, dy: y - box.y };
+  }));
 }
 
 export function distributeSel(axis) {
-  const sel = selectedEls().filter((e) => e.type !== 'connector' && !isLocked(e));
-  if (sel.length < 3) return;
+  const units = arrangeUnits();
+  if (units.length < 3) return;
   const k = axis === 'h' ? 'x' : 'y', s = axis === 'h' ? 'w' : 'h';
-  sel.sort((a, b) => a[k] - b[k]);
-  const total = sel.reduce((t, e) => t + e[s], 0);
-  const span = sel[sel.length - 1][k] + sel[sel.length - 1][s] - sel[0][k];
-  const gap = (span - total) / (sel.length - 1);
-  let pos = sel[0][k];
-  act(() => {
-    for (const el of sel) {
-      setEl({ ...el, [k]: pos });
-      pos += el[s] + gap;
-    }
-  });
+  units.sort((a, b) => a.box[k] - b.box[k]);
+  const last = units[units.length - 1].box;
+  const total = units.reduce((t, u) => t + u.box[s], 0);
+  const gap = (last[k] + last[s] - units[0].box[k] - total) / (units.length - 1);
+  let pos = units[0].box[k];
+  moveUnits(units.map((unit) => {
+    const d = pos - unit.box[k];
+    pos += unit.box[s] + gap;
+    return { unit, dx: axis === 'h' ? d : 0, dy: axis === 'h' ? 0 : d };
+  }));
 }
 
-export function arrangeGrid(list = selectedEls().filter((e) => e.type !== 'connector' && !isLocked(e)), gap = 20) {
-  if (list.length < 2) return;
-  const b = unionRect(list.map(bounds));
-  const cols = Math.ceil(Math.sqrt(list.length));
-  const cw = Math.max(...list.map((e) => e.w)), ch = Math.max(...list.map((e) => e.h));
-  list.sort((a, c) => a.y - c.y || a.x - c.x);
-  act(() => list.forEach((el, i) => setEl({ ...el, x: b.x + (i % cols) * (cw + gap), y: b.y + Math.floor(i / cols) * (ch + gap) })));
+export function arrangeGrid(list = selectedEls(), gap = 20) {
+  const units = arrangeUnits(list);
+  if (units.length < 2) return;
+  const b = unionRect(units.map((u) => u.box));
+  const cols = Math.ceil(Math.sqrt(units.length));
+  const cw = Math.max(...units.map((u) => u.box.w)), ch = Math.max(...units.map((u) => u.box.h));
+  units.sort((p, q) => p.box.y - q.box.y || p.box.x - q.box.x);
+  moveUnits(units.map((unit, i) => ({ unit, dx: b.x + (i % cols) * (cw + gap) - unit.box.x, dy: b.y + Math.floor(i / cols) * (ch + gap) - unit.box.y })));
 }
 
 /* ---------------- Tabellen: Zellauswahl, Formatierung, Zeilen und Spalten ---------------- */
@@ -3094,7 +3163,7 @@ export function toggleModLock() {
 
 export function nudge(dx, dy) {
   const ids = new Set(app.sel);
-  for (const el of selectedEls()) if (el.type === 'frame') withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
+  for (const el of selectedEls()) if (el.type === 'frame' && !isLocked(el)) withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
   // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit (wie beim Ziehen)
   for (const c of app.els.values()) {
     if (c.type === 'connector' && !ids.has(c.id) && waypointsOf(c).length && c.from.id && c.to.id && ids.has(c.from.id) && ids.has(c.to.id)) ids.add(c.id);
@@ -3255,7 +3324,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Delete' || e.key === 'Backspace') {
     if (app.sel.size) {
       e.preventDefault();
-      deleteEls([...app.sel].filter((id) => !isLocked(getEl(id))));
+      deleteSelection();
     }
     return;
   }
@@ -3312,14 +3381,18 @@ const CLIP_PREFIX = 'vibeboard-clipboard:';
 document.addEventListener('copy', (e) => {
   if (isTyping(e) || app.editing || !app.sel.size) return;
   e.preventDefault();
-  e.clipboardData.setData('text/plain', CLIP_PREFIX + JSON.stringify(collectForCopy([...app.sel])));
+  e.clipboardData.setData('text/plain', CLIP_PREFIX + JSON.stringify({ from: boardId, els: collectForCopy([...app.sel]) }));
 });
 
 document.addEventListener('cut', (e) => {
   if (isTyping(e) || app.editing || !app.sel.size || app.viewOnly) return;
   e.preventDefault();
-  e.clipboardData.setData('text/plain', CLIP_PREFIX + JSON.stringify(collectForCopy([...app.sel])));
-  deleteEls([...app.sel]);
+  const copied = collectForCopy([...app.sel]);
+  e.clipboardData.setData('text/plain', CLIP_PREFIX + JSON.stringify({ from: boardId, els: copied }));
+  // Mitkopierter Inhalt von Frames zieht mit um, sonst läge er nach dem Einfügen doppelt da. Gesperrtes bleibt.
+  const gone = copied.filter((c) => getEl(c.id) && !isLocked(getEl(c.id))).map((c) => c.id);
+  if (gone.length < copied.length) toast(T('Gesperrte Elemente bleiben unverändert'));
+  if (gone.length) deleteEls(gone);
 });
 
 // Mittlere Maustaste = Verschieben. Unter Linux fügt sie sonst zusätzlich die markierte Auswahl ein
@@ -3351,7 +3424,7 @@ document.addEventListener('paste', (e) => {
   const at = rectContainsPoint(visibleRect(), lastCursorWorld) ? lastCursorWorld : viewCenter();
   if (text.startsWith(CLIP_PREFIX)) {
     try {
-      pasteElements(JSON.parse(text.slice(CLIP_PREFIX.length)), at);
+      pasteElements(clipped(JSON.parse(text.slice(CLIP_PREFIX.length))), at);
     } catch {
       toast(T('Einfügen fehlgeschlagen'));
     }
@@ -3464,9 +3537,11 @@ export function initCore() {
   window.addEventListener('beforeunload', (e) => {
     // Noch nicht beim Server angekommene Änderungen: Browser fragt nach, bevor die Seite verlassen wird
     const unsent = app.sync.pending || app.sync.sending.length > 0;
+    // Große Pakete überleben das Verlassen der Seite nicht (Browser begrenzen keepalive): Hier muss der Browser nachfragen
+    const heavy = app.sync.hasLargePacket();
     app.sync.flushNow();
     // Speicherfehler des Servers betreffen nur, wer selbst noch ungespeicherte Änderungen hat
-    if ((unsent && (!app.sync.connected || app.sync.retrying)) || (app.sync.save.failed && app.sync.unsaved)) {
+    if (heavy || (unsent && (!app.sync.connected || app.sync.retrying)) || (app.sync.save.failed && app.sync.unsaved)) {
       e.preventDefault();
       e.returnValue = '';
     }

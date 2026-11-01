@@ -88,3 +88,10 @@
   - Ändert sich, wer moderiert, laden Teilnehmende den Stand neu.
   - Solange ein Board verborgene Bereiche hat, startet nur der Besitzer die Moderation (sonst sähe, wer sie startet, die Inhalte), und Versionen stellen nur Moderierende wieder her.
   - Kommentare in verborgenen Bereichen erreichen nur Moderierende, lösen keine Benachrichtigungen aus und erscheinen im Aktivitätsverlauf ohne Text. Schätzrunden und Besprechungen geben keine verborgenen Titel preis.
+
+### REQ-MOD-011 Moderation und Privatmodus ohne Moderierende
+- **Seit:** 4.11.3 · **Priorität:** Muss · **Status:** umgesetzt
+- **Beschreibung:** Eine Sperre darf ein Team nicht aussperren, nur weil die startende Person gegangen ist.
+- **Akzeptanzkriterien:**
+  - Ist keine moderierende Person und nicht der Besitzer im Board, nennt das Banner, wer gestartet hat, und Personen mit Bearbeitungsrecht können die Moderation beenden. Übernehmen oder ändern können sie sie nicht.
+  - Ebenso dürfen sie den Privatmodus aufdecken, wenn weder die startende Person noch jemand Moderierendes da ist.

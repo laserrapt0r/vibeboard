@@ -21,7 +21,7 @@ import {
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
   tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment, togglePin, deleteFramesWithContent, holdTool,
-  canCopyFormat, copyFormat, pasteFormat, hasCopiedFormat, startBrush, stopBrush, tableAggregate,
+  deleteSelection, canCopyFormat, copyFormat, pasteFormat, hasCopiedFormat, startBrush, stopBrush, tableAggregate,
   setBusy, clearBusy, stageRect,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
@@ -199,6 +199,8 @@ function applySel(patch, filter) {
   act(() => {
     for (const el of selectedEls()) {
       if (filter && !filter(el)) continue;
+      // Gesperrtes bleibt, auch wenn es mit freien Elementen ausgewählt ist
+      if (isLocked(el)) continue;
       const p = typeof patch === 'function' ? patch(el) : patch;
       if (p) setEl(autoHeight({ ...el, ...p }));
     }
@@ -460,10 +462,10 @@ export function buildCtx() {
       { label: T('Nur Höhe übernehmen'), icon: 'alignMiddle', disabled: !hasCopiedSize(), onClick: () => pasteSize('h') },
       { label: T('Als PNG exportieren'), icon: 'download', onClick: () => exportPng(true) },
       '-',
-      { label: T('Löschen'), icon: 'trash', danger: true, hint: T('Entf'), onClick: () => deleteEls([...app.sel]) },
+      { label: T('Löschen'), icon: 'trash', danger: true, hint: T('Entf'), onClick: deleteSelection },
     ], { placement: 'top' }));
     items.push(more);
-    items.push(actBtn('trash', T('Löschen (Entf)'), () => deleteEls([...app.sel])));
+    items.push(actBtn('trash', T('Löschen (Entf)'), deleteSelection));
   }
   ctxbar.append(...items);
   ctxbar.classList.remove('hidden');
@@ -1045,8 +1047,26 @@ export function insertTemplate(t) {
 }
 
 // Fügt fertige Elemente (Vorlage, Diagramm, Import) in der Ansichtsmitte ein, ohne Bestehendes zu überdecken
-export function placeElements(els, { select = false } = {}) {
-  if (!els.length) return false;
+// Eingefügtes bekommt immer neue Kennungen: Sonst träfe eine eigene Vorlage das Original auf diesem Board und überschriebe es
+function withNewIds(els) {
+  const ids = new Map(els.map((e) => [e.id, uid()]));
+  const groups = new Map();
+  const end = (e) => (e && e.id && ids.has(e.id) ? { ...e, id: ids.get(e.id) } : e);
+  return els.map((e) => {
+    const n = { ...e, id: ids.get(e.id) };
+    if (n.groupId) {
+      if (!groups.has(n.groupId)) groups.set(n.groupId, uid());
+      n.groupId = groups.get(n.groupId);
+    }
+    if (n.type === 'connector') Object.assign(n, { from: end(n.from), to: end(n.to) });
+    if (n.type === 'chart' && ids.has(n.sourceId)) n.sourceId = ids.get(n.sourceId);
+    return n;
+  });
+}
+
+export function placeElements(source, { select = false } = {}) {
+  if (!source.length) return false;
+  const els = withNewIds(source);
   const b = unionRect(els.map((e) => elBounds(e, (id) => els.find((x) => x.id === id))));
   const c = viewCenter();
   let tx = c.x - (b.x + b.w / 2), ty = c.y - (b.y + b.h / 2);
@@ -1069,6 +1089,7 @@ export function placeElements(els, { select = false } = {}) {
     if (n.type === 'connector') {
       if (!n.from.id) n.from = { x: n.from.x + tx, y: n.from.y + ty };
       if (!n.to.id) n.to = { x: n.to.x + tx, y: n.to.y + ty };
+      if (Array.isArray(n.waypoints)) n.waypoints = n.waypoints.map((p) => ({ ...p, x: p.x + tx, y: p.y + ty }));
     } else {
       n.x += tx;
       n.y += ty;
@@ -1395,15 +1416,18 @@ stage.addEventListener('contextmenu', (e) => {
   closeContextMenu();
   const w = toWorld(e.clientX, e.clientY);
   if (el && !app.sel.has(el.id)) setSelection([el.id]);
+  // Rechtsklick ins Leere meint die freie Fläche, nicht die alte Auswahl
+  if (!el && app.sel.size) setSelection([]);
   const has = app.sel.size > 0;
+  const free = !selectedEls().every(isLocked);
   // Erweiterungen anderer Module (Freigaben)
   const extra = [];
   if (has) app.emit('contextItems', extra, selectedEls());
   const items = has ? [
     { label: T('Kopieren'), hint: T('Strg+C'), onClick: () => document.execCommand('copy') },
-    { label: T('Duplizieren'), hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) },
-    { label: T('In den Vordergrund'), hint: T('Strg+]'), onClick: bringToFront },
-    { label: T('In den Hintergrund'), hint: T('Strg+['), onClick: sendToBack },
+    free ? { label: T('Duplizieren'), hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) } : null,
+    free ? { label: T('In den Vordergrund'), hint: T('Strg+]'), onClick: bringToFront } : null,
+    free ? { label: T('In den Hintergrund'), hint: T('Strg+['), onClick: sendToBack } : null,
     { label: selectedEls().every((x) => x.locked) ? T('Entsperren') : T('Sperren'), hint: T('Strg+L'), onClick: toggleLock },
     { label: selectedEls().every((x) => x.locked === 'text') ? T('Fixierung lösen') : T('Position fixieren (Text bleibt bearbeitbar)'), onClick: togglePin },
     app.isFacilitator ? { label: selectedEls().every((x) => x.modLock) ? T('Für Teilnehmende freigeben') : T('Für Teilnehmende sperren'), onClick: toggleModLock } : null,
@@ -1418,7 +1442,7 @@ stage.addEventListener('contextmenu', (e) => {
     hasCopiedFormat() ? { label: T('Format einfügen'), hint: T('Strg+Alt+V'), onClick: pasteFormat } : null,
     { label: T('Foto oder Datei hier einfügen …'), onClick: () => pickFile(w) },
     '-',
-    { label: T('Löschen'), hint: T('Entf'), danger: true, onClick: () => deleteEls([...app.sel]) },
+    free ? { label: T('Löschen'), hint: T('Entf'), danger: true, onClick: deleteSelection } : null,
     selectedEls().some((x) => x.type === 'frame') ? { label: T('Frame samt Inhalt löschen'), danger: true, onClick: deleteFramesWithContent } : null,
   ] : [
     { label: T('Sticky Note hier'), onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },

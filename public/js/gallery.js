@@ -49,7 +49,7 @@ export function markTemplateUsed(t) {
 export async function loadTemplate(t) {
   if (!t.custom) return t;
   const els = await elementsOf(t);
-  return { ...t, build: () => els.map((e) => ({ ...e })) };
+  return { ...t, build: () => JSON.parse(JSON.stringify(els)) };
 }
 
 export function fillPreview(prev, t) {

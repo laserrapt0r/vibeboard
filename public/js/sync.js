@@ -316,7 +316,8 @@ export class Sync {
 
   op(o) {
     // Abstimmen und Schätzen dürfen auch Betrachter, Kommentieren ab der Rolle „Kommentieren“
-    if (this.viewOnly && !['vote', 'estimate', 'pollVote', 'romanVote', 'react'].includes(o.op) && !(o.op === 'comment' && this.canComment)) return;
+    // „Moderation beenden“ gibt es gerade für die, die eine verwaiste Sperre aussperrt; der Server prüft das Recht
+    if (this.viewOnly && !['vote', 'estimate', 'pollVote', 'romanVote', 'react', 'moderation'].includes(o.op) && !(o.op === 'comment' && this.canComment)) return;
     if (o.op === 'vote') delete o.userId;
     if (tracked(o) && o.prev !== undefined) {
       this.merge.touch(o.id, o.prev);
@@ -454,6 +455,12 @@ export class Sync {
       headers: { 'Content-Type': 'application/json', 'X-Vibeboard': '1' },
       body: JSON.stringify({ clientId: this.clientId, kind, data }),
     }).catch(() => {});
+  }
+
+  // Pakete über der keepalive-Grenze der Browser überstehen das Verlassen der Seite nicht
+  hasLargePacket() {
+    const ops = [...this.sending.flat(), ...this.queue.values(), ...this.extra];
+    return ops.some((o) => JSON.stringify(o).length >= 60000);
   }
 
   get pending() {

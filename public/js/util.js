@@ -292,6 +292,8 @@ async function request(url, { method = 'GET', body, raw } = {}) {
   }
   const r = await fetch(url, opts);
   if (r.status === 401 && !url.startsWith('/api/auth/')) {
+    // Ungespeicherte Arbeit im Tab: nicht wegnavigieren, sondern zur Anmeldung in einem neuen Tab bitten
+    if (authLost && authLost()) throw Object.assign(new Error(T('Nicht angemeldet')), { code: 'auth' });
     location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
     throw Object.assign(new Error(T('Nicht angemeldet')), { code: 'auth' });
   }
@@ -403,6 +405,9 @@ let toastTimer;
 // Name einer Kanban-Spalte aus ihrer Überschrift, ohne führendes Emoji: Der Text ist zugleich der Status der Karten darin
 // und ohne Zusatz nach einem Punkt („In Arbeit · WIP 3“): Sonst änderte ein neues Limit den Status
 export const columnName = (text) => String(text ?? '').replace(/^[^\p{L}\p{N}]+/u, '').split(/\s+·\s+/)[0].trim();
+
+let authLost = null;
+export const onAuthLost = (fn) => (authLost = fn);
 
 export function toast(msg, ms = 2200, action) {
   let t = document.getElementById('toast');

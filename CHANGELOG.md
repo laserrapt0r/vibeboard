@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.11.3] – 2026-11-01
+
+Korrekturen aus einer gezielten Fehlersuche, erster Teil: Datenverlust und Blocker.
+
+### Behoben
+- Rückgängig löscht keine fremde Arbeit mehr: Es setzt nur die Felder zurück, die man selbst geändert hat. In Tabellen bleiben fremde Zeilen und Zellen erhalten; hat man selbst Zeilen geändert und andere haben inzwischen geschrieben, bleibt die Struktur stehen, und ein Hinweis erklärt das.
+- Ausrichten, Verteilen und Rasteranordnung zerstörten mit einem Kommentar in der Auswahl alle Positionen. Gruppen bleiben dabei zusammen, Frames nehmen ihren Inhalt mit.
+- Gesperrtes und Fixiertes ließ sich über Strg+X, Rechtsklick und Papierkorb löschen. Das Kontextmenü bietet bei Gesperrtem weder Löschen noch Duplizieren noch Ebenen an, Farben treffen bei gemischter Auswahl nur Freies, der Radierer verschont gesperrte Striche, ein gesperrter Frame lässt seinen Inhalt nicht wandern.
+- Strg+X auf einen Frame verdoppelte den Inhalt beim Einfügen.
+- Eine eigene Vorlage überschrieb beim Einfügen das Original auf demselben Board; Knickpunkte von Linien wandern jetzt mit.
+- In ein anderes Board kopierte Dateien waren kaputt, Diagramme ohne Tabelle blieben unerklärt: Beides meldet jetzt einen Hinweis. Angedockte Linien lassen sich kopieren. Kopien übernehmen keine Reaktionen.
+- Beim Neuladen gingen große Änderungen ohne Rückfrage verloren.
+- Nach Ablauf der Sitzung leitete die Seite weiter und verwarf offene Änderungen. Jetzt bleibt sie stehen und bittet um Anmeldung in einem neuen Tab.
+- Verließen alle Moderierenden oder der Starter des Privatmodus das Board, blieb es für alle anderen gesperrt: Bearbeitende können beides jetzt beenden, das Banner nennt, wer gestartet hat.
+- Zoomen und Verschieben mit zwei Fingern funktionierte auf Touch-Geräten nicht.
+- Rechtsklick ins Leere zeigt auch bei bestehender Auswahl das Menü der freien Fläche.
+
 ## [4.11.2] – 2026-11-01
 
 ### Behoben
