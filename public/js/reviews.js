@@ -37,9 +37,12 @@ async function send(run, message) {
   }
 }
 
+const ROLE_NAME = { owner: T('Besitzer'), editor: T('Bearbeiten'), commenter: T('Kommentieren'), viewer: T('Ansehen') };
+
 export async function requestReview(el) {
-  const people = (await boardPeople()).filter((p) => !p.guest);
-  const boxes = people.map((p) => ({ p, cb: h('input', { type: 'checkbox', value: p.id }) }));
+  // Entscheiden braucht mindestens das Recht zu kommentieren: Wer nur ansehen darf, ist sichtbar, aber nicht wählbar
+  const people = (await api(`/api/boards/${app.boardId}/people?roles=1`)).people.filter((p) => !p.guest);
+  const boxes = people.map((p) => ({ p, cb: h('input', { type: 'checkbox', value: p.id, disabled: p.role === 'viewer' }) }));
   const note = h('textarea', { rows: 3, maxlength: 2000 });
   const due = h('input', { type: 'date' });
   const err = h('div', { class: 'form-error hidden', role: 'alert' });
@@ -63,7 +66,7 @@ export async function requestReview(el) {
     toggleReviews(true);
   } },
   h('fieldset', { class: 'plain' }, h('legend', {}, T('Prüfende Personen')),
-    h('div', { class: 'check-grid' }, boxes.map((b) => h('label', { class: 'check' }, b.cb, b.p.displayName)))),
+    h('div', { class: 'check-grid' }, boxes.map((b) => h('label', { class: 'check' + (b.cb.disabled ? ' muted' : '') }, b.cb, b.p.displayName, h('span', { class: 'muted small' }, ' · ' + (ROLE_NAME[b.p.role] || '') + (b.cb.disabled ? T(' – kann nicht prüfen') : '')))))),
   h('label', {}, T('Hinweis an die Prüfenden (optional)'), note),
   h('label', {}, T('Bis wann (optional)'), due),
   err,

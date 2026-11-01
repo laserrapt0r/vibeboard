@@ -4,7 +4,7 @@ import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
   debounce, throttle, toast, contrastText, STICKY_COLORS, api, columnName,
 } from './util.js';
-import { shownCells, renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
+import { shownCells, renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, renderOrder, isBackdrop, shapeTextColor, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
   outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions, SHAPE_DEFAULTS, labelBelow, labelOutside, setElementLookup } from './render.js';
 import { THEMES } from './highlight.js';
 import { Sync } from './sync.js';
@@ -156,12 +156,29 @@ export function animateView(target, ms = 280) {
   anim = requestAnimationFrame(step);
 }
 
+// Teil der Fläche, den die festen Leisten frei lassen. Ausgeblendete Leisten (Präsentation) zählen nicht.
+function freeArea(r) {
+  const box = (s) => $(s)?.getClientRects()[0];
+  let left = r.left, top = r.top, right = r.right, bottom = r.bottom;
+  for (const s of ['#topbar', '#topright']) if (box(s)) top = Math.max(top, box(s).bottom);
+  if (box('#bottom-left')) bottom = Math.min(bottom, box('#bottom-left').top);
+  const tools = box('#tools');
+  // Links als Spalte, auf dem Handy unten als Zeile
+  if (tools && tools.height > tools.width) left = Math.max(left, tools.right);
+  else if (tools) bottom = Math.min(bottom, tools.top);
+  const w = right - left, h = bottom - top;
+  if (w < 200 || h < 200) return { x: 0, y: 0, w: r.width, h: r.height };
+  return { x: left - r.left, y: top - r.top, w, h };
+}
+
+// pad 0 steht für „genau diesen Ausschnitt“ (Ansicht einer anderen Person, gemerkte Ansicht): Der richtet sich nicht nach den Leisten
 export function viewFor(rect, pad = 80, maxZ = 2) {
   const r = stageRect();
+  const a = pad ? freeArea(r) : { x: 0, y: 0, w: r.width, h: r.height };
   // Auf kleinen Bildschirmen darf der Rand nicht den ganzen Platz einnehmen
-  pad = Math.min(pad, r.width * 0.12, r.height * 0.12);
-  const z = clamp(Math.min((r.width - pad * 2) / Math.max(rect.w, 1), (r.height - pad * 2) / Math.max(rect.h, 1)), 0.01, maxZ);
-  return { z, x: r.width / 2 - (rect.x + rect.w / 2) * z, y: r.height / 2 - (rect.y + rect.h / 2) * z };
+  pad = Math.min(pad, a.w * 0.12, a.h * 0.12);
+  const z = clamp(Math.min((a.w - pad * 2) / Math.max(rect.w, 1), (a.h - pad * 2) / Math.max(rect.h, 1)), 0.01, maxZ);
+  return { z, x: a.x + a.w / 2 - (rect.x + rect.w / 2) * z, y: a.y + a.h / 2 - (rect.y + rect.h / 2) * z };
 }
 
 export function fitTo(rect, { pad = 80, animate = true, maxZ = 2 } = {}) {
@@ -215,22 +232,131 @@ export function rerenderAll() {
   scheduleRender(true);
 }
 
-// Inhaltsfarben folgen dem Untergrund: Schwarz auf Weiß, auf dem dunklen Board hell, im weißen Frame wieder dunkel.
+// Inhaltsfarben folgen dem Untergrund: Schwarz auf Weiß, auf dem dunklen Board hell, auf weißen Frames, Notizen und Formen wieder dunkel.
 // So bleibt Text für alle lesbar, egal in welchem Design er entstand. Bewusst gewählte Farben bleiben unberührt.
 const AUTO_INK = new Set(['#1a1a1a', '#f1f1f1', '#e6e6e6']);
 
-function inkFor(el, color, frameList) {
+// Raster nach Lage: Die Farbe wird bei jedem Zeichnen gebraucht, das Suchen darf nicht mit der Größe des Boards wachsen
+const GRID_CELL = 1024;
+
+class Grid {
+  cells = new Map();
+  rects = new Map();
+
+  keys(r) {
+    const out = [];
+    // Unsinnig große Elemente lohnen kein Raster, ihnen fehlt dann nur die Farbanpassung
+    if ((r.w / GRID_CELL + 2) * (r.h / GRID_CELL + 2) > 10000) return out;
+    for (let x = Math.floor(r.x / GRID_CELL); x <= Math.floor((r.x + r.w) / GRID_CELL); x++) {
+      for (let y = Math.floor(r.y / GRID_CELL); y <= Math.floor((r.y + r.h) / GRID_CELL); y++) out.push(x + ':' + y);
+    }
+    return out;
+  }
+
+  set(id, r) {
+    const old = this.rects.get(id);
+    if (old) for (const k of this.keys(old)) this.cells.get(k)?.delete(id);
+    this.rects.delete(id);
+    if (!r) return;
+    this.rects.set(id, r);
+    for (const k of this.keys(r)) {
+      if (!this.cells.has(k)) this.cells.set(k, new Set());
+      this.cells.get(k).add(id);
+    }
+  }
+
+  // Alle Einträge, die r treffen
+  find(r) {
+    const out = new Set();
+    for (const k of this.keys(r)) {
+      for (const id of this.cells.get(k) || []) if (rectsIntersect(this.rects.get(id), r)) out.add(id);
+    }
+    return out;
+  }
+}
+
+// Flächen, auf denen Inhalte liegen können, und Elemente mit automatischer Farbe. Beides entsteht beim ersten Bedarf.
+let surfaces = null, inked = null;
+
+const solid = (fill) => (fill && fill !== 'transparent' && fill !== 'none' ? fill : null);
+
+function surfaceFill(el) {
+  if (el.hidden) return null;
+  if (el.type === 'frame') return solid(el.fill) || (el.fill ? null : '#ffffff');
+  if (el.type === 'sticky' || el.type === 'shape') return solid(el.fill);
+  if (el.type === 'table') return el.fill || '#ffffff';
+  return el.type === 'card' ? '#ffffff' : null;
+}
+
+function surfaceEntry(el) {
+  const fill = el && surfaceFill(el);
+  return fill ? { ...bounds(el), fill, z: el.z, backdrop: isBackdrop(el) } : null;
+}
+
+const INKED_TYPES = new Set(['text', 'shape', 'connector', 'pen']);
+
+function inkedEntry(el) {
+  if (!el || !INKED_TYPES.has(el.type)) return null;
+  const b = bounds(el);
+  return { x: b.x + b.w / 2, y: b.y + b.h / 2, w: 0, h: 0 };
+}
+
+function indexSurfaces() {
+  surfaces = new Grid();
+  inked = new Grid();
+  for (const el of app.els.values()) {
+    surfaces.set(el.id, surfaceEntry(el));
+    inked.set(el.id, inkedEntry(el));
+  }
+}
+
+// Geänderte Flächen färben auch fremde Inhalte um: Darunter- oder Wegschieben einer Notiz ändert die Farbe des Texts darüber
+function trackSurfaces() {
+  const changed = [];
+  for (const id of dirty) {
+    const el = app.els.get(id);
+    inked.set(id, inkedEntry(el));
+    const old = surfaces.rects.get(id), now = surfaceEntry(el);
+    if (JSON.stringify(old) === JSON.stringify(now)) continue;
+    surfaces.set(id, now);
+    if (old) changed.push(old);
+    if (now) changed.push(now);
+  }
+  for (const r of changed) for (const id of inked.find(r)) dirty.add(id);
+}
+
+// Füllung der obersten Fläche, die bei (x, y) unter el liegt
+function fillBelow(el, x, y) {
+  if (!surfaces) indexSurfaces();
+  let top = null;
+  for (const id of surfaces.find({ x, y, w: 0, h: 0 })) {
+    const s = app.els.get(id);
+    if (!s || id === el.id || renderOrder(s, el) > 0) continue;
+    if (!top || renderOrder(s, top) > 0) top = s;
+  }
+  return top && surfaces.rects.get(top.id).fill;
+}
+
+function inkFor(el, color) {
   if (!AUTO_INK.has(String(color).toLowerCase())) return color;
-  if (!app.settings.dark) return '#1a1a1a';
-  const b = bounds(el), cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-  const f = frameList.find((r) => r.id !== el.id && cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h);
-  return f ? contrastText(f.fill || '#ffffff') : '#f1f1f1';
+  const b = bounds(el);
+  const fill = fillBelow(el, b.x + b.w / 2, b.y + b.h / 2);
+  return fill ? contrastText(fill) : app.settings.dark ? '#f1f1f1' : '#1a1a1a';
+}
+
+// Frame-Titel stehen über dem Frame, also meist auf dem Board
+const FRAME_TITLE = '#6b6b6b', FRAME_TITLE_DARK = '#a9adb5';
+
+function frameTitleInk(el, x, y) {
+  const fill = fillBelow(el, x, y);
+  if (!fill) return app.settings.dark ? FRAME_TITLE_DARK : FRAME_TITLE;
+  return contrastText(fill) === '#ffffff' ? FRAME_TITLE_DARK : FRAME_TITLE;
 }
 
 function renderEnv() {
-  const frameList = [...app.els.values()].filter((e) => e.type === 'frame');
   return {
-    ink: (el, color) => inkFor(el, color, frameList),
+    ink: inkFor,
+    frameTitle: frameTitleInk,
     get: getEl,
     zoom: app.view.z,
     showAuthor: app.settings.showAuthor,
@@ -251,6 +377,7 @@ function flushRender() {
     for (const el of app.els.values()) {
       if (el.type === 'connector' && ((el.from && el.from.id && dirty.has(el.from.id)) || (el.to && el.to.id && dirty.has(el.to.id)))) dirty.add(el.id);
     }
+    if (surfaces) trackSurfaces();
     const env = renderEnv();
     // Diagramme zeigen die Werte ihrer Tabelle
     for (const el of app.els.values()) if (el.type === 'chart' && dirty.has(el.sourceId)) dirty.add(el.id);
@@ -403,9 +530,10 @@ export function setEl(el, send = true) {
   record(el.id);
   const prev = app.els.get(el.id);
   app.els.set(el.id, el);
-  if (!prev || prev.z !== el.z) orderDirty = true;
+  if (!prev || renderOrder(prev, el)) orderDirty = true;
   if (el.z > maxZ) maxZ = el.z;
   markDirty(el.id);
+  if (!prev && el.type === 'frame' && el.order != null) fillFrameOrder(el.id);
   if (send) app.sync.upsert(el, prev);
 }
 
@@ -423,6 +551,17 @@ export function deleteEl(id) {
   app.sel.delete(id);
   markDirty(id);
   app.sync.remove(id, prev);
+}
+
+// Neu angelegt und unverändert verworfen: Auch der Eintrag im Verlauf verschwindet. Woran andere inzwischen etwas gehängt haben, bleibt.
+export function discardCreated(id) {
+  const used = [...app.els.values()].some((e) => (e.type === 'connector' && (e.from.id === id || e.to.id === id)) || (e.type === 'comment' && e.anchor?.id === id));
+  if (used) return;
+  const i = undoStack.findLastIndex((u) => u.before.size === 1 && u.before.has(id) && !u.before.get(id));
+  if (i >= 0) undoStack.splice(i, 1);
+  deleteEl(id);
+  selectionChanged();
+  app.emit('history');
 }
 
 // Löschen aus der Oberfläche: Gesperrtes bleibt stehen, wie bei Entf
@@ -570,31 +709,54 @@ export function redo() {
 export const canUndo = () => undoStack.length > 0;
 export const canRedo = () => redoStack.length > 0;
 
+// Was andere während einer eigenen, noch offenen Geste ändern, gehört nicht zu ihr: Sonst nähme Rückgängig es mit zurück.
+// Eigene offene Änderungen stecken in beiden Ständen, hier unterscheidet sich also nur Fremdes.
+function absorbForeign(prev, next) {
+  const before = tx?.before.get(next.id);
+  if (!before || !prev) return;
+  for (const k of new Set([...Object.keys(prev), ...Object.keys(next)])) {
+    if (JSON.stringify(prev[k]) === JSON.stringify(next[k])) continue;
+    const same = k === 'cells' && prev.rows === next.rows && prev.cols === next.cols && before.rows === next.rows && before.cols === next.cols;
+    if (same) next.cells.forEach((row, r) => row.forEach((v, c) => {
+      if (v !== prev.cells?.[r]?.[c] && before.cells?.[r]) before.cells[r][c] = v;
+    }));
+    else if (k in next) before[k] = clone(next[k]);
+    else delete before[k];
+  }
+}
+
 export function applyRemoteOp(op) {
   if (op.op === 'upsert') {
     // Eigene Eingaben, die noch unterwegs sind, gehören zum angezeigten Text
     op = { ...op, el: app.sync?.texts ? app.sync.texts.overlay(op.el) : op.el };
     if (op.el.type === 'code') op = { ...op, el: autoHeight(op.el) };
     const prev = app.els.get(op.el.id);
+    absorbForeign(prev, op.el);
     app.els.set(op.el.id, op.el);
-    if (!prev || prev.z !== op.el.z) orderDirty = true;
+    if (!prev || renderOrder(prev, op.el)) orderDirty = true;
     if (op.el.z > maxZ) maxZ = op.el.z;
     markDirty(op.el.id);
     const ed = app.editing;
-    if (ed && ed.id === op.el.id) requestAnimationFrame(layoutEditor);
+    if (ed && ed.id === op.el.id) {
+      // Eine bisher leere Notiz hat jemand im privaten Modus zuerst beschrieben: Sie gehört jetzt dieser Person
+      if (op.el.hidden) closeLostEdit(T('Diese Notiz hat gerade jemand anderes privat beschrieben'));
+      else requestAnimationFrame(layoutEditor);
+    }
   } else if (op.op === 'delete') {
     app.els.delete(op.id);
     if (app.sel.delete(op.id)) selectionChanged();
     markDirty(op.id);
-    if (app.editing && app.editing.id === op.id) {
-      const typed = app.editing.dirty;
-      abortEdit();
-      // Weiter Getipptes darf nicht als Kürzel Werkzeuge umschalten
-      if (typed) {
-        keysPausedUntil = Date.now() + 1500;
-        toast(T('Dieses Element wurde gerade von jemand anderem gelöscht'), 5000);
-      }
-    }
+    if (app.editing && app.editing.id === op.id) closeLostEdit(T('Dieses Element ist nicht mehr verfügbar: Jemand hat es gelöscht oder verborgen'));
+  }
+}
+
+function closeLostEdit(why) {
+  const typed = app.editing.dirty;
+  abortEdit();
+  // Weiter Getipptes darf nicht als Kürzel Werkzeuge umschalten
+  if (typed) {
+    keysPausedUntil = Date.now() + 1500;
+    toast(why, 5000);
   }
 }
 
@@ -745,6 +907,7 @@ export function loadElements(obj) {
   }
   for (const id of [...app.sel]) if (!app.els.has(id)) app.sel.delete(id);
   orderDirty = true;
+  surfaces = null;
 }
 
 /* Vorschaubild für die Board-Übersicht */
@@ -797,10 +960,8 @@ export function makeElement(type, x, y, o = {}) {
     }
     case 'text':
       return autoHeight({ ...base, x: x - 4, y: y - 18, w: 260, h: 38, text: '', fontSize: 24, color: '#1a1a1a', align: 'left', ...o });
-    case 'frame': {
-      const n = [...app.els.values()].filter((e) => e.type === 'frame').length + 1;
-      return { ...base, x: x - 640, y: y - 360, w: 1280, h: 720, title: T('Frame ') + n, fill: '#ffffff', order: n, ...o };
-    }
+    case 'frame':
+      return { ...base, x: x - 640, y: y - 360, w: 1280, h: 720, title: freeFrameTitle(), fill: '#ffffff', order: nextFrameOrder(), ...o };
     case 'card':
       return { ...base, x: x - 150, y: y - 70, w: 300, h: 140, title: T('Neue Karte'), description: '', color: '#4262ff', ...o };
     case 'code':
@@ -893,9 +1054,56 @@ export function frameChildren(frame) {
   return out;
 }
 
+// Reihenfolge der Folien in Liste, Präsentation und Export. Ohne „order“ (Vorlagen) zählt die Lage.
 export function frames() {
   // Themengruppen (Retro) sind keine Folien
-  return [...app.els.values()].filter((e) => e.type === 'frame' && e.kind !== 'topic').sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || a.y - b.y || a.x - b.x);
+  return [...app.els.values()].filter((e) => e.type === 'frame' && e.kind !== 'topic').sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || a.y - b.y || a.x - b.x || (a.id < b.id ? -1 : 1));
+}
+
+// Frames ohne Nummer rutschen vor einen neuen, der eine hat: Dann lieber erst alle durchnummerieren, die Nummer des neuen liegt dahinter
+function nextFrameOrder() {
+  const list = frames();
+  return Math.max(0, ...list.map((f) => f.order ?? 0)) + list.filter((f) => f.order == null).length + 1;
+}
+
+function fillFrameOrder(exceptId) {
+  const list = frames().filter((f) => f.id !== exceptId);
+  let n = Math.max(0, ...list.map((f) => f.order ?? 0));
+  for (const f of list) if (f.order == null) setEl({ ...f, order: ++n });
+}
+
+// Frame-Titel mit Nummer, die noch niemand trägt. start: Wunschnummer
+function freeFrameTitle(start = frames().length + 1, used = new Set(frames().map((f) => f.title))) {
+  let n = start;
+  while (used.has(T`Frame ${n}`)) n++;
+  used.add(T`Frame ${n}`);
+  return T`Frame ${n}`;
+}
+
+// Frame-Kopien stehen direkt hinter ihrem Original und tragen eine eigene Nummer, frei benannte Titel bleiben
+function placeFrameCopies(copies) {
+  const list = frames();
+  const used = new Set(list.map((f) => f.title));
+  for (const c of copies) {
+    const src = list.findIndex((f) => f.id === c._src);
+    list.splice(src < 0 ? list.length : src + 1, 0, c);
+    const m = /\d+/.exec(String(c.title));
+    if (m && c.title === T`Frame ${m[0]}`) c.title = freeFrameTitle(Number(m[0]), used);
+  }
+  list.forEach((f, i) => {
+    if (copies.includes(f)) f.order = i + 1;
+    else if (f.order !== i + 1) setEl({ ...f, order: i + 1 });
+  });
+}
+
+// Rechts neben dem letzten Frame, ohne einen anderen zu überdecken
+export function spotForNewFrame() {
+  const list = frames(), last = list.at(-1);
+  if (!last) return viewCenter();
+  const GAP = 80, w = 1280, h = 720;
+  const spot = { x: last.x + last.w + GAP, y: last.y, w, h };
+  for (let hit; (hit = list.find((f) => rectsIntersect(f, spot)));) spot.x = hit.x + hit.w + GAP;
+  return { x: spot.x + w / 2, y: spot.y + h / 2 };
 }
 
 function elementAt(wx, wy, exclude, pad = 0) {
@@ -1043,8 +1251,11 @@ function renderOverlay() {
       if (!labelAt || b.y < labelAt.y) labelAt = b;
     }
     // Namensschild an der Auswahl bzw. am gerade bearbeiteten Element
-    const ed = p.editing && getEl(p.editing);
-    const active = !ed && p.busy && p.busy.ids.map(getEl).find(Boolean);
+    // Anonyme Beiträge: Das Schild verriete, wer schreibt, auch wenn der Modus erst während des Tippens wechselt
+    const edited = p.editing && getEl(p.editing);
+    const secret = !!edited && (edited.anon || edited.priv === 'anon');
+    const ed = edited && !secret ? edited : null;
+    const active = !ed && !secret && p.busy && p.busy.ids.map(getEl).find(Boolean);
     if (ed || active) labelAt = bounds(ed || active);
     if (labelAt) {
       const doing = ed ? T(' schreibt …') : active ? { move: T(' verschiebt …'), resize: T(' ändert die Größe …'), card: T(' bearbeitet die Karte …') }[p.busy.what] : '';
@@ -1252,21 +1463,21 @@ function editorGeometry(el, ed = app.editing, text = editor.value) {
       lay = textLayout(el, box);
       align = el.align || 'center';
       valign = labelBelow(el.shape) ? 'top' : el.valign || 'middle';
-      color = labelOutside(el.shape) ? renderEnv().ink(el, el.textColor || '#1a1a1a') : el.textColor || contrastText(el.fill === 'transparent' ? '#ffffff' : el.fill);
+      color = shapeTextColor(el, renderEnv());
       break;
     case 'text':
       box = { x: el.x + 4, y: el.y + 4, w: el.w - 8, h: Math.max(el.h - 8, 20) };
       lay = textLayout(el, box);
       align = el.align || 'left';
       valign = 'top';
-      color = el.color || '#1a1a1a';
+      color = inkFor(el, el.color || '#1a1a1a');
       break;
     case 'frame': {
       const ts = Math.max(14, Math.min(48, Math.min(el.w, el.h) / 45));
       box = { x: el.x, y: el.y - ts * 1.6, w: Math.max(240, el.w / 2), h: ts * 1.5 };
       lay = { size: ts, lines: [el.title || ''], bold: true };
       align = 'left';
-      color = '#6b6b6b';
+      color = frameTitleInk(el, el.x + 2, el.y - ts * 0.5);
       break;
     }
     case 'connector': {
@@ -1431,6 +1642,8 @@ function onRemoteText(ops, before) {
   }
   const { selectionStart, selectionEnd } = editor;
   writeEditor(ed.session.value, TextOps.mapPos(selectionStart, ops), TextOps.mapPos(selectionEnd, ops));
+  const el = getEl(ed.id);
+  if (el?.type === 'text') showEditedText(ed, el, ed.session.value); // Die Höhe richtet sich nach dem Text
   app.emit('textmoved', { id: ed.id, field: ed.field, cell: ed.cell, ops });
   requestAnimationFrame(layoutEditor);
 }
@@ -1505,7 +1718,11 @@ export function finishEdit() {
   // Offene Silbenkomposition gehört zum Text: Sonst wäre das Wort weg, bei einer neuen Notiz sogar die ganze Notiz
   endComposition(ed);
   const el = getEl(ed.id);
-  if (el && ((el.type === 'text' && !el.locked) || ed.drop) && !String(el.text || '').trim()) deleteEls([el.id]);
+  if (el && ((el.type === 'text' && !el.locked) || ed.drop) && !String(el.text || '').trim()) {
+    deleteEls([el.id]);
+    // Für den verworfenen Knoten beiseitegeschobene Äste kehren zurück
+    for (const [id, y] of ed.pushed || []) if (getEl(id)) setEl({ ...getEl(id), y });
+  }
   cancelEditUI();
   commit();
   if (ed.created) commit();
@@ -1525,9 +1742,9 @@ export function abortEdit() {
 // hinterlässt keinen Eintrag im Verlauf
 function createAndEdit(id, make, drop = true) {
   begin();
-  make();
+  const pushed = make();
   startEdit(id, { isNew: true, drop });
-  if (app.editing?.id === id) app.editing.created = true;
+  if (app.editing?.id === id) Object.assign(app.editing, { created: true, pushed });
   else commit();
 }
 
@@ -1566,6 +1783,49 @@ function mindChildren(node) {
   return out;
 }
 
+// Ein Ast mit allen Unterknoten
+function mindBranch(node) {
+  const out = new Map([[node.id, node]]);
+  for (const n of out.values()) for (const k of mindChildren(n)) out.set(k.id, k);
+  return [...out.values()];
+}
+
+const MIND_GAP = 24;
+
+// Wie weit b nach unten muss, damit kein Knoten mehr auf einem aus a liegt
+function mindClash(a, b) {
+  let need = 0;
+  for (const p of a) for (const q of b) if (rectsIntersect(p, q)) need = Math.max(need, p.y + p.h + MIND_GAP - q.y);
+  return need;
+}
+
+// Der neue Knoten macht seinen Ast größer: Stößt der an Nachbaräste, rücken die tieferen nach unten, Ebene für Ebene bis zur
+// Wurzel. Nur was im Weg liegt, bewegt sich; alles andere bleibt, wo es hingezogen wurde. Liefert die alten Lagen.
+function mindMakeRoom(node) {
+  const pushed = new Map();
+  const seen = new Set([node.id]);
+  for (let cur = node, up = mindParent(cur); up && !seen.has(up.id); cur = up, up = mindParent(cur)) {
+    seen.add(up.id);
+    const sibs = mindChildren(up).sort((a, b) => a.y - b.y);
+    const changed = new Set([cur.id]);
+    sibs.forEach((sib, j) => {
+      let need = 0;
+      for (let i = 0; i < j; i++) {
+        if (!changed.has(sibs[i].id) && !changed.has(sib.id)) continue;
+        need = Math.max(need, mindClash(mindBranch(getEl(sibs[i].id)), mindBranch(getEl(sib.id))));
+      }
+      if (need <= 0 || isLocked(sib)) return;
+      for (const n of mindBranch(getEl(sib.id))) {
+        if (isLocked(n)) continue;
+        if (!pushed.has(n.id)) pushed.set(n.id, n.y);
+        setEl({ ...n, y: n.y + need });
+      }
+      changed.add(sib.id);
+    });
+  }
+  return pushed;
+}
+
 export function mindAddChild(node) {
   const parent = mindParent(node);
   const kids = mindChildren(node);
@@ -1585,12 +1845,15 @@ export function mindAddChild(node) {
   const child = makeElement('shape', 0, 0, {
     x, y, w, h, mind: true, shape: isRoot ? 'roundrect' : 'pill',
     fill: isRoot ? color : '#ffffff', stroke: isRoot ? 'none' : color, strokeWidth: 2,
-    textColor: isRoot ? '#ffffff' : undefined, bold: isRoot, fontSize: isRoot ? 20 : 16, text: '',
+    bold: isRoot, fontSize: isRoot ? 20 : 16, text: '',
   });
   const conn = makeElement('connector', 0, 0, { from: { id: node.id }, to: { id: child.id }, stroke: color, strokeWidth: isRoot ? 4 : 2, routing: 'curve', arrowEnd: false, mind: true });
   createAndEdit(child.id, () => {
     setEl(child);
     setEl(conn);
+    const pushed = mindMakeRoom(child);
+    reveal(getEl(child.id));
+    return pushed;
   });
 }
 
@@ -1603,8 +1866,8 @@ export function mindAddSibling(node) {
 // Nächstes Objekt gleicher Art daneben (Tab beim Tippen). Bleibt im selben Bereich: Liegt das Objekt in einer Spalte oder einem
 // Frame, geht es erst daneben und dann darunter weiter. Ist die Spalte voll, läuft es unten über: In die Nachbarspalte zu
 // rutschen ergäbe eine falsche Kategorie.
-const NEXT_GAP = 20;
-const NEXT_DROP = ['id', 'text', 'locked', 'modLock', 'groupId', 'priv', 'privName', 'anon', 'reactions', 'votes', 'mind', 'link', 'order', 'kind', 'statusCol', 'tags', 'ext', 'fileRef', 'approval'];
+const NEXT_GAP = 20, NEXT_COLS = 5, NEXT_ROWS = 40;
+const NEXT_DROP = ['id', 'text', 'locked', 'modLock', 'groupId', 'priv', 'privName', 'anon', 'reactions', 'votes', 'mind', 'link', 'order', 'kind', 'backdrop', 'statusCol', 'tags', 'ext', 'fileRef', 'approval'];
 
 function freeSpotNextTo(el) {
   const c = { x: el.x + el.w / 2, y: el.y + el.h / 2 };
@@ -1618,15 +1881,42 @@ function freeSpotNextTo(el) {
   const others = [...app.els.values()].filter((e) => e.id !== el.id && e.type !== 'connector' && !e.hidden && !areas.includes(e)).map(bounds);
   const open = (r) => !others.some((b) => rectsIntersect(b, r));
   const step = { x: el.w + NEXT_GAP, y: el.h + NEXT_GAP };
-  for (const fits of [inArea, inWidth]) {
-    for (let i = 1; i < 40; i++) {
-      for (const [dx, dy] of [[i, 0], [0, i], [-i, i]]) {
-        const r = { x: el.x + dx * step.x, y: el.y + dy * step.y, w: el.w, h: el.h };
+  // Spalten eines gedachten Rasters durch das Objekt. Ohne Bereich beginnt die Reihe bei ihrem ersten Objekt und bricht um.
+  let left = el.x, cols = NEXT_COLS;
+  if (area) {
+    left -= Math.floor((el.x - area.x) / step.x) * step.x;
+    cols = Math.max(1, Math.floor((area.x + area.w - left + NEXT_GAP) / step.x));
+  } else {
+    while (others.some((b) => Math.abs(b.y - el.y) < 1 && Math.abs(b.x - (left - step.x)) < 1)) left -= step.x;
+  }
+  const col = Math.round((el.x - left) / step.x);
+  const spot = (c, row) => ({ x: left + c * step.x, y: el.y + row * step.y, w: el.w, h: el.h });
+  const scan = (fits, firstRow, lastRow, from, to) => {
+    for (let row = firstRow; row <= lastRow; row++) {
+      for (let c = from(row); c < to(row); c++) {
+        const r = spot(c, row);
         if (fits(r) && open(r)) return r;
       }
     }
-  }
-  return { x: el.x, y: Math.max(...others.filter((b) => b.x < el.x + el.w && el.x < b.x + b.w).map((b) => b.y + b.h), el.y + el.h) + NEXT_GAP, w: el.w, h: el.h };
+    return null;
+  };
+  const rowsDown = area ? Math.max(0, Math.floor((area.y + area.h - el.y - el.h) / step.y)) : NEXT_ROWS;
+  const rowsUp = area ? Math.floor((el.y - area.y) / step.y) : 0;
+  // Erst der Rest der eigenen Zeile, dann darunter von links. Übersprungene Lücken weiter oben kommen vor dem Überlauf dran.
+  return scan(inArea, 0, rowsDown, (row) => (row ? 0 : col + 1), () => cols)
+    || scan(inArea, -rowsUp, 0, () => 0, (row) => (row ? cols : Math.min(col, cols)))
+    || scan(inWidth, 0, NEXT_ROWS, (row) => (row ? 0 : col + 1), () => cols)
+    || { x: el.x, y: Math.max(...others.filter((b) => b.x < el.x + el.w && el.x < b.x + b.w).map((b) => b.y + b.h), el.y + el.h) + NEXT_GAP, w: el.w, h: el.h };
+}
+
+// Neues soll ganz im Blick liegen: Die Ansicht rückt mit, ohne den Zoom zu ändern
+export function reveal(r) {
+  const a = freeArea(stageRect()), z = app.view.z;
+  const v = { x: (a.x - app.view.x) / z, y: (a.y - app.view.y) / z, w: a.w / z, h: a.h / z };
+  if (rectContains(v, r)) return;
+  app.view.x -= (r.x + r.w / 2 - (v.x + v.w / 2)) * z;
+  app.view.y -= (r.y + r.h / 2 - (v.y + v.h / 2)) * z;
+  applyView();
 }
 
 export function addNextTo(el) {
@@ -1636,12 +1926,7 @@ export function addNextTo(el) {
   createAndEdit(n.id, () => {
     setEl(n);
     setSelection([n.id]);
-    const v = visibleRect();
-    if (spot.x < v.x || spot.y < v.y || spot.x + spot.w > v.x + v.w || spot.y + spot.h > v.y + v.h) {
-      app.view.x -= (spot.x + spot.w / 2 - (v.x + v.w / 2)) * app.view.z;
-      app.view.y -= (spot.y + spot.h / 2 - (v.y + v.h / 2)) * app.view.z;
-      applyView();
-    }
+    reveal(spot);
   });
 }
 
@@ -1669,19 +1954,55 @@ function createAtCenter() {
     newComment(c);
     return;
   }
-  const el = makeElement(app.tool, snapV(c.x), snapV(c.y));
+  let el = makeElement(app.tool, snapV(c.x), snapV(c.y));
+  const off = twinShift([el]);
+  el = inColumn(translated(el, off, off));
   act(() => setEl(el));
   if (app.tool === 'shape') rememberShape(el.shape);
   afterCreate();
   setSelection([el.id]);
   if (['sticky', 'shape', 'text', 'code'].includes(el.type)) startEdit(el.id, { isNew: true });
   else if (el.type === 'frame') startEdit(el.id);
-  else if (el.type === 'card') app.emit('editCard', el.id);
+  else if (el.type === 'card') app.emit('editCard', el.id, { isNew: true });
+}
+
+// Liegt Neues genau auf etwas Gleichgroßem, sähe man es nicht: Versatz in Rastermaßen, der das vermeidet
+function twinShift(list) {
+  const get = (id) => list.find((x) => x.id === id) || getEl(id);
+  const key = (b, d = 0) => [b.x + d, b.y + d, b.w, b.h].map(Math.round).join();
+  const taken = new Set([...app.els.values()].map((e) => key(bounds(e))));
+  const rects = list.map((e) => elBounds(e, get)).filter(Boolean);
+  const g = gridSize();
+  let d = 0;
+  while (d < 200 * g && rects.some((r) => taken.has(key(r, d)))) d += g;
+  return d;
+}
+
+// Freier Platz für etwas Neues ohne Zielpunkt: die Mitte der Ansicht, sonst neben oder unter dem Inhalt. Liefert dessen Mittelpunkt.
+export function freeCenter(w, h) {
+  const c = viewCenter();
+  const existing = [...app.els.values()].map(bounds);
+  if (!existing.some((r) => rectsIntersect(r, { x: c.x - w / 2, y: c.y - h / 2, w, h }))) return c;
+  const all = unionRect(existing);
+  // rechts daneben oder darunter – je nachdem, was das Board kompakter hält
+  return all.w > all.h * 1.6 ? { x: all.x + w / 2, y: all.y + all.h + 200 + h / 2 } : { x: all.x + all.w + 200 + w / 2, y: all.y + h / 2 };
 }
 
 const afterCreate = () => {
   if (!app.toolHeld) setTool('select');
 };
+
+// Wer nicht bearbeiten darf, bekäme beim Versuch sonst keine Antwort. Einmal je Seite genügt.
+let roleHinted = false;
+function explainReadOnly() {
+  if (!app.baseViewOnly) return toast(T('Das Bearbeiten ist gerade gesperrt'));
+  if (roleHinted) return;
+  roleHinted = true;
+  const text = app.guest
+    ? (app.canComment ? T('Als Gast kannst du dieses Board ansehen und kommentieren, aber nicht bearbeiten. Kommentar: Taste C.') : T('Als Gast kannst du dieses Board nur ansehen. Abstimmen und Reagieren gehen trotzdem.'))
+    : (app.canComment ? T('Du kannst dieses Board ansehen und kommentieren, aber nicht bearbeiten. Kommentar: Taste C.') : T('Du kannst dieses Board nur ansehen. Abstimmen und Reagieren gehen trotzdem.'));
+  toast(text, 6000);
+}
 
 export function setTool(t) {
   if (app.viewOnly && !['select', 'hand', 'laser'].includes(t) && !(t === 'comment' && app.canComment)) return;
@@ -1736,6 +2057,24 @@ function snapV(v) {
   return app.settings.snap ? Math.round(v / gridSize()) * gridSize() : v;
 }
 
+// Mit dem Finger zählt die Stimme erst beim Loslassen: Langes Drücken öffnet das Menü, Wischen ist keine Stimme
+const TAP_MS = 500;
+let tapVote = null;
+
+function castVote(e, id) {
+  const delta = e.altKey || e.shiftKey ? -1 : 1;
+  if (e.pointerType === 'touch') tapVote = { id, delta, x: e.clientX, y: e.clientY, at: Date.now(), pointer: e.pointerId };
+  else app.emit('vote', id, delta);
+}
+
+window.addEventListener('pointerup', (e) => {
+  const t = tapVote;
+  if (!t || t.pointer !== e.pointerId) return;
+  tapVote = null;
+  if (Date.now() - t.at < TAP_MS && Math.hypot(e.clientX - t.x, e.clientY - t.y) < 10) app.emit('vote', t.id, t.delta);
+});
+['pointercancel', 'contextmenu'].forEach((k) => window.addEventListener(k, () => (tapVote = null)));
+
 stage.addEventListener('pointerdown', onDown);
 // Formel: Der Klick auf eine Zelle fügt einen Bezug ein und darf der Eingabe den Fokus nicht nehmen
 stage.addEventListener('mousedown', (e) => {
@@ -1770,7 +2109,7 @@ function onDown(e) {
   if (app.editing) finishEdit();
   app.emit('pointerdown', e);
   const w = toWorld(e.clientX, e.clientY);
-  const start = { cx: e.clientX, cy: e.clientY, w };
+  const start = { cx: e.clientX, cy: e.clientY, w, z: app.view.z };
   if (e.button === 2) return;
 
   if (e.button === 1 || spaceDown || app.tool === 'hand') {
@@ -1792,16 +2131,21 @@ function onDown(e) {
 
   // Abstimmungsmodus
   const v = app.session.voting;
+  const minus = e.target.closest && e.target.closest('[data-unvote]');
+  if (minus) {
+    app.emit('vote', minus.dataset.unvote, -1);
+    return;
+  }
   // Abstimmung über Themengruppen (Retro): ein Klick irgendwo in die Gruppe zählt für das Thema
   if (v && v.active && app.voteMode && app.tool === 'select' && v.target === 'topics') {
     const topic = [...app.els.values()].filter((f) => f.type === 'frame' && f.kind === 'topic' && w.x >= f.x && w.x <= f.x + f.w && w.y >= f.y && w.y <= f.y + f.h)
       .sort((a, b) => a.w * a.h - b.w * b.h)[0];
     if (topic) {
-      app.emit('vote', topic.id, e.altKey || e.shiftKey ? -1 : 1);
+      castVote(e, topic.id);
       return;
     }
   } else if (v && v.active && app.voteMode && app.tool === 'select' && hit && !['frame', 'connector', 'comment', 'pen'].includes(hit.el.type)) {
-    app.emit('vote', hit.el.id, e.altKey || e.shiftKey ? -1 : 1);
+    castVote(e, hit.el.id);
     return;
   }
 
@@ -1932,7 +2276,7 @@ function onDown(e) {
       drag = { mode: 'create', start, type: app.tool };
       return;
     case 'mindmap': {
-      const el = makeElement('shape', w.x, w.y, { x: w.x - 130, y: w.y - 45, w: 260, h: 90, shape: 'pill', fill: '#1a1a1a', stroke: 'none', strokeWidth: 0, textColor: '#ffffff', bold: true, fontSize: 22, text: '', mind: true });
+      const el = makeElement('shape', w.x, w.y, { x: w.x - 130, y: w.y - 45, w: 260, h: 90, shape: 'pill', fill: '#1a1a1a', stroke: 'none', strokeWidth: 0, bold: true, fontSize: 22, text: '', mind: true });
       afterCreate();
       createAndEdit(el.id, () => setEl(el));
       return;
@@ -2087,7 +2431,8 @@ function onMove(e) {
         drag.fromColumns = columnsOfSelection();
       }
       drag.moved = true;
-      let dx = w.x - s.w.x, dy = w.y - s.w.y;
+      // Aus der Mausbewegung, nicht aus Weltpunkten: Führt die Moderation die Ansicht, wechselt sie mitten in der Geste
+      let dx = dxs / s.z, dy = dys / s.z;
       // Umschalt: nur waagerecht oder senkrecht verschieben
       if (e.shiftKey) {
         if (Math.abs(dx) > Math.abs(dy)) dy = 0;
@@ -2492,10 +2837,18 @@ function columnAt(el) {
   return zone ? columnNameOf(zone) : '';
 }
 
+// Neue Karten übernehmen den Status der Spalte, in der sie entstehen
+function inColumn(el) {
+  const status = el.type === 'card' ? columnAt(el) : '';
+  return status ? { ...el, status } : el;
+}
+
+const columnHead = (zone) => [...app.els.values()]
+  .filter((e) => e.id !== zone.id && e.type === 'shape' && String(e.text ?? '').trim() && e.x >= zone.x - 1 && e.x + e.w <= zone.x + zone.w + 1 && e.y >= zone.y - 1 && e.y < zone.y + 100)
+  .sort((a, b) => a.y - b.y)[0];
+
 function columnNameOf(zone) {
-  const head = [...app.els.values()]
-    .filter((e) => e.id !== zone.id && e.type === 'shape' && String(e.text ?? '').trim() && e.x >= zone.x - 1 && e.x + e.w <= zone.x + zone.w + 1 && e.y >= zone.y - 1 && e.y < zone.y + 100)
-    .sort((a, b) => a.y - b.y)[0];
+  const head = columnHead(zone);
   return head ? columnName(head.text) : '';
 }
 
@@ -2512,9 +2865,49 @@ export function cardToColumn(id, status) {
   if (!card || isLocked(card)) return;
   const zone = [...app.els.values()].find((z) => z.statusCol && !z.hidden && columnNameOf(z) === status);
   if (!zone || columnAt(card) === status) return;
-  const inside = [...app.els.values()].filter((e) => e.type === 'card' && e.id !== id && columnAt(e) === status);
+  // Auch was unter einer Spalte liegt, die nicht wachsen durfte, gehört dazu
+  const below = (e) => e.x + e.w / 2 >= zone.x && e.x + e.w / 2 <= zone.x + zone.w && e.y >= zone.y;
+  const inside = [...app.els.values()].filter((e) => e.type === 'card' && e.id !== id && below(e) && (columnAt(e) === status || e.status === status));
   const y = Math.max(zone.y + 90, ...inside.map((e) => e.y + e.h + 16));
-  setEl({ ...card, x: zone.x + (zone.w - card.w) / 2, y: Math.min(y, zone.y + zone.h - card.h) });
+  setEl({ ...card, x: zone.x + (zone.w - card.w) / 2, y });
+  growColumn(zone, y + card.h + 16);
+}
+
+const framesAround = (el) => [...app.els.values()].filter((f) => f.type === 'frame' && !f.hidden && !f.modLock && rectContains(bounds(f), bounds(el)));
+
+// Die volle Spalte wird länger, ihr Frame mit: Sonst rutschte sie aus ihm heraus und bliebe beim Verschieben zurück
+function growColumn(zone, bottom) {
+  if (bottom <= zone.y + zone.h || zone.modLock) return;
+  const around = framesAround(zone);
+  setEl({ ...zone, h: bottom - zone.y });
+  for (const f of around) if (bottom + COLUMN_MARGIN > f.y + f.h) setEl({ ...f, h: bottom + COLUMN_MARGIN - f.y });
+}
+
+const COLUMN_MARGIN = 40;
+const COLUMN_DROP = ['modLock', 'groupId', 'priv', 'privName', 'anon', 'reactions', 'votes', 'link', 'tags', 'ext', 'approval'];
+
+// Neue Spalte rechts neben der letzten, nach deren Vorbild. Ohne Spalten auf dem Board: false.
+export function addBoardColumn(name) {
+  const zones = [...app.els.values()].filter((z) => z.statusCol && !z.hidden && columnNameOf(z)).sort((a, b) => a.x - b.x);
+  const last = zones.at(-1);
+  if (!last || app.viewOnly) return false;
+  const before = zones.at(-2);
+  const gap = before ? Math.max(0, last.x - before.x - before.w) : NEXT_GAP;
+  const dx = last.w + gap;
+  const copy = (o, extra = {}) => {
+    // Spaltenflächen älterer Boards haben noch kein backdrop: Die Kopie soll dieselbe Ebene behalten
+    const n = { ...clone(o), id: uid(), z: nextZ(), x: o.x + dx, author: app.user.name || '', backdrop: isBackdrop(o), ...extra };
+    for (const k of COLUMN_DROP) delete n[k];
+    return n;
+  };
+  const around = framesAround(last);
+  act(() => {
+    setEl(copy(last));
+    setEl(copy(columnHead(last), { text: name }));
+    const right = last.x + dx + last.w + COLUMN_MARGIN;
+    for (const f of around) if (right > f.x + f.w) setEl({ ...f, w: right - f.x });
+  });
+  return true;
 }
 
 function applyColumnStatus(from) {
@@ -2598,6 +2991,7 @@ function onUp(e) {
       } else {
         el = makeElement(d.type, snapV(d.start.w.x), snapV(d.start.w.y));
       }
+      el = inColumn(el);
       if (d.type === 'shape') rememberShape(el.shape);
       afterCreate();
       if (['sticky', 'shape', 'text', 'code'].includes(el.type)) {
@@ -2610,7 +3004,7 @@ function onUp(e) {
       act(() => setEl(el));
       setSelection([el.id]);
       if (el.type === 'frame') startEdit(el.id);
-      else if (el.type === 'card') app.emit('editCard', el.id);
+      else if (el.type === 'card') app.emit('editCard', el.id, { isNew: true });
       break;
     }
     case 'connect': {
@@ -2707,7 +3101,7 @@ function quickConnect(d, w, target) {
     return;
   }
   // neues Element in Pfeilrichtung (Klick) oder am Ablagepunkt (Ziehen)
-  const copy = { ...clone(src), id: uid(), z: nextZ(), text: '', title: src.type === 'card' ? T('Neue Karte') : src.title, description: '', groupId: undefined, author: app.user.name || '' };
+  let copy = { ...clone(src), id: uid(), z: nextZ(), text: '', title: src.type === 'card' ? T('Neue Karte') : src.title, description: '', groupId: undefined, author: app.user.name || '' };
   delete copy.src;
   if (src.type === 'image') {
     Object.assign(copy, { type: 'shape', shape: 'roundrect', fill: '#ffffff', stroke: '#1a1a1a', strokeWidth: 2, fontSize: 18 });
@@ -2725,13 +3119,20 @@ function quickConnect(d, w, target) {
     if (d.side === 'top') copy.y = src.y - gap - copy.h, copy.x = src.x + (src.w - copy.w) / 2;
   }
   const toSide = d.moved ? undefined : OPPOSITE[d.side];
+  copy = inColumn(copy);
   const c = makeElement('connector', 0, 0, { from: { id: src.id, side: d.side }, to: { id: copy.id, side: toSide } });
-  act(() => {
+  const make = () => {
     setEl(copy);
     setEl(c);
-  });
-  if (copy.type === 'card') setSelection([copy.id]);
-  else startEdit(copy.id, { isNew: true });
+    reveal(bounds(copy));
+  };
+  if (copy.type === 'card') {
+    act(make);
+    setSelection([copy.id]);
+    return;
+  }
+  // Wie bei Tab: Eine leer verlassene Notiz verschwindet samt Linie
+  createAndEdit(copy.id, make, ['sticky', 'shape', 'text'].includes(copy.type));
 }
 
 /* Doppelklick: bearbeiten bzw. neue Notiz */
@@ -2739,8 +3140,11 @@ stage.addEventListener('dblclick', (e) => {
   // Dateianhänge öffnen auch Betrachter (Vorschau bzw. Download)
   const fh = hitInfo(e.target);
   if (fh && fh.el.type === 'file') return app.emit('openFile', fh.el.id);
-  if (app.viewOnly || e.target === editor) return;
-  if (stage.classList.contains('voting')) return;
+  if (e.target === editor || stage.classList.contains('voting')) return;
+  if (app.viewOnly) {
+    if (fh?.el.type !== 'comment') explainReadOnly();
+    return;
+  }
   // Doppelklick auf einen Knickpunkt entfernt ihn
   const wh = e.target.closest && e.target.closest('[data-handle^="wp-"]');
   if (wh) {
@@ -2813,7 +3217,15 @@ export function collectForCopy(ids) {
   for (const el of app.els.values()) {
     if (el.type === 'connector' && el.from.id && el.to.id && set.has(el.from.id) && set.has(el.to.id)) set.add(el.id);
   }
-  return [...set].map(getEl).filter((e) => e && !e.hidden).map(clone);
+  return [...set].map(getEl).filter((e) => e && !e.hidden).map(clone).map((e) => freeLooseEnds(e, set));
+}
+
+// Ein Verbinder, dessen Ziel nicht mitkommt, behält die Stelle als freies Ende. Das geht nur hier: Im anderen Board fehlt die Lage.
+function freeLooseEnds(el, kept) {
+  if (el.type !== 'connector') return el;
+  const poly = connectorGeom(el, getEl)?.poly;
+  const end = (e, p) => (e.id && !kept.has(e.id) && p ? { x: p.x, y: p.y } : e);
+  return { ...el, from: end(el.from, poly?.[0]), to: end(el.to, poly?.at(-1)) };
 }
 
 export function duplicateEls(list, dx = 20, dy = 20, select = true) {
@@ -2852,7 +3264,10 @@ export function duplicateEls(list, dx = 20, dy = 20, select = true) {
       return n;
     })
     .filter(Boolean);
-  act(() => out.forEach((n) => setEl(n)));
+  act(() => {
+    placeFrameCopies(out.filter((n) => n.type === 'frame' && n.kind !== 'topic'));
+    out.forEach((n) => setEl(n));
+  });
   if (select) {
     out.forEach((c) => delete c._src);
     setSelection(out.map((n) => n.id));
@@ -2867,6 +3282,14 @@ function clipped(data) {
   const kept = list.filter((e) => e.type !== 'file');
   if (kept.length < list.length) toast(T('Dateien lassen sich nicht in andere Boards kopieren: bitte dort neu hochladen'), 5000);
   const ids = new Set(kept.map((e) => e.id));
+  // Linien an einer solchen Datei bleiben mit freiem Ende erhalten
+  const byId = new Map(list.map((e) => [e.id, e]));
+  for (const c of kept) {
+    if (c.type !== 'connector' || [c.from, c.to].every((e) => !e.id || ids.has(e.id))) continue;
+    const poly = connectorGeom(c, (id) => byId.get(id))?.poly;
+    if (c.from.id && !ids.has(c.from.id) && poly) c.from = { x: poly[0].x, y: poly[0].y };
+    if (c.to.id && !ids.has(c.to.id) && poly) c.to = { x: poly.at(-1).x, y: poly.at(-1).y };
+  }
   if (kept.some((e) => e.type === 'chart' && !ids.has(e.sourceId))) toast(T('Diagramm ohne Tabelle kopiert: Tabelle bitte mitkopieren'), 5000);
   return kept;
 }
@@ -2879,7 +3302,8 @@ export function pasteElements(list, at) {
     dx = at.x - (b.x + b.w / 2);
     dy = at.y - (b.y + b.h / 2);
   }
-  duplicateEls(list, dx, dy, true);
+  const off = twinShift(list.map((e) => translated(e, dx, dy)));
+  duplicateEls(list, dx + off, dy + off, true);
 }
 
 /* ================================================================== */
@@ -3359,15 +3783,21 @@ export function clusterByColor() {
   toast(T`${groups.size} Farb-Cluster gebildet`);
 }
 
+// Gesperrtes behält seine Ebene. Eine bewusst verschobene Vorlagenfläche ist ab dann ein normales Element.
+function restack(pick) {
+  const sel = selectedEls();
+  const free = sel.filter((e) => !isLocked(e));
+  if (sel.length && !free.length) return toast(T('Gesperrte Elemente bleiben unverändert'));
+  act(() => pick(free).forEach(([el, z]) => setEl({ ...el, z, backdrop: false })));
+}
+
 export function bringToFront() {
-  const sel = selectedEls().sort((a, b) => a.z - b.z);
-  act(() => sel.forEach((el) => setEl({ ...el, z: nextZ() })));
+  restack((free) => free.sort((a, b) => a.z - b.z).map((el) => [el, nextZ()]));
 }
 
 export function sendToBack() {
-  const sel = selectedEls().sort((a, b) => b.z - a.z);
   let minZ = Math.min(0, ...[...app.els.values()].map((e) => e.z || 0));
-  act(() => sel.forEach((el) => setEl({ ...el, z: --minZ })));
+  restack((free) => free.sort((a, b) => b.z - a.z).map((el) => [el, --minZ]));
 }
 
 export function groupSel() {
@@ -3407,7 +3837,7 @@ export function deleteFramesWithContent() {
     return el && el.type !== 'comment' && !(el.modLock && !app.isFacilitator);
   });
   deleteEls(gone);
-  toast(T`${gone.length} Elemente gelöscht – Strg+Z macht das rückgängig`, 3500);
+  toast(gone.length === 1 ? T('1 Element gelöscht') : T`${gone.length} Elemente gelöscht`, 8000, { label: T('Rückgängig'), onClick: undo });
 }
 
 export function toggleLock() {
@@ -3587,6 +4017,7 @@ window.addEventListener('keydown', (e) => {
   if (mod) return;
   if (app.viewOnly) {
     if (key === 'v' || key === 'h' || key === 'x' || (key === 'c' && app.canComment)) setTool(TOOL_KEYS[key]);
+    else if (TOOL_KEYS[key] || key === 'r' || key === 'o') explainReadOnly();
     return;
   }
   // Zellauswahl in einer Tabelle: Pfeiltasten wandern, Enter bearbeitet, Entf leert, Tippen überschreibt
@@ -3861,14 +4292,16 @@ function rectContainsPoint(r, p) {
 
 export function pasteText(text, at) {
   if (/^https?:\/\/\S+$/.test(text.trim())) {
-    const el = makeElement('text', at.x, at.y, { text: text.trim(), color: '#4262ff', fontSize: 18, w: 420 });
-    addElements([autoHeight(el)]);
+    const el = autoHeight(makeElement('text', at.x, at.y, { text: text.trim(), color: '#4262ff', fontSize: 18, w: 420 }));
+    const off = twinShift([el]);
+    addElements([translated(el, off, off)]);
     return;
   }
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   if (lines.length <= 1) {
     const el = makeElement('sticky', at.x, at.y, { text: text.trim() });
-    addElements([el]);
+    const off = twinShift([el]);
+    addElements([translated(el, off, off)]);
     return;
   }
   // Mehrere Zeilen -> eine Sticky Note pro Zeile
@@ -3876,7 +4309,8 @@ export function pasteText(text, at) {
   const size = 200, gap = 20;
   const ox = at.x - (cols * (size + gap)) / 2, oy = at.y - (Math.ceil(lines.length / cols) * (size + gap)) / 2;
   const list = lines.slice(0, 400).map((l, i) => makeElement('sticky', 0, 0, { x: ox + (i % cols) * (size + gap), y: oy + Math.floor(i / cols) * (size + gap), text: l }));
-  addElements(list);
+  const off = twinShift(list);
+  addElements(list.map((e) => translated(e, off, off)));
   toast(T`${list.length} Sticky Notes erstellt`);
 }
 
@@ -3903,10 +4337,11 @@ export function insertImageFile(file, at) {
         src = file.type === 'image/png' ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85);
         if (src.length > 6e6) src = c.toDataURL('image/jpeg', 0.75);
       }
-      const p = at || viewCenter();
       const dispW = Math.min(600, width), dispH = (dispW / width) * height;
+      const p = at || freeCenter(dispW, dispH);
       const el = { id: uid(), type: 'image', z: nextZ(), x: p.x - dispW / 2, y: p.y - dispH / 2, w: dispW, h: dispH, src, name: file.name, author: app.user.name || '' };
       addElements([el]);
+      if (!at) reveal(el);
     };
     img.onerror = () => toast(T('Bild konnte nicht gelesen werden'));
     img.src = reader.result;

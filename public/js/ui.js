@@ -6,7 +6,7 @@ import {
 import { REACT_TYPES, shownCells, sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery, markTemplateUsed } from './gallery.js';
-import { popover, closePop, menu } from './menu.js';
+import { popover, closePop, menu, menuAt } from './menu.js';
 import { openShareDialog } from './share.js';
 import { openProfileDialog, accountMenuItems } from './account.js';
 import { legalLinks } from './footer.js';
@@ -15,29 +15,20 @@ import { bellButton, refresh as refreshBell } from './notifications.js';
 export { popover, closePop, menu };
 import { dropGesture,
   app, $, stage, getEl, bounds, setTool, saveToolOpts, selectedEls, selectionBounds, act, setEl, updateEl, deleteEls,
-  undo, redo, canUndo, canRedo, zoomBy, zoomAt, fitAll, fitTo, toScreen, visibleRect, viewCenter, applyView, startEdit,
-  duplicateEls, collectForCopy, bringToFront, sendToBack, groupSel, ungroupSel, toggleLock, alignSel, distributeSel,
+  canEdit, undo, redo, canUndo, canRedo, zoomBy, zoomAt, fitAll, fitTo, toScreen, visibleRect, viewCenter, applyView, startEdit,
+  duplicateEls, collectForCopy, bringToFront, sendToBack, groupSel, ungroupSel, toggleLock, alignSel, distributeSel, spotForNewFrame,
   arrangeGrid, clusterByColor, frames, makeElement, addElements, nextZ, insertImageFile, setSelection, pasteElements,
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
   tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment, togglePin, deleteFramesWithContent, holdTool,
   deleteSelection, pasteFromClipboard, canCopyFormat, copyFormat, pasteFormat, hasCopiedFormat, startBrush, stopBrush, tableAggregate,
-  setBusy, clearBusy, stageRect,
+  setBusy, clearBusy, stageRect, boardColumns, cardToColumn, discardCreated, freeCenter,
 } from './core.js';
 import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
 
 /* ================================================================== */
 /* Allgemeine Popover / Menüs                                          */
 /* ================================================================== */
-
-document.addEventListener('pointerdown', (e) => {
-  if (ctxMenu && !ctxMenu.contains(e.target)) closeContextMenu();
-}, true);
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape' || !ctxMenu) return;
-  e.stopPropagation();
-  closeContextMenu();
-}, true);
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !sidePanel || document.querySelector('.modal-back') || app.editing) return;
@@ -80,11 +71,12 @@ const pickFile = (at = null) => {
 };
 fileInput.addEventListener('cancel', () => (uploadAt = null));
 fileInput.addEventListener('change', () => {
-  const c = uploadAt || viewCenter();
+  // Ohne gewählten Punkt sucht jede Datei selbst freien Platz, sobald ihre Größe feststeht
+  const c = uploadAt;
   uploadAt = null;
   [...fileInput.files].forEach((f, i) => {
-    if (f.type.startsWith('image/')) insertImageFile(f, { x: c.x + i * 40, y: c.y + i * 40 });
-    else app.emit('dropFile', f, { x: c.x + i * 240, y: c.y });
+    if (f.type.startsWith('image/')) insertImageFile(f, c && { x: c.x + i * 40, y: c.y + i * 40 });
+    else app.emit('dropFile', f, c && { x: c.x + i * 240, y: c.y });
   });
   fileInput.value = '';
 });
@@ -599,7 +591,19 @@ app.on('history', () => {
 /* Karten-Dialog                                                       */
 /* ================================================================== */
 
-app.on('editCard', (id) => {
+// Status zum Auswählen: Spalten des Boards zuerst, dann was auf Karten steht. Gleiches in anderer Schreibweise nur einmal.
+function statusChoices() {
+  const cols = boardColumns();
+  const onCards = [...app.els.values()].filter((e) => e.type === 'card' && e.status).map((e) => String(e.status).trim());
+  const presets = cols.length ? [] : [T('Offen'), T('In Arbeit'), T('Review'), T('Test'), T('Blockiert'), T('Fertig')];
+  const seen = new Set();
+  return [...cols, ...onCards, ...presets].filter((s) => {
+    const key = s.toLowerCase();
+    return s && !seen.has(key) && seen.add(key);
+  });
+}
+
+app.on('editCard', (id, { isNew = false } = {}) => {
   const el = getEl(id);
   if (!el || el.hidden) return;
   let color = el.color || '#4262ff';
@@ -622,7 +626,9 @@ app.on('editCard', (id) => {
   });
   const due = h('input', { type: 'date', value: el.due || '' });
   const start = h('input', { type: 'date', value: el.start || '' });
-  const status = h('input', { type: 'text', value: el.status || '', placeholder: T('z. B. In Arbeit'), list: 'status-list' });
+  const choices = statusChoices();
+  const knownStatus = (v) => choices.find((s) => s.toLowerCase() === v.trim().toLowerCase()) ?? v.trim();
+  const status = h('input', { type: 'text', value: el.status || '', placeholder: T('z. B. In Arbeit'), list: 'status-list', onchange: () => (status.value = knownStatus(status.value)) });
   const key = h('input', { type: 'text', value: el.key || '', placeholder: T('z. B. VB-42'), maxlength: 40 });
   const prio = h('select', { 'aria-label': T('Priorität') }, h('option', { value: '' }, T('Ohne')), Object.entries(PRIORITIES).map(([k, p]) => h('option', { value: k, selected: el.priority === k }, `${p.icon} ${p.label}`)));
   const points = h('input', { type: 'text', value: el.points ?? '', placeholder: T('z. B. 5'), maxlength: 5 });
@@ -632,22 +638,33 @@ app.on('editCard', (id) => {
     color = c;
     sw.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('active', s.title === c));
   });
-  const form = h('form', { class: 'form', onsubmit: (e) => {
-    e.preventDefault();
-    if (start.value && due.value && start.value > due.value) return toast(T('Der Beginn muss vor der Fälligkeit liegen.'));
+  // Was im Dialog anders steht als in base
+  const changes = (base) => {
     const next = {
-      title: title.value, description: desc.value, assignee: assignee.value.trim(), assigneeId: assigneeId || undefined, due: due.value, start: start.value || undefined, status: status.value.trim(), color,
+      title: title.value, description: desc.value, assignee: assignee.value.trim(), assigneeId: assigneeId || undefined, due: due.value, start: start.value || undefined, status: knownStatus(status.value), color,
       key: key.value.trim() || undefined, priority: prio.value || undefined, points: points.value.trim() || undefined,
       tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 8),
     };
+    return Object.fromEntries(Object.entries(next).filter(([k, v]) => JSON.stringify(v ?? '') !== JSON.stringify((k === 'tags' ? base.tags || [] : base[k]) ?? '')));
+  };
+  let saved = false;
+  const form = h('form', { class: 'form', onsubmit: (e) => {
+    e.preventDefault();
+    if (start.value && due.value && start.value > due.value) return toast(T('Der Beginn muss vor der Fälligkeit liegen.'));
     // Nur Geändertes schreiben: Sonst überschriebe der offene Dialog, was andere inzwischen an der Karte geändert haben
-    const patch = Object.fromEntries(Object.entries(next).filter(([k, v]) => JSON.stringify(v ?? '') !== JSON.stringify(el[k] ?? '')));
+    const patch = changes(el);
     // Hat jemand währenddessen am selben Text geschrieben, bleibt beides erhalten
     const now = getEl(id);
     for (const k of ['title', 'description']) {
       if (now && k in patch && (now[k] ?? '') !== (el[k] ?? '')) patch[k] = globalThis.TextOps.merge3(el[k] ?? '', patch[k] ?? '', now[k] ?? '');
     }
-    if (Object.keys(patch).length) act(() => updateEl(id, patch));
+    if (Object.keys(patch).length) {
+      act(() => {
+        updateEl(id, patch);
+        if (patch.status) cardToColumn(id, patch.status);
+      });
+    }
+    saved = true;
     m.close();
     buildCtx();
   } },
@@ -658,7 +675,7 @@ app.on('editCard', (id) => {
   h('div', { class: 'form-row' }, h('label', {}, T('Schlüssel / Ticket'), key), h('label', {}, T('Story Points'), points)),
   h('label', {}, T('Labels (durch Komma getrennt)'), tags),
   h('datalist', { id: 'assignee-list' }, names.map((n) => h('option', { value: n }))),
-  h('datalist', { id: 'status-list' }, [T('Offen'), T('In Arbeit'), T('Review'), T('Test'), T('Blockiert'), T('Fertig')].map((n) => h('option', { value: n }))),
+  h('datalist', { id: 'status-list' }, choices.map((n) => h('option', { value: n }))),
   h('div', {}, h('div', { class: 'label' }, T('Farbe')), sw),
   h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, T('Abbrechen')), h('button', { type: 'submit', class: 'btn primary' }, T('Speichern'))));
   // Weicher Hinweis: Niemand wird ausgesperrt, gespeichert wird nur, was man selbst geändert hat
@@ -681,9 +698,16 @@ app.on('editCard', (id) => {
       app.off('busy', showOthers);
       app.off('render', gone);
       clearBusy('card');
+      // Angelegt und ohne Eingabe abgebrochen: Es soll keine Karte „Neue Karte“ liegen bleiben
+      const now = getEl(id);
+      if (isNew && !saved && now && !Object.keys(changes(now)).length) discardCreated(id);
     },
   });
-  setTimeout(() => title.focus(), 0);
+  setTimeout(() => {
+    title.focus();
+    // Neue Karte: Tippen ersetzt den Vorschlag
+    if (isNew) title.select();
+  }, 0);
 });
 
 /* ================================================================== */
@@ -824,7 +848,7 @@ function commentHtml(m) {
 function renderCommentPop() {
   if (!commentPop) return;
   const el = getEl(commentPop.id);
-  if (!el) return closeComment();
+  if (!el) return commentGone();
   const thread = el.thread || [];
   const sig = JSON.stringify([thread.length, thread.at(-1)?.pending, el.resolved, el.task || null, commentPop.taskForm]);
   if (commentPop.sig === sig) return;
@@ -923,7 +947,7 @@ function taskRow(el) {
 function positionComment() {
   if (!commentPop) return;
   const el = getEl(commentPop.id);
-  if (!el) return closeComment();
+  if (!el) return commentGone();
   const sr = stageRect();
   const p = toScreen(el.x, el.y);
   const box = commentPop.box;
@@ -932,6 +956,31 @@ function positionComment() {
   y = Math.max(64, Math.min(innerHeight - box.offsetHeight - 8, y));
   box.style.left = x + 'px';
   box.style.top = y + 'px';
+}
+
+// Der Kommentar wurde gelöscht. Ein Entwurf bleibt lesbar, bis man ihn selbst wegklickt; sonst ginge er ohne Hinweis verloren.
+function commentGone() {
+  if (commentPop.gone) return;
+  const draft = commentPop.box.querySelector('textarea')?.value.trim();
+  if (!draft) {
+    closeComment();
+    return;
+  }
+  commentPop.gone = true;
+  const text = h('textarea', { rows: 4, readOnly: true, 'aria-label': T('Dein nicht gesendeter Text') }, draft);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(draft);
+      toast(T('Text kopiert'));
+    } catch {
+      text.select();
+      toast(T('Der Browser erlaubt das Kopieren hier nicht: Bitte Strg+C drücken'), 4000);
+    }
+  };
+  commentPop.box.replaceChildren(h('p', { role: 'alert' }, T('Dieser Kommentar wurde gelöscht. Deine Antwort wurde nicht gesendet.')), text,
+    h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: copy }, T('Text kopieren')), h('button', { class: 'btn small', onclick: closeComment }, T('Schließen'))));
+  text.focus();
+  text.select();
 }
 
 function closeComment() {
@@ -953,7 +1002,7 @@ app.on('overlay', positionComment);
 document.addEventListener('pointerdown', (e) => {
   // Angefangener Text geht nicht durch einen Klick daneben verloren
   if (commentPop && [...commentPop.box.querySelectorAll('textarea')].some((t) => t.value.trim())) return;
-  if (commentPop && !commentPop.box.contains(e.target) && !(e.target.closest && e.target.closest('.el-comment'))) closeComment();
+  if (commentPop && !commentPop.gone && !commentPop.box.contains(e.target) && !(e.target.closest && e.target.closest('.el-comment'))) closeComment();
 }, true);
 
 /* ================================================================== */
@@ -998,7 +1047,7 @@ export function renderSidePanel() {
     side.append(h('div', { class: 'side-actions' },
       h('button', { class: 'btn primary small', disabled: !list.length, onclick: () => app.emit('present', null) }, h('span', { html: ICONS.present }), T('Präsentieren')),
       app.viewOnly ? null : h('button', { class: 'btn small', onclick: () => {
-        const c = viewCenter();
+        const c = spotForNewFrame();
         const f = makeElement('frame', c.x, c.y);
         addElements([f]);
         fitTo({ x: f.x, y: f.y, w: f.w, h: f.h });
@@ -1105,22 +1154,9 @@ export function placeElements(source, { select = false } = {}) {
   if (!source.length) return false;
   const els = withNewIds(source);
   const b = unionRect(els.map((e) => elBounds(e, (id) => els.find((x) => x.id === id))));
-  const c = viewCenter();
-  let tx = c.x - (b.x + b.w / 2), ty = c.y - (b.y + b.h / 2);
   // Nicht über bestehende Inhalte legen
-  const target = { x: b.x + tx, y: b.y + ty, w: b.w, h: b.h };
-  const existing = [...app.els.values()].map(bounds);
-  if (existing.some((r) => rectsIntersect(r, target))) {
-    const all = unionRect(existing);
-    // rechts daneben oder darunter – je nachdem, was das Board kompakter hält
-    if (all.w > all.h * 1.6) {
-      tx = all.x - b.x;
-      ty = all.y + all.h + 200 - b.y;
-    } else {
-      tx = all.x + all.w + 200 - b.x;
-      ty = all.y - b.y;
-    }
-  }
+  const c = freeCenter(b.w, b.h);
+  const tx = c.x - (b.x + b.w / 2), ty = c.y - (b.y + b.h / 2);
   const moved = els.map((e) => {
     const n = { ...e, z: nextZ() };
     if (n.type === 'connector') {
@@ -1211,7 +1247,7 @@ async function exportPptx() {
       : [{ bounds: unionRect(all.map(bounds)), elements: sortForRender(all) }];
     if (!all.length) return toast(T('Nichts zu exportieren'));
     download(safeName(app.name) + '.pptx', await buildPptx(slides, getEl));
-    toast(T`${slides.length} Folien exportiert`);
+    toast(slides.length === 1 ? T('1 Folie exportiert') : T`${slides.length} Folien exportiert`);
   } catch (e) {
     toast(T('Export fehlgeschlagen: ') + e.message);
   }
@@ -1231,7 +1267,7 @@ async function importFile(file) {
     const data = JSON.parse(await file.text());
     const list = Array.isArray(data) ? data : Array.isArray(data.elements) ? data.elements : Object.values(data.elements || {});
     // Eine JSON-Datei ohne Board-Elemente ist kein Export, sondern ein Dokument – als Dateianhang ablegen
-    if (!list.length || !list.every((e) => e && typeof e === 'object' && typeof e.type === 'string')) return app.emit('dropFile', file, viewCenter());
+    if (!list.length || !list.every((e) => e && typeof e === 'object' && typeof e.type === 'string')) return app.emit('dropFile', file);
     const n = list.filter((e) => e && e.type !== 'comment').length;
     if (!n) return toast(T('Keine Elemente gefunden (Kommentare werden nicht importiert)'));
     pasteElements(list, viewCenter());
@@ -1243,8 +1279,8 @@ async function importFile(file) {
 }
 app.on('importFile', importFile);
 
-function openExportMenu(anchor) {
-  menu(anchor, [
+// Auch die Befehlssuche bietet diese Einträge an
+export const exportItems = () => [
     { header: T('Exportieren') },
     { label: T('Als PNG-Bild'), icon: 'image', onClick: () => exportPng(false) },
     { label: T('Auswahl als PNG'), icon: 'image', disabled: !app.sel.size, onClick: () => exportPng(true) },
@@ -1264,7 +1300,10 @@ function openExportMenu(anchor) {
     { header: T('Vorlagen') },
     { label: T('Board als Vorlage speichern …'), icon: 'template', disabled: app.guest, onClick: () => app.emit('saveTemplate', false) },
     { label: T('Auswahl als Vorlage speichern …'), icon: 'template', disabled: app.guest || !app.sel.size, onClick: () => app.emit('saveTemplate', true) },
-  ]);
+];
+
+function openExportMenu(anchor) {
+  menu(anchor, exportItems());
 }
 
 /* ================================================================== */
@@ -1341,7 +1380,7 @@ async function copyElementLink() {
 export function openShortcuts() {
   const groups = [
     [T('Werkzeuge'), [['V', T('Auswählen')], [T('H / Leertaste'), T('Verschieben')], ['N', T('Sticky Note')], ['T', T('Text')], ['S', T('Form')], ['R / O', T('Rechteck / Ellipse')], ['L', T('Verbindungslinie')], ['P', T('Stift')], ['E', T('Radierer')], ['F', T('Frame')], ['K', T('Karte')], ['M', T('Mindmap')], ['C', T('Kommentar')], ['X', T('Laserpointer')]]],
-    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+Bild↑ / Bild↓'), T('Nach vorne / Nach hinten')], ['?', T('Diese Übersicht')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], ['Alt+1 … 9', T('Gemerkte Ansichten')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Enter mit gewähltem Werkzeug'), T('Element in der Mitte der Ansicht anlegen')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
+    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+] / [ oder Strg+Bild↑ / Bild↓'), T('Ganz nach vorn / ganz nach hinten')], ['?', T('Diese Übersicht')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], ['Alt+1 … 9', T('Gemerkte Ansichten')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Enter mit gewähltem Werkzeug'), T('Element in der Mitte der Ansicht anlegen')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Menütaste / Umschalt+F10'), T('Kontextmenü')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
     [T('Tabellen'), [[T('Klick in ausgewählte Tabelle'), T('Zelle wählen')], [T('Umschalt + Klick / Pfeil'), T('Bereich wählen')], [T('Pfeiltasten'), T('Zellauswahl bewegen')], [T('Enter / F2'), T('Zelle bearbeiten')], [T('Tippen'), T('Zelle überschreiben')], [T('Entf'), T('Inhalt leeren')], ['Tab', T('Nächste Zelle (beim Bearbeiten)')], [T('Linie ziehen'), T('Spaltenbreite / Zeilenhöhe')]]],
     [T('Verbinder'), [[T('Linie ziehen'), T('Biegen (Knickpunkt)')], [T('◦ auf der Linie ziehen'), T('Knickpunkt einfügen')], [T('Doppelklick auf ▪'), T('Knickpunkt entfernen')], [T('Beschriftung ziehen'), T('Entlang der Linie verschieben')], [T('Ende an Rand ziehen'), T('Fester Andockpunkt')], [T('Ende in Formmitte'), T('Automatisch andocken')]]],
     [T('Mindmap'), [['Tab', T('Unterknoten hinzufügen')], [T('Enter (beim Tippen)'), T('Geschwisterknoten')], [T('Umschalt+Enter'), T('Geschwisterknoten')]]],
@@ -1384,15 +1423,36 @@ const describeEl = (el) => {
 };
 
 function openElementList() {
-  const els = [...app.els.values()].filter((e) => !e.hidden).sort((a, b) => (a.y - b.y) || (a.x - b.x));
-  const list = h('ul', { class: 'element-list' }, els.map((el) => h('li', {}, h('button', { class: 'btn block', onclick: () => {
+  const rows = () => [...app.els.values()].filter((e) => !e.hidden).sort((a, b) => (a.y - b.y) || (a.x - b.x)).map((el) => [el.id, describeEl(el)]);
+  const list = h('ul', { class: 'element-list' });
+  const hint = h('p', { class: 'muted' });
+  let sig = '';
+  // Die Liste folgt dem Board, auch wenn andere gerade ändern. Der Fokus bleibt auf demselben Eintrag.
+  const fill = () => {
+    const now = rows();
+    const next = JSON.stringify(now);
+    if (next === sig) return;
+    sig = next;
+    const focus = document.activeElement?.closest?.('.element-list') ? document.activeElement.dataset.id : null;
+    list.replaceChildren(...now.map(([id, label]) => h('li', {}, h('button', { class: 'btn block', 'data-id': id, onclick: () => pick(id) }, label))));
+    hint.textContent = now.length ? (app.viewOnly ? T('Wähle ein Element aus, um dorthin zu springen.') : T('Wähle ein Element aus. Danach verschieben es die Pfeiltasten, Eingabe bearbeitet den Text, Entf löscht es.')) : T('Dieses Board ist noch leer.');
+    if (focus) list.querySelector(`[data-id="${CSS.escape(focus)}"]`)?.focus();
+  };
+  const pick = (id) => {
+    const el = getEl(id);
+    if (!el || el.hidden) {
+      toast(T('Dieses Element gibt es nicht mehr.'));
+      return fill();
+    }
     m.close();
-    setSelection([el.id]);
+    setSelection([id]);
     fitTo(bounds(el), { maxZ: 1.5, pad: 200 });
     stage.focus({ preventScroll: true }); // Pfeiltasten und Eingabe wirken jetzt auf das Element
-  } }, describeEl(el)))));
-  const m = modal(T('Elementliste'), h('div', { class: 'form' },
-    h('p', { class: 'muted' }, els.length ? (app.viewOnly ? T('Wähle ein Element aus, um dorthin zu springen.') : T('Wähle ein Element aus. Danach verschieben es die Pfeiltasten, Eingabe bearbeitet den Text, Entf löscht es.')) : T('Dieses Board ist noch leer.')), list));
+  };
+  const watch = throttle(fill, 300);
+  fill();
+  const m = modal(T('Elementliste'), h('div', { class: 'form' }, hint, list), { onClose: () => app.off('render', watch) });
+  app.on('render', watch);
 }
 
 // Geänderte Auswahl ansagen: Das Board selbst ist eine Zeichenfläche ohne lesbare Struktur
@@ -1407,27 +1467,49 @@ function selectionAnnouncer() {
 }
 selectionAnnouncer();
 
+let searchWatch = null;
+
 export function openSearch() {
+  if (searchWatch) app.off('render', searchWatch);
   searchBox.classList.remove('hidden');
   searchBox.innerHTML = '';
   const count = h('span', { class: 'muted small' });
   const input = h('input', { type: 'search', placeholder: T('Auf dem Board suchen …') });
+  const findHits = () => {
+    const q = input.value.trim().toLowerCase();
+    return q ? [...app.els.values()].filter((e) => textOf(e).toLowerCase().includes(q)).map((e) => e.id) : [];
+  };
+  const showCount = () => {
+    const n = app.searchHits.length;
+    count.textContent = n && app.searchIndex >= 0 ? `${app.searchIndex + 1} / ${n}` : input.value.trim() ? T`${n} Treffer` : '';
+  };
   const go = (d) => {
     if (!app.searchHits.length) return;
     app.searchIndex = (app.searchIndex + d + app.searchHits.length) % app.searchHits.length;
     const el = getEl(app.searchHits[app.searchIndex]);
     if (el) fitTo(bounds(el), { maxZ: 1.5, pad: 200 });
-    count.textContent = `${app.searchIndex + 1} / ${app.searchHits.length}`;
+    showCount();
     scheduleRender(true);
   };
   input.addEventListener('input', () => {
-    const q = input.value.trim().toLowerCase();
-    app.searchHits = q ? [...app.els.values()].filter((e) => textOf(e).toLowerCase().includes(q)).map((e) => e.id) : [];
+    app.searchHits = findHits();
     app.searchIndex = -1;
-    count.textContent = q ? T`${app.searchHits.length} Treffer` : '';
+    showCount();
     scheduleRender(true);
     if (app.searchHits.length) go(1);
   });
+  // Treffer folgen dem Board, ohne die Ansicht zu bewegen: Der aktuelle Treffer bleibt aktuell, solange es ihn gibt
+  searchWatch = throttle(() => {
+    const hits = findHits();
+    if (JSON.stringify(hits) === JSON.stringify(app.searchHits)) return;
+    const at = hits.indexOf(app.searchHits[app.searchIndex]);
+    app.searchHits = hits;
+    if (at >= 0) app.searchIndex = at;
+    else if (app.searchIndex >= 0) app.searchIndex = hits.length ? Math.min(app.searchIndex, hits.length - 1) : -1;
+    showCount();
+    scheduleRender(true);
+  }, 300);
+  app.on('render', searchWatch);
   input.addEventListener('keydown', (e) => {
     e.stopPropagation();
     if (e.key === 'Enter') go(e.shiftKey ? -1 : 1);
@@ -1439,6 +1521,8 @@ export function openSearch() {
 }
 
 function closeSearch() {
+  if (searchWatch) app.off('render', searchWatch);
+  searchWatch = null;
   searchBox.classList.add('hidden');
   app.searchHits = [];
   app.searchIndex = -1;
@@ -1448,13 +1532,6 @@ function closeSearch() {
 /* ================================================================== */
 /* Kontextmenü                                                         */
 /* ================================================================== */
-
-let ctxMenu = null;
-
-function closeContextMenu() {
-  if (ctxMenu) ctxMenu.remove();
-  ctxMenu = null;
-}
 
 // Langes Drücken: iOS meldet dafür kein Kontextmenü. Android schon, dann entfällt das eigene.
 let press = null;
@@ -1486,7 +1563,6 @@ stage.addEventListener('contextmenu', (e) => {
     if (el && !el.hidden) app.emit('reactMenu', el, e);
     return;
   }
-  closeContextMenu();
   const w = toWorld(e.clientX, e.clientY);
   if (el && !app.sel.has(el.id)) setSelection([el.id]);
   // Rechtsklick ins Leere meint die freie Fläche, nicht die alte Auswahl
@@ -1497,48 +1573,74 @@ stage.addEventListener('contextmenu', (e) => {
   // Erweiterungen anderer Module (Freigaben)
   const extra = [];
   if (has) app.emit('contextItems', extra, selectedEls());
+  const one = app.sel.size === 1 ? selectedEls()[0] : null;
+  const formats = selectedEls().some(canCopyFormat);
+  const place = filesAllowed() ? T('Foto oder Datei hier einfügen …') : T('Foto hier einfügen …');
   const items = has ? [
-    { label: T('Kopieren'), hint: T('Strg+C'), onClick: () => document.execCommand('copy') },
+    // Bearbeiten
+    one && ((one.type === 'card' && !isLocked(one)) || canEdit(one)) ? { label: T('Text bearbeiten'), icon: 'edit', hint: T('Enter'), onClick: () => startEdit(one.id, { selectAll: false }) } : null,
+    formats ? { label: T('Format übertragen'), icon: 'brush', onClick: () => startBrush(false) } : null,
+    '-',
+    // Zwischenablage
+    { label: T('Kopieren'), icon: 'copy', hint: T('Strg+C'), onClick: () => document.execCommand('copy') },
     free ? { label: T('Ausschneiden'), hint: T('Strg+X'), onClick: () => document.execCommand('cut') } : null,
     canPaste ? { label: T('Einfügen'), hint: T('Strg+V'), onClick: () => pasteFromClipboard(w) } : null,
-    free ? { label: T('Duplizieren'), hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) } : null,
-    free ? { label: T('In den Vordergrund'), hint: T('Strg+]'), onClick: bringToFront } : null,
-    free ? { label: T('In den Hintergrund'), hint: T('Strg+['), onClick: sendToBack } : null,
-    { label: selectedEls().every((x) => x.locked) ? T('Entsperren') : T('Sperren'), hint: T('Strg+L'), onClick: toggleLock },
-    { label: selectedEls().every((x) => x.locked === 'text') ? T('Fixierung lösen') : T('Position fixieren (Text bleibt bearbeitbar)'), onClick: togglePin },
-    app.isFacilitator ? { label: selectedEls().every((x) => x.modLock) ? T('Für Teilnehmende freigeben') : T('Für Teilnehmende sperren'), onClick: toggleModLock } : null,
-    app.sel.size > 1 ? { label: T('Gruppieren'), hint: T('Strg+G'), onClick: groupSel } : null,
-    selectedEls().some((x) => x.groupId) ? { label: T('Gruppierung aufheben'), onClick: ungroupSel } : null,
-    { label: T('Kommentar hinzufügen'), onClick: () => newComment(w) },
-    el && app.sel.size === 1 && REACT_TYPES.has(el.type) ? { label: T('Reagieren …'), onClick: () => app.emit('reactMenu', el, e) } : null,
-    ...extra,
-    '-',
-    selectedEls().some(canCopyFormat) ? { label: T('Format übertragen'), onClick: () => startBrush(false) } : null,
-    selectedEls().some(canCopyFormat) ? { label: T('Format kopieren'), hint: T('Strg+Alt+C'), onClick: () => copyFormat() && toast(T('Format kopiert')) } : null,
+    free ? { label: T('Duplizieren'), icon: 'copy', hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) } : null,
+    formats ? { label: T('Format kopieren'), hint: T('Strg+Alt+C'), onClick: () => copyFormat() && toast(T('Format kopiert')) } : null,
     hasCopiedFormat() ? { label: T('Format einfügen'), hint: T('Strg+Alt+V'), onClick: pasteFormat } : null,
-    { label: filesAllowed() ? T('Foto oder Datei hier einfügen …') : T('Foto hier einfügen …'), onClick: () => pickFile(w) },
+    { label: place, icon: 'image', onClick: () => pickFile(w) },
     '-',
-    app.sel.size === 1 ? { label: T('Link zu diesem Element kopieren'), icon: 'link', onClick: copyElementLink } : null,
-    free ? { label: T('Löschen'), hint: T('Entf'), danger: true, onClick: deleteSelection } : null,
-    selectedEls().some((x) => x.type === 'frame') ? { label: T('Frame samt Inhalt löschen'), danger: true, onClick: deleteFramesWithContent } : null,
+    // Anordnen
+    free ? { label: T('In den Vordergrund'), icon: 'front', hint: T('Strg+]'), onClick: bringToFront } : null,
+    free ? { label: T('In den Hintergrund'), icon: 'back', hint: T('Strg+['), onClick: sendToBack } : null,
+    app.sel.size > 1 ? { label: T('Gruppieren'), icon: 'group', hint: T('Strg+G'), onClick: groupSel } : null,
+    selectedEls().some((x) => x.groupId) ? { label: T('Gruppierung aufheben'), onClick: ungroupSel } : null,
+    '-',
+    // Sperren
+    { label: selectedEls().every((x) => x.locked) ? T('Entsperren') : T('Sperren'), icon: selectedEls().every((x) => x.locked) ? 'unlock' : 'lock', hint: T('Strg+L'), onClick: toggleLock },
+    { label: selectedEls().every((x) => x.locked === 'text') ? T('Fixierung lösen') : T('Position fixieren (Text bleibt bearbeitbar)'), onClick: togglePin },
+    app.isFacilitator ? { label: selectedEls().every((x) => x.modLock) ? T('Für Teilnehmende freigeben') : T('Für Teilnehmende sperren'), icon: 'shield', onClick: toggleModLock } : null,
+    '-',
+    // Zusammenarbeit
+    { label: T('Kommentar hinzufügen'), icon: 'comment', onClick: () => newComment(w) },
+    el && one && REACT_TYPES.has(el.type) ? { label: T('Reagieren …'), icon: 'smile', onClick: () => app.emit('reactMenu', el, e) } : null,
+    ...extra,
+    one ? { label: T('Link zu diesem Element kopieren'), icon: 'link', onClick: copyElementLink } : null,
+    '-',
+    // Löschen
+    free ? { label: T('Löschen'), icon: 'trash', hint: T('Entf'), danger: true, onClick: deleteSelection } : null,
+    selectedEls().some((x) => x.type === 'frame') ? { label: T('Frame samt Inhalt löschen'), icon: 'trash', danger: true, onClick: deleteFramesWithContent } : null,
   ] : [
-    { label: T('Sticky Note hier'), onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
-    { label: T('Text hier'), onClick: () => { const s = makeElement('text', w.x, w.y); act(() => setEl(s)); startEdit(s.id, { isNew: true }); } },
-    { label: T('Kommentar hier'), onClick: () => newComment(w) },
-    { label: filesAllowed() ? T('Foto oder Datei hier einfügen …') : T('Foto hier einfügen …'), onClick: () => pickFile(w) },
-    { label: T('Vorlage einfügen …'), onClick: openTemplates },
+    { label: T('Sticky Note hier'), icon: 'sticky', onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
+    { label: T('Text hier'), icon: 'text', onClick: () => { const s = makeElement('text', w.x, w.y); act(() => setEl(s)); startEdit(s.id, { isNew: true }); } },
+    { label: T('Kommentar hier'), icon: 'comment', onClick: () => newComment(w) },
+    { label: place, icon: 'image', onClick: () => pickFile(w) },
+    { label: T('Vorlage einfügen …'), icon: 'template', onClick: openTemplates },
     canPaste ? { label: T('Einfügen'), hint: T('Strg+V'), onClick: () => pasteFromClipboard(w) } : null,
     '-',
     { label: T('Alles auswählen'), hint: T('Strg+A'), onClick: () => setSelection([...app.els.keys()]) },
-    { label: T('Alles anzeigen'), hint: T('Umschalt+1'), onClick: () => fitAll() },
+    { label: T('Alles anzeigen'), icon: 'fit', hint: T('Umschalt+1'), onClick: () => fitAll() },
   ];
-  const list = h('div', { class: 'menu' }, items.filter(Boolean).map((it) => it === '-' ? h('div', { class: 'menu-sep' }) : h('button', { class: 'menu-item' + (it.danger ? ' danger' : ''), onclick: () => { closeContextMenu(); it.onClick(); } },
-    h('span', { class: 'mi-label' }, it.label), it.hint ? h('span', { class: 'mi-hint' }, it.hint) : null)));
-  ctxMenu = h('div', { class: 'popover panel context-menu' }, list);
-  document.body.append(ctxMenu);
-  const r = ctxMenu.getBoundingClientRect();
-  ctxMenu.style.left = Math.min(e.clientX, innerWidth - r.width - 8) + 'px';
-  ctxMenu.style.top = Math.min(e.clientY, innerHeight - r.height - 8) + 'px';
+  menuAt(e.clientX, e.clientY, tidySeparators(items), 'context-menu');
+});
+
+// Leere Gruppen sollen keine Trennlinien hinterlassen
+function tidySeparators(items) {
+  const out = [];
+  for (const it of items.filter(Boolean)) if (it !== '-' || (out.length && out.at(-1) !== '-')) out.push(it);
+  if (out.at(-1) === '-') out.pop();
+  return out;
+}
+
+// Menütaste oder Umschalt+F10: dasselbe Menü an der Auswahl, sonst in der Mitte der Fläche
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
+  if (app.editing || e.target.closest?.('input, textarea, select, .modal-back, .popover')) return;
+  e.preventDefault();
+  const id = [...app.sel][0];
+  const g = id && stage.querySelector(`g[data-id="${CSS.escape(id)}"]`);
+  const r = (g || stage).getBoundingClientRect();
+  (g || stage).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
 });
 
 /* ================================================================== */

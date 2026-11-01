@@ -2,7 +2,7 @@
 // (PDF über pdf.js, Text direkt) und Download. Geprüft wird alles auf dem Server (Typ, Größe, Virenscan).
 import { T } from './i18n.js';
 import { h, api, ICONS, toast, modal } from './util.js';
-import { app, getEl, act, updateEl, addElements, makeElement, viewCenter, fitTo, setSelection } from './core.js';
+import { app, getEl, act, updateEl, addElements, makeElement, freeCenter, reveal, fitTo, setSelection } from './core.js';
 import { fileKind, fileSize } from './render.js';
 
 const ACCEPT = '.pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp,.doc,.xls,.ppt,.txt,.md,.csv,.json';
@@ -65,8 +65,10 @@ async function upload(file, at) {
     if (e instanceof TypeError) e.message = T('Keine Verbindung zum Server. Bitte versuche es gleich noch einmal.');
     return toast(`„${file.name}“: ${e.message}`, 6000);
   }
-  const el = makeElement('file', at.x - 110, at.y - 130, { w: 220, h: 260, fileId: info.id, name: info.name, mime: info.mime, size: info.size });
+  const p = at || freeCenter(220, 260);
+  const el = makeElement('file', p.x - 110, p.y - 130, { w: 220, h: 260, fileId: info.id, name: info.name, mime: info.mime, size: info.size });
   addElements([el]);
+  if (!at) reveal(el);
   if (/\.pdf$/i.test(info.name)) makePreview(el, file).catch(() => {});
 }
 
@@ -84,8 +86,7 @@ async function makePreview(el, file) {
 const picker = h('input', { type: 'file', accept: ACCEPT, multiple: true, style: { display: 'none' } });
 document.body.append(picker);
 picker.addEventListener('change', () => {
-  const c = viewCenter();
-  [...picker.files].forEach((f, i) => upload(f, { x: c.x + i * 240, y: c.y }));
+  [...picker.files].forEach((f) => upload(f));
   picker.value = '';
 });
 

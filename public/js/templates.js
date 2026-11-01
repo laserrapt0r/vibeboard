@@ -40,13 +40,13 @@ export const TEMPLATES = [
     build: () => {
       const b = new B();
       b.frame(0, 0, 1700, 1000, T('Mindmap'));
-      const root = b.shape(700, 450, 300, 100, { shape: 'pill', fill: '#1a1a1a', stroke: 'none', strokeWidth: 0, text: T('Zentrales Thema'), textColor: '#ffffff', fontSize: 26, bold: true, mind: true });
+      const root = b.shape(700, 450, 300, 100, { shape: 'pill', fill: '#1a1a1a', stroke: 'none', strokeWidth: 0, text: T('Zentrales Thema'), fontSize: 26, bold: true, mind: true });
       const branches = [
         [1110, 230, T('Thema 1'), '#4262ff', 1], [1110, 670, T('Thema 2'), '#12b886', 1],
         [370, 230, T('Thema 3'), '#f59f00', -1], [370, 670, T('Thema 4'), '#e64980', -1],
       ];
       for (const [x, y, t, col, dir] of branches) {
-        const n = b.shape(x, y, 220, 70, { shape: 'roundrect', fill: col, stroke: 'none', strokeWidth: 0, text: t, textColor: '#ffffff', fontSize: 20, bold: true, mind: true });
+        const n = b.shape(x, y, 220, 70, { shape: 'roundrect', fill: col, stroke: 'none', strokeWidth: 0, text: t, fontSize: 20, bold: true, mind: true });
         b.conn(root, n, { stroke: col, strokeWidth: 4, arrowEnd: false, mind: true });
         [-55, 65].forEach((dy, i) => {
           const cx = dir > 0 ? x + 300 : x - 260;

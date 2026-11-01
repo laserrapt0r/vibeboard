@@ -20,18 +20,20 @@
   - Besitzer: zusätzlich teilen, Freigabe ändern, Mitglieder verwalten, löschen.
   - Rechteänderungen wirken sofort: offene Verbindungen der betroffenen Person werden neu aufgebaut.
   - Geändert in 3.7.0 – Rolle „Kommentieren“ zwischen Betrachter und Bearbeiter: wie Betrachter, zusätzlich Kommentare schreiben, beantworten, erledigen und zuweisen sowie Rundgänge aufzeichnen. Wählbar für Mitglieder, für die Link-Freigabe und für Teams. Gilt aus mehreren Quellen eine Rolle (Mitgliedschaft, Team, Link), zählt die höchste. Im Board steht die eigene Rolle als Hinweis neben dem Namen.
+  - Geändert in 4.15.0: Wer nicht bearbeiten darf, bekommt beim Doppelklick oder einer Werkzeugtaste einmal je Seite einen Hinweis, was die eigene Rolle kann; Gäste einen eigenen Wortlaut.
 
 ### REQ-BOARD-003 Teilen mit Personen
 - **Seit:** 2.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Einladen per Benutzername oder E-Mail mit Vorschlagsliste (nur aktive, bestätigte Konten; ohne Anzeige fremder E-Mail-Adressen).
   - Geändert in 4.0.0: Eine Suche über alle Konten gibt es nicht mehr (`/api/users/search` entfällt). Eingeladen wird
-    - über die vollständige E-Mail-Adresse (genauer Abgleich, höchstens 30 Versuche je Stunde und Person; gibt es kein Konto, wird das gemeldet – seit 4.2.0 mit dem Angebot einer Einladung, [REQ-BOARD-010](#req-board-010-einladung-an-adressen-ohne-konto)) oder
+    - über die vollständige E-Mail-Adresse (genauer Abgleich, höchstens 150 Versuche je Stunde und Person; gibt es kein Konto, wird das gemeldet – seit 4.2.0 mit dem Angebot einer Einladung, [REQ-BOARD-010](#req-board-010-einladung-an-adressen-ohne-konto)) oder
     - aus der Liste der Personen, mit denen die einladende Person ein Team teilt (Name, Farbe und gemeinsame Teams; ohne E-Mail-Adressen). Der Server prüft das gemeinsame Team.
   - Geändert in 4.0.0: Die Mitgliederliste zeigt Namen; E-Mail-Adressen nur dem Besitzer (Namen sind nicht eindeutig) – außer bei Personen, die er aus einem Team kennt, in dem er nicht verwaltet (wie in der Team-Ansicht).
   - Optional Einladungs-Mail mit Link zum Board.
   - Rolle ändern und entfernen; Fehler werden angezeigt, die Auswahl springt dann zurück.
   - Geändert in 4.12.0: Wer schon Mitglied ist, erhält keine zweite Einladung. Mit gleicher Rolle ändert sich nichts, mit anderer wird nur die Rolle geändert und das gemeldet.
+  - Geändert in 4.15.0: Einladungen legen immer eine Benachrichtigung an. Ohne Mailserver entfällt das Häkchen „Per E-Mail benachrichtigen“, Dialog und Meldung sagen, dass der Link selbst weitergegeben werden muss. Die Grenze liegt bei 150 Versuchen je Stunde.
 
 ### REQ-BOARD-004 Freigabe per Link
 - **Seit:** 2.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -60,6 +62,7 @@
   - Anmelden mit Benutzername/Kennwort ist für Gastzugänge nicht möglich; Benutzernamen „gast-…“ sind reserviert. Gäste erscheinen nicht in der Benutzerverwaltung.
   - Missbrauchsschutz: Ratenbegrenzung für Beitritt und Linkerstellung, höchstens 100 Gäste je Link. Abgelaufene Gastzugänge werden spätestens nach einer Minute entfernt und getrennt. Gastlink-Tokens erscheinen nicht im Protokoll.
   - Geändert in 4.11.5: Abgeschnittene Gastlinks und beendete Gastzugänge führen zur Seite „Link nicht gültig“, nicht zur Anmeldung. Gäste haben kein Profilmenü.
+  - Geändert in 4.15.0: Der Beitritt ist auf 300 je Link in 10 Minuten begrenzt, je Adresse zählen nur Fehlversuche (20 in 10 Minuten). Die Beitrittsseite erlaubt 600 Abrufe je Adresse in 10 Minuten.
 
 ### REQ-BOARD-007 Teams und Ordner
 - **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt

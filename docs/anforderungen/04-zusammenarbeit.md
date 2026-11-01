@@ -23,6 +23,7 @@
     - Der Server schickt am Anfang des Streams 2 KB Füllzeichen und sofort eine kurze Startnachricht. Kommt diese nicht innerhalb von 4 Sekunden an, wechselt der Client auf Long-Polling; kommt sie an, wartet er ohne Zeitlimit auf die (bei großen Boards evtl. lange) Begrüßung.
     - Ein Wechsel wegen Zeitüberschreitung wird im Browser 7 Tage lang gemerkt (nicht bei kurzen Verbindungsfehlern); danach wird es erneut mit Server-Sent Events versucht. Kopf, Polster und Startnachricht schickt der Server noch vor dem Laden des Boards. `?transport=sse` erzwingt Server-Sent Events.
   - Polling-Teilnehmende, die eine Minute lang nicht abholen, werden entfernt.
+  - Geändert in 4.15.0: Im Long-Polling gehen „reload“ und „deleted“ nicht mehr verloren, wenn der Kanal endet, während die Person gerade nicht abfragt: Die nächste Abfrage bekommt sie noch.
 
 ### REQ-COLLAB-003 Wiederverbinden ohne Datenverlust
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -95,6 +96,10 @@
     - Im Aktivitätsverlauf erscheinen Änderungen an anonymen Beiträgen als „Anonym“.
     - Der eigene Browser meldet bei anonymen Beiträgen weder „… schreibt“ noch die Auswahl an andere.
     - Verdeckte Platzhalter enthalten keine Benutzer-ID, Änderungen im Echtzeitkanal keinen Absender.
+  - Geändert in 4.15.0: Verschiebt jemand einen Frame, nimmt der Server fremde private Beiträge darin mit. Es wird nichts bekannt, was nicht schon sichtbar ist (Lage und Größe des Platzhalters). Was der Frame beim Ziehen nur überstreicht, bleibt liegen.
+  - Geändert in 4.15.0: Wer im privaten Modus eine bisher leere Notiz, einen leeren Text, eine leere Form, einen leeren Code-Block oder eine leere Karte beschreibt, schreibt privat: Schon der erste Buchstabe erreicht niemanden, auch nicht über das gemeinsame Tippen. Elemente mit Inhalt und Tabellen bleiben, wie sie sind. Schreiben zwei gleichzeitig, gewinnt die erste Eingabe, bei der anderen Person schließt sich der Editor mit einem Hinweis.
+  - Geändert in 4.15.0: Im anonymen Modus stehen an Mauszeigern keine Namen, die Zeiger sind neutral grau.
+  - Geändert in 4.15.0: Aufdecken erscheint nur für die startende Person, Besitzer und Moderierende; sind sie alle weg, für Bearbeitende.
 
 ### REQ-COLLAB-010 Benachrichtigungen
 - **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -106,6 +111,7 @@
   - Öffnen eines Kommentars markiert alle Hinweise zu ihm als gelesen.
   - E-Mail: nur wenn in der Administration erlaubt, im eigenen Profil nicht abgeschaltet, ein Mailserver eingerichtet ist und die Person gerade nicht im Board ist; höchstens eine E-Mail je Person und Board in zehn Minuten.
   - Gäste erhalten keine Benachrichtigungen. Hinweise werden nach 90 Tagen gelöscht.
+  - Geändert in 4.15.0: Wird ein Board mit einer Person geteilt, steht das immer in ihrer Glocke, auch ohne Mailserver und auch beim Einlösen einer Einladung nach der Registrierung.
 
 ### REQ-COLLAB-011 Aktivitätsverlauf
 - **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -180,6 +186,7 @@
   - Prüfende und Anfordernde werden benachrichtigt; Status erscheint live am Element und im Panel „Freigaben“; das Protokoll hält die Entscheidungen fest.
   - Wer angefordert hat und der Besitzer können erneut vorlegen oder entfernen.
   - Geändert in 4.11.2: Freigaben lassen sich auch im Kontextmenü anfordern und anzeigen.
+  - Geändert in 4.15.0: Der Dialog zeigt die Rolle jeder Person. Wer nur ansehen darf, ist nicht wählbar; die Fehlermeldung des Servers nennt den Namen.
 
 ### REQ-COLLAB-019 Gleichzeitige Änderungen am selben Element
 - **Seit:** 4.6.0 · **Priorität:** Muss · **Status:** umgesetzt

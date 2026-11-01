@@ -3,6 +3,7 @@ import { T, DEC } from './i18n.js';
 import { h, append, ICONS, toast, modal, initials, throttle } from './util.js';
 import { app, getEl, bounds, fitTo, setSelection, act, updateEl } from './core.js';
 import { menu } from './ui.js';
+import { leads } from './moderation.js';
 
 const myId = () => String(app.user.id);
 
@@ -33,10 +34,13 @@ function renderPrivate() {
   pmBanner.innerHTML = '';
   append(pmBanner,
     h('span', { class: 'pm-icon', html: ICONS.eyeOff }),
-    h('span', {}, h('b', {}, T('Privater Modus')), T` · gestartet von ${pm.by || T('jemandem')} – neue Notizen, Texte, Karten, Formen, Code-Blöcke, Tabellen und Bilder sieht nur, wer sie erstellt. `,
+    h('span', {}, h('b', {}, T('Privater Modus')), T` · gestartet von ${pm.by || T('jemandem')} – neue Notizen, Texte, Karten, Formen, Code-Blöcke, Tabellen und Bilder sieht nur, wer sie erstellt. Das gilt auch für bisher leere Notizen, die du jetzt beschreibst. `,
       h('span', { class: 'muted small' }, T`Deine privaten Elemente: ${mine} · verdeckt von anderen: ${others}`)),
-    app.viewOnly ? null : h('button', { class: 'btn small primary', onclick: () => setPrivateMode(false) }, T('Aufdecken & beenden')));
+    canReveal(pm) ? h('button', { class: 'btn small primary', onclick: () => setPrivateMode(false) }, T('Aufdecken & beenden')) : null);
 }
+
+// Aufdecken zeigt die Beiträge aller: Das entscheidet, wer den Modus gestartet hat oder das Board leitet (prüft auch der Server)
+const canReveal = (pm) => !app.viewOnly && leads(pm.byId);
 
 app.on('session', (kind) => {
   if (kind !== 'all' && kind !== 'privateMode') return;
@@ -50,6 +54,7 @@ app.on('session', (kind) => {
   renderPrivate();
 });
 app.on('render', throttle(() => app.session.privateMode && renderPrivate(), 400));
+app.on('peers', () => app.session.privateMode && renderPrivate());
 
 /* ================================================================== */
 /* Schätzrunde mit verdeckten Karten                                  */
@@ -185,10 +190,11 @@ app.on('buildCollabTools', (box) => {
   if (app.viewOnly) return;
   const b = h('button', { class: 'icon-btn', id: 'btn-private', title: T('Privater Modus (verdeckt sammeln)'), html: ICONS.eyeOff });
   b.onclick = () => {
-    const active = !!app.session.privateMode?.active;
+    const pm = app.session.privateMode;
+    const active = !!pm?.active;
     menu(b, active ? [
       { header: T('Privater Modus läuft') },
-      { label: T('Aufdecken & beenden'), icon: 'check', onClick: () => setPrivateMode(false) },
+      canReveal(pm) ? { label: T('Aufdecken & beenden'), icon: 'check', onClick: () => setPrivateMode(false) } : { label: T`Aufdecken kann ${pm.by || T('die startende Person')}`, disabled: true },
     ] : [
       { header: T('Privater Modus') },
       { label: T('Für alle starten'), icon: 'eyeOff', onClick: () => setPrivateMode(true) },

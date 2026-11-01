@@ -1,7 +1,7 @@
 // Kanban und Zeitleiste: andere Ansichten derselben Karten. Jede Änderung landet direkt am Element auf dem Board.
 import { T, LOCALE } from './i18n.js';
-import { h, modal, toast, initials, readableOn, throttle } from './util.js';
-import { app, getEl, act, updateEl, bounds, fitTo, setSelection, isLocked, boardColumns, cardToColumn } from './core.js';
+import { h, modal, toast, initials, readableOn, throttle, columnName } from './util.js';
+import { app, getEl, act, updateEl, bounds, fitTo, setSelection, isLocked, boardColumns, cardToColumn, addBoardColumn } from './core.js';
 import { DONE_RE } from './planning.js';
 
 const DAY = 86400000;
@@ -10,14 +10,15 @@ let view = 'kanban';
 
 const cards = () => [...app.els.values()].filter((e) => e.type === 'card' && !e.hidden);
 const statusOf = (c) => String(c.status || '').trim();
-const signature = () => JSON.stringify(cards().map((c) => [c.id, c.title, c.status, c.assignee, c.start, c.due, c.color, c.key]));
+const signature = () => JSON.stringify([boardColumns(), cards().map((c) => [c.id, c.title, c.status, c.assignee, c.start, c.due, c.color, c.key])]);
 
-function columns(list, extra) {
+// Spalten des Boards in dessen Reihenfolge, dahinter alles andere: offen vor erledigt
+function columns(list, onBoard, extra) {
   const seen = [...new Set(list.map(statusOf))];
-  const named = [...new Set([...seen.filter(Boolean), ...extra])];
+  const named = [...new Set([...seen.filter(Boolean), ...extra])].filter((s) => !onBoard.includes(s));
   const open = named.filter((s) => !DONE_RE.test(s));
   const done = named.filter((s) => DONE_RE.test(s));
-  return [...(seen.includes(NO_STATUS) ? [NO_STATUS] : []), ...open, ...done];
+  return [...(seen.includes(NO_STATUS) ? [NO_STATUS] : []), ...new Set(onBoard), ...open, ...done];
 }
 
 function jump(id, close) {
@@ -36,7 +37,8 @@ const setStatus = (id, status) => act(() => {
 function kanban(close, added, rerender) {
   const list = cards();
   // Spalten des Boards bleiben auch leer erhalten, sonst ließe sich eine Karte nicht zurückschieben
-  const cols = columns(list, [...boardColumns(), ...added]);
+  const onBoard = boardColumns();
+  const cols = columns(list, onBoard, added);
   if (!cols.length) cols.push(NO_STATUS);
   const board = h('div', { class: 'kanban' });
   for (const col of cols) {
@@ -61,7 +63,8 @@ function kanban(close, added, rerender) {
       body.append(card);
     }
     const column = h('section', { class: 'kanban-col', 'aria-label': col || T('Ohne Status') },
-      h('h3', {}, col || T('Ohne Status'), ' ', h('span', { class: 'muted small' }, inCol.length)), body);
+      h('h3', {}, col || T('Ohne Status'), ' ', h('span', { class: 'muted small' }, inCol.length)),
+      !inCol.length && added.includes(col) ? h('p', { class: 'muted small' }, T('Vorläufig: Die Spalte bleibt nur, wenn eine Karte in ihr liegt.')) : null, body);
     if (!app.viewOnly) {
       column.addEventListener('dragenter', (e) => e.preventDefault());
       column.addEventListener('dragover', (e) => {
@@ -85,8 +88,10 @@ function kanban(close, added, rerender) {
     const input = h('input', { type: 'text', placeholder: T('Neue Spalte'), 'aria-label': T('Neue Spalte'), maxlength: 40 });
     board.append(h('form', { class: 'kanban-add', onsubmit: (e) => {
       e.preventDefault();
-      const v = input.value.trim();
-      if (v && !added.includes(v)) added.push(v);
+      // Der Name steht so auch in der Überschrift: Zusätze nach „·“ zählen dort nicht
+      const v = columnName(input.value);
+      const same = cols.find((s) => s.toLowerCase() === v.toLowerCase());
+      if (v && !onBoard.some((s) => s.toLowerCase() === v.toLowerCase()) && !addBoardColumn(same || v) && !same) added.push(v);
       rerender();
       document.querySelector('.kanban-add input')?.focus();
     } }, input, h('button', { class: 'btn small', type: 'submit' }, T('Hinzufügen'))));

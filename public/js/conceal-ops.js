@@ -27,6 +27,8 @@
       const c = center(el);
       if (areas.some((f) => inside(c, f))) out.add(el.id);
     }
+    // Kommentare am Element teilen dessen Schicksal, auch wenn sie selbst außerhalb liegen
+    for (const el of list) if (el && el.type === 'comment' && el.anchor && out.has(el.anchor.id)) out.add(el.id);
     // Verbindungen: verborgen, wenn ein Ende an einem verborgenen Element hängt oder beide freien Enden im Bereich liegen
     for (const el of list) {
       if (!el || el.type !== 'connector') continue;

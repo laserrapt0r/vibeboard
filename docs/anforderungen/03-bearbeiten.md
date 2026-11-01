@@ -60,6 +60,7 @@
   - Geändert in 4.11.3: Die Sperre gilt für alle Wege: Entf, Strg+X, Kontextmenü, Papierkorb, Radierer, Farben bei gemischter Auswahl. Ausdrücklich ausgenommen ist „Frame samt Inhalt löschen“.
   - Sperren (Strg+L) verhindert Verschieben, Größenänderung, Bearbeiten und Löschen. Geändert in 3.3.0: Ein Doppelklick auf ein gesperrtes Element erklärt, wie es sich entsperren lässt.
   - In den Vorder-/Hintergrund (Strg+] / Strg+[).
+  - Geändert in 4.15.0: Sperren ändert die Ebene nicht, gesperrte Elemente bleiben auch bei Strg+] und Strg+[ liegen. Unter den Inhalten liegen nur Flächen aus Vorlagen; wer eine davon nach dem Entsperren nach vorn holt, macht sie zum normalen Element. Alle sehen dieselbe Reihenfolge.
 
 ### REQ-EDIT-006 Kopieren, Einfügen, Duplizieren
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -67,6 +68,7 @@
   - Strg+C/X/V über die System-Zwischenablage, auch zwischen Boards; Strg+D dupliziert.
   - Verbindungen zwischen kopierten Elementen bleiben erhalten; Frames werden mit Inhalt kopiert.
   - Mehrzeiliger Text erzeugt eine Sticky Note pro Zeile; eine einzelne URL wird als Link-Text eingefügt.
+  - Geändert in 4.15.0: Einfügen und Enter mit Werkzeug legen nichts deckungsgleich ab, sondern versetzen um ein Rastermaß. Ein Verbinder, dessen eines Ende nicht mitkopiert wurde, bekommt beim Kopieren ein freies Ende an derselben Stelle und kommt so auch in anderen Boards an.
 
 ### REQ-EDIT-007 Rückgängig und Wiederholen
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -86,6 +88,10 @@
   - Eine Übersicht aller Tastenkürzel öffnet sich mit `?`.
   - Geändert in 4.11.0: Das Kontextmenü fügt Fotos und Dateien (PDF, Office, Text) an der Klickstelle ein, auch im Frame und auf Elementen, und bietet Format übertragen, kopieren und einfügen.
   - Geändert in 4.11.5: Die Suche findet auch Dateinamen und Ergebnisse von Tabellenformeln. Das Kontextmenü kopiert einen Link zum Element.
+  - Geändert in 4.15.0: Die Tastenkürzel-Übersicht führt „Ganz nach vorn / ganz nach hinten“ als einen Eintrag, ihre Spalten überlappen nicht mehr. In der Befehlspalette stehen nur echte Kürzel in der Kürzelspalte. Meldungen stehen über dem Abstimmungsbanner.
+  - Geändert in 4.15.0: Suche und Elementliste folgen dem Board, auch bei Änderungen anderer, ohne die Ansicht zu bewegen. Ein inzwischen gelöschtes Element in der Elementliste wird gemeldet und nicht ausgewählt.
+  - Geändert in 4.15.0: Das Kontextmenü ist ein vollwertiges Menü: Rollen, Pfeiltasten, Pos1, Ende, Esc, Symbole und Trenner; die Tasten wirken nicht auf die Auswahl dahinter. Menütaste und Umschalt+F10 öffnen es. Neu ist „Text bearbeiten“, die Einträge sind gruppiert: Bearbeiten, Zwischenablage, Anordnen, Sperren, Zusammenarbeit, Löschen.
+  - Geändert in 4.15.0: „Frame samt Inhalt löschen“ meldet die Menge mit dem Knopf „Rückgängig“.
 
 ### REQ-EDIT-009 Automatisches Layout und Swimlanes
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -109,6 +115,7 @@
   - Tab beim Tippen in einer Notiz oder Form legt das nächste Objekt gleicher Art und Gestaltung auf freiem Platz daneben an und startet die Eingabe.
   - Liegt das Objekt in einer Spalte oder einem Frame, bleibt das neue darin. Ist die Spalte voll, läuft es unten über, nie in die Nachbarspalte. Enter bleibt der Zeilenumbruch.
   - Aus einem leeren Objekt heraus entsteht kein weiteres; ein per Tab angelegtes, leer gebliebenes Objekt verschwindet beim Beenden.
+  - Geändert in 4.15.0: In Frames und Spalten geht es von der eigenen Zeile nach rechts, dann zeilenweise darunter von links weiter, danach in frei gebliebene Plätze weiter oben. Erst wenn der Bereich voll ist, läuft er unten über. Ohne Rahmen bricht die Reihe nach fünf Objekten um.
 
 ### REQ-EDIT-012 Werkzeug aktiv halten
 - **Seit:** 4.8.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -127,6 +134,7 @@
   - Strg+K wirkt auch während der Eingabe auf dem Board. In Eingabefeldern von Dialogen und im Namen des Boards bleibt die Taste dem Browser überlassen.
   - Vollständig per Tastatur und mit Bildschirmleser bedienbar: Pfeiltasten wählen, Enter führt aus, Esc schließt. Der Fokus kehrt danach zurück.
   - Geändert in 4.11.5: Die Palette bietet keine Vorlagen an, die die Administration ausgeblendet hat.
+  - Geändert in 4.15.0: Die Suche kennt Synonyme je Befehl und sucht in Gruppennamen. Export-Formate, Import, Retro-Einträge und „Personen einladen“ sind eigene Befehle, was die Rolle nicht darf, erscheint nicht. Filter und Retro sind auch in schmalen Fenstern zu finden.
 
 ### REQ-EDIT-014 Format übertragen
 - **Seit:** 4.9.0 · **Priorität:** Soll · **Status:** umgesetzt

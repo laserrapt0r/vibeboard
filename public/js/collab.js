@@ -8,9 +8,9 @@ import { followStruct, textCaretRects,
   loadElements, applyRemoteOp, applyRemoteTableOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
   BUSY_TTL, resendBusy, stageRect,
 } from './core.js';
-import { throttle } from './util.js';
+import { throttle, unionRect } from './util.js';
 import { elementLabel, menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
-import { facilitatorItems, toolsReserved } from './moderation.js';
+import { facilitatorItems, toolsReserved, leads } from './moderation.js';
 import * as bell from './notifications.js';
 
 // Gesperrte Werkzeuge (Moderation): Hinweis statt Aktion
@@ -89,6 +89,8 @@ function applyFollowView(rect) {
 
 const CHAT_MS = 6000;
 
+const anonymousRound = () => !!(app.session.privateMode?.active && app.session.privateMode.anonymous);
+
 function updateCursor(p) {
   let c = cursorEls.get(p.clientId);
   if (!p.cursor) return;
@@ -102,6 +104,9 @@ function updateCursor(p) {
     cursorsLayer.append(c);
     cursorEls.set(p.clientId, c);
   }
+  // Anonym gesammelt: Name und Farbe am Zeiger verrieten, wer gerade an einem verdeckten Beitrag sitzt
+  const anon = anonymousRound();
+  c.classList.toggle('anon', anon);
   const chat = c.querySelector('.peer-chat');
   const showChat = p.chat && p.chat.text && Date.now() - p.chat.t < CHAT_MS;
   chat.classList.toggle('hidden', !showChat);
@@ -119,7 +124,7 @@ function updateCursor(p) {
     const ang = (Math.atan2(s.y - H / 2, s.x - W / 2) * 180) / Math.PI;
     c.style.transform = `translate(${cx}px, ${cy}px)`;
     c.querySelector('.peer-arrow').style.transform = `rotate(${ang + 135}deg)`;
-    c.title = T`${p.name} – klicken, um hinzuspringen`;
+    c.title = anon ? T('Klicken, um hinzuspringen') : T`${p.name} – klicken, um hinzuspringen`;
   } else {
     c.style.transform = `translate(${s.x}px, ${s.y}px)`;
     c.querySelector('.peer-arrow').style.transform = '';
@@ -254,6 +259,7 @@ function removeCursor(id) {
 }
 
 app.on('view', () => app.peers.forEach(updateCursor));
+app.on('session', (kind) => (kind === 'all' || kind === 'privateMode') && app.peers.forEach(updateCursor));
 setInterval(() => app.peers.forEach(updateCursor), 1000);
 
 /* ================================================================== */
@@ -486,9 +492,13 @@ export function setVoting(v) {
   renderVoting();
 }
 
+// Eine laufende Abstimmung beenden nur, wer sie gestartet hat oder das Board leitet (prüft auch der Server)
+const mayEndVoting = (v) => !app.viewOnly && (leads(v.byId) || String(app.session.retro?.active && app.session.retro.byId) === String(app.user.id));
+
 function openVotingMenu(anchor) {
   const v = app.session.voting;
   if (v && v.active) {
+    if (!mayEndVoting(v)) return toast(T('Die Abstimmung beendet, wer sie gestartet hat.'), 4000);
     menu(anchor, [
       { header: T('Abstimmung läuft') },
       { label: T('Abstimmung beenden & Ergebnisse zeigen'), icon: 'check', onClick: endVoting },
@@ -570,9 +580,10 @@ function renderVoting() {
     banner.innerHTML = '';
     append(banner,
       h('span', { html: ICONS.vote }),
-      h('span', {}, h('b', {}, v.title || T('Abstimmung läuft')), ' · ', left > 0 ? T`Noch ${left} von ${v.votesPerUser} Stimmen` : T('Alle Stimmen vergeben'), h('span', { class: 'muted small' }, T('  (Klick = Stimme, Alt+Klick = zurücknehmen)'))),
-      h('button', { class: 'btn small', onclick: () => { app.voteMode = !app.voteMode; renderVoting(); } }, app.voteMode ? T('Pausieren') : T('Abstimmen')),
-      app.viewOnly ? null : h('button', { class: 'btn small primary', onclick: endVoting }, T('Beenden')),
+      h('span', {}, h('b', {}, v.title || T('Abstimmung läuft')), ' · ', left > 0 ? T`Noch ${left} von ${v.votesPerUser} Stimmen` : T('Alle Stimmen vergeben'), h('span', { class: 'muted small' }, T('  (Klick = Stimme, Minus an der Stimme = zurücknehmen)'))),
+      // Wirkt nur im eigenen Browser: Klicks wählen wieder aus, statt abzustimmen
+      h('button', { class: 'btn small', title: T('Gilt nur für dich: Klicks wählen wieder aus, statt abzustimmen'), onclick: () => { app.voteMode = !app.voteMode; renderVoting(); } }, app.voteMode ? T('Für mich pausieren') : T('Abstimmen')),
+      mayEndVoting(v) ? h('button', { class: 'btn small primary', onclick: endVoting }, T('Beenden')) : null,
     );
   }
   renderVotes();
@@ -597,6 +608,11 @@ function renderVotes() {
     const cx = b.x + b.w - r * 0.3, cy = b.y + r * 0.3;
     const color = v.active ? '#4262ff' : '#e8590c';
     out += `<g><circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="#fff" stroke-width="${2 / z}"/><text x="${cx}" y="${cy + 5 / z}" text-anchor="middle" font-family="${esc(FONT)}" font-weight="bold" font-size="${14 / z}" fill="#fff">${n}</text></g>`;
+    // Zurücknehmen ohne Alt-Taste, also auch mit dem Finger
+    if (v.active && app.voteMode) {
+      const mx = cx - r * 2.4, bar = r * 0.9;
+      out += `<g class="vote-minus" data-unvote="${esc(id)}" role="button" aria-label="${esc(T('Stimme zurücknehmen'))}"><title>${esc(T('Stimme zurücknehmen'))}</title><circle cx="${mx}" cy="${cy}" r="${r}" fill="#fff" stroke="#4262ff" stroke-width="${2 / z}"/><rect x="${mx - bar / 2}" y="${cy - 1.5 / z}" width="${bar}" height="${3 / z}" fill="#4262ff"/></g>`;
+    }
   }
   layerVotes.innerHTML = out;
 }
@@ -607,7 +623,7 @@ app.on('view', renderVotes);
 app.on('vote', (elId, delta) => {
   const v = app.session.voting;
   if (!v || !v.active) return;
-  if (delta > 0 && myVotesUsed(v) >= v.votesPerUser) return toast(T('Du hast alle Stimmen vergeben (Alt+Klick nimmt eine zurück)'));
+  if (delta > 0 && myVotesUsed(v) >= v.votesPerUser) return toast(T('Du hast alle Stimmen vergeben (das Minus an einer Stimme nimmt sie zurück)'));
   app.sync.op({ op: 'vote', elId, delta });
 });
 
@@ -620,9 +636,28 @@ const pbar = $('#present-bar');
 
 app.on('present', (startId) => startPresentation(startId));
 
-function startPresentation(startId) {
-  const list = frames();
-  if (!list.length) return toast((app.viewOnly ? T('Auf diesem Board gibt es noch keine Frames.') : T('Lege zuerst Frames an – sie werden zu Folien')));
+// Ohne Frames gibt es keine Folien: Die Wahl bleibt stehen, bis jemand sie getroffen hat
+function askWithoutFrames() {
+  const content = [...app.els.values()].filter((e) => !e.hidden);
+  const m = modal(T('Keine Folien vorhanden'), h('div', { class: 'form' },
+    h('p', {}, app.viewOnly ? T('Auf diesem Board gibt es noch keine Frames. Du kannst das ganze Board als eine Ansicht zeigen.') : T('Frames werden zu Folien. Lege einen an oder zeige das ganze Board als eine Ansicht.')),
+    h('div', { class: 'form-actions' },
+      h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, T('Abbrechen')),
+      app.viewOnly ? null : h('button', { type: 'button', class: 'btn', onclick: () => {
+        m.close();
+        setTool('frame');
+        toast(T('Ziehe den Frame auf dem Board auf'), 4000);
+      } }, T('Frame anlegen')),
+      h('button', { type: 'button', class: 'btn primary', disabled: !content.length, onclick: () => {
+        m.close();
+        const r = unionRect(content.map(bounds));
+        startPresentation(null, [{ id: null, title: T('Ganzes Board'), ...r }]);
+      } }, T('Ganzes Board zeigen')))));
+}
+
+function startPresentation(startId, slides = frames()) {
+  const list = slides;
+  if (!list.length) return askWithoutFrames();
   finishEdit();
   setSelection([]);
   setTool('select');
@@ -651,13 +686,23 @@ function showSlide() {
   fitTo({ x: el.x, y: el.y, w: el.w, h: el.h }, { pad: 24, maxZ: 8 });
   pbar.innerHTML = '';
   pbar.append(
-    h('button', { class: 'icon-btn', title: T('Zurück (←)'), html: ICONS.chevLeft, onclick: () => go(-1) }),
+    h('button', { class: 'icon-btn', title: T('Zurück (←)'), html: ICONS.chevLeft, disabled: present.i === 0, onclick: () => go(-1) }),
     h('span', {}, `${present.i + 1} / ${present.list.length} · ${el.title || T('Frame')}`),
-    h('button', { class: 'icon-btn', title: T('Weiter (→)'), html: ICONS.chevRight, onclick: () => go(1) }),
+    h('button', { class: 'icon-btn', title: T('Weiter (→)'), html: ICONS.chevRight, disabled: present.i === present.list.length - 1, onclick: () => go(1) }),
     h('button', { class: 'icon-btn', title: T('Beenden (Esc)'), html: ICONS.close, onclick: stopPresentation }),
   );
   pbar.classList.remove('hidden');
+  wakeBar();
 }
+
+// Sichtbar beim Start und nach jeder Aktivität, erst danach tritt die Leiste zurück
+let barTimer = 0;
+function wakeBar() {
+  pbar.classList.remove('idle');
+  clearTimeout(barTimer);
+  barTimer = setTimeout(() => pbar.classList.add('idle'), 3000);
+}
+for (const ev of ['pointermove', 'pointerdown', 'keydown']) document.addEventListener(ev, () => present && wakeBar(), { passive: true });
 
 function go(d) {
   if (!present) return;
@@ -787,6 +832,18 @@ export function initCollab() {
       const srv = op.op === 'upsert' && getEl(op.el.id);
       if (srv && srv.hidden) continue;
       applyRemoteOp(srv && srv.priv ? { ...op, el: { ...op.el, priv: srv.priv, privName: srv.privName } } : op);
+    }
+    // Offline getippt, inzwischen gelöscht: Wer daran gearbeitet hat, verliert die Arbeit nicht (wie bei anderen Änderungen)
+    for (const t of app.sync.texts.map.values()) {
+      const lost = before.get(t.target.id);
+      if (getEl(t.target.id) || !lost || t.target.cell || !(t.flying || t.buffer.length)) continue;
+      const el = { ...lost, [t.target.field]: t.value };
+      t.server = t.value;
+      t.flying = null;
+      t.buffer = [];
+      app.sync.promote(el.id, el);
+      applyRemoteOp({ op: 'upsert', el });
+      toast(T('Dieses Element wurde gelöscht. Deine Eingabe hat es wiederhergestellt.'), 6000);
     }
     if (app.editing && !getEl(app.editing.id)) abortEdit();
     // Eigene Eingaben, die der Server noch nicht hat, sichtbar halten und Verpasstes nachholen
@@ -985,10 +1042,12 @@ export function initCollab() {
   });
   s.on('reload', (msg) => {
     s.close();
-    if (msg.reason === 'disabled') location.href = '/login';
+    if (msg.reason === 'disabled') location.href = app.guest ? '/g/beendet' : '/login';
     else {
       if (msg.reason === 'restored') noteForNextLoad(T('Das Board wurde auf einen früheren Stand zurückgesetzt. Der vorige Stand liegt im Versionsverlauf.'));
       location.reload();
+      // Wer die Rückfrage des Browsers mit „Bleiben“ beantwortet, soll nicht in einem toten Tab sitzen
+      setTimeout(() => s.connect(), 1500);
     }
   });
   s.on('deleted', () => {

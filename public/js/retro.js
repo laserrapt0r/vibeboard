@@ -4,18 +4,20 @@ import { T, LOCALE, DEC } from './i18n.js';
 import { h, append, api, ICONS, toast, modal, promptDialog, esc, throttle } from './util.js';
 import { app, getEl, bounds, fitTo, act, updateEl, addElements, makeElement, frameChildren, now, markDirty, viewCenter } from './core.js';
 import { menu, showSidePanel, currentSidePanel, renderSidePanel, boardPeople } from './ui.js';
-import { isFacilitator } from './moderation.js';
+import { isFacilitator, leads } from './moderation.js';
 import { setTimer, setVoting } from './collab.js';
 import { download, safeName } from './exporter.js';
 
 const myId = () => String(app.user.id);
 const op = (o) => app.sync.op(o);
 
-// Steuern darf, wer moderiert – ohne Moderation, wer bearbeiten darf (prüft auch der Server)
+// Steuern darf, wer moderiert – ohne Moderation, wer bearbeiten darf; eine laufende Retro leitet, wer sie gestartet hat
+// (prüft auch der Server)
 export function canSteer() {
   const m = app.session.moderation;
+  const r = app.session.retro;
   // Moderationsrechte setzen Bearbeiten voraus: Kommentierende bekommen keine Knöpfe, die dann nichts tun
-  return app.role === 'owner' || (m && m.active ? isFacilitator() && app.role === 'editor' : !app.viewOnly);
+  return app.role === 'owner' || (m && m.active ? isFacilitator() && app.role === 'editor' : !app.viewOnly && (!(r && r.active) || leads(r.byId)));
 }
 
 export const STEPS = {
@@ -140,7 +142,7 @@ function renderBar() {
   const chips = h('ol', { class: 'retro-steps' }, r.steps.map((s, i) => h('li', { class: 'retro-step' + (i === r.step ? ' current' : i < r.step ? ' done' : '') },
     steer ? h('button', { type: 'button', title: T`Zu „${STEPS[s].label}“ springen`, onclick: () => goStep(i) }, `${STEPS[s].icon} ${STEPS[s].label}`) : h('span', {}, `${STEPS[s].icon} ${STEPS[s].label}`))));
   append(bar,
-    h('div', { class: 'retro-head' }, h('b', {}, T('Retro')), h('span', { class: 'muted small' }, T` · Schritt ${r.step + 1} von ${r.steps.length}`), chips),
+    h('div', { class: 'retro-head' }, h('b', {}, T('Retro')), h('span', { class: 'muted small' }, T` · Schritt ${r.step + 1} von ${r.steps.length}`, steer || !r.by ? '' : T` · geleitet von ${r.by}`), chips),
     h('div', { class: 'retro-hint' }, h('span', {}, STEPS[cur].hint),
       cur === 'review' || cur === 'actions' ? h('button', { class: 'btn small', onclick: () => showSidePanel('actions') }, T('Maßnahmen anzeigen')) : null,
       cur === 'close' ? h('button', { class: 'btn small', onclick: openSummary }, T('Zusammenfassung')) : null,
@@ -394,7 +396,8 @@ function pollLine(p) {
   }
   const avg = Object.entries(counts).reduce((s, [k, c]) => s + Number(k) * c, 0) / n;
   const label = p.kind === 'roti' ? T('ROTI (1–5)') : p.kind === 'mood' ? T('Stimmung (1–5)') : p.kind === 'fist' ? T('Fist of Five (0–5)') : p.question || T('Umfrage');
-  return T`${label}: Ø ${avg.toFixed(1).replace('.', DEC)} (${n} Stimmen)`;
+  const mean = avg.toFixed(1).replace('.', DEC);
+  return n === 1 ? T`${label}: Ø ${mean} (1 Stimme)` : T`${label}: Ø ${mean} (${n} Stimmen)`;
 }
 
 async function summaryData() {
@@ -456,8 +459,8 @@ export async function openSummary() {
       h('button', { class: 'btn small', onclick: () => navigator.clipboard.writeText(md).then(() => toast(T('Kopiert')), () => toast(T('Kopieren nicht möglich'))) }, T('Kopieren')),
       h('button', { class: 'btn small', onclick: () => download(safeName(app.name) + '-' + T('zusammenfassung') + '.md', new Blob([md], { type: 'text/markdown' })) }, T('Als Markdown herunterladen')),
       h('button', { class: 'btn small', onclick: () => printSummary(md) }, T('Drucken / PDF')),
-      isFacilitator() ? h('button', { class: 'btn small', onclick: () => send({ email: true }, (r) => T`Zusammenfassung verschickt, Empfänger: ${r.mailed}`) }, T('Per E-Mail an Beteiligte')) : null,
-      isFacilitator() ? h('button', { class: 'btn small', onclick: () => send({ webhook: true }, (r) => (r.webhook ? T('An den Team-Kanal geschickt (sofern ein Team-Webhook eingerichtet ist)') : T('Das Board gehört zu keinem Team – kein Team-Kanal'))) }, T('An Team-Kanal')) : null),
+      isFacilitator() && app.boardMeta?.mailEnabled ? h('button', { class: 'btn small', onclick: () => send({ email: true }, (r) => T`Zusammenfassung verschickt, Empfänger: ${r.mailed}`) }, T('Per E-Mail an Beteiligte')) : null,
+      isFacilitator() && app.boardMeta?.team ? h('button', { class: 'btn small', onclick: () => send({ webhook: true }, () => T('An den Team-Kanal geschickt (sofern ein Team-Webhook eingerichtet ist)')) }, T('An Team-Kanal')) : null),
     app.viewOnly ? null : h('div', { class: 'form-actions' }, h('button', { class: 'btn primary', onclick: () => {
       m.close();
       nextRetro();
@@ -557,10 +560,11 @@ function renderPicker() {
 /* Menü, Kontextleiste, Ereignisse                                     */
 /* ================================================================== */
 
-function retroMenu(anchor) {
+// Auch die Befehlssuche bietet diese Einträge an
+export function retroItems() {
   const r = app.session.retro;
   const steer = canSteer();
-  menu(anchor, [
+  return [
     { header: T('Retro') },
     r && r.active
       ? { label: T('Retro-Ablauf beenden'), icon: 'stop', disabled: !steer, onClick: () => op({ op: 'retro', action: 'stop' }) }
@@ -573,7 +577,11 @@ function retroMenu(anchor) {
     { label: T('Zusammenfassung'), icon: 'download', onClick: openSummary },
     { label: T('Umfrage-Verlauf'), icon: 'activity', onClick: () => app.emit('openPollHistory') },
     app.viewOnly ? null : { label: T('Nächste Retro anlegen …'), icon: 'plus', onClick: nextRetro },
-  ].filter(Boolean));
+  ].filter(Boolean);
+}
+
+function retroMenu(anchor) {
+  menu(anchor, retroItems());
 }
 
 app.on('retroMenu', retroMenu);
@@ -637,6 +645,8 @@ app.on('session', (kind) => {
     renderPicker();
   }
 });
+// Ist die Leitung gegangen, dürfen andere übernehmen
+app.on('peers', () => app.session.retro?.active && renderBar());
 // Rückblick: Jemand hat eine Maßnahme der letzten Retro abgehakt oder übernommen
 app.on('actionsChanged', () => {
   prevCache = null;

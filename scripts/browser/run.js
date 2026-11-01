@@ -6,6 +6,7 @@
 // Jeder Test beginnt mit frisch gestartetem Server, sonst griffen die Anmeldegrenzen über die Tests hinweg.
 const { spawnSync } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const TIMEOUT_MS = 300000;
@@ -40,7 +41,7 @@ try {
   for (const name of list) {
     ctl('restart');
     if (!own) sleep(6000);
-    const r = spawnSync(process.execPath, [path.join(__dirname, `test-${name}.js`)], { env, encoding: 'utf8', timeout: TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
+    const r = spawnSync(process.execPath, [path.join(__dirname, `test-${name}.js`)], { env, cwd: os.tmpdir(), encoding: 'utf8', timeout: TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
     const lines = String(r.stdout || '').split('\n');
     const ok = lines.filter((l) => l.startsWith('ok')).length;
     const bad = lines.filter((l) => l.startsWith('FAIL') && !/^FAIL \d+$/.test(l));

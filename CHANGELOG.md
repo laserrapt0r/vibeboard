@@ -4,6 +4,72 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.15.0] – 2026-11-01
+
+Korrekturen aus der Prüfung des Zusammenspiels, der Bedienung und der Lesbarkeit, dazu ein Lasttest.
+
+### Sicherheit
+- Wird der Link eines Boards eingeschränkt, verlieren auch Mitglieder sofort das höhere Recht, das sie nur über den Link hatten. Bisher behielten offene Verbindungen ihre Schreibrechte.
+- Der Verlauf zeigt keine Beschriftungen von Verbindern aus verborgenen Bereichen mehr.
+- Tabellen lassen sich nicht mehr in verborgene Bereiche schieben. Kommentare an verborgenen Elementen sind mit verborgen.
+- Gastlinks von Boards im Papierkorb gelten nicht mehr.
+- Der zweite Faktor hat eine eigene Grenze je Konto, weil die Anmeldung nur noch Fehlversuche zählt. Rollen in der Personenliste sehen nur Bearbeitende. Die Meldung „Board geteilt“ ist je Person begrenzt.
+- Wer im privaten Modus eine bisher leere Notiz beschreibt, schreibt privat. Bisher machte das Text und Namen sofort sichtbar; auch der erste Buchstabe erreicht nun niemanden. Das gilt ebenso für leere Texte, Formen, Code-Blöcke und Karten, die Retro-Vorlagen legen solche an.
+- Eine Boardkopie oder Versionskopie enthält keine Verbinder zu fremden privaten oder verborgenen Elementen mehr, deren Beschriftung sonst mitkam.
+- Eine laufende Retro und eine laufende Abstimmung steuert der Server nur noch für die startende Person, Besitzer und Moderierende. Bisher konnten alle Bearbeitenden sie für alle weiterschalten oder beenden. Sind alle Leitenden gegangen, dürfen Bearbeitende übernehmen.
+
+### Behoben
+- Rückgängig nimmt keine fremden Änderungen mehr mit, die während der eigenen Geste eintrafen.
+- Offline getippter Text geht nicht mehr verloren, wenn das Element inzwischen gelöscht wurde.
+- „Bleiben“ im Rückfragedialog beim Neuladen hinterlässt keinen toten Tab mehr.
+- Führt die Moderation die Ansicht, springt ein gerade gezogenes Element nicht mehr weg.
+- Rückgängig einer fremden Löschung behält Autorschaft und Reaktionen.
+- Am anonymen Beitrag steht kein Name mehr, auch wenn der Modus beim Tippen wechselt. Eine wiederhergestellte Version bleibt anonym.
+- Widerrufene Gäste landen auf der Erklärseite statt bei der Anmeldung.
+- Dunkles Design: Automatischer Text auf hellen Formen, Notizen, Karten und Tabellen ist lesbar, die Farbe folgt der obersten Fläche darunter. Das gilt auch für Formen ohne Füllung. Frame-Titel erreichen 4,5:1.
+- Sperren ändert die Ebene nicht mehr, und alle sehen sofort dieselbe Reihenfolge. Unter den Inhalten liegen nur noch Flächen aus Vorlagen.
+- Strg+] und Strg+[ verschieben keine gesperrten Elemente mehr.
+- Neue Frames rutschen in Vorlagen-Boards nicht mehr an Stelle 1. Titel-Nummern sind eindeutig, eine Frame-Kopie steht direkt hinter dem Original. „+ Frame“ im Panel legt Frames nicht mehr aufeinander.
+- Einpassen und „Alles anzeigen“ lassen die festen Leisten frei.
+- Handy: Die Kontextleiste überdeckt das Seitenpanel nicht mehr. Der Fokusring im Suchfeld des Vorlagendialogs ist vollständig sichtbar.
+- Meldungen liegen nicht mehr über dem Abstimmungsbanner.
+- Tastenkürzel: Spalten überlappen nicht mehr, doppelte Einträge sind zusammengelegt.
+- Mindmap: Neue Knoten überlappen keine Nachbaräste mehr. Tiefer liegende Äste rücken nach unten, nur so weit wie nötig, ein leer verworfener Knoten stellt die alten Lagen wieder her.
+- Kanban: Eine volle Spalte wächst nach unten, ihr Frame mit, statt Karten aufeinanderzustapeln. Die Ansicht zeigt die Spalten in der Reihenfolge des Boards, fremde Status dahinter. „Neue Spalte“ legt auf Boards mit Spalten eine echte Spalte an, sonst steht sie als vorläufig da.
+- Karten: Neue Karten übernehmen den Status ihrer Spalte, der Titel ist beim Öffnen markiert, eine unverändert abgebrochene neue Karte verschwindet ohne Eintrag im Verlauf. Der Status im Dialog bietet die Spalten an, gleicht die Schreibweise an und nimmt die Karte auf dem Board mit.
+- Tab: Notizen füllen Spalten und Frames zeilenweise und verlassen sie erst, wenn wirklich kein Platz ist. Ohne Rahmen bricht die Reihe nach fünf Notizen um.
+- Griffpunkte: Esc auf einer leeren neuen Notiz entfernt sie samt Linie, die Ansicht folgt der neuen Notiz.
+- Bilder und Dateien ohne gewählten Zielpunkt suchen freien Platz, wie Vorlagen. Enter mit Werkzeug und Einfügen legen nichts mehr deckungsgleich ab.
+- Ein Verbinder, von dem nur ein Ende mitkopiert wurde, kommt auch in einem anderen Board an, das andere Ende ist frei.
+- Verschiebt jemand einen Frame, wandern fremde private Beiträge darin mit, ohne dass etwas von ihnen sichtbar wird.
+- Suche und Elementliste folgen dem Board, auch bei fremden Änderungen. Ein inzwischen gelöschtes Element wird gemeldet statt ausgewählt.
+- Wird ein Kommentar gelöscht, während man antwortet, zeigt das Fenster einen Hinweis und behält den Entwurf zum Kopieren.
+- Helles Design: Automatischer Text auf dunklen Formen ist lesbar, die Farbe folgt wie im dunklen Design der obersten Fläche.
+- „1 Folie exportiert“ und „1 Stimme“ stehen in der Einzahl. In der Befehlssuche stehen Klammerzusätze nicht mehr in der Kürzelspalte.
+- Long-Polling: „reload“ und „deleted“ gehen nicht mehr verloren, wenn der Kanal zwischen zwei Abfragen endet.
+- Verborgene Bereiche: Wandert ein Element über die Grenze, folgen seine Verbinder sofort, nicht erst nach dem Neuladen.
+- Touch: Eine Stimme lässt sich über das Minus an der eigenen Stimme zurücknehmen, langes Drücken zählt nicht mehr als weitere Stimme.
+- Das Kontextmenü lässt sich mit der Tastatur bedienen, Pfeiltasten verschieben nicht mehr das Element dahinter. Menütaste und Umschalt+F10 öffnen es.
+- Im anonymen Sammeln stehen keine Namen mehr an den Mauszeigern.
+
+### Geändert
+- Automatische Textfarbe auf Füllungen: Es gewinnt die Farbe mit dem höheren Kontrast, auch im PowerPoint-Export. Mindmap-Äste geben keine weiße Schrift mehr vor.
+- Präsentationsleiste: Voll sichtbar beim Start und nach Aktivität, tritt erst nach 3 Sekunden Ruhe zurück, nicht bei Fokus und nicht auf Touch-Geräten. Zurück und Weiter sind an den Enden deaktiviert.
+- Grenzwerte für Workshops: Bei der Anmeldung zählen nur Fehlversuche (je Konto und je Adresse), der Gastbeitritt zählt je Gastlink (300 in 10 Minuten) und je Adresse nur Fehlversuche, Einladungen sind auf 150 je Stunde angehoben. Die Meldung nennt die Wartezeit in Minuten.
+- Einladungen erscheinen immer in der Glocke („hat ein Board mit dir geteilt“). Ohne Mailserver entfällt das E-Mail-Häkchen, und die Meldung sagt, dass der Link selbst weitergegeben werden muss. Neue Migration für die Benachrichtigungsart.
+- Freigabedialog: Rollen stehen dabei, wer nur ansehen darf, ist nicht wählbar, die Fehlermeldung nennt den Namen.
+- „Per E-Mail an Beteiligte“ erscheint nur mit Mailserver, „An Team-Kanal“ nur mit Team. „Benutzer anlegen“ wählt ohne Mailserver das Kennwort vor.
+- Kontextmenü: neu „Text bearbeiten“, Einträge sind nach Bearbeiten, Zwischenablage, Anordnen, Sperren, Zusammenarbeit und Löschen geordnet.
+- „Frame samt Inhalt löschen“ meldet die Menge mit dem Knopf „Rückgängig“.
+- Befehlssuche: Synonyme je Befehl, Gruppennamen, Export-Formate, Import, Retro und „Personen einladen“ als eigene Befehle, Filter und Retro auch bei schmalem Fenster. Was die Rolle nicht darf, erscheint nicht.
+- Präsentieren ohne Frames öffnet einen Dialog mit „Frame anlegen“ und „Ganzes Board zeigen“.
+- Wer nicht bearbeiten darf, bekommt bei Doppelklick oder Werkzeugtaste einmalig einen Hinweis, was die Rolle kann.
+- „Pausieren“ in der Abstimmung heißt jetzt „Für mich pausieren“: Es wirkt nur im eigenen Browser.
+- Große Workshops: Zeiger und Cursor werden je Raum im Takt gebündelt, Nachrichten nur einmal serialisiert. Im Lasttest bleiben 50 tippende Personen flüssig, vorher brach der Server dort ein.
+
+### Entwicklung
+- Browsertests liegen in `scripts/browser/` und laufen in der CI, `npm run test:load` misst gemeinsames Arbeiten.
+
 ## [4.14.0] – 2026-11-01
 
 ### Hinzugefügt

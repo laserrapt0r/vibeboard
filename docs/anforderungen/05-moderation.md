@@ -17,6 +17,8 @@
   - Während der Abstimmung sieht jede Person nur die eigenen Stimmen; das Stimmenlimit prüft der Server.
   - Nach dem Beenden: Ergebnisliste sortiert nach Stimmen, Zahlen an den Elementen; Ergebnisse ausblendbar oder löschbar.
   - Auch Betrachter dürfen abstimmen; Stimmen sind nur für vorhandene Elemente möglich.
+  - Geändert in 4.15.0: Beenden und Abbrechen einer laufenden Abstimmung sehen und dürfen nur die startende Person, Besitzer, Moderierende und die Retro-Leitung; sind sie alle weg, Bearbeitende. Der Server prüft das und setzt Name und Kennung der startenden Person selbst. „Für mich pausieren“ bleibt für alle: Es wirkt nur im eigenen Browser.
+  - Geändert in 4.15.0: Eine eigene Stimme nimmt das Minus neben ihr zurück, ohne Alt oder Umschalt, also auch auf Touch. Mit dem Finger zählt eine Stimme erst beim kurzen Antippen: Langes Drücken und Wischen sind keine Stimme.
 
 ### REQ-MOD-003 Präsentationsmodus
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -25,6 +27,8 @@
   - Weiter mit Pfeiltasten, Bild↓, Leertaste oder Enter; zurück mit Pfeiltasten, Bild↑ oder Rücktaste; Ende mit Esc.
   - Inhalte außerhalb der aktuellen Folie werden ausgeblendet; Bedienelemente sind verborgen.
   - Geändert in 4.11.5: Während der Präsentation wählen Buchstabentasten kein Werkzeug und legen nichts an. Ein Doppelklick beim Abstimmen öffnet keinen Editor (REQ-MOD-002).
+  - Geändert in 4.15.0: Die Leiste ist beim Start und nach jeder Aktivität voll sichtbar und tritt erst nach 3 Sekunden Ruhe zurück, nicht bei Fokus und nicht auf Touch-Geräten. Auf der ersten Folie ist Zurück, auf der letzten Weiter deaktiviert.
+  - Geändert in 4.15.0: Ohne Frames fragt ein Dialog nach „Frame anlegen“ (Werkzeug) oder „Ganzes Board zeigen“ (eine Ansicht). Wer nur ansehen darf, sieht nur die Ansicht.
 
 ### REQ-MOD-004 Schätzrunde
 - **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -57,6 +61,8 @@
   - Beim Wechsel richtet der Browser der steuernden Person ein: Check-in → Stimmungsumfrage; Sammeln → privater Modus (anonym) und Timer; Aufdecken → privater Modus aus; Gruppieren → Timer; Abstimmen → Abstimmung über Themengruppen (ohne Themen über Beiträge); Besprechen → Abstimmung beenden, Besprechung in der Reihenfolge der Stimmen; Maßnahmen/Rückblick → Maßnahmen-Panel bei allen; Abschluss → ROTI-Umfrage und Zusammenfassung.
   - Steuern darf, wer moderiert – ohne laufende Moderation, wer bearbeiten darf. Der Server prüft das; Teilnehmende sehen die Leiste ohne Steuerknöpfe.
   - Die Leiste zeigt Schritt, Fortschritt und einen Hinweis, was zu tun ist.
+  - Geändert in 4.15.0: Eine laufende Retro leitet, wer sie gestartet hat. Andere sehen keine Steuerknöpfe, nur wer leitet; der Server lehnt Schritte, Besprechung, Umfragen und Zufallsauswahl von ihnen ab, außer von Besitzer und Moderierenden. Sind diese alle weg, dürfen Bearbeitende übernehmen.
+  - Geändert in 4.15.0: Die Zusammenfassung bietet „Per E-Mail an Beteiligte“ nur mit Mailserver und „An Team-Kanal“ nur auf Team-Boards.
 
 ### REQ-MOD-007 Themengruppen und Besprechungsmodus
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -90,6 +96,7 @@
   - Ändert sich, wer moderiert, laden Teilnehmende den Stand neu.
   - Solange ein Board verborgene Bereiche hat, startet nur der Besitzer die Moderation (sonst sähe, wer sie startet, die Inhalte), und Versionen stellen nur Moderierende wieder her.
   - Kommentare in verborgenen Bereichen erreichen nur Moderierende, lösen keine Benachrichtigungen aus und erscheinen im Aktivitätsverlauf ohne Text. Schätzrunden und Besprechungen geben keine verborgenen Titel preis.
+  - Geändert in 4.15.0: Überquert ein Element die Bereichsgrenze, ohne dass sich ein Frame ändert, folgen Verbinder und Kommentare daran sofort. Board- und Versionskopien lassen Verbinder zu nicht mitkopierten Elementen weg.
 
 ### REQ-MOD-011 Moderation und Privatmodus ohne Moderierende
 - **Seit:** 4.11.3 · **Priorität:** Muss · **Status:** umgesetzt

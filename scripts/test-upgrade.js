@@ -84,6 +84,9 @@ const SEEDS = {
     await c.query(`INSERT INTO user_identities (provider, external_id, user_id) VALUES ('ldap', 'abc123', 1)`);
     await c.query(`UPDATE users SET recent_templates = '["kanban", "u1"]', external_link_ok = true WHERE id = 1`);
   },
+  11: async (c) => {
+    await c.query(`INSERT INTO notifications (user_id, board_id, kind, actor_id, actor_name, excerpt) VALUES (1, 'b1', 'board_shared', 1, 'alt', 'Altes Board')`);
+  },
 };
 
 async function structure(c, schema) {

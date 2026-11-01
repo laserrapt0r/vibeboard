@@ -143,6 +143,11 @@ export class Sync {
       }
     }
     if (msg.type === 'saved') this.noteSave(msg, { at: msg.at });
+    // Gebündelte Zeiger: jeweils wie ein einzelnes Signal behandeln, die eigenen sind schon angezeigt
+    if (msg.type === 'signals') {
+      for (const m of Array.isArray(msg.list) ? msg.list : []) if (m.from !== this.clientId) this.emit('signal', m);
+      return;
+    }
     this.emit(msg.type, msg);
   }
 

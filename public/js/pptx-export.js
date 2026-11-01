@@ -96,7 +96,7 @@ async function addElement(slide, el, map, s, get) {
       return slide.shape(b, { text: el.text, size, color: el.color || '#1a1a1a', italic: el.italic, underline: el.underline, strike: el.strike, bold: el.bold, align: el.align || 'left', anchor: 't', txBox: true, name: 'Text' });
     case 'shape':
       if (PRST[el.shape || 'rect']) {
-        return slide.shape(b, { prst: PRST[el.shape || 'rect'], fill: el.fill, stroke: el.stroke, width: el.strokeWidth ?? 2, text: el.text, size, color: el.textColor || '#1a1a1a', bold: el.bold, align: el.align || 'center' });
+        return slide.shape(b, { prst: PRST[el.shape || 'rect'], fill: el.fill, stroke: el.stroke, width: el.strokeWidth ?? 2, text: el.text, size, color: el.textColor || contrastText(el.fill), bold: el.bold, align: el.align || 'center' });
       }
       break;
     case 'frame':

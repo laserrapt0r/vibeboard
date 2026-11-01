@@ -48,6 +48,9 @@
   - Die Wahl gilt für alle Seiten und bleibt im Browser gespeichert.
   - Geändert in 3.5.0: zusätzlich ein Neon-Design.
   - Geändert in 3.6.0: Das Neon-Design ist wieder entfernt. Wer es gewählt hatte, erhält automatisch das dunkle Design.
+  - Geändert in 4.15.0: Automatische Farben richten sich im dunklen Design nach der obersten Fläche unter dem Inhalt (Frame, Notiz, Form, Karte, Tabelle), auch bei Formen ohne Füllung. Frame-Titel erreichen 4,5:1. Exporte bleiben schwarz auf weiß.
+  - Geändert in 4.15.0: Einpassen und das Anspringen von Elementen lassen die festen Leisten frei.
+  - Geändert in 4.15.0: Im hellen Design folgen automatische Farben und Frame-Titel ebenfalls der obersten Fläche: Auf dunklen Formen ist der Text hell.
 
 ### REQ-CANVAS-007 Ansicht merken
 - **Seit:** 1.0.0 · **Priorität:** Kann · **Status:** umgesetzt

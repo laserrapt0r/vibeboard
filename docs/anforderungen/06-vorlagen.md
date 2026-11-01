@@ -66,6 +66,7 @@
 - **Seit:** 4.8.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Hintergründe von Vorlagen sind gesperrt. Beschriftungen sind nur fixiert ([REQ-EDIT-010](03-bearbeiten.md)): Ihr Text lässt sich direkt ändern.
+  - Geändert in 4.15.0: Gesperrte Vorlagenteile tragen das Merkmal `backdrop` und liegen unter den Inhalten. Boards von vor 4.15.0 werden über gesperrte Elemente ohne Autor erkannt.
   - Bestehende Boards und eigene Vorlagen bleiben unverändert.
 
 ### REQ-TPL-010 Angebote zur Vorlage
@@ -79,4 +80,5 @@
 - **Akzeptanzkriterien:**
   - Zieht man Karten auf dem Board in eine andere Kanban-Spalte der Vorlagen „Kanban-Board“ und „Entwicklungs-Kanban“, erhalten sie deren Überschrift als Status, ohne führendes Emoji und ohne Zusatz nach „·“ (z. B. WIP-Limit). Das lässt sich zusammen mit dem Verschieben rückgängig machen. Liegende Karten behalten nach dem Umbenennen einer Spalte ihren Status bis zum nächsten Wechsel.
   - Züge innerhalb einer Spalte und Karten außerhalb einer Spalte ändern den Status nicht. Karten aus Jira oder Azure DevOps bleiben ausgenommen: Ihr Status kommt aus dem Ticket. Geändert in 4.11.4: Eine Statusänderung in der Kanban-Ansicht verschiebt die Karte in die passende Spalte auf dem Board; Spalten des Boards bleiben dort auch leer sichtbar.
+  - Geändert in 4.15.0: Eine volle Spalte wird länger, ihr Frame wächst mit; Karten liegen nicht mehr aufeinander. Darf die Spalte nicht wachsen (Sperre der Moderation), läuft sie nach unten über. Neue Karten erhalten den Status der Spalte, in der sie entstehen.
   - Gantt-Diagramm und Zeitstrahl bestehen aus Karten mit Terminen. Die Lage auf dem Board ändert die Termine nicht.

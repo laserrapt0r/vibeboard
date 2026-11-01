@@ -27,11 +27,12 @@ BSI IT-Grundschutz.
 - **Seit:** 2.0.0, erweitert in 3.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Rate-Limits:
-    - Anmeldung: 30 pro IP in 10 min, 10 pro Konto in 15 min
+    - Anmeldung: 30 Fehlversuche pro IP in 10 min, 10 pro Konto in 15 min
     - Registrierung: 10 pro IP in 30 min
     - Kennwort vergessen und Bestätigungsmail: 5 pro IP in 15 min
-    - Zwei-Faktor-Codes: 30 pro IP in 10 min, 5 pro Anmeldeversuch
+    - Zwei-Faktor-Codes: 30 Fehlversuche pro IP in 10 min, 5 pro Anmeldeversuch
   - Kennwort vergessen, Bestätigungsmail erneut senden und Registrierung mit vorhandener E-Mail-Adresse geben keine Auskunft über bestehende Konten.
+  - Geändert in 4.15.0: Die Meldung bei zu vielen Versuchen nennt die Wartezeit in Minuten. Anmeldung und Gastbeitritt zählen nur noch Fehlversuche, gleichzeitige Rateversuche werden trotzdem vorab gezählt.
 
 ### REQ-SEC-005 CSRF-Schutz
 - **Seit:** 2.0.0 · **Priorität:** Muss · **Status:** umgesetzt

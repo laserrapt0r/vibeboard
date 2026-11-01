@@ -254,13 +254,14 @@ function userMenu(anchor, u) {
   ], { placement: 'left' });
 }
 
-function createUser() {
+async function createUser() {
+  const { mailEnabled } = await api('/api/config', { quiet: true }).catch(() => ({ mailEnabled: true }));
   const err = errorBox();
   const username = h('input', { type: 'text', required: true, maxlength: 60 });
   const email = h('input', { type: 'email', required: true });
   const role = h('select', {}, h('option', { value: 'user' }, T('Benutzer')), h('option', { value: 'admin' }, T('Administrator')));
-  const inviteRadio = h('input', { type: 'radio', name: 'pwmode', checked: true });
-  const pwRadio = h('input', { type: 'radio', name: 'pwmode' });
+  const inviteRadio = h('input', { type: 'radio', name: 'pwmode', checked: mailEnabled });
+  const pwRadio = h('input', { type: 'radio', name: 'pwmode', checked: !mailEnabled });
   const pw = h('input', { type: 'password', autocomplete: 'new-password', disabled: true, maxlength: 256 });
   const sync = () => {
     pw.disabled = inviteRadio.checked;
@@ -284,8 +285,9 @@ function createUser() {
   h('label', {}, T('E-Mail-Adresse'), email, h('span', { class: 'field-hint' }, T('Damit meldet sich die Person an. Vom Admin eingetragene Adressen gelten als bestätigt.'))),
   h('label', {}, T('Rolle'), role),
   h('div', {}, h('div', { class: 'label' }, T('Kennwort')),
-    h('label', { class: 'check' }, inviteRadio, T('Einladung per E-Mail – die Person legt ihr Kennwort selbst fest (empfohlen)')),
-    h('label', { class: 'check' }, pwRadio, T('Kennwort jetzt festlegen')), pw),
+    mailEnabled ? h('label', { class: 'check' }, inviteRadio, T('Einladung per E-Mail – die Person legt ihr Kennwort selbst fest (empfohlen)')) : null,
+    h('label', { class: 'check' }, pwRadio, T('Kennwort jetzt festlegen')), pw,
+    mailEnabled ? null : h('p', { class: 'field-hint' }, T('Einladungen per E-Mail brauchen einen Mailserver. Gib das Kennwort der Person selbst weiter.'))),
   err.el,
   h('div', { class: 'form-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => m.close() }, T('Abbrechen')), h('button', { type: 'submit', class: 'btn primary' }, T('Anlegen'))));
   const m = modal(T('Benutzer anlegen'), form);

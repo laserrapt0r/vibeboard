@@ -76,10 +76,10 @@ class Person {
   post(path, body) {
     return fetch(`${BASE}/api/boards/${this.job.board}/${path}`, { method: 'POST', headers: this.job.headers, body: JSON.stringify({ clientId: this.id, ...body }) })
       .then((r) => {
-        if (!r.ok) this.stats.errors++;
+        if (!r.ok) this.stats.fail(r.status);
         return r.arrayBuffer();
       })
-      .catch(() => this.stats.errors++);
+      .catch(() => this.stats.fail('Netz'));
   }
 
   // Wie im Browser: immer nur ein Paket unterwegs, was danach getippt wird, geht gesammelt raus
@@ -113,7 +113,7 @@ class Person {
 async function worker() {
   process.on('message', async (msg) => {
     if (msg.type !== 'start') return;
-    const stats = { delays: [], errors: 0, count: 0, bytes: 0 };
+    const stats = { delays: [], kinds: {}, count: 0, bytes: 0, fail(k) { this.kinds[k] = (this.kinds[k] || 0) + 1; } };
     const job = { ...msg.job, sent: new Map() };
     const people = msg.people.map(({ i, shared }) => new Person(i, { ...job, shared }, stats));
     for (const p of people) {
@@ -126,7 +126,7 @@ async function worker() {
       await wait(msg.seconds * 1000);
       people.forEach((p) => p.close());
       await wait(1500);
-      process.send({ type: 'done', stats });
+      process.send({ type: 'done', stats: { delays: stats.delays, kinds: stats.kinds, count: stats.count, bytes: stats.bytes } });
       process.exit(0);
     });
   });
@@ -160,7 +160,10 @@ async function level(persons, headers, board, notes, sharedNote) {
     sentChars: all.reduce((a, s) => a + s.count, 0),
     p50: percentile(delays, 0.5), p95: percentile(delays, 0.95), p99: percentile(delays, 0.99), max: delays[delays.length - 1] || 0,
     health95: percentile(samples, 0.95),
-    errors: all.reduce((a, s) => a + s.errors, 0),
+    errors: Object.entries(all.reduce((a, s) => {
+      for (const [k, n] of Object.entries(s.kinds)) a[k] = (a[k] || 0) + n;
+      return a;
+    }, {})).map(([k, n]) => `${n}×${k}`).join(' ') || '0',
     mbPerPerson: Math.round((all.reduce((a, s) => a + s.bytes, 0) / persons / SECONDS / 1024 / 1024) * 100) / 100,
   };
 }

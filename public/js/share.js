@@ -17,6 +17,8 @@ export async function openShareDialog(boardId, { me, onLeave, onClose } = {}) {
   const body = h('div', { class: 'form share' });
   const m = modal(T('Board teilen'), body, { onClose });
   const url = `${location.origin}/board/${boardId}`;
+  // Ohne die Angabe lieber das Häkchen zeigen als eine funktionierende Benachrichtigung verstecken
+  const { mailEnabled = true } = await api('/api/config', { quiet: true }).catch(() => ({}));
 
   async function render() {
     let info;
@@ -57,15 +59,16 @@ export async function openShareDialog(boardId, { me, onLeave, onClose } = {}) {
     if (owner) {
       const input = h('input', { type: 'email', placeholder: T('E-Mail-Adresse'), autocomplete: 'off', inputmode: 'email' });
       const role = h('select', { 'aria-label': T('Rolle') }, ROLE_OPTIONS.map(([v]) => h('option', { value: v }, ROLE_TEXT[v])));
-      const notify = h('input', { type: 'checkbox', checked: true });
+      const notify = h('input', { type: 'checkbox', checked: mailEnabled });
       const add = async (body) => {
         try {
           const r = await api(`/api/boards/${boardId}/members`, { method: 'POST', body: { ...body, role: role.value, notify: notify.checked } });
-          toast(r.already ? T('Diese Person ist bereits Mitglied mit dieser Rolle') : r.roleChanged ? T('Bereits Mitglied – die Rolle wurde geändert') : r.invited ? T('Einladung verschickt – nach der Registrierung ist das Board geteilt') : r.mailed ? T('Eingeladen – E-Mail wurde verschickt') : T('Eingeladen'), 4000);
+          toast(r.already ? T('Diese Person ist bereits Mitglied mit dieser Rolle') : r.roleChanged ? T('Bereits Mitglied – die Rolle wurde geändert') : r.invited ? T('Einladung verschickt – nach der Registrierung ist das Board geteilt') : r.mailed ? T('Eingeladen – E-Mail wurde verschickt') : mailEnabled ? T('Eingeladen – die Person sieht es in ihrer Glocke') : T('Eingeladen – die Person sieht es in ihrer Glocke. Eine E-Mail gibt es ohne Mailserver nicht: Gib den Link selbst weiter.'), mailEnabled ? 4000 : 8000);
           render();
         } catch (ex) {
           // Adresse ohne Konto: erst nachfragen, dann zur Registrierung einladen
           if (ex.code === 'not_registered' && !body.inviteUnregistered) {
+            if (!mailEnabled) return toast(T('Zu dieser E-Mail-Adresse gibt es noch kein Konto. Ohne Mailserver geht keine Einladung hinaus: Gib den Link selbst weiter.'), 8000);
             if (await confirmDialog(T('Keine registrierte Adresse'), T`${body.email} ist nicht registriert. Soll eine Einladung per E-Mail verschickt werden? Nach der Registrierung ist das Board automatisch mit der Person geteilt.`, T('Einladung verschicken'))) add({ ...body, inviteUnregistered: true });
             return;
           }
@@ -80,7 +83,7 @@ export async function openShareDialog(boardId, { me, onLeave, onClose } = {}) {
       body.append(h('form', { class: 'invite', onsubmit: invite },
         h('div', { class: 'label' }, T('Personen einladen')),
         h('div', { class: 'invite-row' }, input, role, h('button', { type: 'submit', class: 'btn primary' }, T('Einladen'))),
-        h('label', { class: 'check' }, notify, T('Per E-Mail benachrichtigen')),
+        mailEnabled ? h('label', { class: 'check' }, notify, T('Per E-Mail benachrichtigen')) : h('p', { class: 'muted small' }, T('Es ist kein Mailserver eingerichtet: Eingeladene sehen die Einladung in ihrer Glocke, den Link gibst du selbst weiter.')),
         teamBox));
       // Vorschläge: Personen aus gemeinsamen Teams
       api(`/api/boards/${boardId}/share-candidates`).then(({ candidates }) => {

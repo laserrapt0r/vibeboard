@@ -3,7 +3,7 @@ import { T, guestName } from './i18n.js';
 import { h, api, ICONS, relTime, toast, initials } from './util.js';
 import { popover, closePop } from './menu.js';
 
-const KIND = { review: T('bittet dich um eine Freigabe'), review_result: T('hat über deine Freigabe entschieden'), mention: T('hat dich erwähnt'), reply: T('hat geantwortet'), task: T('hat dir einen Kommentar zugewiesen'), team_invite: T('lädt dich in ein Team ein') };
+const KIND = { review: T('bittet dich um eine Freigabe'), review_result: T('hat über deine Freigabe entschieden'), mention: T('hat dich erwähnt'), reply: T('hat geantwortet'), task: T('hat dir einen Kommentar zugewiesen'), team_invite: T('lädt dich in ein Team ein'), board_shared: T('hat ein Board mit dir geteilt') };
 
 let state = { unread: 0, items: [] };
 const buttons = new Set();
@@ -51,7 +51,7 @@ export function bellButton({ open } = {}) {
   b.onclick = async () => {
     await refresh();
     const list = h('div', { class: 'notif-list' });
-    if (!state.items.length) list.append(h('p', { class: 'muted pad' }, T('Keine Benachrichtigungen. Hier erscheint, wenn dich jemand in einem Kommentar @erwähnt, dir antwortet, dir einen Kommentar zuweist oder in ein Team einlädt.')));
+    if (!state.items.length) list.append(h('p', { class: 'muted pad' }, T('Keine Benachrichtigungen. Hier erscheint, wenn jemand ein Board mit dir teilt, dich in einem Kommentar @erwähnt, dir antwortet, dir einen Kommentar zuweist oder in ein Team einlädt.')));
     for (const n of state.items) {
       list.append(h('button', { class: 'notif-item' + (n.read ? '' : ' unread'), onclick: () => {
         closePop();

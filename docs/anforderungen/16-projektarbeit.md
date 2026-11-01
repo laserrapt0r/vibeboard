@@ -61,6 +61,7 @@
   - Kanban und Zeitleiste zeigen dieselben Karten wie das Board. Änderungen wirken sofort am Element und erscheinen bei allen.
   - Kanban: Spalten nach Status, Verschieben per Ziehen oder Auswahlfeld, neue Spalten. Zeitleiste: Balken von Beginn bis Fälligkeit, Verschieben per Ziehen oder Datumsfeld.
   - Beide Ansichten sind ohne Maus bedienbar.
+  - Geändert in 4.15.0: Die Spalten stehen in der Reihenfolge des Boards, Status ohne Spalte dahinter. „Neue Spalte“ legt auf Boards mit Spalten eine echte Spalte rechts neben der letzten an (rückgängig machbar, der Frame wächst mit). Boards ohne Spalten kennen nur Status: Dort ist die neue Spalte als vorläufig gekennzeichnet und bleibt nur mit einer Karte erhalten.
 
 ### REQ-PROJ-008 Abgleich mit Jira und Azure DevOps
 - **Seit:** 4.4.0 · **Priorität:** Muss · **Status:** umgesetzt

@@ -8,33 +8,66 @@ import {
 } from './core.js';
 import { TEMPLATES } from './templates.js';
 import { hideBuiltin } from './gallery.js';
-import { insertTemplate, elementText, openShortcuts } from './ui.js';
+import { insertTemplate, elementText, openShortcuts, exportItems } from './ui.js';
+import { retroItems } from './retro.js';
 import { savedViews, goToView, saveCurrentView, headings, goToHeading } from './guide.js';
 
 const SOURCES = [['#tools', () => T('Werkzeug')], ['#topbar', () => T('Board')], ['#topright', () => T('Board')], ['#bottom-left', () => T('Board')], ['#zoomctl', () => T('Ansicht')], ['#ctxbar', () => T('Auswahl')]];
 const MAX_SHOWN = 40;
 const RECENT_KEY = 'paletteRecent';
 
+// Filter und Retro stehen in schmalen Fenstern nur im Einstellungsmenü: Ihre Knöpfe sind dann ausgeblendet, aber nicht verboten
+const FOLDED = '#btn-filter, #btn-retro';
+
+// Weitere Suchwörter je Knopf (Werkzeug, Kennung oder Beschriftung). Der Wortlaut der Oberfläche ist selten das, was man eintippt.
+const synonyms = () => ({
+  sticky: T('notiz haftnotiz zettel post-it'), text: T('schrift beschriftung'), shape: T('rechteck kreis ellipse figur'), connector: T('verbinden verbindung pfeil linie'),
+  pen: T('zeichnen malen freihand'), highlighter: T('hervorheben markieren'), eraser: T('löschen wegradieren'), frame: T('folie rahmen bereich'),
+  card: T('ticket todo'), table: T('zellen spalten zeilen'), code: T('programm quelltext'), mindmap: T('gedanken ideen'), comment: T('anmerkung rückmeldung'),
+  emoji: T('smiley aufkleber'), image: T('foto datei upload pdf'), laser: T('zeiger pointer'), template: T('muster'), diagram: T('flussdiagramm mermaid'),
+  'btn-vote': T('wählen punkte dot voting'), 'btn-timer': T('stoppuhr countdown zeit'), 'btn-retro': T('retrospektive umfrage'), 'btn-private': T('verdeckt geheim anonym sammeln'),
+  'btn-moderation': T('leiten sperren'), [T('Präsentieren')]: T('folien vortrag vorführen'),
+});
+
 const plain = (s) => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 function fromButtons() {
   const seen = new Set(), out = [];
+  const also = synonyms();
   for (const [selector, group] of SOURCES) {
     const root = document.querySelector(selector);
     if (!root) continue;
     for (const b of root.querySelectorAll('button')) {
       const title = b.title || b.getAttribute('aria-label') || b.textContent.trim();
       // Auf dem Handy liegen Kollaborations-Knöpfe im Scrollbereich: sichtbar ist, was im Layout steckt
-      if (!title || b.disabled || (b.offsetParent === null && getComputedStyle(b).position !== 'fixed')) continue;
-      // „Suchen (Strg+F)“ → Name und Tastenkürzel
+      if (!title || b.disabled || (b.offsetParent === null && getComputedStyle(b).position !== 'fixed' && !b.matches(FOLDED))) continue;
+      // „Suchen (Strg+F)“ → Name und Tastenkürzel. Nicht jede Klammer ist ein Kürzel („… (Mermaid-Syntax)“)
       const m = /^(.*?)\s*\(([^()]{1,24})\)$/.exec(title);
-      const label = m ? m[1] : title;
+      const key = m && /[+−]|^\S{1,6}$/.test(m[2]) ? m[2] : '';
+      const label = key ? m[1] : title;
       if (seen.has(label)) continue;
       seen.add(label);
-      out.push({ id: 'b:' + label, label, group: group(), hint: m ? m[2] : '', icon: b.querySelector('svg')?.outerHTML, run: () => b.isConnected && b.click() });
+      out.push({ id: 'b:' + label, label, group: group(), hint: key, also: also[b.dataset.tool] || also[b.id] || also[label], icon: b.querySelector('svg')?.outerHTML, run: () => b.isConnected && b.click() });
     }
   }
   return out;
+}
+
+// Einträge aus Menüs: Die Überschrift wird zur Gruppe. Was die Rolle nicht darf, ist dort schon deaktiviert.
+function fromMenu(items) {
+  let group = '';
+  const out = [];
+  for (const it of items) {
+    if (!it || it === '-') continue;
+    if (it.header) group = it.header;
+    else if (!it.disabled) out.push({ id: 'm:' + it.label, label: it.label, group, icon: ICONS[it.icon], run: it.onClick });
+  }
+  return out;
+}
+
+function fromCommands() {
+  const invite = app.role === 'owner' ? [{ id: 'invite', label: T('Personen einladen'), group: T('Board'), also: T('teilen freigeben mitglied'), icon: ICONS.share, run: () => app.emit('openShare') }] : [];
+  return [...invite, ...fromMenu(exportItems()), ...fromMenu(retroItems())];
 }
 
 function fromSelection() {
@@ -102,13 +135,18 @@ function fromBoard(q, texts) {
   return out;
 }
 
-// Alle Wörter müssen vorkommen; Treffer am Anfang eines Wortes zählen mehr
+// Alle Wörter müssen vorkommen; Treffer am Anfang eines Wortes zählen mehr, Gruppe und Suchwörter am wenigsten
 function score(words, cmd) {
   const hay = plain(cmd.search || cmd.label);
+  const more = cmd.low ? '' : plain(`${cmd.group} ${cmd.also || ''}`);
   let total = 0;
   for (const w of words) {
     const at = hay.indexOf(w);
-    if (at < 0) return 0;
+    if (at < 0) {
+      if (!more.includes(w)) return 0;
+      total += 1;
+      continue;
+    }
     total += at === 0 ? 4 : /[\s(/-]/.test(hay[at - 1]) ? 3 : 1;
   }
   return total + (cmd.low ? 0 : 2);
@@ -116,7 +154,7 @@ function score(words, cmd) {
 
 function search(query, recent, texts) {
   const q = plain(query.trim());
-  const all = [...fromSelection(), ...fromButtons(), ...fromBoard(q, texts), ...fromSettings()];
+  const all = [...fromSelection(), ...fromButtons(), ...fromBoard(q, texts), ...fromCommands(), ...fromSettings()];
   const rank = (c) => {
     const i = recent.indexOf(c.id);
     return i < 0 ? 0 : (recent.length - i) / recent.length;

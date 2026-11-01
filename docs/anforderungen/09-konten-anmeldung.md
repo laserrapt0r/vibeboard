@@ -42,6 +42,7 @@
   - Fehlermeldungen unterscheiden nicht zwischen unbekanntem Konto und falschem Kennwort.
   - Deaktivierte, unbestätigte und noch nicht freigeschaltete Konten erhalten eine passende Meldung (erst nach korrektem Kennwort).
   - Nach der Anmeldung wird zur ursprünglich aufgerufenen Seite weitergeleitet – nur innerhalb der Anwendung.
+  - Geändert in 4.15.0: Bei der Anmeldung zählen nur Fehlversuche: 10 je Konto in 15 Minuten, 30 je Adresse in 10 Minuten; beim zweiten Faktor ebenso. Viele Personen hinter einer Adresse sperren sich damit nicht aus.
 
 ### REQ-AUTH-006 Zwei-Faktor-Anmeldung (TOTP)
 - **Seit:** 3.0.0 · **Priorität:** Soll · **Status:** umgesetzt

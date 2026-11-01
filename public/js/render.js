@@ -1023,6 +1023,13 @@ export const REACT_TYPES = new Set(['sticky', 'card', 'shape', 'text', 'image', 
 // Standardfarben von Text, Linien und Stift folgen dem Untergrund (siehe inkFor in core.js); Exporte bleiben bei Schwarz auf Weiß
 const inked = (env, el, color) => (env.ink ? env.ink(el, color) : color === '#f1f1f1' || color === '#e6e6e6' ? '#1a1a1a' : color);
 
+// Liegt die Beschriftung nicht auf der eigenen Füllung, entscheidet der Untergrund
+export function shapeTextColor(el, env) {
+  const open = !el.fill || el.fill === 'transparent' || el.fill === 'none';
+  if (labelOutside(el.shape) || open) return inked(env, el, el.textColor || '#1a1a1a');
+  return el.textColor || contrastText(el.fill);
+}
+
 export function cellNumber(v) {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   // Nur Zahlen mit Währung oder Prozent: „1e3“ oder „1,5k“ sind Text, Klammern stehen für negativ
@@ -1348,7 +1355,7 @@ function renderBody(el, env) {
       const kind = el.shape || 'rect';
       // 'none' = ohne Füllung und innen durchklickbar (z. B. Rahmen von Blöcken im Sequenzdiagramm)
       const fillAttr = fill === 'transparent' ? 'rgba(255,255,255,0.001)' : fill;
-      const color = labelOutside(kind) ? inked(env, el, el.textColor || '#1a1a1a') : el.textColor || (contrastText(fill === 'transparent' || fill === 'none' ? '#ffffff' : fill));
+      const color = shapeTextColor(el, env);
       const outline = T`fill="${fillAttr}" stroke="${stroke}" stroke-width="${sw}"${dash ? T` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>`;
       if (kind === 'umlclass') return umlClassSvg(el, x, y, w, h, outline, stroke, sw, color);
       const geo = shapeGeom(kind, x, y, w, h);
@@ -1382,7 +1389,7 @@ function renderBody(el, env) {
       const tw = measure(title, ts, true) + 8;
       return `<rect class="frame-body" x="${x}" y="${y}" width="${w}" height="${h}" fill="${el.fill || '#ffffff'}" stroke="${el.stroke || '#d6d6d6'}" stroke-width="1"/>` +
         `<rect class="frame-title" x="${x}" y="${y - ts * 1.6}" width="${tw}" height="${ts * 1.5}" fill="transparent"/>` +
-        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="#6b6b6b">${esc(title)}</text>` + (Array.isArray(el.lanes) && el.lanes.length ? lanesSvg(el) : '') + concealMarkup(el, env);
+        `<text class="frame-title-text" x="${x + 2}" y="${y - ts * 0.5}" font-family="${esc(FONT)}" font-size="${ts}" font-weight="bold" fill="${env.frameTitle ? env.frameTitle(el, x + 2, y - ts * 0.5) : '#6b6b6b'}">${esc(title)}</text>` + (Array.isArray(el.lanes) && el.lanes.length ? lanesSvg(el) : '') + concealMarkup(el, env);
     }
     case 'connector': {
       const g = connectorGeom(el, get);
@@ -1624,8 +1631,15 @@ export function renderSvgDocument(elements, { padding = 40, background = '#fffff
   };
 }
 
+// Hintergrund sind nur Flächen aus Vorlagen. Boards von vor 4.15.0 kennen das Feld nicht: Dort gilt, was gesperrt ist und keinen Autor hat.
+export const isBackdrop = (e) => e.backdrop ?? (!!e.locked && e.author === undefined && !e.anon);
+
+// Frames ganz unten, dann Vorlagen-Flächen, Themengruppen, Inhalte, Kommentare. Die Kennung entscheidet bei gleichem z: Zwei Personen
+// können gleichzeitig dasselbe z vergeben, und alle sollen dieselbe Reihenfolge sehen.
+const layerRank = (e) => (e.type === 'frame' ? (e.kind === 'topic' ? 2 : 0) : e.type === 'comment' ? 4 : isBackdrop(e) ? 1 : 3);
+
+export const renderOrder = (a, b) => layerRank(a) - layerRank(b) || (a.z || 0) - (b.z || 0) || (a.id === b.id ? 0 : a.id < b.id ? -1 : 1);
+
 export function sortForRender(list) {
-  // Frames ganz unten, dann gesperrte Hintergründe (Vorlagen-Flächen), Themengruppen, Inhalte, Kommentare
-  const rank = (e) => (e.type === 'frame' ? (e.kind === 'topic' ? 2 : 0) : e.type === 'comment' ? 4 : e.locked ? 1 : 3);
-  return [...list].sort((a, b) => rank(a) - rank(b) || (a.z || 0) - (b.z || 0));
+  return [...list].sort(renderOrder);
 }

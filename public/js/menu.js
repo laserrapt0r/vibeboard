@@ -31,6 +31,13 @@ export function popover(anchor, content, { placement = 'bottom', onClose, cls = 
   } else if (placement === 'left') {
     x = r.left - pr.width - 8;
     y = r.top;
+  } else if (placement === 'at') {
+    x = r.left;
+    y = r.top;
+  } else if (!r.width && !r.height) {
+    // Anker ist ausgeblendet (schmales Fenster, Aufruf aus der Befehlssuche)
+    x = (innerWidth - pr.width) / 2;
+    y = 72;
   } else {
     x = r.left + r.width / 2 - pr.width / 2;
     y = r.bottom + 8;
@@ -49,11 +56,13 @@ export function popover(anchor, content, { placement = 'bottom', onClose, cls = 
 }
 
 // Pfeiltasten, Pos1 und Ende bewegen den Fokus zwischen den Einträgen (Tastaturmuster für Menüs)
-function menuKeys(list) {
+// own: Alle Tasten gehören dem Menü. Sonst wirkten sie auf die Auswahl dahinter (Entf, Pfeile, Werkzeugkürzel).
+function menuKeys(list, own) {
   list.addEventListener('keydown', (e) => {
     const items = [...list.querySelectorAll('[role^=menuitem]:not([disabled])')];
     const i = items.indexOf(document.activeElement);
     const target = { ArrowDown: items[(i + 1) % items.length], ArrowUp: items[(i - 1 + items.length) % items.length], Home: items[0], End: items[items.length - 1] }[e.key];
+    if (own) e.stopPropagation();
     if (e.key === 'Tab') return closePop();
     if (!target) return;
     e.preventDefault();
@@ -91,10 +100,16 @@ export function menu(anchor, items, opts) {
     h('span', { class: 'mi-label' }, it.label), it.hint ? h('span', { class: 'mi-hint' }, it.hint) : null);
   }));
   const pop = popover(anchor, list, opts);
-  menuKeys(list);
+  menuKeys(list, opts?.placement === 'at');
   anchor.setAttribute?.('aria-haspopup', 'menu');
   anchor.setAttribute?.('aria-expanded', 'true');
   list.querySelector('[role^=menuitem]:not([disabled])')?.focus({ preventScroll: true });
   return pop;
+}
+
+// Dasselbe Menü an einer Stelle des Bildschirms, etwa als Kontextmenü an der Maus
+export function menuAt(x, y, items, cls = '') {
+  const anchor = { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }), contains: () => false };
+  return menu(anchor, items, { placement: 'at', cls });
 }
 

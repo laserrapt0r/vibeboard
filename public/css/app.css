@@ -229,6 +229,7 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
 #laser { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
 #layer-overlay *, #layer-votes, #layer-draft, #layer-draft * { pointer-events: none; }
+#layer-votes .vote-minus, #layer-votes .vote-minus * { pointer-events: all; cursor: pointer; }
 #layer-overlay [data-handle], #layer-overlay [data-handle] *, #layer-overlay [data-qc], #layer-overlay [data-qc] * { pointer-events: all; }
 #layer-overlay .wp-add, #layer-overlay .wp { cursor: move; }
 #layer-overlay [data-qc] { cursor: crosshair; }
@@ -287,6 +288,8 @@ body.presenting #text-carets { display: none; }
 .peer-cursor.idle { opacity: 0.35; }
 .peer-cursor.away, #cursors.off .peer-cursor { display: none; }
 .peer-arrow { display: inline-block; transition: transform 0.2s; }
+.peer-cursor.anon .peer-name { display: none; }
+.peer-cursor.anon .peer-arrow path { fill: #868e96; }
 .peer-cursor.offscreen { pointer-events: auto; cursor: pointer; transition: none; }
 .peer-cursor.offscreen .peer-name { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
 .peer-chat {
@@ -472,9 +475,12 @@ body.presenting #text-carets { display: none; }
 
 #present-bar {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center;
-  gap: 8px; padding: 4px 8px; opacity: 0.25; transition: opacity 0.2s;
+  gap: 8px; padding: 4px 8px; transition: opacity 0.2s;
 }
-#present-bar:hover { opacity: 1; }
+#present-bar.idle { opacity: 0.25; }
+#present-bar:hover, #present-bar:focus-within { opacity: 1; }
+/* Ohne Hover käme man auf Touch-Geräten nie wieder an die volle Deckkraft */
+@media (hover: none) { #present-bar.idle { opacity: 1; } }
 #present-mask { position: absolute; pointer-events: none; box-shadow: 0 0 0 100000px var(--canvas); }
 body.presenting .chrome, body.presenting #ctxbar, body.presenting #timer-widget { display: none !important; }
 body.presenting #stage { background-image: none; }
@@ -495,14 +501,15 @@ body.presenting #stage { background-image: none; }
 /* Tastenkürzel */
 .shortcuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px 32px; }
 .shortcuts h4 { margin: 12px 0 6px; }
-.shortcuts table { border-collapse: collapse; width: 100%; }
+.shortcuts table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.shortcuts kbd { white-space: normal; overflow-wrap: anywhere; max-width: 100%; box-sizing: border-box; }
 .shortcuts td { padding: 4px 0; vertical-align: top; }
 .shortcuts td:first-child { width: 48%; padding-right: 12px; }
 
 /* ---------------- Vorlagen-Galerie ---------------- */
 
 .tpl-wrap { display: grid; grid-template-columns: 200px 1fr; grid-template-rows: minmax(0, 1fr); gap: 20px; height: 100%; min-height: 0; }
-.tpl-side { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; }
+.tpl-side { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; padding: 4px; /* Platz für den Fokusring */ }
 .tpl-search { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: var(--panel); }
 .tpl-cats { display: flex; flex-direction: column; gap: 2px; }
 .tpl-cat { text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 6px; }
@@ -576,7 +583,8 @@ body.dash-page { min-height: 100vh; }
   #bottom-left { bottom: 74px; }
   #bottom-right { bottom: 74px; }
   #minimap { display: none; }
-  #sidepanel { left: 12px; width: auto; top: 124px; bottom: 130px; }
+  /* Volle Breite: Liegt die Kontextleiste darüber, verdeckt sie den Inhalt des Panels */
+  #sidepanel { left: 12px; width: auto; top: 124px; bottom: 130px; z-index: 61; }
   .tpl-wrap { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .tpl-cats { flex-direction: row; overflow-x: auto; }
   .tpl-cat { white-space: nowrap; }

@@ -117,7 +117,13 @@ export function luminance(hex) {
   return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
 }
 
-export const contrastText = (bg) => (luminance(bg) < 0.35 ? '#ffffff' : '#1a1a1a');
+const contrastRatio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+// Die Farbe mit dem höheren Kontrast
+export const contrastText = (bg) => {
+  const l = luminance(bg);
+  return contrastRatio(l, 1) > contrastRatio(l, luminance('#1a1a1a')) ? '#ffffff' : '#1a1a1a';
+};
 
 /* ---------------- Textmessung & Umbruch ---------------- */
 
@@ -422,6 +428,10 @@ export function toast(msg, ms = 2200, action) {
       action.onClick();
     } }, action.label));
   }
+  // Das Abstimmungsbanner bleibt lesbar. Seine Höhe hängt am Umbruch, deshalb messen
+  const banner = document.getElementById('voting-banner');
+  const top = banner && !banner.classList.contains('hidden') && banner.getClientRects()[0]?.top;
+  t.style.bottom = top ? `${innerHeight - top + 10}px` : '';
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show', 'with-action'), ms);

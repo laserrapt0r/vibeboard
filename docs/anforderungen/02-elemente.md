@@ -65,6 +65,7 @@
 - **Akzeptanzkriterien:**
   - Klick auf einen Punkt erzeugt eine Kopie in dieser Richtung inklusive Verbindung und startet die Texteingabe.
   - Ziehen auf ein anderes Element verbindet die beiden; Ziehen auf eine freie Fläche erzeugt dort ein neues verbundenes Element.
+  - Geändert in 4.15.0: Eine per Griffpunkt angelegte Notiz, die leer bleibt, verschwindet samt Linie ohne Eintrag im Verlauf. Die Ansicht folgt, wenn sie nicht ganz im Fenster liegt.
 
 ### REQ-ELEM-006 Freihandzeichnen
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -81,6 +82,7 @@
   - Beim Verschieben eines Frames wandern die darin liegenden Elemente mit.
   - Ein Frame wird über seinen Titel ausgewählt; Ziehen in einer leeren Frame-Fläche erzeugt einen Auswahlrahmen.
   - Reihenfolge und Navigation über das Frames-Panel.
+  - Geändert in 4.15.0: Jeder neue Frame steht in der Reihenfolge hinten, auch in Vorlagen-Boards, deren Frames vorher nach ihrer Lage durchnummeriert werden. Liste, Präsentation und Export verwenden dieselbe Reihenfolge. Titel-Nummern sind eindeutig, eine Kopie steht direkt hinter dem Original. „+ Frame“ im Panel setzt den Frame mit Abstand rechts neben den letzten.
 
 ### REQ-ELEM-008 Karten (Aufgaben)
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -90,6 +92,7 @@
   - Überfällige Termine werden rot dargestellt.
   - Geändert in 3.2.0: zusätzlich Schlüssel/Ticketnummer (z. B. „VB-42“), Priorität (Kritisch, Hoch, Mittel, Niedrig – auch über die Kontextleiste), Story Points und bis zu 8 Labels. Alle Angaben erscheinen auf der Karte, ohne sich zu überlappen.
   - Karten bilden die Aufgaben des Boards (Aufgaben-Panel, „Meine Aufgaben“, siehe [16](16-projektarbeit.md)).
+  - Geändert in 4.15.0: Beim Öffnen einer neuen Karte ist der Titel markiert. Bricht man sie unverändert ab (Esc, Abbrechen, Schließen), verschwindet sie ohne Eintrag im Verlauf. Das Statusfeld bietet die Spalten und vorhandenen Status an und gleicht die Schreibweise an eine vorhandene an; eine Änderung nimmt die Karte auf dem Board in die passende Spalte mit.
 
 ### REQ-ELEM-009 Tabellen
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -125,6 +128,8 @@
   - Geändert in 4.8.0: Neue Knoten, die leer bleiben, verschwinden beim Beenden; aus einem leeren neuen Knoten heraus entsteht kein weiterer. Beim ersten Bearbeiten erklärt ein Hinweis die Tasten.
   - Hauptäste erhalten unterschiedliche Farben; Unterknoten werden ohne Überlappung untereinander angeordnet.
   - Geändert in 4.12.0: Ziehen und Pfeiltasten nehmen die Unterknoten mit. Gesperrte Knoten bleiben liegen, eine Alt-Kopie kopiert nur die Auswahl.
+  - Geändert in 4.15.0: Neue Äste und die Mindmap-Vorlage geben keine Schriftfarbe mehr vor, die Schrift passt sich der Füllung an.
+  - Geändert in 4.15.0: Ein neuer Knoten überlappt auch andere Äste nicht. Tiefer liegende Äste rücken samt Unterknoten so weit wie nötig nach unten, alles andere bleibt liegen. Der Schritt lässt sich mit dem Knoten zusammen rückgängig machen; bleibt der Knoten leer, kehren die Äste zurück.
 
 ### REQ-ELEM-011 Bilder
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -133,6 +138,7 @@
   - Einfügen per Upload-Dialog, Drag & Drop oder Zwischenablage.
   - Bilder über 1800 px oder 1,5 MB werden vor dem Hochladen verkleinert.
   - Seitenverhältnis bleibt beim Skalieren erhalten. Alle Uploads werden geprüft (siehe [12](12-uploads-virenschutz.md)).
+  - Geändert in 4.15.0: Ohne gewählten Zielpunkt (Werkzeug, Hochladen) suchen Bilder und Dateien freien Platz wie Vorlagen und legen sich nicht über Inhalte; die Ansicht folgt. Ablegen und Einfügen an einer Stelle bleiben dort.
 
 ### REQ-ELEM-012 Sticker
 - **Seit:** 1.0.0 · **Priorität:** Kann · **Status:** umgesetzt
@@ -165,6 +171,7 @@
     - Das Kommentar-Panel filtert nach „Offen“, „Mir zugewiesen“ und „Alle“.
   - Geändert in 4.12.0: Ein Kommentar auf einem Element hängt an diesem Element: Er folgt ihm bei jeder Bewegung und bleibt beim Skalieren an derselben Stelle. Zieht man ihn selbst, hängt er am Element unter ihm oder an keinem mehr. Wird das Element gelöscht, bleibt der Kommentar an seiner Stelle. Ältere Kommentare ändern sich erst, wenn sie verschoben werden.
   - Geändert in 4.12.0: Die Auswahl für Aufgaben enthält nur Personen, die den Kommentar auch erledigen dürfen.
+  - Geändert in 4.15.0: Wird ein Kommentar gelöscht, während im Fenster eine Antwort steht, bleibt das Fenster mit Hinweis offen und der Entwurf lässt sich kopieren.
 
 ### REQ-ELEM-015 Code-Blöcke
 - **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt

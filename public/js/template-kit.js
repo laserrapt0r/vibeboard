@@ -23,6 +23,8 @@ export class B {
   add(el) {
     el.id = uid();
     el.z = ++this.z;
+    // Gesperrtes aus Vorlagen ist Hintergrund, auch wenn jemand die Sperre später aufhebt
+    el.backdrop = !!el.locked;
     this.els.push(el);
     return el;
   }

@@ -18,6 +18,15 @@ export function isFacilitator() {
   return app.role === 'owner' || !!(m && (m.facilitators || []).includes(myId()));
 }
 
+// Darf ich steuern, was startedBy begonnen hat? Wie leads() auf dem Server: Ist niemand mit Steuerrecht mehr da,
+// darf jede bearbeitende Person übernehmen, sonst bliebe das Team ausgesperrt.
+export function leads(startedBy) {
+  if (String(startedBy) === myId() || isFacilitator()) return true;
+  if (app.viewOnly) return false;
+  const m = mod();
+  return ![...app.peers.values()].some((p) => String(p.userId) === String(startedBy) || p.role === 'owner' || (m?.facilitators || []).includes(String(p.userId)));
+}
+
 // Sind Werkzeuge wie Timer oder Abstimmung gerade den Moderierenden vorbehalten?
 export function toolsReserved() {
   const m = mod();
@@ -120,6 +129,8 @@ const REASONS = {
   editLock: T('Die Moderation hat das Bearbeiten gerade gesperrt.'),
   modLock: T('Dieses Element hat die Moderation für Teilnehmende gesperrt.'),
   reserved: T('Das ist während der Moderation den Moderierenden vorbehalten.'),
+  retroLead: T('Die Retro steuert, wer sie gestartet hat.'),
+  voting: T('Die Abstimmung beendet, wer sie gestartet hat.'),
 };
 let lastBlocked = 0;
 app.on('blocked', (why) => {
