@@ -13,7 +13,7 @@ import { legalLinks } from './footer.js';
 import { bellButton, refresh as refreshBell } from './notifications.js';
 
 export { popover, closePop, menu };
-import {
+import { dropGesture,
   app, $, stage, getEl, bounds, setTool, saveToolOpts, selectedEls, selectionBounds, act, setEl, updateEl, deleteEls,
   undo, redo, canUndo, canRedo, zoomBy, zoomAt, fitAll, fitTo, toScreen, visibleRect, viewCenter, applyView, startEdit,
   duplicateEls, collectForCopy, bringToFront, sendToBack, groupSel, ungroupSel, toggleLock, alignSel, distributeSel,
@@ -66,11 +66,15 @@ const PEN_COLORS = ['#1a1a1a', '#e03131', '#f08c00', '#2f9e44', '#1971c2', '#704
 const HL_COLORS = ['#f5d128', '#93d275', '#6cd8fa', '#ffcee0', '#ff9d48', '#c9b2e8'];
 
 // Bilder werden Bild-Elemente, Dokumente (PDF, Office, Text) Dateianhänge
-const fileInput = h('input', { type: 'file', accept: 'image/*,.pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp,.doc,.xls,.ppt,.txt,.md,.csv,.json', multiple: true, style: { display: 'none' } });
+const FILE_ACCEPT = 'image/*,.pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp,.doc,.xls,.ppt,.txt,.md,.csv,.json';
+const fileInput = h('input', { type: 'file', accept: FILE_ACCEPT, multiple: true, style: { display: 'none' } });
 document.body.append(fileInput);
 // Aus dem Kontextmenü landet die Datei an der Klickstelle, sonst in der Mitte der Ansicht
 let uploadAt = null;
+const filesAllowed = () => app.features?.files !== false;
 const pickFile = (at = null) => {
+  // Ohne Dateianhänge bietet der Dialog nur Bilder an
+  fileInput.accept = filesAllowed() ? FILE_ACCEPT : 'image/*';
   uploadAt = at;
   fileInput.click();
 };
@@ -100,7 +104,8 @@ function buildTools() {
       nav.append(h('div', { class: 'tool-sep' }));
       continue;
     }
-    const [id, title] = t;
+    const [id, rawTitle] = t;
+    const title = id === 'image' && !filesAllowed() ? T('Bild hochladen') : rawTitle;
     if (app.viewOnly && !['select', 'hand', 'laser'].includes(id) && !(id === 'comment' && app.canComment)) continue;
     const b = iconBtn(id === 'template' ? 'template' : id, title, () => {
       if (id === 'image') return pickFile();
@@ -454,7 +459,7 @@ export function buildCtx() {
   if (!locked) {
     items.push(actBtn('comment', T('Kommentieren'), () => {
       const b = selectionBounds();
-      newComment({ x: b.x + b.w, y: b.y });
+      newComment({ x: b.x + b.w, y: b.y }, app.sel.size === 1 ? [...app.sel][0] : null);
     }));
     const more = actBtn('more', T('Mehr'), () => menu(more, [
       { label: T('Duplizieren'), icon: 'copy', hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) },
@@ -697,6 +702,15 @@ export async function boardPeople() {
   return peopleCache.list;
 }
 
+// Zuständig kann nur sein, wer den Kommentar auch erledigen darf
+async function assignablePeople() {
+  try {
+    return (await api(`/api/boards/${app.boardId}/people?assignable=1`)).people;
+  } catch {
+    return boardPeople();
+  }
+}
+
 const commentOp = (action, id, extra = {}) => app.sync.op({ op: 'comment', action, id, ...extra });
 const myId = () => String(app.user.id);
 const fmtDate = (d) => (d ? new Date(d + 'T00:00').toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
@@ -824,7 +838,7 @@ function renderCommentPop() {
     const cur = getEl(commentPop.id);
     // Sofort anzeigen; der Server ergänzt Autor und Zeitpunkt und schickt den gültigen Stand
     applyRemoteOp({ op: 'upsert', el: { ...cur, thread: [...(cur.thread || []), { author: app.user.name, color: app.user.color, text: t, ts: Date.now(), pending: true }] } });
-    commentOp('add', cur.id, { x: cur.x, y: cur.y, text: t, mentions: mention.mentions() });
+    commentOp('add', cur.id, { x: cur.x, y: cur.y, anchor: cur.anchor, text: t, mentions: mention.mentions() });
     mention.reset();
     input.value = '';
     renderCommentPop();
@@ -886,7 +900,7 @@ function taskRow(el) {
   }
   const who = h('select', { 'aria-label': T('Zuständige Person') }, h('option', { value: '' }, T('Person wählen …')));
   const due = h('input', { 'aria-label': T('Fällig am'), type: 'date', value: t?.due || '' });
-  boardPeople().then((people) => people.forEach((p) => who.append(h('option', { value: p.id, selected: t && t.assigneeId === p.id }, p.displayName + (p.id === myId() ? T(' (du)') : '') + (p.guest ? T(' (Gast)') : '')))));
+  assignablePeople().then((people) => people.forEach((p) => who.append(h('option', { value: p.id, selected: t && t.assigneeId === p.id }, p.displayName + (p.id === myId() ? T(' (du)') : '') + (p.guest ? T(' (Gast)') : '')))));
   return h('form', { class: 'comment-task-form', onsubmit: (e) => {
     e.preventDefault();
     if (!who.value) return toast(T('Bitte eine Person wählen'));
@@ -1240,7 +1254,7 @@ function openExportMenu(anchor) {
     { label: T('Jira / Azure DevOps verbinden …'), icon: 'link', disabled: app.viewOnly || app.guest, onClick: () => app.emit('openTracker') },
     { label: T('Diagramm aus Text (Mermaid) …'), icon: 'diagram', disabled: app.viewOnly, onClick: () => app.emit('openDiagramText') },
     { label: T('Bild hochladen'), icon: 'image', disabled: app.viewOnly, onClick: () => pickFile() },
-    { label: T('Datei anhängen (PDF, Office, Text)'), icon: 'file', disabled: app.viewOnly, onClick: () => app.emit('pickFile') },
+    filesAllowed() ? { label: T('Datei anhängen (PDF, Office, Text)'), icon: 'file', disabled: app.viewOnly, onClick: () => app.emit('pickFile') } : null,
     '-',
     { header: T('Vorlagen') },
     { label: T('Board als Vorlage speichern …'), icon: 'template', disabled: app.guest, onClick: () => app.emit('saveTemplate', false) },
@@ -1437,6 +1451,27 @@ function closeContextMenu() {
   ctxMenu = null;
 }
 
+// Langes Drücken: iOS meldet dafür kein Kontextmenü. Android schon, dann entfällt das eigene.
+let press = null;
+const endPress = () => {
+  if (press) clearTimeout(press.timer);
+  press = null;
+};
+stage.addEventListener('pointerdown', (e) => {
+  endPress();
+  // Im Texteditor gehört langes Drücken dem Cursor und der Textauswahl
+  if (e.pointerType !== 'touch' || !e.isPrimary || app.editing || !['select', 'hand'].includes(app.tool)) return;
+  const { clientX, clientY, target } = e;
+  press = { x: clientX, y: clientY, timer: setTimeout(() => {
+    press = null;
+    if (app.editing || !dropGesture()) return;
+    target.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX, clientY }));
+  }, 550) };
+}, true);
+window.addEventListener('pointermove', (e) => press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10 && endPress(), true);
+['pointerup', 'pointercancel', 'contextmenu'].forEach((k) => window.addEventListener(k, endPress, true));
+window.addEventListener('pointerdown', (e) => e.pointerType === 'touch' && !e.isPrimary && endPress(), true);
+
 stage.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   const g = e.target.closest && e.target.closest('g[data-id]');
@@ -1476,7 +1511,7 @@ stage.addEventListener('contextmenu', (e) => {
     selectedEls().some(canCopyFormat) ? { label: T('Format übertragen'), onClick: () => startBrush(false) } : null,
     selectedEls().some(canCopyFormat) ? { label: T('Format kopieren'), hint: T('Strg+Alt+C'), onClick: () => copyFormat() && toast(T('Format kopiert')) } : null,
     hasCopiedFormat() ? { label: T('Format einfügen'), hint: T('Strg+Alt+V'), onClick: pasteFormat } : null,
-    { label: T('Foto oder Datei hier einfügen …'), onClick: () => pickFile(w) },
+    { label: filesAllowed() ? T('Foto oder Datei hier einfügen …') : T('Foto hier einfügen …'), onClick: () => pickFile(w) },
     '-',
     app.sel.size === 1 ? { label: T('Link zu diesem Element kopieren'), icon: 'link', onClick: copyElementLink } : null,
     free ? { label: T('Löschen'), hint: T('Entf'), danger: true, onClick: deleteSelection } : null,
@@ -1485,7 +1520,7 @@ stage.addEventListener('contextmenu', (e) => {
     { label: T('Sticky Note hier'), onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
     { label: T('Text hier'), onClick: () => { const s = makeElement('text', w.x, w.y); act(() => setEl(s)); startEdit(s.id, { isNew: true }); } },
     { label: T('Kommentar hier'), onClick: () => newComment(w) },
-    { label: T('Foto oder Datei hier einfügen …'), onClick: () => pickFile(w) },
+    { label: filesAllowed() ? T('Foto oder Datei hier einfügen …') : T('Foto hier einfügen …'), onClick: () => pickFile(w) },
     { label: T('Vorlage einfügen …'), onClick: openTemplates },
     canPaste ? { label: T('Einfügen'), hint: T('Strg+V'), onClick: () => pasteFromClipboard(w) } : null,
     '-',

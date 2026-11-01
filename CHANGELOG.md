@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.12.0] – 2026-11-01
+
+Offene Punkte aus der Fehlersuche geschlossen, die sich im Betrieb als Fehlverhalten zeigten.
+
+### Hinzugefügt
+- Kommentare hängen am Element: Sie folgen ihm bei jeder Bewegung, auch beim Skalieren und bei den anderen im Board.
+- Zellen kopieren, ausschneiden und einfügen, auch mit Excel und Co. Formeln wandern innerhalb von vibeboard mit.
+- Langes Drücken öffnet das Kontextmenü auch auf iOS.
+- Papierkorb: Boards auswählen, alle auswählen, gemeinsam wiederherstellen oder endgültig löschen.
+
+### Geändert
+- Mindmap: Ein gezogener Knoten nimmt seine Unterknoten mit.
+- Passt Text nicht in Notiz oder Form, wird er kleiner, statt herauszulaufen. Auch im PowerPoint-Export.
+- Abgeschaltete Dateianhänge werden nicht mehr angeboten.
+- Dürfen nur Administratoren Teams anlegen, sehen andere kein „+“ mehr.
+- Die Auswahl für Aufgaben enthält nur Personen, die den Kommentar erledigen dürfen.
+- Erneutes Einladen meldet „bereits Mitglied“ oder „Rolle geändert“, ohne zweite E-Mail und ohne Hinauswurf aus dem Board.
+
+### Behoben
+- Ein vom Server abgelehntes Löschen oder Ändern eines Kommentars blieb bis zum Neuladen falsch angezeigt.
+- Im Long-Polling blieben Weggegangene über eine Minute sichtbar.
+
 ## [4.11.5] – 2026-11-01
 
 Korrekturen aus der Fehlersuche, dritter Teil: Hinweise, Rollen und Sackgassen.

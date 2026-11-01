@@ -3642,5 +3642,16 @@
 "Verbindung zu Ticketsystem gelöscht": "Ticket system connection deleted",
 "Konto über SCIM angelegt": "Account created via SCIM",
 "Konto über SCIM gesperrt": "Account disabled via SCIM",
-"Konto mit externer Anmeldung verknüpft": "Account linked to external sign-in"
+"Konto mit externer Anmeldung verknüpft": "Account linked to external sign-in",
+"Nicht alles passte in die Tabelle": "Not everything fit into the table",
+"Foto hier einfügen …": "Insert photo here …",
+"Diese Person ist bereits Mitglied mit dieser Rolle": "This person is already a member with this role",
+"Bereits Mitglied – die Rolle wurde geändert": "Already a member – the role was changed",
+"Alle auswählen": "Select all",
+"{0} von {1} ausgewählt": "{0} of {1} selected",
+"„{0}“ auswählen": "Select “{0}”",
+"{0} Boards werden mit allen Inhalten, Versionen, Dateien und Aufzeichnungen endgültig gelöscht. Das lässt sich nicht rückgängig machen.": "{0} boards will be permanently deleted with all content, versions, files and recordings. This can’t be undone.",
+"{0} von {1} erledigt, bei den übrigen gab es einen Fehler": "{0} of {1} done, the others failed",
+"{0} Boards endgültig gelöscht": "{0} boards permanently deleted",
+"{0} Boards wiederhergestellt": "{0} boards restored"
 }

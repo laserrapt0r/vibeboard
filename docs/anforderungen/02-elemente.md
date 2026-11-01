@@ -9,6 +9,7 @@
   - Die Schriftgröße passt sich automatisch an (ohne Wörter zu zerteilen, sofern möglich) oder wird fest eingestellt.
   - Optional wird der Name der Person angezeigt, die die Notiz erstellt hat.
   - Anlegen per Werkzeug (N), Doppelklick auf eine freie Fläche oder Kontextmenü.
+  - Geändert in 4.12.0: Passt Text in der gewählten Größe nicht in Notiz oder Form, wird er so weit verkleinert, dass er hineinpasst. Die gewählte Größe bleibt gespeichert und gilt wieder, sobald der Text passt.
 
 ### REQ-ELEM-002 Text
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -114,6 +115,7 @@
     - Zellinhalte und -formate werden zellgenau übertragen. Bearbeiten oder formatieren zwei Personen gleichzeitig verschiedene Zellen, bleiben beide Änderungen erhalten, und alle sehen denselben Stand.
     - Fügt jemand Zeilen oder Spalten ein oder löscht sie, während eine andere Person eine Zelle bearbeitet oder ausgewählt hat, wandern Bearbeitung und Auswahl mit der Zelle mit. Wurde die Zelle gelöscht, endet die Bearbeitung.
     - Rückgängig nimmt nur die eigenen Zelländerungen zurück, nicht die anderer Personen.
+  - Geändert in 4.12.0: Strg+C, Strg+X und Strg+V gelten bei ausgewählten Zellen für diese Zellen. Andere Programme erhalten die sichtbaren Werte als Tabellentext; Tabellentext aus Excel lässt sich einfügen; ein einzelner Wert füllt eine größere Auswahl. Innerhalb von vibeboard bleiben Formeln erhalten, und ihre Bezüge wandern mit (mit $ festgehaltene bleiben). Ohne Zellauswahl gilt Kopieren weiter für die ganze Tabelle.
 
 ### REQ-ELEM-010 Mindmaps
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -122,6 +124,7 @@
   - Tab erzeugt einen Unterknoten, Enter (beim Tippen) bzw. Umschalt+Enter einen Geschwisterknoten.
   - Geändert in 4.8.0: Neue Knoten, die leer bleiben, verschwinden beim Beenden; aus einem leeren neuen Knoten heraus entsteht kein weiterer. Beim ersten Bearbeiten erklärt ein Hinweis die Tasten.
   - Hauptäste erhalten unterschiedliche Farben; Unterknoten werden ohne Überlappung untereinander angeordnet.
+  - Geändert in 4.12.0: Ziehen und Pfeiltasten nehmen die Unterknoten mit. Gesperrte Knoten bleiben liegen, eine Alt-Kopie kopiert nur die Auswahl.
 
 ### REQ-ELEM-011 Bilder
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -160,6 +163,8 @@
     - Löschen dürfen Bearbeitende jeden Kommentar, alle anderen nur eigene Threads ohne Antworten anderer.
     - Ein neuer Kommentar entsteht erst mit dem ersten Beitrag; ein leerer Entwurf verschwindet beim Schließen, ohne gespeichert zu werden.
     - Das Kommentar-Panel filtert nach „Offen“, „Mir zugewiesen“ und „Alle“.
+  - Geändert in 4.12.0: Ein Kommentar auf einem Element hängt an diesem Element: Er folgt ihm bei jeder Bewegung und bleibt beim Skalieren an derselben Stelle. Zieht man ihn selbst, hängt er am Element unter ihm oder an keinem mehr. Wird das Element gelöscht, bleibt der Kommentar an seiner Stelle. Ältere Kommentare ändern sich erst, wenn sie verschoben werden.
+  - Geändert in 4.12.0: Die Auswahl für Aufgaben enthält nur Personen, die den Kommentar auch erledigen dürfen.
 
 ### REQ-ELEM-015 Code-Blöcke
 - **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt

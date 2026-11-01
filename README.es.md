@@ -84,12 +84,12 @@ Todo el contenido de las capturas de pantalla son datos de ejemplo.
 | **Tarjetas** | Tareas con descripción, responsable, fecha de vencimiento, estado, prioridad, story points, número de ticket, etiquetas y color |
 | **Bloques de código** | Código fuente con resaltado de sintaxis para 13 lenguajes, números de línea, esquema claro u oscuro, botón de copiar |
 | **Diagrama a partir de texto** | Introduce diagramas de flujo y de secuencia en sintaxis Mermaid, con vista previa en vivo; el resultado son formas y conectores normales y editables |
-| **Tablas** | Seleccionar celdas y rangos; por celda negrita, cursiva, subrayado, tachado, alineación, tamaño de letra, color de texto y de celda; insertar y eliminar filas/columnas en cualquier posición; arrastrar anchos de columna y alturas de fila; manejo con el teclado como en una hoja de cálculo |
+| **Tablas** | Seleccionar celdas y rangos; copiar y pegar celdas, también con programas de hojas de cálculo; por celda negrita, cursiva, subrayado, tachado, alineación, tamaño de letra, color de texto y de celda; insertar y eliminar filas/columnas en cualquier posición; arrastrar anchos de columna y alturas de fila; manejo con el teclado como en una hoja de cálculo |
 | **Mapas mentales** | Selecciona un nodo y pulsa **Tab** para un nodo hijo y **Enter** para un nodo hermano |
 | **Imágenes** | mediante carga, arrastrar y soltar o desde el portapapeles; las imágenes grandes se reducen automáticamente |
 | **Stickers** | Emojis como elementos que se colocan libremente |
 | **Enlaces** | Adjunta una URL a los elementos; un icono de enlace la abre |
-| **Comentarios** | Hilos en cualquier lugar, @menciones con lista de sugerencias y notificación, estado «Hecho», asignar como tarea (con vencimiento), resumen de comentarios con el filtro «Asignado a mí» |
+| **Comentarios** | Hilos en cualquier lugar o unidos a un elemento (lo siguen), @menciones con lista de sugerencias y notificación, estado «Hecho», asignar como tarea (con vencimiento), resumen de comentarios con el filtro «Asignado a mí» |
 
 Al pegar texto de varias líneas en el tablero se crea automáticamente una nota adhesiva por línea.
 
@@ -246,7 +246,7 @@ Más información: [docs/integrations.md](docs/integrations.md) (en inglés).
 - Inicio: barra de plantillas plegable, aviso de tareas por vencer, tableros editados recientemente
 - Tableros propios y compartidos con imágenes en miniatura
 - Búsqueda, ordenación, compartir, renombrar, duplicar, eliminar, salir de un tablero
-- **Papelera:** Los tableros eliminados se pueden restaurar durante 30 días (ajustable); después se eliminan definitivamente.
+- **Papelera:** Los tableros eliminados se pueden restaurar durante 30 días (ajustable); después se eliminan definitivamente. Se pueden seleccionar varios o todos para restaurarlos o eliminarlos juntos.
 - Tablero nuevo directamente desde una plantilla, también desde **plantillas propias** (guardar un tablero o una
   selección como plantilla personal o de equipo)
 - **Aplicación instalable (PWA):** se puede usar en su propia ventana desde el navegador con «Instalar app» (menú de la cuenta)

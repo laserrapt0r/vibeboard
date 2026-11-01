@@ -31,6 +31,7 @@
   - Geändert in 4.0.0: Die Mitgliederliste zeigt Namen; E-Mail-Adressen nur dem Besitzer (Namen sind nicht eindeutig) – außer bei Personen, die er aus einem Team kennt, in dem er nicht verwaltet (wie in der Team-Ansicht).
   - Optional Einladungs-Mail mit Link zum Board.
   - Rolle ändern und entfernen; Fehler werden angezeigt, die Auswahl springt dann zurück.
+  - Geändert in 4.12.0: Wer schon Mitglied ist, erhält keine zweite Einladung. Mit gleicher Rolle ändert sich nichts, mit anderer wird nur die Rolle geändert und das gemeldet.
 
 ### REQ-BOARD-004 Freigabe per Link
 - **Seit:** 2.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -71,6 +72,7 @@
   - Startseite: Team-Ansicht mit Mitgliederverwaltung, „Ordner anlegen“ und Ordnern als Filter („Alle“, Ordner, „Ohne Ordner“); Board-Menü „In Ordner verschieben …“.
   - Wird ein Team gelöscht, bleiben die Boards beim Besitzer, sind aber nicht mehr für das Team freigegeben.
   - Geändert in 4.0.0: Mitglieder werden nicht mehr direkt hinzugefügt, sondern eingeladen und müssen annehmen ([REQ-BOARD-008](#req-board-008-einladungen-in-teams)).
+  - Geändert in 4.12.0: Dürfen nur Administratoren Teams anlegen, zeigt die Übersicht allen anderen kein „+“ mehr.
 
 ### REQ-BOARD-008 Einladungen in Teams
 - **Seit:** 4.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -92,6 +94,7 @@
   - Nach Ablauf der Frist (Standard 30 Tage, einstellbar 1–365) werden sie automatisch endgültig gelöscht.
   - Löschen, Wiederherstellen und endgültiges Löschen erscheinen im Sicherheitsprotokoll.
   - Geändert in 4.3.0: Der Papierkorb zeigt das Vorschaubild des Boards; nur für Besitzer und Administration abrufbar.
+  - Geändert in 4.12.0: Boards lassen sich einzeln oder mit „Alle auswählen“ markieren und gemeinsam wiederherstellen oder nach einer Rückfrage endgültig löschen. Scheitert ein Board, bleibt es markiert, und die Meldung nennt die Anzahl.
 
 ### REQ-BOARD-010 Einladung an Adressen ohne Konto
 - **Seit:** 4.2.0 · **Priorität:** Soll · **Status:** umgesetzt

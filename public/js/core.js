@@ -4,7 +4,7 @@ import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
   debounce, throttle, toast, contrastText, STICKY_COLORS, api, columnName,
 } from './util.js';
-import { renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
+import { shownCells, renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
   outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions, SHAPE_DEFAULTS, labelBelow, labelOutside, setElementLookup } from './render.js';
 import { THEMES } from './highlight.js';
 import { Sync } from './sync.js';
@@ -364,6 +364,7 @@ export function begin() {
 export function commit() {
   if (!tx) return;
   if (--tx.depth > 0) return;
+  followAnchors(tx);
   const t = tx;
   tx = null;
   const after = new Map();
@@ -482,12 +483,16 @@ function withOwnChanges(target, other, cur) {
 
 function applySnapshot(map, opposite = new Map()) {
   const removed = new Set();
+  const kept = new Set();
   let blocked = false;
   for (const [id, el] of map) {
     const cur = app.els.get(id), other = opposite.get(id);
+    // Kommentar nur mitgewandert und inzwischen gelöscht: Das Löschen macht dieser Schritt nicht rückgängig
+    if (el && el.type === 'comment' && other && !cur) continue;
     const tp = el && tableUndoPatch(el, other, cur);
     if (tp === BLOCKED) {
       blocked = true;
+      kept.add(id);
       continue;
     }
     if (tp) {
@@ -517,6 +522,8 @@ function applySnapshot(map, opposite = new Map()) {
       if (el.type === 'connector' && ((el.from?.id && removed.has(el.from.id)) || (el.to?.id && removed.has(el.to.id)))) deleteEl(el.id);
     }
   }
+  // Auch Kommentare, die erst nach diesem Schritt angehängt wurden, gehen mit
+  followAnchors({ before: opposite }, kept);
   for (const id of [...app.sel]) if (!app.els.has(id)) app.sel.delete(id);
   selectionChanged();
   scheduleSaveThumb();
@@ -584,8 +591,81 @@ export function applyRemoteOp(op) {
 }
 
 // Neuer Kommentar: zunächst nur ein lokaler Platzhalter; angelegt wird er erst mit dem ersten Beitrag (Server)
-export function newComment(w) {
-  const el = { ...makeElement('comment', w.x, w.y), draft: true };
+/* ---------------- Kommentare hängen am Element ---------------- */
+
+// Lage als Anteil der Größe: So bleibt der Kommentar auch nach dem Skalieren an derselben Stelle
+const anchorable = (el) => !!el && !el.hidden && !el.priv && !el.anon && Number.isFinite(el.w) && Number.isFinite(el.h) && el.w > 0 && el.h > 0 && !['comment', 'connector', 'frame', 'pen'].includes(el.type);
+const makeAnchor = (p, t) => ({ id: t.id, rx: Math.round(((p.x - t.x) / t.w) * 1e4) / 1e4, ry: Math.round(((p.y - t.y) / t.h) * 1e4) / 1e4 });
+const anchoredAt = (c, t) => ({ x: Math.round(t.x + c.anchor.rx * t.w), y: Math.round(t.y + c.anchor.ry * t.h) });
+
+function anchorAt(p) {
+  let best = null;
+  for (const el of app.els.values()) {
+    if (anchorable(el) && rectContainsPoint(el, p) && (!best || (el.z || 0) >= (best.z || 0))) best = el;
+  }
+  return best;
+}
+
+// Beim Abschluss jeder Änderung, damit es für alle Wege gilt: Ziehen, Pfeiltasten, Ausrichten, Größe, Layouts
+function followAnchors(t, extra = []) {
+  const moved = new Set(extra);
+  for (const [id, b] of t.before) {
+    const a = app.els.get(id);
+    if (a && b && (a.x !== b.x || a.y !== b.y || a.w !== b.w || a.h !== b.h)) moved.add(id);
+  }
+  if (!moved.size) return;
+  for (const c of [...app.els.values()]) {
+    if (c.type !== 'comment' || !c.anchor || c.draft || !moved.has(c.anchor.id) || isLocked(c)) continue;
+    const target = app.els.get(c.anchor.id);
+    if (!target) continue;
+    const p = anchoredAt(c, target);
+    if (p.x !== c.x || p.y !== c.y) setEl({ ...c, ...p });
+  }
+}
+
+// Was beim Ziehen mitwandert: Unterknoten einer Mindmap und Kommentare an bewegten Elementen
+function followersOf(ids) {
+  const moving = new Set(ids);
+  const kids = new Map();
+  for (const c of app.els.values()) {
+    if (c.type === 'connector' && c.mind && c.from.id && c.to.id) kids.set(c.from.id, [...(kids.get(c.from.id) || []), c.to.id]);
+  }
+  const out = new Set();
+  const stack = [...ids];
+  while (stack.length) {
+    for (const k of kids.get(stack.pop()) || []) {
+      const el = getEl(k);
+      if (moving.has(k) || !el || isLocked(el)) continue;
+      moving.add(k);
+      out.add(k);
+      stack.push(k);
+    }
+  }
+  for (const c of app.els.values()) {
+    if (c.type === 'comment' && c.anchor && !c.draft && moving.has(c.anchor.id) && !moving.has(c.id) && !isLocked(c)) out.add(c.id);
+  }
+  return out;
+}
+
+// Ein selbst verschobener Kommentar hängt danach am Element unter ihm, oder an keinem mehr
+function reanchorMoved(origs) {
+  const moved = new Set(origs.map((o) => o.id));
+  for (const o of origs) {
+    const c = getEl(o.id);
+    // Nur selbst gewählte Kommentare: Was ein Frame mitnimmt, wurde nicht umgehängt
+    if (!c || c.type !== 'comment' || c.draft || !app.sel.has(c.id) || (c.anchor && moved.has(c.anchor.id))) continue;
+    const t = anchorAt(c);
+    if (t) setEl({ ...c, anchor: makeAnchor(c, t) });
+    else if (c.anchor) {
+      const { anchor, ...rest } = c;
+      setEl(rest);
+    }
+  }
+}
+
+export function newComment(w, targetId = null) {
+  const target = targetId ? getEl(targetId) : anchorAt(w);
+  const el = { ...makeElement('comment', w.x, w.y, anchorable(target) ? { anchor: makeAnchor(w, target) } : {}), draft: true };
   applyRemoteOp({ op: 'upsert', el });
   setTool('select');
   app.emit('openComment', el.id, true);
@@ -1807,6 +1887,9 @@ function startMove(e, start) {
     if (el && el.type === 'frame' && !isLocked(el)) withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
   }
   ids = [...ids].filter((id) => getEl(id) && (!isLocked(getEl(id)) || pageOfMovedFrame(getEl(id))));
+  // Eine Alt-Kopie nimmt nur die Auswahl mit
+  const followers = e.altKey ? new Set() : followersOf(ids);
+  ids.push(...followers);
   // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit
   const idSet = new Set(ids);
   for (const c of app.els.values()) {
@@ -1822,7 +1905,9 @@ function startMove(e, start) {
   }
   const origs = ids.map((id) => clone(getEl(id)));
   const moving = new Set(ids);
-  const ob = unionRect(origs.map((o) => elBounds(o, getEl)));
+  // Einrasten und Hilfslinien richten sich nach dem Gezogenen, nicht nach dem, was mitwandert
+  const led = origs.filter((o) => !followers.has(o.id));
+  const ob = unionRect((led.length ? led : origs).map((o) => elBounds(o, getEl)));
   // Kandidaten für Hilfslinien
   const cand = app.settings.smartGuides ? snapCandidates(moving) : { x: [], y: [], w: [], h: [], boxes: [] };
   drag = { mode: 'move', start, origs, ob, cand, moved: false, tx: true };
@@ -2356,7 +2441,10 @@ function onUp(e) {
   hoverAnchor = null;
   switch (d.mode) {
     case 'move':
-      if (d.moved) applyColumnStatus(d.fromColumns);
+      if (d.moved) {
+        applyColumnStatus(d.fromColumns);
+        reanchorMoved(d.origs);
+      }
       commit();
       if (d.clickComment && !d.moved) app.emit('openComment', d.clickComment);
       if (d.clickSelect && !d.moved) setSelection([d.clickSelect]);
@@ -3245,14 +3333,31 @@ export function toggleModLock() {
   app.emit('selection');
 }
 
+// Langes Drücken öffnet ein Menü: Die Geste darunter endet hier, sonst wirkte das Loslassen wie ein Klick.
+// false, wenn schon gezogen wurde: Dann war es keine lange Berührung.
+export function dropGesture() {
+  if (!drag) return true;
+  if (drag.moved) return false;
+  const d = drag;
+  drag = null;
+  if (d.tx) commit();
+  scheduleRender(true);
+  return true;
+}
+
 export function nudge(dx, dy) {
   const ids = new Set(app.sel);
   for (const el of selectedEls()) if (el.type === 'frame' && !isLocked(el)) withGroups(frameChildren(el).map((c) => c.id)).forEach((c) => ids.add(c));
+  followersOf([...ids].filter((id) => getEl(id) && (!isLocked(getEl(id)) || pageOfMovedFrame(getEl(id))))).forEach((id) => ids.add(id));
   // Knickpunkte von Verbindern zwischen mitbewegten Elementen wandern mit (wie beim Ziehen)
   for (const c of app.els.values()) {
     if (c.type === 'connector' && !ids.has(c.id) && waypointsOf(c).length && c.from.id && c.to.id && ids.has(c.from.id) && ids.has(c.to.id)) ids.add(c.id);
   }
-  act(() => [...ids].map(getEl).filter((e) => e && (!isLocked(e) || pageOfMovedFrame(e))).forEach((el) => setEl(translated(el, dx, dy))));
+  act(() => {
+    const list = [...ids].map(getEl).filter((e) => e && (!isLocked(e) || pageOfMovedFrame(e)));
+    list.forEach((el) => setEl(translated(el, dx, dy)));
+    reanchorMoved(list);
+  });
 }
 
 /* ================================================================== */
@@ -3476,14 +3581,106 @@ window.addEventListener('keyup', (e) => {
 /* Zwischenablage über System-Events (funktioniert auch boardübergreifend) */
 const CLIP_PREFIX = 'vibeboard-clipboard:';
 
+// Ausgewählte Zellen einer Tabelle (nur dann gelten Kopieren und Einfügen für Zellen statt für die Tabelle)
+function cellClip() {
+  const cs = app.cellSel && app.sel.size === 1 && app.sel.has(app.cellSel.id) ? app.cellSel : null;
+  const t = cs && getEl(cs.id);
+  if (!t || t.type !== 'table') return null;
+  return { t, r0: Math.min(cs.r0, cs.r1), r1: Math.max(cs.r0, cs.r1), c0: Math.min(cs.c0, cs.c1), c1: Math.max(cs.c0, cs.c1) };
+}
+
+const CELL_MIME = 'text/x-vibeboard-cells';
+let lastCells = null;
+const tsvCell = (v) => (/[\t\n\r"]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+
+// Für andere Programme die sichtbaren Werte, für die eigene Tabelle zusätzlich die Formeln
+function writeCells(e, cl) {
+  const shown = shownCells(cl.t);
+  const pick = (m) => m.slice(cl.r0, cl.r1 + 1).map((row) => row.slice(cl.c0, cl.c1 + 1).map((v) => String(v ?? '')));
+  e.preventDefault();
+  const plain = pick(shown).map((row) => row.map(tsvCell).join('\t')).join('\n');
+  const raw = JSON.stringify({ r0: cl.r0, c0: cl.c0, cells: pick(cl.t.cells || []) });
+  e.clipboardData.setData('text/plain', plain);
+  e.clipboardData.setData(CELL_MIME, raw);
+  // Das Einfügen übers Kontextmenü liest nur Text: So bleiben Formeln auch dort erhalten
+  lastCells = { plain, raw };
+}
+
+// Nur ein Anführungszeichen, das die ganze Zelle umschließt, ist Quoting; „"Zitat" Rest“ ist schlicht Text
+function quotedCell(s, start) {
+  for (let i = start + 1; i < s.length; i++) {
+    if (s[i] !== '"') continue;
+    if (s[i + 1] === '"') {
+      i++;
+      continue;
+    }
+    return i + 1 === s.length || s[i + 1] === '\t' || s[i + 1] === '\n';
+  }
+  return false;
+}
+
+// Text aus Tabellenprogrammen: Tabulatoren trennen Spalten, Zellen mit Umbruch stehen in Anführungszeichen
+function parseTsv(text) {
+  const rows = [[]];
+  let cell = '', quoted = false;
+  const s = text.replace(/\r\n?/g, '\n').replace(/\n$/, '');
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (quoted) {
+      if (ch === '"' && s[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"' && !cell && quotedCell(s, i)) quoted = true;
+    else if (ch === '\t') { rows[rows.length - 1].push(cell); cell = ''; }
+    else if (ch === '\n') { rows[rows.length - 1].push(cell); cell = ''; rows.push([]); }
+    else cell += ch;
+  }
+  rows[rows.length - 1].push(cell);
+  return rows;
+}
+
+function pasteCells(cl, raw, text) {
+  let data = null;
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {}
+  const src = data && Array.isArray(data.cells) ? data.cells.map((r) => r.map(String)) : parseTsv(text);
+  const value = (r, c, tr, tc) => {
+    const v = src[r][c] ?? '';
+    return data ? globalThis.TableFormula.move(v, tr - data.r0 - r, tc - data.c0 - c) : v;
+  };
+  const cells = [];
+  const single = src.length === 1 && src[0].length === 1;
+  // Ein einzelner Wert füllt eine größere Auswahl
+  if (single) {
+    for (let r = cl.r0; r <= cl.r1; r++) for (let c = cl.c0; c <= cl.c1; c++) cells.push([r, c, value(0, 0, r, c)]);
+  } else {
+    src.forEach((row, r) => row.forEach((_, c) => {
+      if (cl.r0 + r < cl.t.rows && cl.c0 + c < cl.t.cols) cells.push([cl.r0 + r, cl.c0 + c, value(r, c, cl.r0 + r, cl.c0 + c)]);
+    }));
+    if (src.length > cl.t.rows - cl.r0 || Math.max(...src.map((r) => r.length)) > cl.t.cols - cl.c0) toast(T('Nicht alles passte in die Tabelle'), 3500);
+  }
+  if (cells.length) act(() => tablePatch(cl.t, { cells }));
+  scheduleRender(true);
+}
+
 document.addEventListener('copy', (e) => {
   if (isTyping(e) || app.editing || !app.sel.size) return;
+  const cl = cellClip();
+  if (cl) return writeCells(e, cl);
   e.preventDefault();
   e.clipboardData.setData('text/plain', CLIP_PREFIX + JSON.stringify({ from: boardId, els: collectForCopy([...app.sel]) }));
 });
 
 document.addEventListener('cut', (e) => {
   if (isTyping(e) || app.editing || !app.sel.size || app.viewOnly) return;
+  const cl = cellClip();
+  if (cl) {
+    writeCells(e, cl);
+    if (isLocked(cl.t)) toast(T('Gesperrte Elemente bleiben unverändert'));
+    else tableAction('clear');
+    return;
+  }
   e.preventDefault();
   const copied = collectForCopy([...app.sel]);
   e.clipboardData.setData('text/plain', CLIP_PREFIX + JSON.stringify({ from: boardId, els: copied }));
@@ -3520,21 +3717,23 @@ document.addEventListener('paste', (e) => {
   if (!text) return;
   e.preventDefault();
   const at = rectContainsPoint(visibleRect(), lastCursorWorld) ? lastCursorWorld : viewCenter();
-  pasteClipboardText(text, at);
+  pasteClipboardText(text, at, e.clipboardData.getData(CELL_MIME));
 });
 
 // Aus dem Kontextmenü: Der Browser fragt beim ersten Mal nach der Erlaubnis
 export async function pasteFromClipboard(at) {
   try {
     const text = await navigator.clipboard.readText();
-    if (text) pasteClipboardText(text, at);
+    if (text) pasteClipboardText(text, at, lastCells && lastCells.plain === text ? lastCells.raw : '');
     else toast(T('Die Zwischenablage ist leer'));
   } catch {
     toast(T('Der Browser erlaubt das Einfügen hier nicht: Bitte Strg+V drücken'), 4000);
   }
 }
 
-function pasteClipboardText(text, at) {
+function pasteClipboardText(text, at, cellData = '') {
+  const cl = text.startsWith(CLIP_PREFIX) ? null : cellClip();
+  if (cl) return isLocked(cl.t) ? toast(T('Gesperrte Elemente bleiben unverändert')) : pasteCells(cl, cellData, text);
   if (text.startsWith(CLIP_PREFIX)) {
     try {
       pasteElements(clipped(JSON.parse(text.slice(CLIP_PREFIX.length))), at);

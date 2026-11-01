@@ -466,7 +466,22 @@
     });
   }
 
-  const api = { isFormula, compute, adjust, refName, parseRef, cellNumber, valid: (s) => isFormula(s) && !!parse(s), ERR };
+  /** Bezüge beim Kopieren in eine andere Zelle mitwandern lassen; mit $ festgehaltene bleiben. */
+  function move(formula, dr, dc) {
+    if (!isFormula(formula) || !parse(formula) || (!dr && !dc)) return formula;
+    const one = (ref) => {
+      const r = ref.absRow ? ref.r : ref.r + dr, c = ref.absCol ? ref.c : ref.c + dc;
+      return r < 0 || c < 0 ? '#REF!' : refText(ref, r, c);
+    };
+    return formula.replace(/"(?:[^"]|"")*"|(\$?[A-Za-z]{1,2}\$?\d{1,3})(?:\s*:\s*(\$?[A-Za-z]{1,2}\$?\d{1,3}))?(?![A-Za-z0-9_.(])/g, (whole, first, second, pos, str) => {
+      if (!first || /[A-Za-z0-9_.$ÄÖÜäöüß]/.test(str[pos - 1] || '')) return whole;
+      const a = parseRef(first), b = second ? parseRef(second) : null;
+      if (!a || (second && !b)) return whole;
+      return b ? `${one(a)}:${one(b)}` : one(a);
+    });
+  }
+
+  const api = { isFormula, compute, adjust, move, refName, parseRef, cellNumber, valid: (s) => isFormula(s) && !!parse(s), ERR };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TableFormula = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -3642,5 +3642,16 @@
 "Verbindung zu Ticketsystem gelöscht": "Connexion au système de tickets supprimée",
 "Konto über SCIM angelegt": "Compte créé via SCIM",
 "Konto über SCIM gesperrt": "Compte désactivé via SCIM",
-"Konto mit externer Anmeldung verknüpft": "Compte lié à une connexion externe"
+"Konto mit externer Anmeldung verknüpft": "Compte lié à une connexion externe",
+"Nicht alles passte in die Tabelle": "Tout n’a pas pu entrer dans le tableau",
+"Foto hier einfügen …": "Insérer une photo ici …",
+"Diese Person ist bereits Mitglied mit dieser Rolle": "Cette personne est déjà membre avec ce rôle",
+"Bereits Mitglied – die Rolle wurde geändert": "Déjà membre – le rôle a été modifié",
+"Alle auswählen": "Tout sélectionner",
+"{0} von {1} ausgewählt": "{0} sur {1} sélectionnés",
+"„{0}“ auswählen": "Sélectionner « {0} »",
+"{0} Boards werden mit allen Inhalten, Versionen, Dateien und Aufzeichnungen endgültig gelöscht. Das lässt sich nicht rückgängig machen.": "{0} tableaux seront définitivement supprimés avec tous leurs contenus, versions, fichiers et enregistrements. Cette action est irréversible.",
+"{0} von {1} erledigt, bei den übrigen gab es einen Fehler": "{0} sur {1} effectués, les autres ont échoué",
+"{0} Boards endgültig gelöscht": "{0} tableaux définitivement supprimés",
+"{0} Boards wiederhergestellt": "{0} tableaux restaurés"
 }

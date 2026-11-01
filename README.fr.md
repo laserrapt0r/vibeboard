@@ -85,12 +85,12 @@ Tous les contenus des captures d'écran sont des données d'exemple.
 | **Cartes** | Tâches avec description, responsable, date d'échéance, statut, priorité, story points, numéro de ticket, étiquettes et couleur |
 | **Blocs de code** | Code source avec coloration syntaxique pour 13 langages, numéros de ligne, thème clair ou sombre, bouton de copie |
 | **Diagramme à partir d'un texte** | Saisir des organigrammes et des diagrammes de séquence en syntaxe Mermaid, avec aperçu en direct ; il en résulte des formes et des connecteurs normaux et modifiables |
-| **Tableaux** | Sélectionner des cellules et des plages ; par cellule gras, italique, souligné, barré, alignement, taille de police, couleur du texte et de la cellule ; insérer et supprimer des lignes/colonnes à n'importe quel endroit ; faire glisser les largeurs de colonne et les hauteurs de ligne ; utilisation au clavier comme dans un tableur |
+| **Tableaux** | Sélectionner des cellules et des plages ; copier et coller des cellules, aussi avec les tableurs ; par cellule gras, italique, souligné, barré, alignement, taille de police, couleur du texte et de la cellule ; insérer et supprimer des lignes/colonnes à n'importe quel endroit ; faire glisser les largeurs de colonne et les hauteurs de ligne ; utilisation au clavier comme dans un tableur |
 | **Cartes mentales** | Sélectionner un nœud, puis **Tab** pour un nœud enfant et **Entrée** pour un nœud frère |
 | **Images** | par téléversement, glisser-déposer ou depuis le presse-papiers ; les grandes images sont réduites automatiquement |
 | **Stickers** | Emojis comme éléments librement positionnables |
 | **Liens** | Associer une URL à des éléments ; une icône de lien l'ouvre |
-| **Commentaires** | Fils de discussion n'importe où, @mentions avec liste de suggestions et notification, statut « Terminé », attribution comme tâche (avec échéance), aperçu des commentaires avec le filtre « Attribué à moi » |
+| **Commentaires** | Fils de discussion n'importe où ou liés à un élément (ils le suivent), @mentions avec liste de suggestions et notification, statut « Terminé », attribution comme tâche (avec échéance), aperçu des commentaires avec le filtre « Attribué à moi » |
 
 Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une note adhésive par ligne.
 
@@ -249,7 +249,7 @@ Plus d'informations : [docs/integrations.md](docs/integrations.md) (en anglais)
 - Accueil : barre de modèles repliable, avis sur les tâches arrivant à échéance, tableaux modifiés récemment
 - Tableaux personnels et partagés avec vignettes
 - Recherche, tri, partage, renommage, duplication, suppression, quitter un tableau
-- **Corbeille :** Les tableaux supprimés restent restaurables pendant 30 jours (réglable), puis ils sont supprimés définitivement.
+- **Corbeille :** Les tableaux supprimés restent restaurables pendant 30 jours (réglable), puis ils sont supprimés définitivement. Plusieurs tableaux, ou tous, peuvent être sélectionnés pour les restaurer ou les supprimer ensemble.
 - Nouveau tableau directement à partir d'un modèle, y compris à partir de **modèles personnels** (enregistrer un tableau
   ou une sélection comme modèle personnel ou d'équipe)
 - **Application installable (PWA) :** utilisable dans sa propre fenêtre depuis le navigateur via « Installer l'application » (menu du compte)

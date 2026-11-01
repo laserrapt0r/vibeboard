@@ -83,12 +83,12 @@ All content in the screenshots is sample data.
 | **Cards** | Tasks with description, assignee, due date, status, priority, story points, ticket number, labels and color |
 | **Code blocks** | Source code with syntax highlighting for 13 languages, line numbers, light or dark scheme, copy button |
 | **Diagram from text** | Enter flowcharts and sequence diagrams in Mermaid syntax, with live preview; the result is normal, editable shapes and connectors |
-| **Tables** | Select cells and ranges; per cell bold, italic, underline, strikethrough, alignment, font size, text and cell color; insert and delete rows/columns anywhere; drag column widths and row heights; keyboard control like a spreadsheet |
+| **Tables** | Select cells and ranges; copy and paste cells, also with spreadsheet programs; per cell bold, italic, underline, strikethrough, alignment, font size, text and cell color; insert and delete rows/columns anywhere; drag column widths and row heights; keyboard control like a spreadsheet |
 | **Mind maps** | Select a node, then **Tab** for a child node and **Enter** for a sibling node |
 | **Images** | by upload, drag & drop or from the clipboard; large images are scaled down automatically |
 | **Stickers** | Emojis as freely placeable elements |
 | **Links** | Attach a URL to elements; a link icon opens it |
-| **Comments** | Threads anywhere, @mentions with suggestion list and notification, “Done” status, assign as a task (with due date), comment overview with the “Assigned to me” filter |
+| **Comments** | Threads anywhere or attached to an element (they follow it), @mentions with suggestion list and notification, “Done” status, assign as a task (with due date), comment overview with the “Assigned to me” filter |
 
 Pasting multi-line text into the board automatically creates one sticky note per line.
 
@@ -241,7 +241,7 @@ More: [docs/integrations.md](docs/integrations.md).
 - Home: collapsible template bar, notice about due tasks, recently edited boards
 - Own and shared boards with thumbnails
 - Search, sorting, sharing, renaming, duplicating, deleting, leaving a board
-- **Trash:** Deleted boards can be restored for 30 days (adjustable), then they are deleted permanently.
+- **Trash:** Deleted boards can be restored for 30 days (adjustable), then they are deleted permanently. Select several or all to restore or delete them together.
 - New board directly from a template – also from **your own templates** (save a board or selection as a personal or
   team template)
 - **Installable app (PWA):** can be used in its own window via “Install app” (account menu) in the browser

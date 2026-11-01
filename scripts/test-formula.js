@@ -154,5 +154,14 @@ eq('Spaltenname zweistellig', F.refName(0, 27), 'AB1');
   eq('Struktur: Ergebnis nach Löschen', F.compute(b).text(3, 0, 'de'), '2');
 }
 
+// Kopieren in andere Zellen
+eq('Kopieren: Bezug wandert', F.move('=A1+B2', 1, 2), '=C2+D3');
+eq('Kopieren: $ bleibt', F.move('=$A$1+B$2+$C3', 1, 1), '=$A$1+C$2+$C4');
+eq('Kopieren: Bereich', F.move('=SUMME(A1:A3)', 2, 1), '=SUMME(B3:B5)');
+eq('Kopieren: Text bleibt', F.move('=A1+"B2"', 1, 0), '=A2+"B2"');
+eq('Kopieren: Links vom Rand', F.move('=A1', 0, -1), '=#REF!');
+eq('Kopieren: Keine Formel', F.move('Text A1', 1, 1), 'Text A1');
+eq('Kopieren: Ohne Versatz', F.move('=A1', 0, 0), '=A1');
+
 console.log(failed ? `${failed} von ${count} Prüfungen fehlgeschlagen` : `${count} Prüfungen bestanden`);
 process.exit(failed ? 1 : 0);

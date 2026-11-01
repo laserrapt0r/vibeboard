@@ -14,6 +14,7 @@ let data = { owned: [], shared: [], teams: [], folderList: [] };
 let view = location.hash === '#aufgaben' ? { kind: 'tasks' } : location.hash === '#einladungen' ? { kind: 'start' } : loadPref('dashView', { kind: 'start' });
 const BOARD_VIEWS = new Set(['all', 'mine', 'shared', 'folder', 'team']);
 let me = null;
+let canCreateTeam = true;
 // „neon“: Einstellung aus 3.5.0, wird als dunkles Design übernommen
 let dark = loadPref('settings', {}).dark || loadPref('settings', {}).neon;
 
@@ -278,6 +279,8 @@ function render() {
 /* ---------------- Papierkorb ---------------- */
 
 let trash = { days: 30, boards: [] };
+const trashSel = new Set();
+let trashBusy = false;
 
 async function loadTrash(quiet) {
   try {
@@ -289,20 +292,79 @@ async function loadTrash(quiet) {
   if (view.kind === 'trash') renderTrash();
 }
 
+// Auswahl im Papierkorb: Aktionen laufen je Board über dieselben Routen wie einzeln (Rechte, Protokoll)
+function trashBar() {
+  const n = trashSel.size, total = trash.boards.length;
+  const all = h('input', { type: 'checkbox', checked: n === total, 'aria-label': T('Alle auswählen'), onchange: (e) => {
+    trashSel.clear();
+    if (e.target.checked) trash.boards.forEach((b) => trashSel.add(b.id));
+    renderTrash();
+  } });
+  all.indeterminate = n > 0 && n < total;
+  return h('div', { class: 'trash-bar', id: 'trash-bar' },
+    h('label', { class: 'trash-all' }, all, T('Alle auswählen')),
+    h('span', { class: 'muted', role: 'status' }, n ? T`${n} von ${total} ausgewählt` : ''),
+    h('span', { class: 'spacer' }),
+    h('button', { class: 'btn small', disabled: !n || trashBusy, onclick: () => trashBulk('restore') }, h('span', { html: ICONS.restore }), T('Wiederherstellen')),
+    h('button', { class: 'btn small danger', disabled: !n || trashBusy, onclick: () => trashBulk('delete') }, T('Endgültig löschen')));
+}
+
+async function trashBulk(action) {
+  const list = trash.boards.filter((b) => trashSel.has(b.id));
+  if (!list.length || trashBusy) return;
+  const remove = action === 'delete';
+  if (remove) {
+    const text = list.length === 1
+      ? T`„${list[0].name}“ wird mit allen Inhalten, Versionen, Dateien und Aufzeichnungen endgültig gelöscht. Das lässt sich nicht rückgängig machen.`
+      : T`${list.length} Boards werden mit allen Inhalten, Versionen, Dateien und Aufzeichnungen endgültig gelöscht. Das lässt sich nicht rückgängig machen.`;
+    if (!(await confirmDialog(T('Endgültig löschen'), text, T('Endgültig löschen'), true))) return;
+  }
+  trashBusy = true;
+  renderTrash();
+  let done = 0;
+  // Nacheinander: Endgültiges Löschen räumt Dateien auf, das soll den Server nicht auf einmal treffen
+  for (const b of list) {
+    try {
+      if (remove) await api(`/api/trash/${b.id}`, { method: 'DELETE' });
+      else await api(`/api/trash/${b.id}/restore`, { method: 'POST' });
+      trashSel.delete(b.id);
+      done++;
+    } catch {
+      // Zählt unten als nicht erledigt und bleibt ausgewählt
+    }
+  }
+  trashBusy = false;
+  if (done < list.length) toast(T`${done} von ${list.length} erledigt, bei den übrigen gab es einen Fehler`, 6000);
+  else if (done === 1) toast(remove ? T('Endgültig gelöscht') : T`„${list[0].name}“ wiederhergestellt`);
+  else toast(remove ? T`${done} Boards endgültig gelöscht` : T`${done} Boards wiederhergestellt`);
+  await loadTrash();
+  if (!remove) load();
+}
+
 function renderTrash() {
   const box = document.getElementById('dash-trash');
+  const known = new Set(trash.boards.map((b) => b.id));
+  for (const id of [...trashSel]) if (!known.has(id)) trashSel.delete(id);
+  document.getElementById('trash-bar')?.remove();
   document.getElementById('dash-trash-info').textContent = T`Gelöschte Boards bleiben ${trash.days} Tage im Papierkorb und werden danach endgültig entfernt. Nur du siehst deine gelöschten Boards.`;
   box.innerHTML = '';
   if (!trash.boards.length) {
     box.append(h('div', { class: 'dash-empty' }, T('Der Papierkorb ist leer.')));
     return;
   }
+  box.before(trashBar());
   for (const b of trash.boards) {
     const days = Math.max(0, Math.ceil((b.purgeAt - Date.now()) / 86400000));
     const thumb = h('div', { class: 'board-thumb' });
     if (b.hasThumb) thumb.append(h('img', { src: `/api/trash/${b.id}/thumb?t=${b.deletedAt}`, alt: '', loading: 'lazy' }));
     else thumb.append(h('div', { class: 'board-thumb-empty' }, '🗑️'));
-    box.append(h('div', { class: 'board-card trashed' }, thumb,
+    const picked = trashSel.has(b.id);
+    const pick = h('input', { type: 'checkbox', class: 'trash-pick', checked: picked, 'aria-label': T`„${b.name}“ auswählen`, onchange: (e) => {
+      if (e.target.checked) trashSel.add(b.id);
+      else trashSel.delete(b.id);
+      renderTrash();
+    } });
+    box.append(h('div', { class: 'board-card trashed' + (picked ? ' picked' : '') }, pick, thumb,
       h('div', { class: 'board-info' },
         h('div', { class: 'board-name' }, b.name),
         h('div', { class: 'board-meta' }, T`gelöscht ${relTime(b.deletedAt)} · ${b.elementCount} Elemente · Tage übrig: ${days}`),
@@ -373,7 +435,7 @@ function renderNav() {
   nav.append(h('div', { class: 'dash-nav-head' }, h('span', {}, T('Ordner')), h('button', { class: 'icon-btn small', title: T('Neuer Ordner'), html: ICONS.plus, onclick: () => newFolder(null) })));
   if (!personal.length) nav.append(h('div', { class: 'dash-nav-hint' }, T('Eigene Ordner – nur für dich sichtbar.')));
   for (const f of personal) nav.append(item(f.name, { kind: 'folder', id: f.id }, allBoards().filter((b) => b.folders.includes(f.id)).length, 'folder'));
-  nav.append(h('div', { class: 'dash-nav-head' }, h('span', {}, T('Teams')), h('button', { class: 'icon-btn small', title: T('Team erstellen'), html: ICONS.plus, onclick: newTeam })));
+  nav.append(h('div', { class: 'dash-nav-head' }, h('span', {}, T('Teams')), canCreateTeam ? h('button', { class: 'icon-btn small', title: T('Team erstellen'), html: ICONS.plus, onclick: newTeam }) : null));
   if (invitations.length) nav.append(h('button', { class: 'dash-nav-item invite-link', onclick: () => setView({ kind: 'start' }) }, h('span', { class: 'nav-icon', html: ICONS.bell }), h('span', { class: 'nav-label' }, T('Einladungen')), h('span', { class: 'nav-count alert' }, invitations.length)));
   if (!data.teams.length) nav.append(h('div', { class: 'dash-nav-hint' }, T('Teams teilen Boards mit allen Mitgliedern auf einmal.')));
   for (const t of data.teams) nav.append(item(t.name, { kind: 'team', id: t.id }, allBoards().filter((b) => inTeam(b, t.id)).length, 'team'));
@@ -790,7 +852,9 @@ importInput.addEventListener('change', async () => {
 (async () => {
   applyDark();
   try {
-    me = (await api('/api/auth/me')).user;
+    const account = await api('/api/auth/me');
+    me = account.user;
+    canCreateTeam = account.canCreateTeam !== false;
   } catch {
     location.href = '/login';
     return;

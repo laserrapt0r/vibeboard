@@ -218,7 +218,7 @@ body.dark .btn.danger:not(.primary):not(:hover) { color: #ff8f8f; }
 body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavior: none; }
 
 #stage {
-  position: fixed; inset: 0; overflow: hidden; touch-action: none;
+  position: fixed; inset: 0; overflow: hidden; touch-action: none; -webkit-touch-callout: none;
   background-color: var(--canvas);
   background-image: radial-gradient(circle, var(--grid) 1.1px, transparent 1.3px);
   user-select: none; -webkit-user-select: none;
@@ -1207,6 +1207,11 @@ body.retro-active #filter-banner { bottom: 118px; }
 
 /* Papierkorb */
 .board-card.trashed { cursor: default; }
+.board-card.trashed.picked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.trash-pick { position: absolute; top: 8px; left: 8px; z-index: 1; width: 20px; height: 20px; margin: 0; cursor: pointer; }
+.trash-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 14px; }
+.trash-all { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.trash-all input { width: 18px; height: 18px; margin: 0; }
 .board-card.trashed .board-thumb { filter: grayscale(1); opacity: 0.7; }
 .dash-nav-sep { height: 1px; background: var(--border); margin: 10px 8px; }
 

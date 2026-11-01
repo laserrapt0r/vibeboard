@@ -209,6 +209,13 @@ export class Sync {
   async connectPoll() {
     this.transport = 'poll';
     this.emit('transport', 'poll');
+    if (!this.leaveHook) {
+      this.leaveHook = () => {
+        if (this.stopped) return;
+        fetch(`/api/boards/${this.boardId}/leave`, { method: 'POST', keepalive: true, headers: { 'X-Vibeboard': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId: this.clientId }) }).catch(() => {});
+      };
+      addEventListener('pagehide', this.leaveHook);
+    }
     const loop = ++this.pollLoop;
     const p = new URLSearchParams({ client: this.clientId, transport: 'poll' });
     while (!this.stopped && this.pollLoop === loop) {
@@ -406,7 +413,8 @@ export class Sync {
         }
         for (const op of res.revert || []) authoritative(op);
         if (res.marks && res.marks.length) this.emit('marks', res.marks);
-        const ids = new Set([...ops.filter(tracked).map(idOf), ...direct.map(idOf)]);
+        // Zurückgenommenes auch dann anzeigen, wenn es einen Abgleich-Eintrag hat (z. B. mitgewanderte Kommentare)
+        const ids = new Set([...ops.filter(tracked).map(idOf), ...direct.map(idOf), ...(res.revert || []).map(idOf)]);
         const shown = [...ids].map((id) => this.resolved(id)).filter(Boolean);
         this.emit('apply', [...direct.filter((o) => !this.merge.has(idOf(o))), ...shown]);
         this.merge.sweep((id) => this.openOps(id).length > 0);

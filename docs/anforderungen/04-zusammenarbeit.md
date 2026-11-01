@@ -10,6 +10,7 @@
   - Geändert in 3.7.0: Kommentare werden nicht mehr als ganzes Element überschrieben, sondern über eigene Operationen geändert ([REQ-ELEM-014](02-elemente.md)).
   - Geändert in 3.5.0: Bei Tabellen gilt das je Zelle. Änderungen an verschiedenen Zellen gehen nicht verloren, und eingefügte oder gelöschte Zeilen und Spalten verschieben die Zellen anderer Personen korrekt (REQ-ELEM-009).
   - Nur angemeldete Personen mit mindestens Leserecht erhalten den Echtzeitkanal; Änderungen erfordern Schreibrecht (Prüfung auf dem Server).
+  - Geändert in 4.12.0: Lehnt der Server eine Kommentaränderung ab, kehrt der angezeigte Stand zum Server zurück. Tippen zwei Personen in dieselbe Notiz, gewinnt weiter die letzte Eingabe; der Hinweis „✎ Name bearbeitet“ zeigt das an. Ändert jemand im Moment der Übertragung die Tabellenstruktur, kann eine Zelleingabe in der Nachbarzelle landen: Offene Zelleditoren wandern mit, nur Pakete unterwegs nicht.
 
 ### REQ-COLLAB-002 Echtzeit ohne WebSockets, mit Rückfalloption
 - **Seit:** 1.0.0 (Server-Sent Events), 3.0.0 (Long-Polling-Rückfall) · **Priorität:** Muss · **Status:** umgesetzt
@@ -47,6 +48,7 @@
   - Geändert in 4.7.0:
     - Auch Verschieben, Größe ändern und der offene Kartendialog erscheinen als „✎ Name …“ am Element; wer dieselbe Karte öffnet, sieht im Dialog, bei wem sie noch offen ist.
     - Die Hinweise sperren nichts, gelten nicht für anonyme Beiträge und verschwinden nach spätestens 12 Sekunden von selbst, wenn die Verbindung abreißt.
+  - Geändert in 4.12.0: Auch im Long-Polling meldet ein schließender Tab das Verlassen sofort. Nur nach einem Absturz dauert es weiterhin bis zu 75 Sekunden.
 
 ### REQ-COLLAB-005 Folgen und Zusammenholen
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt

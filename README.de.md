@@ -84,12 +84,12 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 | **Karten** | Aufgaben mit Beschreibung, Zuständigkeit, Fälligkeitsdatum, Status, Priorität, Story Points, Ticketnummer, Labels und Farbe |
 | **Code-Blöcke** | Quelltext mit Syntaxhervorhebung für 13 Sprachen, Zeilennummern, hellem oder dunklem Schema, Kopieren-Knopf |
 | **Diagramm aus Text** | Fluss- und Sequenzdiagramme in Mermaid-Schreibweise eingeben, mit Live-Vorschau; es entstehen normale, bearbeitbare Formen und Verbindungen |
-| **Tabellen** | Zellen und Bereiche auswählen; je Zelle fett, kursiv, unterstrichen, durchgestrichen, Ausrichtung, Schriftgröße, Text- und Zellenfarbe; Zeilen/Spalten an beliebiger Stelle einfügen und löschen; Spaltenbreiten und Zeilenhöhen ziehen; Tastaturbedienung wie in einer Tabellenkalkulation |
+| **Tabellen** | Zellen und Bereiche auswählen; Zellen kopieren und einfügen, auch mit Tabellenprogrammen; je Zelle fett, kursiv, unterstrichen, durchgestrichen, Ausrichtung, Schriftgröße, Text- und Zellenfarbe; Zeilen/Spalten an beliebiger Stelle einfügen und löschen; Spaltenbreiten und Zeilenhöhen ziehen; Tastaturbedienung wie in einer Tabellenkalkulation |
 | **Mindmaps** | Knoten auswählen, dann **Tab** für einen Unterknoten und **Umschalt+Enter** für einen Geschwisterknoten; beim Tippen genügt **Enter** |
 | **Bilder** | per Upload, Drag & Drop oder aus der Zwischenablage; große Bilder werden automatisch verkleinert |
 | **Sticker** | Emojis als frei platzierbare Elemente |
 | **Links** | URL an Elemente hängen; ein Link-Symbol öffnet sie |
-| **Kommentare** | Threads an beliebiger Stelle, @Erwähnungen mit Vorschlagsliste und Benachrichtigung, „Erledigt“-Status, als Aufgabe zuweisen (mit Fälligkeit), Kommentarübersicht mit Filter „Mir zugewiesen“ |
+| **Kommentare** | Threads an beliebiger Stelle oder am Element (sie folgen ihm), @Erwähnungen mit Vorschlagsliste und Benachrichtigung, „Erledigt“-Status, als Aufgabe zuweisen (mit Fälligkeit), Kommentarübersicht mit Filter „Mir zugewiesen“ |
 
 Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pro Zeile.
 
@@ -241,7 +241,7 @@ Mehr dazu: [docs/integrations.md](docs/integrations.md) (Englisch).
 - Start: einklappbare Vorlagenleiste, Hinweis auf fällige Aufgaben, zuletzt bearbeitete Boards
 - Eigene und geteilte Boards mit Vorschaubildern
 - Suche, Sortierung, Teilen, Umbenennen, Duplizieren, Löschen, Board verlassen
-- **Papierkorb:** Gelöschte Boards bleiben 30 Tage (einstellbar) wiederherstellbar, dann werden sie endgültig gelöscht.
+- **Papierkorb:** Gelöschte Boards bleiben 30 Tage (einstellbar) wiederherstellbar, dann werden sie endgültig gelöscht. Mehrere oder alle lassen sich auswählen und gemeinsam wiederherstellen oder löschen.
 - Neues Board direkt aus einer Vorlage – auch aus **eigenen Vorlagen** (Board oder Auswahl als persönliche oder
   Team-Vorlage speichern)
 - **Installierbare App (PWA):** im Browser über „App installieren“ (Kontomenü) als eigenes Fenster nutzbar

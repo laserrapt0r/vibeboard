@@ -74,7 +74,17 @@ export function textLayout(el, box) {
     return { size: r.size, lines: r.lines, bold, italic };
   }
   const size = Number(el.fontSize) || 16;
-  return { size, lines: wrap(el.text || '', box.w, size, bold, italic), bold, italic };
+  const lines = wrap(el.text || '', box.w, size, bold, italic);
+  // Notizen und Formen wachsen nicht mit: Mehrzeiliger Text wird so wenig wie nötig kleiner, statt aus der Form zu laufen.
+  // Eine einzelne Zeile bleibt: Flache Formen sind oft knapp so hoch wie ihre Schrift.
+  if ((el.type === 'sticky' || el.type === 'shape') && lines.length > 1 && lines.length * size * LH > box.h) {
+    for (let s = size - 1; s >= 6; s -= Math.max(1, Math.round(s * 0.06))) {
+      const next = wrap(el.text || '', box.w, s, bold, italic);
+      if (next.length * s * LH <= box.h || s <= 6) return { size: s, lines: next, bold, italic };
+    }
+    return { size: 6, lines: wrap(el.text || '', box.w, 6, bold, italic), bold, italic };
+  }
+  return { size, lines, bold, italic };
 }
 
 export function textSvg(box, layout, { color = '#1a1a1a', align = 'center', valign = 'middle', cls = 't', underline = false, strike = false } = {}) {

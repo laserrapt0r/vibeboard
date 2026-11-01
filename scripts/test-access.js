@@ -31,6 +31,7 @@ const PUBLIC = new Map(Object.entries({
 // Änderungen, die auch mit Ansehen- oder Gast-Rolle erlaubt sind, weil sie das Board nicht ändern
 const READ_ROLE_WRITES = new Map(Object.entries({
   'POST /api/boards/:id/duplicate': 'legt eine eigene Kopie an, siehe duplicates()',
+  'POST /api/boards/:id/leave': 'beendet nur die eigene Verbindung im Long-Polling',
   'DELETE /api/boards/:id/members/:uid': 'nur sich selbst entfernen; der Test nutzt eine fremde Kennung',
 }));
 // Zusätzlich für die Rolle Kommentieren: bewusst erlaubt

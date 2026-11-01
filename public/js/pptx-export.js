@@ -86,7 +86,9 @@ class Slide {
 async function addElement(slide, el, map, s, get) {
   const b0 = elBounds(el, get);
   const b = map(b0);
-  const size = (typeof el.fontSize === 'number' ? el.fontSize : textLayout(el, { x: 0, y: 0, w: el.w, h: el.h }).size || 18) * s;
+  // Gewählte Größen messen wie auf dem Board im Innenrahmen, sonst stünde die verkleinerte Schrift hier wieder groß
+  const inset = typeof el.fontSize === 'number' ? Math.max(8, Math.min(el.w, el.h) * 0.08) : 0;
+  const size = (textLayout(el, { x: 0, y: 0, w: el.w - inset * 2, h: el.h - inset * 2 }).size || (typeof el.fontSize === 'number' ? el.fontSize : 18)) * s;
   switch (el.type) {
     case 'sticky':
       return slide.shape(b, { fill: el.fill || '#fff9b1', text: el.text, size, color: el.textColor || contrastText(el.fill || '#fff9b1'), italic: el.italic, underline: el.underline, strike: el.strike, bold: el.bold, align: el.align || 'center', name: 'Notiz' });

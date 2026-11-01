@@ -61,7 +61,7 @@ export async function openShareDialog(boardId, { me, onLeave, onClose } = {}) {
       const add = async (body) => {
         try {
           const r = await api(`/api/boards/${boardId}/members`, { method: 'POST', body: { ...body, role: role.value, notify: notify.checked } });
-          toast(r.invited ? T('Einladung verschickt – nach der Registrierung ist das Board geteilt') : r.mailed ? T('Eingeladen – E-Mail wurde verschickt') : T('Eingeladen'), 4000);
+          toast(r.already ? T('Diese Person ist bereits Mitglied mit dieser Rolle') : r.roleChanged ? T('Bereits Mitglied – die Rolle wurde geändert') : r.invited ? T('Einladung verschickt – nach der Registrierung ist das Board geteilt') : r.mailed ? T('Eingeladen – E-Mail wurde verschickt') : T('Eingeladen'), 4000);
           render();
         } catch (ex) {
           // Adresse ohne Konto: erst nachfragen, dann zur Registrierung einladen

@@ -89,3 +89,5 @@
   - Unbekannte Adressen zeigen eine verständliche Seite mit Status 404. Fehlende Dateien bleiben schlicht.
   - Ohne Verbindung erscheint statt der Browsermeldung ein verständlicher Text; Meldungen des Servers bleiben erhalten.
   - Die Offline-Seite bemerkt selbst, wenn der Server zurück ist, und führt an die ursprüngliche Adresse zurück.
+  - Sind Dateianhänge abgeschaltet, bietet die Oberfläche sie nicht an (seit 4.12.0).
+  - Langes Drücken öffnet auf Touch-Geräten das Kontextmenü, auch auf iOS (seit 4.12.0).
