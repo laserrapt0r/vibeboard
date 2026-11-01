@@ -3,7 +3,7 @@ import { T, LOCALE, guestName } from './i18n.js';
 import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
   initials, relTime, rectsIntersect, throttle, uid, api, contrastText } from './util.js';
-import { REACT_TYPES, sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
+import { REACT_TYPES, shownCells, sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery, markTemplateUsed } from './gallery.js';
 import { popover, closePop, menu } from './menu.js';
@@ -234,7 +234,7 @@ function colorBtnMenu(anchor, color, title, onPick) {
 }
 
 function selectBtn(value, options, title, onPick, width = 64) {
-  const label = (options.find((o) => o[0] === value) || [value, String(value)])[1];
+  const label = (options.find((o) => o[0] === value) || [value, String(value)])[1] || title;
   const b = h('button', { class: 'ctx-btn select-btn', title, style: { minWidth: width + 'px' } }, h('span', {}, label), h('span', { class: 'caret', html: ICONS.chevDown }));
   b.onclick = () => menu(b, options.map(([v, l]) => ({ label: l, checked: v === value, onClick: () => onPick(v) })), { placement: 'top' });
   return b;
@@ -619,7 +619,7 @@ app.on('editCard', (id) => {
   const start = h('input', { type: 'date', value: el.start || '' });
   const status = h('input', { type: 'text', value: el.status || '', placeholder: T('z. B. In Arbeit'), list: 'status-list' });
   const key = h('input', { type: 'text', value: el.key || '', placeholder: T('z. B. VB-42'), maxlength: 40 });
-  const prio = h('select', {}, h('option', { value: '' }, T('Ohne')), Object.entries(PRIORITIES).map(([k, p]) => h('option', { value: k, selected: el.priority === k }, `${p.icon} ${p.label}`)));
+  const prio = h('select', { 'aria-label': T('Priorität') }, h('option', { value: '' }, T('Ohne')), Object.entries(PRIORITIES).map(([k, p]) => h('option', { value: k, selected: el.priority === k }, `${p.icon} ${p.label}`)));
   const points = h('input', { type: 'text', value: el.points ?? '', placeholder: T('z. B. 5'), maxlength: 5 });
   const tags = h('input', { type: 'text', value: cardTags(el).join(', '), placeholder: T('z. B. Backend, Bug') });
   const names = [...new Set([app.user.name, ...[...app.peers.values()].map((p) => p.name), ...[...app.els.values()].filter((e) => e.assignee).map((e) => e.assignee)].filter(Boolean))];
@@ -884,8 +884,8 @@ function taskRow(el) {
       h('span', { class: 'spacer' }),
       app.canComment ? h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, T('Ändern')) : null);
   }
-  const who = h('select', {}, h('option', { value: '' }, T('Person wählen …')));
-  const due = h('input', { type: 'date', value: t?.due || '' });
+  const who = h('select', { 'aria-label': T('Zuständige Person') }, h('option', { value: '' }, T('Person wählen …')));
+  const due = h('input', { 'aria-label': T('Fällig am'), type: 'date', value: t?.due || '' });
   boardPeople().then((people) => people.forEach((p) => who.append(h('option', { value: p.id, selected: t && t.assigneeId === p.id }, p.displayName + (p.id === myId() ? T(' (du)') : '') + (p.guest ? T(' (Gast)') : '')))));
   return h('form', { class: 'comment-task-form', onsubmit: (e) => {
     e.preventDefault();
@@ -1018,7 +1018,7 @@ export function renderSidePanel() {
       renderSidePanel();
     } }, l)))));
     const list = (f === 'mine' ? mine : f === 'open' ? open : all).sort((a, b) => (b.thread.at(-1)?.ts || 0) - (a.thread.at(-1)?.ts || 0));
-    if (!list.length) side.append(h('p', { class: 'muted pad' }, f === 'mine' ? T('Dir sind keine offenen Kommentare zugewiesen.') : T('Keine Kommentare. Mit dem Kommentar-Werkzeug (C) kannst du überall auf dem Board Feedback hinterlassen und mit @Name jemanden erwähnen.')));
+    if (!list.length) side.append(h('p', { class: 'muted pad' }, f === 'mine' ? T('Dir sind keine offenen Kommentare zugewiesen.') : (app.canComment ? T('Keine Kommentare. Mit dem Kommentar-Werkzeug (C) kannst du überall auf dem Board Feedback hinterlassen und mit @Name jemanden erwähnen.') : T('Noch keine Kommentare.'))));
     for (const c of list) {
       const first = c.thread[0], last = c.thread.at(-1);
       side.append(h('div', { class: 'comment-card' + (c.resolved ? ' resolved' : ''), onclick: () => {
@@ -1050,7 +1050,7 @@ function moveFrame(list, i, d) {
 /* ================================================================== */
 
 export function openTemplates() {
-  if (app.viewOnly) return;
+  if (app.viewOnly) return toast(T('Das Bearbeiten ist gerade gesperrt'));
   const m = modal(T('Vorlage einfügen'), templateGallery((t) => {
     m.close();
     insertTemplate(t);
@@ -1308,15 +1308,27 @@ function openSettings(anchor) {
   ], { placement: 'bottom' });
 }
 
+async function copyElementLink() {
+  const url = `${location.origin}/board/${encodeURIComponent(app.boardId)}#el=${encodeURIComponent([...app.sel][0])}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    toast(T('Link kopiert'));
+  } catch {
+    // Ohne HTTPS gibt es keinen Zugriff auf die Zwischenablage
+    toast(url, 8000);
+  }
+}
+
 export function openShortcuts() {
   const groups = [
     [T('Werkzeuge'), [['V', T('Auswählen')], [T('H / Leertaste'), T('Verschieben')], ['N', T('Sticky Note')], ['T', T('Text')], ['S', T('Form')], ['R / O', T('Rechteck / Ellipse')], ['L', T('Verbindungslinie')], ['P', T('Stift')], ['E', T('Radierer')], ['F', T('Frame')], ['K', T('Karte')], ['M', T('Mindmap')], ['C', T('Kommentar')], ['X', T('Laserpointer')]]],
-    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], ['Alt+1 … 9', T('Gemerkte Ansichten')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Enter mit gewähltem Werkzeug'), T('Element in der Mitte der Ansicht anlegen')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
+    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+Bild↑ / Bild↓'), T('Nach vorne / Nach hinten')], ['?', T('Diese Übersicht')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], ['Alt+1 … 9', T('Gemerkte Ansichten')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Enter mit gewähltem Werkzeug'), T('Element in der Mitte der Ansicht anlegen')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Strg+] / ['), T('Vorder-/Hintergrund')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
     [T('Tabellen'), [[T('Klick in ausgewählte Tabelle'), T('Zelle wählen')], [T('Umschalt + Klick / Pfeil'), T('Bereich wählen')], [T('Pfeiltasten'), T('Zellauswahl bewegen')], [T('Enter / F2'), T('Zelle bearbeiten')], [T('Tippen'), T('Zelle überschreiben')], [T('Entf'), T('Inhalt leeren')], ['Tab', T('Nächste Zelle (beim Bearbeiten)')], [T('Linie ziehen'), T('Spaltenbreite / Zeilenhöhe')]]],
     [T('Verbinder'), [[T('Linie ziehen'), T('Biegen (Knickpunkt)')], [T('◦ auf der Linie ziehen'), T('Knickpunkt einfügen')], [T('Doppelklick auf ▪'), T('Knickpunkt entfernen')], [T('Beschriftung ziehen'), T('Entlang der Linie verschieben')], [T('Ende an Rand ziehen'), T('Fester Andockpunkt')], [T('Ende in Formmitte'), T('Automatisch andocken')]]],
     [T('Mindmap'), [['Tab', T('Unterknoten hinzufügen')], [T('Enter (beim Tippen)'), T('Geschwisterknoten')], [T('Umschalt+Enter'), T('Geschwisterknoten')]]],
     [T('Zusammenarbeit'), [['/', T('Cursor-Chat: Nachricht am Mauszeiger')], [T('Esc'), T('Cursor-Chat schließen')]]],
     [T('Verschieben & Größe'), [[T('Umschalt + Ziehen'), T('Nur waagerecht/senkrecht verschieben')], [T('Strg + Ziehen'), T('Ohne Einrasten')], [T('Seitengriff'), T('Nur Breite bzw. Höhe ändern')], [T('Umschalt + Griff'), T('Seitenverhältnis beibehalten')], [T('Alt + Griff'), T('Größe von der Mitte aus')], [T('Strg+D (wiederholt)'), T('Kopie mit zuletzt verwendetem Versatz')], [T('Klick in ausgewählte Gruppe'), T('Einzelnes Element der Gruppe wählen')], [T('Pfeiltasten'), T('Um 1 px (Umschalt: 10 px, mit Raster: eine Rasterweite) verschieben')], [T('Umschalt-/Strg-Klick'), T('Zur Auswahl hinzufügen bzw. entfernen (Ziehen verschiebt)')]]],
+    [T('Präsentation'), [[T('→ / Leertaste'), T('Nächste Folie')], [T('← / Rücktaste'), T('Vorherige Folie')], ['Esc', T('Beenden')]]],
     [T('Ansicht'), [[T('Strg + Mausrad'), T('Zoomen')], [T('Strg + / −'), T('Zoomen')], [T('Strg+0'), T('Auf 100 %')], [T('Umschalt+1'), T('Alles anzeigen')], [T('Umschalt+2'), T('Auswahl anzeigen')], [T('Strg+F'), T('Suchen')]]],
   ];
   modal(T('Tastenkürzel'), h('div', { class: 'shortcuts' }, groups.map(([t, list]) => h('div', {}, h('h4', {}, t), h('table', {}, list.map(([k, d]) => h('tr', {}, h('td', {}, h('kbd', {}, k)), h('td', {}, d))))))), { wide: true });
@@ -1333,7 +1345,9 @@ export function elementText(el) {
 }
 
 function textOf(el) {
-  return [el.text, el.title, el.description, el.label, el.assignee, el.status, ...(el.thread || []).map((m) => m.text), ...(el.cells || []).flat()].filter(Boolean).join(' ');
+  // Auch Formelergebnisse und Dateinamen findet man, nicht nur die Formel
+  const shown = el.cells ? shownCells(el).flat() : [];
+  return [el.text, el.title, el.description, el.label, el.assignee, el.status, el.name, ...(el.thread || []).map((m) => m.text), ...(el.cells || []).flat(), ...shown].filter(Boolean).join(' ');
 }
 
 /* ================================================================== */
@@ -1344,6 +1358,7 @@ const TYPE_NAMES = {
   chart: T('Diagramm'), sticky: T('Haftnotiz'), text: T('Text'), shape: T('Form'), connector: T('Verbindung'), image: T('Bild'), pen: T('Zeichnung'), highlighter: T('Markierung'),
   frame: T('Frame'), comment: T('Kommentar'), card: T('Karte'), table: T('Tabelle'), code: T('Code'), emoji: T('Emoji'), file: T('Datei'), mindmap: T('Mindmap-Knoten'),
 };
+export const elementLabel = (el) => TYPE_NAMES[el.type] || T('Element');
 const describeEl = (el) => {
   const text = (el.title || textOf(el) || '').trim().replace(/\s+/g, ' ').slice(0, 120);
   return `${TYPE_NAMES[el.type] || T('Element')}${text ? `: ${text}` : ''}`;
@@ -1358,7 +1373,7 @@ function openElementList() {
     stage.focus({ preventScroll: true }); // Pfeiltasten und Eingabe wirken jetzt auf das Element
   } }, describeEl(el)))));
   const m = modal(T('Elementliste'), h('div', { class: 'form' },
-    h('p', { class: 'muted' }, els.length ? T('Wähle ein Element aus. Danach verschieben es die Pfeiltasten, Eingabe bearbeitet den Text, Entf löscht es.') : T('Dieses Board ist noch leer.')), list));
+    h('p', { class: 'muted' }, els.length ? (app.viewOnly ? T('Wähle ein Element aus, um dorthin zu springen.') : T('Wähle ein Element aus. Danach verschieben es die Pfeiltasten, Eingabe bearbeitet den Text, Entf löscht es.')) : T('Dieses Board ist noch leer.')), list));
 }
 
 // Geänderte Auswahl ansagen: Das Board selbst ist eine Zeichenfläche ohne lesbare Struktur
@@ -1463,6 +1478,7 @@ stage.addEventListener('contextmenu', (e) => {
     hasCopiedFormat() ? { label: T('Format einfügen'), hint: T('Strg+Alt+V'), onClick: pasteFormat } : null,
     { label: T('Foto oder Datei hier einfügen …'), onClick: () => pickFile(w) },
     '-',
+    app.sel.size === 1 ? { label: T('Link zu diesem Element kopieren'), icon: 'link', onClick: copyElementLink } : null,
     free ? { label: T('Löschen'), hint: T('Entf'), danger: true, onClick: deleteSelection } : null,
     selectedEls().some((x) => x.type === 'frame') ? { label: T('Frame samt Inhalt löschen'), danger: true, onClick: deleteFramesWithContent } : null,
   ] : [
@@ -1598,6 +1614,11 @@ function buildTopbar() {
   const top = $('#topbar');
   const nameInput = h('input', { 'aria-label': T('Name des Boards'), id: 'board-name', type: 'text', value: app.name, title: T('Board umbenennen'), readonly: app.viewOnly });
   nameInput.addEventListener('change', () => {
+    // Sperre kam, während getippt wurde: Der Server lehnt das ab, also gar nicht erst so tun
+    if (app.viewOnly) {
+      nameInput.value = app.name;
+      return;
+    }
     const n = nameInput.value.trim() || T('Unbenanntes Board');
     app.name = n;
     document.title = n + T(' – vibeboard');
@@ -1703,7 +1724,7 @@ function buildBottomLeft() {
     iconBtn('undo', T('Rückgängig (Strg+Z)'), undo, { id: 'btn-undo', disabled: true }),
     iconBtn('redo', T('Wiederholen (Strg+Y)'), redo, { id: 'btn-redo', disabled: true }),
     h('span', { class: 'top-sep' }),
-    iconBtn('keyboard', T('Tastenkürzel'), openShortcuts),
+    iconBtn('keyboard', T('Tastenkürzel (?)'), openShortcuts),
   );
   if (app.viewOnly) bl.querySelectorAll('#btn-undo,#btn-redo').forEach((b) => b.remove());
 }

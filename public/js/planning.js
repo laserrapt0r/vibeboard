@@ -65,7 +65,7 @@ function renderTasks(side, close) {
   side.append(h('div', { class: 'side-actions' }, h('div', { class: 'seg' }, filters.map(([k, l]) =>
     h('button', { class: 'btn small' + (taskFilter === k ? ' active' : ''), onclick: () => { taskFilter = k; renderSidePanel(); } }, l)))));
   if (!cards.length) {
-    side.append(h('p', { class: 'muted pad' }, T('Noch keine Karten. Mit dem Karten-Werkzeug (K) legst du Aufgaben mit Zuständigkeit, Fälligkeit, Status, Priorität und Story Points an – oder du importierst sie aus einer CSV-Datei.')));
+    side.append(h('p', { class: 'muted pad' }, (app.viewOnly ? T('Noch keine Karten.') : T('Noch keine Karten. Mit dem Karten-Werkzeug (K) legst du Aufgaben mit Zuständigkeit, Fälligkeit, Status, Priorität und Story Points an – oder du importierst sie aus einer CSV-Datei.'))));
     side.append(h('div', { class: 'side-actions' }, app.viewOnly ? null : h('button', { class: 'btn small', onclick: () => app.emit('openCsvImport') }, h('span', { html: ICONS.upload }), T('Aus CSV importieren'))));
     return;
   }

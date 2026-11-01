@@ -81,3 +81,11 @@
   - Alle Werkzeuge bleiben ab einer Fensterhöhe von rund 500 px erreichbar, die Kontextleiste bleibt im Fenster.
   - Auf dem Handy sind Timer, Abstimmung und Moderation in der oberen Leiste erreichbar.
   - Mit Enter lässt sich mit gewähltem Werkzeug ohne Maus ein Element anlegen. Panels schließen mit Esc.
+
+### REQ-NFR-012 Hinweise und Fehlerseiten
+- **Seit:** 4.11.5 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Leere Panels und Hinweise nennen nur, was die jeweilige Rolle auch tun kann. Tasten-Tipps erscheinen nicht auf Touch-Geräten.
+  - Unbekannte Adressen zeigen eine verständliche Seite mit Status 404. Fehlende Dateien bleiben schlicht.
+  - Ohne Verbindung erscheint statt der Browsermeldung ein verständlicher Text; Meldungen des Servers bleiben erhalten.
+  - Die Offline-Seite bemerkt selbst, wenn der Server zurück ist, und führt an die ursprüngliche Adresse zurück.

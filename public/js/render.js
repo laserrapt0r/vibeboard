@@ -1156,7 +1156,7 @@ function chartSvg(el, get) {
   let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#ffffff" stroke="#e3e3e3" filter="url(#shadow-sm)"/>`;
   const table = el.sourceId ? get(el.sourceId) || lookup(el.sourceId) : null;
   const data = table && table.type === 'table' && !table.hidden ? chartData(table) : null;
-  if (!data) return out + chartText(x + w / 2, y + h / 2, T('Keine Zahlen in der Tabelle'), { size: 14, anchor: 'middle', color: '#868e96' });
+  if (!data) return out + chartText(x + w / 2, y + h / 2, table && !table.hidden ? T('Keine Zahlen in der Tabelle') : T('Die Tabelle zu diesem Diagramm fehlt'), { size: 14, anchor: 'middle', color: '#868e96' });
   let top = y + 12;
   if (el.title) {
     out += chartText(x + 14, y + 26, el.title, { size: 16, bold: true, color: '#1a1a1a' });

@@ -5,7 +5,7 @@ import { renderSvgDocument } from './render.js';
 import { TEMPLATES, CATEGORIES } from './templates.js';
 
 const previewCache = new Map();
-const hideBuiltin = () => !!design().hideBuiltin;
+export const hideBuiltin = () => !!design().hideBuiltin;
 const OWN = 'Eigene Vorlagen';
 const ORG = 'Unsere Vorlagen';
 
@@ -88,7 +88,9 @@ export function templateGallery(onPick, { showBlank = true } = {}) {
     list.forEach((c) => cats.append(h('button', { class: 'tpl-cat' + (c === cat ? ' active' : ''), onclick: () => { cat = c; render(); } }, special.includes(c) ? `⭐ ${T(c)} (${count(c)})` : T(c))));
     grid.innerHTML = '';
     const all = byRecent([...custom, ...(hideBuiltin() ? TEMPLATES.filter((t) => t.id === 'blank') : TEMPLATES)], recent);
-    all.filter((t) => (showBlank || t.id !== 'blank') && (cat === 'Alle' || t.category === cat) && (!q || (t.name + ' ' + t.description).toLowerCase().includes(q))).forEach((t) => {
+    const shown = all.filter((t) => (showBlank || t.id !== 'blank') && (cat === 'Alle' || t.category === cat) && (!q || (t.name + ' ' + t.description).toLowerCase().includes(q)));
+    if (!shown.length) grid.append(h('p', { class: 'muted' }, q ? T('Keine passende Vorlage gefunden.') : T('Noch keine Vorlagen vorhanden.')));
+    shown.forEach((t) => {
       const prev = h('div', { class: 'tpl-prev' });
       fillPreview(prev, t);
       const del = t.custom && t.canDelete ? h('button', { class: 'tpl-del icon-btn small', title: T('Vorlage löschen'), 'aria-label': T`Vorlage „${t.name}“ löschen`, onclick: async (e) => {

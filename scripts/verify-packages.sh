@@ -2,10 +2,10 @@
 # Prüft Signaturen und Herkunft der installierten Pakete (npm audit signatures).
 # Die Prüfung selbst bleibt unverändert streng: Sie muss bestehen, sonst schlägt dieser Schritt fehl.
 #
-# Warum Wiederholungen: Auf GitHub scheiterte die Prüfung zeitweise mit EMISSINGSIGNATUREKEY, ein neuer Lauf bestand; lokal ließ es
-# sich nicht nachstellen. Vermutete Ursache: Die Registry liefert Attestierungen mit einem Jahr Cache-Gültigkeit, npm legt sie im
-# lokalen Cache ab, und eine unvollständige Antwort würde jeder weitere Versuch wieder lesen. Darum wird der Cache vorher geleert.
-# Scheitert es trotzdem, zeigt die Diagnose unten, was wirklich ankam.
+# Warum Wiederholungen: Auf GitHub scheitert die Prüfung zeitweise mit EMISSINGSIGNATUREKEY. Belegt am 2026-11-01: Ein CDN-Knoten
+# der Registry lieferte für ein Paket aus dem Cache nur die Herkunfts-Attestierung ohne die Veröffentlichungs-Attestierung; ein
+# anderer Knoten lieferte beide. Das liegt außerhalb dieses Projekts, darum hilft in dem Fall nur ein neuer CI-Lauf.
+# Der lokale npm-Cache wird trotzdem geleert, damit eine schlechte Antwort nicht zwischen den Versuchen bestehen bleibt.
 # Eine manipulierte Signatur scheitert trotzdem bei jedem Versuch.
 set -u
 

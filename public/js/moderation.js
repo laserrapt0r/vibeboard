@@ -37,6 +37,8 @@ function apply() {
     // Bearbeitungssperre: wie „nur ansehen“ – Kommentieren, Abstimmen und Schätzen bleiben möglich
     app.viewOnly = locked || app.baseViewOnly;
     if (app.sync) app.sync.viewOnly = app.viewOnly;
+    const name = document.getElementById('board-name');
+    if (name) name.readOnly = app.viewOnly;
     if (locked) {
       finishEdit();
       setTool('select');

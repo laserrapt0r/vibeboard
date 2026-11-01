@@ -75,6 +75,7 @@
   - Die Historie bleibt auch dann intakt, wenn ein gerade bearbeitetes Element von anderen gelöscht wird oder während des Ziehens eine Zwei-Finger-Geste beginnt.
   - Während eines laufenden Ziehvorgangs wird Rückgängig ignoriert.
   - Geändert in 4.11.3: Rückgängig und Wiederholen setzen nur die Felder zurück, die dieser Schritt geändert hat. In Tabellen gilt das je Zelle. Hat man selbst Zeilen oder Spalten geändert und andere haben inzwischen geschrieben, bleibt die Struktur stehen und ein Hinweis erklärt das.
+  - Geändert in 4.11.5: Ein neu angelegtes Element samt eingetipptem Text verschwindet mit einem Rückgängig.
 
 ### REQ-EDIT-008 Kontextleiste, Kontextmenü, Suche, Tastenkürzel
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -84,6 +85,7 @@
   - Strg+F durchsucht Texte, Titel, Beschreibungen, Beschriftungen, Kommentare und Tabellenzellen; Treffer werden hervorgehoben und angesprungen.
   - Eine Übersicht aller Tastenkürzel öffnet sich mit `?`.
   - Geändert in 4.11.0: Das Kontextmenü fügt Fotos und Dateien (PDF, Office, Text) an der Klickstelle ein, auch im Frame und auf Elementen, und bietet Format übertragen, kopieren und einfügen.
+  - Geändert in 4.11.5: Die Suche findet auch Dateinamen und Ergebnisse von Tabellenformeln. Das Kontextmenü kopiert einen Link zum Element.
 
 ### REQ-EDIT-009 Automatisches Layout und Swimlanes
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -124,6 +126,7 @@
   - Zuletzt verwendete Befehle stehen oben. Die Suche ignoriert Groß- und Kleinschreibung und Akzente; alle Wörter müssen vorkommen.
   - Strg+K wirkt auch während der Eingabe auf dem Board. In Eingabefeldern von Dialogen und im Namen des Boards bleibt die Taste dem Browser überlassen.
   - Vollständig per Tastatur und mit Bildschirmleser bedienbar: Pfeiltasten wählen, Enter führt aus, Esc schließt. Der Fokus kehrt danach zurück.
+  - Geändert in 4.11.5: Die Palette bietet keine Vorlagen an, die die Administration ausgeblendet hat.
 
 ### REQ-EDIT-014 Format übertragen
 - **Seit:** 4.9.0 · **Priorität:** Soll · **Status:** umgesetzt

@@ -12,9 +12,9 @@ const box = document.getElementById('legal');
 (async () => {
   try {
     const d = await api('/api/legal/' + encodeURIComponent(kind));
-    document.title = `${d.title} – ${d.siteName}`;
+    document.title = `${T(d.title)} – ${d.siteName}`;
     document.getElementById('legal-site').textContent = d.siteName;
-    box.append(h('h1', {}, d.title));
+    box.append(h('h1', {}, T(d.title)));
     if (d.text && d.text.trim()) {
       box.append(renderMarkdown(d.text));
       if (d.updatedAt) box.append(h('p', { class: 'muted small legal-updated' }, T('Stand: ') + new Date(d.updatedAt).toLocaleDateString(LOCALE, { day: '2-digit', month: 'long', year: 'numeric' })));

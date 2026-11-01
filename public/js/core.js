@@ -523,6 +523,7 @@ function applySnapshot(map, opposite = new Map()) {
 }
 
 export function undo() {
+  if (app.viewOnly) return app.baseViewOnly ? undefined : toast(T('Das Bearbeiten ist gerade gesperrt'));
   if (app.editing) finishEdit();
   if (drag || tx) return;
   const e = undoStack.pop();
@@ -535,6 +536,7 @@ export function undo() {
 }
 
 export function redo() {
+  if (app.viewOnly) return app.baseViewOnly ? undefined : toast(T('Das Bearbeiten ist gerade gesperrt'));
   if (app.editing) finishEdit();
   if (drag || tx) return;
   const e = redoStack.pop();
@@ -1092,7 +1094,8 @@ function renderOverlay() {
 
 // Kleine Hinweise erscheinen beim ersten Benutzen und danach nie wieder
 function hintOnce(key, text) {
-  if (loadPref(key, false)) return;
+  // Tasten-Tipps helfen auf Touch-Geräten nicht
+  if (matchMedia('(pointer: coarse)').matches || loadPref(key, false)) return;
   savePref(key, true);
   toast(text, 6000);
 }
@@ -1338,10 +1341,10 @@ export function abortEdit() {
 
 // Anlegen und erste Eingabe sind ein Schritt: Rückgängig nimmt beides zusammen zurück, und ein leer verworfenes Objekt
 // hinterlässt keinen Eintrag im Verlauf
-function createAndEdit(id, make) {
+function createAndEdit(id, make, drop = true) {
   begin();
   make();
-  startEdit(id, { isNew: true, drop: true });
+  startEdit(id, { isNew: true, drop });
   if (app.editing?.id === id) app.editing.created = true;
   else commit();
 }
@@ -1465,7 +1468,7 @@ export function holdTool(t) {
   if (app.tool !== t) return;
   app.toolHeld = true;
   app.emit('tool', t);
-  toast(T('Werkzeug bleibt aktiv – Esc beendet'), 2500);
+  toast(matchMedia('(pointer: coarse)').matches ? T('Werkzeug bleibt aktiv') : T('Werkzeug bleibt aktiv – Esc beendet'), 2500);
 }
 
 const CREATE_AT_CENTER = new Set(['sticky', 'shape', 'frame', 'text', 'card', 'table', 'code']);
@@ -2397,12 +2400,18 @@ function onUp(e) {
       } else {
         el = makeElement(d.type, snapV(d.start.w.x), snapV(d.start.w.y));
       }
-      act(() => setEl(el));
       if (d.type === 'shape') rememberShape(el.shape);
       afterCreate();
+      if (['sticky', 'shape', 'text', 'code'].includes(el.type)) {
+        createAndEdit(el.id, () => {
+          setEl(el);
+          setSelection([el.id]);
+        }, false);
+        break;
+      }
+      act(() => setEl(el));
       setSelection([el.id]);
-      if (['sticky', 'shape', 'text', 'code'].includes(el.type)) startEdit(el.id, { isNew: true });
-      else if (el.type === 'frame') startEdit(el.id);
+      if (el.type === 'frame') startEdit(el.id);
       else if (el.type === 'card') app.emit('editCard', el.id);
       break;
     }
@@ -2533,6 +2542,7 @@ stage.addEventListener('dblclick', (e) => {
   const fh = hitInfo(e.target);
   if (fh && fh.el.type === 'file') return app.emit('openFile', fh.el.id);
   if (app.viewOnly || e.target === editor) return;
+  if (stage.classList.contains('voting')) return;
   // Doppelklick auf einen Knickpunkt entfernt ihn
   const wh = e.target.closest && e.target.closest('[data-handle^="wp-"]');
   if (wh) {
@@ -3163,6 +3173,7 @@ export function sendToBack() {
 }
 
 export function groupSel() {
+  if (app.viewOnly) return;
   const sel = selectedEls();
   if (sel.length < 2) return;
   const gid = uid();
@@ -3171,6 +3182,7 @@ export function groupSel() {
 }
 
 export function ungroupSel() {
+  if (app.viewOnly) return;
   act(() => selectedEls().forEach((el) => el.groupId && setEl({ ...el, groupId: undefined })));
   toast(T('Gruppierung aufgehoben'));
 }
@@ -3274,6 +3286,8 @@ window.addEventListener('keydown', (e) => {
   // Zuerst Module (z. B. Präsentation) reagieren lassen, damit dort auch die Leertaste ankommt
   app.emit('key', e);
   if (e.defaultPrevented) return;
+  // Während der Präsentation legen Buchstaben nichts an
+  if (document.body.classList.contains('presenting')) return;
   if (e.key === ' ' && !spaceDown) {
     spaceDown = true;
     stage.classList.add('space');

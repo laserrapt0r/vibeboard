@@ -87,7 +87,7 @@ function decide(r, decision) {
 function renderPanel(side, close) {
   const list = [...(app.reviews?.values() || [])];
   side.append(h('div', { class: 'side-head' }, h('h3', {}, T('Freigaben')), h('span', { class: 'spacer' }), close));
-  if (!list.length) side.append(h('p', { class: 'muted pad' }, T('Noch keine Freigaben. Wähle einen Frame oder eine Datei aus und fordere im Kontextmenü eine Freigabe an.')));
+  if (!list.length) side.append(h('p', { class: 'muted pad' }, (app.viewOnly ? T('Noch keine Freigaben.') : T('Noch keine Freigaben. Wähle einen Frame oder eine Datei aus und fordere im Kontextmenü eine Freigabe an.'))));
   const me = String(app.user.id);
   for (const r of list) {
     const [label, cls] = STATUS[r.status];

@@ -62,6 +62,7 @@ async function upload(file, at) {
     info = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(info.error || r.statusText);
   } catch (e) {
+    if (e instanceof TypeError) e.message = T('Keine Verbindung zum Server. Bitte versuche es gleich noch einmal.');
     return toast(`„${file.name}“: ${e.message}`, 6000);
   }
   const el = makeElement('file', at.x - 110, at.y - 130, { w: 220, h: 260, fileId: info.id, name: info.name, mime: info.mime, size: info.size });

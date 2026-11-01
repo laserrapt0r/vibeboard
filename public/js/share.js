@@ -56,7 +56,7 @@ export async function openShareDialog(boardId, { me, onLeave, onClose } = {}) {
     // Einladen: über die genaue E-Mail-Adresse oder aus den eigenen Teams – eine Suche über alle Nutzenden gibt es nicht
     if (owner) {
       const input = h('input', { type: 'email', placeholder: T('E-Mail-Adresse'), autocomplete: 'off', inputmode: 'email' });
-      const role = h('select', {}, ROLE_OPTIONS.map(([v]) => h('option', { value: v }, ROLE_TEXT[v])));
+      const role = h('select', { 'aria-label': T('Rolle') }, ROLE_OPTIONS.map(([v]) => h('option', { value: v }, ROLE_TEXT[v])));
       const notify = h('input', { type: 'checkbox', checked: true });
       const add = async (body) => {
         try {
@@ -210,13 +210,13 @@ async function guestSection(body, boardId) {
   const box = h('div', { class: 'share-block' }, h('div', { class: 'label' }, T('Gastlinks (ohne Konto)')));
   body.append(box);
   if (!info.enabled) {
-    box.append(h('p', { class: 'muted small' }, T('Der Gastzugang ist in dieser Installation abgeschaltet. Ein Administrator kann ihn unter „Einstellungen → Zusammenarbeit“ einschalten.')));
+    box.append(h('p', { class: 'muted small' }, T('Der Gastzugang ist in dieser Installation abgeschaltet. Ein Administrator kann ihn unter „Zusammenarbeit“ einschalten.')));
     return;
   }
-  const role = h('select', {}, h('option', { value: 'commenter' }, T('darf kommentieren')), h('option', { value: 'viewer' }, T('darf ansehen')));
+  const role = h('select', { 'aria-label': T('Rolle') }, h('option', { value: 'commenter' }, T('darf kommentieren')), h('option', { value: 'viewer' }, T('darf ansehen')));
   // Nur Laufzeiten bis zur Grenze der Administration anbieten
   const choices = [...new Set([1, 7, 14, 30, maxDays].filter((d) => d <= maxDays))].sort((a, b) => a - b);
-  const days = h('select', {}, choices.map((d) => h('option', { value: d, selected: d === Math.min(7, maxDays) }, d === 1 ? T('1 Tag') : T`${d} Tage`)));
+  const days = h('select', { 'aria-label': T('Gültigkeit') }, choices.map((d) => h('option', { value: d, selected: d === Math.min(7, maxDays) }, d === 1 ? T('1 Tag') : T`${d} Tage`)));
   const label = h('input', { type: 'text', maxlength: 80, placeholder: T('Bezeichnung, z. B. „Workshop Kunde“') });
   const result = h('div');
   const list = h('div', { class: 'guest-links' });

@@ -14,7 +14,8 @@ const op = (o) => app.sync.op(o);
 // Steuern darf, wer moderiert – ohne Moderation, wer bearbeiten darf (prüft auch der Server)
 export function canSteer() {
   const m = app.session.moderation;
-  return app.role === 'owner' || (m && m.active ? isFacilitator() : !app.viewOnly);
+  // Moderationsrechte setzen Bearbeiten voraus: Kommentierende bekommen keine Knöpfe, die dann nichts tun
+  return app.role === 'owner' || (m && m.active ? isFacilitator() && app.role === 'editor' : !app.viewOnly);
 }
 
 export const STEPS = {
@@ -315,7 +316,7 @@ app.on('renderPanel', (kind, side, close) => {
   const list = actionCards();
   side.append(h('div', { class: 'side-head' }, h('h3', {}, T`Maßnahmen (${list.filter((c) => !DONE.test(String(c.status || '').trim())).length} offen)`), h('span', { class: 'spacer' }), close));
   if (!app.viewOnly) side.append(h('div', { class: 'side-actions' }, h('button', { class: 'btn small primary', onclick: () => openActionDialog() }, h('span', { html: ICONS.plus }), T('Maßnahme'))));
-  if (!list.length) side.append(h('p', { class: 'muted pad' }, T('Noch keine Maßnahmen. Wähle einen Beitrag oder ein Thema aus und klicke auf „Als Maßnahme“ – oder lege oben eine neue an.')));
+  if (!list.length) side.append(h('p', { class: 'muted pad' }, (app.viewOnly ? T('Noch keine Maßnahmen.') : T('Noch keine Maßnahmen. Wähle einen Beitrag oder ein Thema aus und klicke auf „Als Maßnahme“ – oder lege oben eine neue an.'))));
   for (const c of list) {
     const done = DONE.test(String(c.status || '').trim());
     side.append(h('div', { class: 'action-row' + (done ? ' done' : '') },

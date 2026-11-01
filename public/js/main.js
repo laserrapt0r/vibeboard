@@ -46,7 +46,10 @@ async function boot() {
   } catch (e) {
     if (e.status === 404) return showError(T('Board nicht gefunden'), T('Dieses Board existiert nicht (mehr).'));
     if (e.status === 403) return showError(T('Kein Zugriff'), T('Du hast keine Berechtigung für dieses Board. Bitte die Besitzerin oder den Besitzer, es mit dir zu teilen.'));
-    if (e.code !== 'auth') showError(T('Fehler'), e.message);
+    if (e.code === 'auth') return;
+    // „Failed to fetch“ des Browsers hilft niemandem; Meldungen des Servers bleiben, wie sie sind
+    if (e instanceof TypeError) showError(T('Keine Verbindung'), T('Der Server ist gerade nicht erreichbar. Lade die Seite gleich noch einmal.'));
+    else showError(T('Fehler'), e.message);
     return;
   }
   app.me = me;

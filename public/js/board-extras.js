@@ -136,7 +136,7 @@ app.on('renderPanel', (kind, side, close) => {
   const tags = allTags();
   side.append(h('div', { class: 'filter-group' }, h('div', { class: 'label' }, T('Schlagwörter')),
     tags.length ? h('div', { class: 'tag-chips' }, tags.map((t) => h('button', { class: 'tag-chip' + (filter.tags.has(t.toLowerCase()) ? ' active' : ''), 'aria-pressed': String(filter.tags.has(t.toLowerCase())), onclick: () => toggle(filter.tags, t.toLowerCase()) }, t)))
-      : h('p', { class: 'muted small' }, T('Noch keine Schlagwörter. Sticky Note auswählen → Etikett-Symbol.'))));
+      : h('p', { class: 'muted small' }, (app.viewOnly ? T('Noch keine Schlagwörter.') : T('Noch keine Schlagwörter. Sticky Note auswählen → Etikett-Symbol.')))));
   const colors = [...new Set([...app.els.values()].filter((e) => e.type === 'sticky' && !e.hidden).map((e) => String(e.fill || '#fff9b1').toLowerCase()))];
   if (colors.length) {
     side.append(h('div', { class: 'filter-group' }, h('div', { class: 'label' }, T('Farbe (Sticky Notes)')),
@@ -209,7 +209,7 @@ app.on('saveTemplate', async (selectionOnly) => {
       const clean = usable.map(({ reactions, author, anon, task, modLock, concealed, ...rest }) => rest);
       await api('/api/templates', { method: 'POST', body: { name: name.value.trim(), description: desc.value.trim(), icon: icon.value.trim(), teamId: scope.value === 'org' ? null : scope.value || null, org: scope.value === 'org', elements: clean } });
       m.close();
-      toast(T`Vorlage „${name.value.trim()}“ gespeichert – sie erscheint in der Vorlagengalerie unter „Eigene Vorlagen“`, 4500);
+      toast(scope.value === 'org' ? T`Vorlage „${name.value.trim()}“ gespeichert – sie erscheint in der Vorlagengalerie unter „Unsere Vorlagen“` : T`Vorlage „${name.value.trim()}“ gespeichert – sie erscheint in der Vorlagengalerie unter „Eigene Vorlagen“`, 4500);
     } catch (ex) {
       toast(ex.message, 5000);
     }

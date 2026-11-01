@@ -7,6 +7,7 @@ import {
   ungroupSel, toggleLock, togglePin, copyFormat, pasteFormat, hasCopiedFormat, canCopyFormat, deleteFramesWithContent, applyView, isLocked,
 } from './core.js';
 import { TEMPLATES } from './templates.js';
+import { hideBuiltin } from './gallery.js';
 import { insertTemplate, elementText, openShortcuts } from './ui.js';
 import { savedViews, goToView, saveCurrentView, headings, goToHeading } from './guide.js';
 
@@ -95,7 +96,7 @@ function fromBoard(q, texts) {
   // Überschriften, Inhalte und Vorlagen nur bei einer Suche: Sonst überdecken sie die Befehle
   if (q.length >= 2) {
     for (const el of headings()) out.push({ id: 'h:' + el.id, label: el.text, group: T('Überschrift'), run: () => goToHeading(el) });
-    if (!app.viewOnly) for (const t of TEMPLATES) if (t.id !== 'blank') out.push({ id: 't:' + t.id, label: t.name, group: T('Vorlage'), run: () => insertTemplate(t) });
+    if (!app.viewOnly && !hideBuiltin()) for (const t of TEMPLATES) if (t.id !== 'blank') out.push({ id: 't:' + t.id, label: t.name, group: T('Vorlage'), run: () => insertTemplate(t) });
     out.push(...texts());
   }
   return out;

@@ -15,6 +15,7 @@ const boards = require('./lib/boards');
 const setup = require('./lib/setup');
 const versions = require('./lib/version');
 const { Router } = require('./lib/router');
+const fs = require('fs');
 const { HttpError, json, redirect, serveFile, serveStatic, isHttps } = require('./lib/http');
 const pkg = require('./package.json');
 const settings = require('./lib/settings');
@@ -96,7 +97,8 @@ async function handlePage(req, res, url) {
     return serveFile(res, page('auth.html'), noStore);
   }
   // Gastlink: Seite zum Beitreten (ohne Anmeldung)
-  if (/^\/g\/[\w-]{20,100}$/.test(p)) return serveFile(res, page('guest.html'), noStore);
+  // Auch für verstümmelte Links: Die Seite erklärt dann, dass der Link nicht gilt
+  if (/^\/g\/[^/]+$/.test(p)) return serveFile(res, page('guest.html'), noStore);
   // Gäste sehen nur ihr Board
   if (user && user.role === 'guest' && !/^\/board\/[^/]+$/.test(p) && !p.includes('.')) {
     const link = await db.one('SELECT board_id FROM guest_links WHERE id = $1', [user.guest_link_id]);
@@ -117,7 +119,11 @@ async function handlePage(req, res, url) {
   }
   // Service Worker der installierbaren App: muss vom Wurzelpfad kommen und immer frisch geprüft werden
   if (p === '/sw.js') return serveFile(res, page('sw.js'), { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' });
-  return serveStatic(res, PUBLIC_DIR, p);
+  // Unbekannte Seiten bekommen eine erklärende Seite, fehlende Dateien weiter nur den Status
+  return serveStatic(res, PUBLIC_DIR, p, p.includes('.') ? null : () => {
+    res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', ...noStore });
+    fs.createReadStream(page('notfound.html')).pipe(res);
+  });
 }
 
 // Request-ID: von einem vorgeschalteten Proxy übernehmen (wenn gültig) oder neu erzeugen

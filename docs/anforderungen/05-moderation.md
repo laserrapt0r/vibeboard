@@ -24,6 +24,7 @@
   - Frames werden in der im Frames-Panel festgelegten Reihenfolge als Folien gezeigt (Vollbild).
   - Weiter mit Pfeiltasten, Bild↓, Leertaste oder Enter; zurück mit Pfeiltasten, Bild↑ oder Rücktaste; Ende mit Esc.
   - Inhalte außerhalb der aktuellen Folie werden ausgeblendet; Bedienelemente sind verborgen.
+  - Geändert in 4.11.5: Während der Präsentation wählen Buchstabentasten kein Werkzeug und legen nichts an. Ein Doppelklick beim Abstimmen öffnet keinen Editor (REQ-MOD-002).
 
 ### REQ-MOD-004 Schätzrunde
 - **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -46,6 +47,7 @@
   - „Für Teilnehmende sperren“ an ausgewählten Elementen (z. B. Hintergründe einer Vorlage): nur Moderierende können diese Elemente ändern, verschieben oder löschen, auch nach Ende der Moderation; danach nur noch der Besitzer. Nur Moderierende können die Sperre setzen oder aufheben.
   - Die Sperren gelten auch für Umbenennen über die Übersicht und für das Wiederherstellen einer Version: Während der Bearbeitungssperre lehnt der Server beides für Nicht-Moderierende ab; enthält das Board für Teilnehmende gesperrte Elemente, dürfen nur Moderierende bzw. der Besitzer eine Version wiederherstellen. Gesperrte Kommentare können nur Moderierende ändern oder löschen.
   - Ein Banner zeigt die laufende Moderation, die Moderierenden und gesperrte Bereiche; abgelehnte Aktionen werden erklärt.
+  - Geändert in 4.11.5: Unter der Bearbeitungssperre lässt sich der Boardname nicht ändern; Rückgängig, Wiederholen und Vorlagen nennen die Sperre, Gruppieren täuscht nichts vor. Moderationsknöpfe der Retro setzen Bearbeitungsrechte voraus.
 
 ### REQ-MOD-006 Retro-Ablauf
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt

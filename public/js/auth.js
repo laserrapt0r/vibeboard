@@ -124,7 +124,7 @@ function renderLogin() {
 
 function renderMfa(ticket) {
   const err = errorBox();
-  const code = field(T('Bestätigungscode'), { type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', required: true, maxlength: 20, pattern: '[0-9a-zA-Z -]{6,20}' },
+  const code = field(T('Bestätigungscode'), { type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', required: true, maxlength: 20, pattern: '[0-9a-zA-Z \\-]{6,20}' },
     T('Den 6-stelligen Code aus deiner Authenticator-App – oder einen Wiederherstellungscode.'));
   const form = h('form', { class: 'form', onsubmit: async (e) => {
     e.preventDefault();
@@ -220,7 +220,7 @@ function renderForgot() {
     err.hide();
     try {
       const r = await api('/api/auth/forgot', { method: 'POST', body: { login: login.input.value } });
-      shell(T('E-Mail unterwegs'), r.mail === false
+      shell(r.mail === false ? T('E-Mail nicht möglich') : T('E-Mail unterwegs'), r.mail === false
         ? T('Der E-Mail-Versand ist nicht eingerichtet. Bitte wende dich an einen Administrator.')
         : T('Falls ein Konto mit hinterlegter E-Mail-Adresse existiert, haben wir dir einen Link zum Zurücksetzen geschickt. Er ist eine Stunde gültig.'),
       toLogin());

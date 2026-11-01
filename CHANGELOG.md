@@ -4,6 +4,35 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.11.5] – 2026-11-01
+
+Korrekturen aus der Fehlersuche, dritter Teil: Hinweise, Rollen und Sackgassen.
+
+### Geändert
+- Hinweise in leeren Panels richten sich nach der Rolle: Wer nur ansehen darf, bekommt keine Anleitung für Werkzeuge, die fehlen.
+- Moderationsknöpfe der Retro erscheinen nur mit Bearbeitungsrechten.
+- Ein neu angelegtes Element samt Text verschwindet mit einem Rückgängig statt mit zweien.
+- Die Suche findet Dateinamen und Ergebnisse von Tabellenformeln.
+- Die Befehlspalette zeigt keine Vorlagen, die die Administration ausgeblendet hat; ist die Galerie leer, sagt sie das.
+- Tasten-Tipps entfallen auf Touch-Geräten.
+
+### Hinzugefügt
+- Seite „Seite nicht gefunden“ für unbekannte Adressen.
+- Kontextmenü: Link zu diesem Element kopieren. Kürzelübersicht: Präsentation, Ebenen, `?`.
+
+### Behoben
+- Unter der Bearbeitungssperre ließ sich der Boardname scheinbar ändern, Rückgängig und Vorlagen blieben stumm, Gruppieren meldete Erfolg.
+- Tasten legten während der Präsentation Elemente an oder wechselten das Werkzeug; ein Doppelklick beim Abstimmen öffnete den Editor.
+- Abgeschnittene Gastlinks zeigten nur „Nicht gefunden“, beendete Gastzugänge führten zur Anmeldung.
+- „Failed to fetch“ erscheint nicht mehr als Fehlermeldung. Die Offline-Seite erholt sich selbst und führt zur ursprünglichen Adresse zurück.
+- „Kennwort vergessen“ meldete eine E-Mail, auch wenn keine verschickt werden konnte.
+- Das Eingabemuster für den Zwei-Faktor-Code war in aktuellen Browsern ungültig und wurde ignoriert.
+- Diagramme ohne Tabelle nennen den wahren Grund. Der Freigabedialog nennt den richtigen Ort für den Gastzugang. Die Meldung nach „Vorlage speichern“ nennt die richtige Rubrik.
+- Fehlende Übersetzungen im Protokoll der Administration und bei den Rechtstexten; Abstimmungsergebnisse zeigen keine internen Typnamen; fehlende Beschriftungen für Bildschirmleser.
+
+### Betrieb
+- Ursache der zeitweise fehlschlagenden Signaturprüfung belegt: Einzelne CDN-Knoten der npm-Registry liefern für ein Paket nur eine von zwei Attestierungen. Die Prüfung bleibt streng; ein neuer Lauf auf einem anderen Knoten besteht.
+
 ## [4.11.4] – 2026-11-01
 
 Korrekturen aus der Fehlersuche, zweiter Teil: Unerreichbares und sichtbar Falsches.

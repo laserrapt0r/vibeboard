@@ -58,6 +58,7 @@
   - Sperren oder Ablaufen des Links löscht die Gastzugänge samt Sitzungen; verbundene Gäste werden sofort getrennt. Abgeschaltet der Gastzugang, werden alle Links gesperrt. Beiträge der Gäste bleiben mit ihrem Namen erhalten.
   - Anmelden mit Benutzername/Kennwort ist für Gastzugänge nicht möglich; Benutzernamen „gast-…“ sind reserviert. Gäste erscheinen nicht in der Benutzerverwaltung.
   - Missbrauchsschutz: Ratenbegrenzung für Beitritt und Linkerstellung, höchstens 100 Gäste je Link. Abgelaufene Gastzugänge werden spätestens nach einer Minute entfernt und getrennt. Gastlink-Tokens erscheinen nicht im Protokoll.
+  - Geändert in 4.11.5: Abgeschnittene Gastlinks und beendete Gastzugänge führen zur Seite „Link nicht gültig“, nicht zur Anmeldung. Gäste haben kein Profilmenü.
 
 ### REQ-BOARD-007 Teams und Ordner
 - **Seit:** 3.7.0 · **Priorität:** Soll · **Status:** umgesetzt

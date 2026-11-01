@@ -8,7 +8,7 @@ import {
   BUSY_TTL, resendBusy, stageRect,
 } from './core.js';
 import { throttle } from './util.js';
-import { menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
+import { elementLabel, menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
 import { facilitatorItems, toolsReserved } from './moderation.js';
 import * as bell from './notifications.js';
 
@@ -29,7 +29,7 @@ function renderAvatars() {
   const box = $('#avatars');
   if (!box) return;
   box.innerHTML = '';
-  const me = h('button', { class: 'avatar', style: { background: app.user.color }, title: T`${app.user.name || T('Gast')} (du) – Profil bearbeiten`, onclick: () => openProfile() }, initials(app.user.name || T('Gast')));
+  const me = h('button', { class: 'avatar', disabled: !!app.guest, style: { background: app.user.color }, title: T`${app.user.name || T('Gast')} (du) – Profil bearbeiten`, onclick: () => openProfile() }, initials(app.user.name || T('Gast')));
   box.append(me);
   const peers = [...app.peers.values()];
   for (const p of peers.slice(0, 6)) {
@@ -380,7 +380,7 @@ function renderTimer() {
 setInterval(() => app.session.timer && renderTimer(), 250);
 
 function openTimerMenu(anchor) {
-  const custom = h('input', { type: 'number', min: 1, max: 180, value: 5, style: { width: '64px' } });
+  const custom = h('input', { 'aria-label': T('Minuten'), type: 'number', min: 1, max: 180, value: 5, style: { width: '64px' } });
   popover(anchor, h('div', { class: 'timer-pop' },
     h('div', { class: 'pop-title' }, T('Timer für alle starten')),
     h('div', { class: 'row wrap' }, [1, 2, 3, 5, 10, 15, 30].map((m) => h('button', { class: 'btn small', onclick: () => { startTimer(m * 60000); closePop(); } }, m + T(' Min')))),
@@ -468,7 +468,7 @@ app.on('renderVotesPanel', (side, close) => {
   side.append(h('p', { class: 'muted pad small' }, T`${total} Stimmen auf ${rows.length} Elemente verteilt`));
   const max = rows[0]?.n || 1;
   rows.forEach((r, i) => {
-    const label = r.el.text || r.el.title || r.el.char || r.el.name || r.el.type;
+    const label = r.el.text || r.el.title || r.el.char || r.el.name || elementLabel(r.el);
     side.append(h('div', { class: 'vote-row', onclick: () => {
       setSelection([r.id]);
       fitTo(bounds(r.el), { maxZ: 1.2, pad: 160 });
@@ -547,7 +547,7 @@ app.on('present', (startId) => startPresentation(startId));
 
 function startPresentation(startId) {
   const list = frames();
-  if (!list.length) return toast(T('Lege zuerst Frames an – sie werden zu Folien'));
+  if (!list.length) return toast((app.viewOnly ? T('Auf diesem Board gibt es noch keine Frames.') : T('Lege zuerst Frames an – sie werden zu Folien')));
   finishEdit();
   setSelection([]);
   setTool('select');
@@ -913,6 +913,11 @@ export function initCollab() {
   s.on('saveState', (st) => app.emit('saveState', st));
   s.on('actionsChanged', () => app.emit('actionsChanged'));
   onAuthLost(() => {
+    // Gäste haben kein Konto: Die Anmeldeseite hilft ihnen nicht, die Gastseite erklärt, dass der Link nicht mehr gilt
+    if (app.guest) {
+      location.href = '/g/beendet';
+      return true;
+    }
     if (!s.unsaved) return false;
     toast(T('Du wurdest abgemeldet. Deine Änderungen warten hier: Melde dich in einem neuen Tab an, danach geht es von selbst weiter.'), 60000, {
       label: T('Anmelden'),
