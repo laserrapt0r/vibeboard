@@ -130,6 +130,7 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
   - Les personnes en dehors de votre vue apparaissent sous forme de flèche au bord de l'écran ; un clic permet de les rejoindre.
   - Les personnes absentes (autre onglet) sont grisées ; les vues de tous figurent sous forme de cadres dans la mini-carte.
   - Les pointeurs de souris des autres peuvent être masqués dans les paramètres.
+- **Écrire ensemble :** Plusieurs personnes peuvent écrire en même temps dans la même note, forme, étiquette ou cellule sans perdre un caractère.
 - **Chat du curseur :** Avec `/`, affichez un court message directement à côté de votre propre pointeur de souris, sans créer de commentaire
 - Liste des participants avec « Suivre » (suivre la vue d'une personne), « Tout le monde me rejoint » et « Tout le monde me suit »
 - **Mode privé :** Au début, tout le monde collecte en secret : les nouveaux contenus ne sont visibles que par leur

@@ -1,6 +1,7 @@
 // Echtzeit-Synchronisation: Server-Sent Events (Empfang) + gebündelte POSTs (Senden)
 import { T } from './i18n.js';
 import { uid } from './util.js';
+import { TextSessions } from './text-sync.js';
 import { Reconciler, enqueue, enqueueDelete, requeue, supersede, supersedeParts, stamped, byStamp, wasRetried, tracked, idOf } from './merge.js';
 
 // Hat sich gezeigt, dass Server-Sent Events hier nicht durchkommen (z. B. Pufferung durch einen Forward-Proxy),
@@ -74,6 +75,8 @@ export class Sync {
     document.addEventListener('visibilitychange', () => !document.hidden && this.reconnect());
     this.started = new WeakSet(); // Pakete, die schon unterwegs sind und sich nicht mehr ändern dürfen
     this.transport = null;
+    this.streamSeq = 0;
+    this.texts = new TextSessions((o) => this.op(o), () => this.streamSeq, () => this.connected);
     this.pollLoop = 0;
     // Speicherstand des Servers (siehe lib/boards.js): eigene Änderungen gelten als gespeichert,
     // wenn savedSeq den in der Antwort genannten Stand (ackSeq) erreicht hat
@@ -122,6 +125,12 @@ export class Sync {
   }
 
   dispatch(msg) {
+    if (['hello', 'ops', 'tsync'].includes(msg.type) && msg.seq > this.streamSeq) this.streamSeq = msg.seq;
+    if (msg.type === 'tsync') {
+      const target = this.texts.onSync(msg);
+      if (target) this.emit('textchange', { target, text: msg.gone ? undefined : msg.text });
+      return;
+    }
     if (msg.type === 'hello') {
       this.connected = true;
       this.everConnected = true;
@@ -267,6 +276,9 @@ export class Sync {
 
   upsert(el, prev) {
     if (this.viewOnly) return;
+    // Der Text in Bearbeitung läuft über die Eingabeschritte, in diesem Weg zählt nur der Rest
+    el = this.texts.mask(el);
+    prev = this.texts.mask(prev);
     this.merge.touch(el.id, prev);
     if (enqueue(this.queue, el, prev)) this.schedule();
   }
@@ -324,6 +336,8 @@ export class Sync {
   op(o) {
     // Abstimmen und Schätzen dürfen auch Betrachter, Kommentieren ab der Rolle „Kommentieren“
     // „Moderation beenden“ gibt es gerade für die, die eine verwaiste Sperre aussperrt; der Server prüft das Recht
+    // Die Rolle hat sich beim Tippen geändert: Offenes kann nicht mehr ankommen
+    if (this.viewOnly && (o.op === 'ttext' || o.op === 'tsync')) return this.texts.abandon();
     if (this.viewOnly && !['vote', 'estimate', 'pollVote', 'romanVote', 'react', 'moderation'].includes(o.op) && !(o.op === 'comment' && this.canComment)) return;
     if (o.op === 'vote') delete o.userId;
     if (tracked(o) && o.prev !== undefined) {
@@ -472,11 +486,11 @@ export class Sync {
   }
 
   get pending() {
-    return this.queue.size + this.extra.length > 0;
+    return this.queue.size + this.extra.length > 0 || this.texts.busy;
   }
 
   // Noch nicht in der Datenbank angekommene eigene Änderungen (Warnung beim Verlassen der Seite)
   get unsaved() {
-    return this.queue.size + this.extra.length + this.sending.length > 0 || this.save.ackSeq > this.save.savedSeq;
+    return this.queue.size + this.extra.length + this.sending.length > 0 || this.texts.busy || this.save.ackSeq > this.save.savedSeq;
   }
 }

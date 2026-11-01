@@ -47,6 +47,8 @@ jobs:
         run: npm run test:sync
       - name: Formeln prüfen
         run: npm run test:formula
+      - name: Gemeinsames Tippen prüfen
+        run: npm run test:text
       - run: npm run test:upgrade
         env:
           DATABASE_URL: postgres://vb:vb@localhost:5432/vb_test

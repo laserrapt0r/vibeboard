@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.13.0] – 2026-11-01
+
+### Hinzugefügt
+- Gemeinsam tippen: Mehrere Personen schreiben gleichzeitig in Notizen, Formen, Mindmap-Knoten, Textelementen, Code, Frame-Titeln, Linienbeschriftungen und Tabellenzellen, ohne dass Zeichen verloren gehen. Der eigene Cursor bleibt an seiner Stelle, Rückgängig nimmt nur die eigene Eingabe zurück.
+
+### Geändert
+- Kartendialoge führen Titel und Beschreibung beim Speichern mit inzwischen geänderten Fassungen zusammen.
+
+### Behoben
+- Papierkorb: Die Knöpfe liefen rechts aus der Karte.
+
 ## [4.12.0] – 2026-11-01
 
 Offene Punkte aus der Fehlersuche geschlossen, die sich im Betrieb als Fehlverhalten zeigten.

@@ -10,7 +10,7 @@
   - Geändert in 3.7.0: Kommentare werden nicht mehr als ganzes Element überschrieben, sondern über eigene Operationen geändert ([REQ-ELEM-014](02-elemente.md)).
   - Geändert in 3.5.0: Bei Tabellen gilt das je Zelle. Änderungen an verschiedenen Zellen gehen nicht verloren, und eingefügte oder gelöschte Zeilen und Spalten verschieben die Zellen anderer Personen korrekt (REQ-ELEM-009).
   - Nur angemeldete Personen mit mindestens Leserecht erhalten den Echtzeitkanal; Änderungen erfordern Schreibrecht (Prüfung auf dem Server).
-  - Geändert in 4.12.0: Lehnt der Server eine Kommentaränderung ab, kehrt der angezeigte Stand zum Server zurück. Tippen zwei Personen in dieselbe Notiz, gewinnt weiter die letzte Eingabe; der Hinweis „✎ Name bearbeitet“ zeigt das an. Ändert jemand im Moment der Übertragung die Tabellenstruktur, kann eine Zelleingabe in der Nachbarzelle landen: Offene Zelleditoren wandern mit, nur Pakete unterwegs nicht.
+  - Geändert in 4.12.0: Lehnt der Server eine Kommentaränderung ab, kehrt der angezeigte Stand zum Server zurück. Ändert jemand im Moment der Übertragung die Tabellenstruktur, kann eine Zelleingabe in der Nachbarzelle landen: Offene Zelleditoren wandern mit, nur Pakete unterwegs nicht.
 
 ### REQ-COLLAB-002 Echtzeit ohne WebSockets, mit Rückfalloption
 - **Seit:** 1.0.0 (Server-Sent Events), 3.0.0 (Long-Polling-Rückfall) · **Priorität:** Muss · **Status:** umgesetzt
@@ -186,7 +186,7 @@
 - **Beschreibung:** Ändern mehrere Personen dasselbe Element fast gleichzeitig, haben danach alle denselben Stand, ohne Neuladen und ohne Sperren.
 - **Akzeptanzkriterien:**
   - Der Server legt die Reihenfolge fest und nummeriert jedes Paket. Eigene Änderungen erscheinen sofort; bis zur Bestätigung liegen sie auf dem letzten Stand des Servers auf.
-  - Änderungen gehen als einzelne Felder: Ändert eine Person die Farbe und eine andere den Text, bleibt beides erhalten. Am selben Feld gewinnt, was zuletzt beim Server ankommt.
+  - Änderungen gehen als einzelne Felder: Ändert eine Person die Farbe und eine andere den Text, bleibt beides erhalten. Am selben Feld gewinnt, was zuletzt beim Server ankommt. Texte sind davon seit 4.13.0 ausgenommen, wenn sie im Editor bearbeitet werden (REQ-COLLAB-020).
   - Die Reihenfolge, in der Bestätigung und Live-Stream eintreffen, hat keinen Einfluss auf das Ergebnis. Das gilt auch für den Rückfall-Transport.
   - Löschen geht vor gleichzeitiges Bearbeiten. Wer während einer Verbindungsstörung ein Element bearbeitet hat und von der Löschung nichts mitbekommen hat, verliert die Arbeit nicht: Das Element kommt mit diesem Stand zurück. War die Löschung sichtbar, bleibt das Element gelöscht.
   - Scheitern mehrere Pakete nacheinander, setzt sich beim erneuten Senden die jeweils neuere Änderung durch. Eine wiederholte Tabellenänderung wird nur einmal ausgeführt.
@@ -194,3 +194,19 @@
   - Vom Server abgelehnte Änderungen (Sperre, fremde private Elemente, Virenscan) kehren beim Absender zum Stand des Servers zurück.
   - Rechte und Prüfungen gelten für Feldänderungen wie für vollständige Elemente.
   - `npm run test:sync` prüft das mit zufälligen Abläufen und läuft bei jedem Push auf `main` und jedem Pull Request.
+
+### REQ-COLLAB-020 Gemeinsam tippen
+- **Seit:** 4.13.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Mehrere Personen können gleichzeitig im selben Text schreiben. Texte gehen als einzelne Schritte zum Server, der sie in eine feste Reihenfolge bringt und gegeneinander umrechnet.
+- **Akzeptanzkriterien:**
+  - Gilt für alles, was im Texteditor auf dem Board bearbeitet wird: Notizen, Formen (auch Mindmap-Knoten und Kanban-Spalten), Textelemente, Code, Frame-Titel, Linienbeschriftungen und Tabellenzellen.
+  - Kein getipptes Zeichen geht verloren oder kommt doppelt an, auch nicht an derselben Stelle. Schreiben zwei an derselben Stelle, steht der zuerst angekommene Text vorn.
+  - Der eigene Cursor bleibt beim eigenen Wort, wenn davor Text dazukommt.
+  - Ändert jemand anderes zur gleichen Zeit Farbe, Lage oder Größe, bleibt beides erhalten.
+  - Rückgängig nimmt nur die eigene Eingabe zurück, Text anderer bleibt. Formeln in Zellen werden nicht teilweise zurückgenommen.
+  - Kartendialoge bearbeiten keinen Live-Text: Beim Speichern werden Titel und Beschreibung mit inzwischen geänderten Fassungen zusammengeführt.
+  - Nach Verbindungsabbruch oder Serverneustart schreibt man weiter; beim Wiederverbinden wird zusammengeführt. Ist der Verlauf auf dem Server nicht mehr vorhanden, gleicht der Browser am vollständigen Text ab.
+  - Änderungen, die ein Text anders erhält (Rückgängig anderer, Einfügen), gelten als vollständiger Text und werden in laufende Eingaben eingerechnet.
+  - Jede Änderung vom Server bringt den ganzen Text mit: Browser können nicht dauerhaft auseinanderlaufen.
+  - Eingabeschritte unterliegen denselben Rechten und Sperren wie jede Änderung. Private und verborgene Inhalte erreichen niemanden sonst, auch nicht als Schritte.
+  - Geprüft durch `npm run test:text` (Simulation mit der echten Logik) in der CI.

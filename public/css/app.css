@@ -1213,6 +1213,8 @@ body.retro-active #filter-banner { bottom: 118px; }
 .trash-all { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .trash-all input { width: 18px; height: 18px; margin: 0; }
 .board-card.trashed .board-thumb { filter: grayscale(1); opacity: 0.7; }
+.board-card.trashed .row { flex-wrap: wrap; }
+.board-card.trashed .row .btn { flex: 1 1 auto; justify-content: center; white-space: nowrap; }
 .dash-nav-sep { height: 1px; background: var(--border); margin: 10px 8px; }
 
 /* Webhooks */

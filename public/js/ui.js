@@ -642,6 +642,11 @@ app.on('editCard', (id) => {
     };
     // Nur Geändertes schreiben: Sonst überschriebe der offene Dialog, was andere inzwischen an der Karte geändert haben
     const patch = Object.fromEntries(Object.entries(next).filter(([k, v]) => JSON.stringify(v ?? '') !== JSON.stringify(el[k] ?? '')));
+    // Hat jemand währenddessen am selben Text geschrieben, bleibt beides erhalten
+    const now = getEl(id);
+    for (const k of ['title', 'description']) {
+      if (now && k in patch && (now[k] ?? '') !== (el[k] ?? '')) patch[k] = globalThis.TextOps.merge3(el[k] ?? '', patch[k] ?? '', now[k] ?? '');
+    }
     if (Object.keys(patch).length) act(() => updateEl(id, patch));
     m.close();
     buildCtx();

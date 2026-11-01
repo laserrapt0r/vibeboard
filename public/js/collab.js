@@ -714,6 +714,9 @@ export function initCollab() {
       applyRemoteOp(srv && srv.priv ? { ...op, el: { ...op.el, priv: srv.priv, privName: srv.privName } } : op);
     }
     if (app.editing && !getEl(app.editing.id)) abortEdit();
+    // Eigene Eingaben, die der Server noch nicht hat, sichtbar halten und Verpasstes nachholen
+    for (const [id] of new Map([...app.sync.texts.map.values()].map((t) => [t.target.id]))) if (getEl(id)) applyRemoteOp({ op: 'upsert', el: getEl(id) });
+    app.sync.texts.reconnected();
     app.name = msg.board.name;
     app.prevRetroId = msg.board.prevRetroId || null;
     app.session = msg.board.session || { timer: null, voting: null };
@@ -741,8 +744,17 @@ export function initCollab() {
     if (op.op === 'upsert' ? !cur || !equal(cur, op.el) : cur) applyRemoteOp(op);
   };
   s.on('apply', (ops) => ops.forEach(show));
+  // Antwort auf eine Nachfrage zum gemeinsamen Tippen: Das Element zeigt den Stand des Servers plus Offenes
+  s.on('textchange', ({ target, text }) => {
+    const el = getEl(target.id);
+    if (!el) return;
+    if (text === undefined) return applyRemoteOp({ op: 'upsert', el });
+    const { cell, field } = target;
+    applyRemoteOp({ op: 'upsert', el: cell ? { ...el, cells: el.cells.map((row, r) => (r === cell[0] ? row.map((x, c) => (c === cell[1] ? text : x)) : row)) } : { ...el, [field]: text } });
+  });
   s.on('ops', (msg) => {
     for (const op of msg.ops) {
+      if (op.op === 'upsert' || op.op === 'delete' || op.op === 'tpatch') app.sync.texts.incoming(op, msg.seq);
       if (op.op === 'upsert' || op.op === 'delete') {
         const next = app.sync.incoming(op, msg.seq);
         if (next) show(next);

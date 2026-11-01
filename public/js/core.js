@@ -458,7 +458,12 @@ function tableUndoPatch(target, other, cur) {
   for (let r = 0; r < target.rows; r++) {
     for (let c = 0; c < target.cols; c++) {
       const tv = target.cells?.[r]?.[c] ?? '', ov = other.cells?.[r]?.[c] ?? '';
-      if (tv !== ov && here(r, c) && (cur.cells?.[r]?.[c] ?? '') === ov) p.cells.push([r, c, tv]);
+      if (tv !== ov && here(r, c)) {
+        const cv = cur.cells?.[r]?.[c] ?? '';
+        // Hat jemand weitergeschrieben, nimmt Rückgängig nur die eigene Eingabe heraus. Formeln bleiben: Halbe sind nichts wert.
+        if (cv === ov) p.cells.push([r, c, tv]);
+        else if (![tv, ov, cv].some((v) => v.startsWith('='))) p.cells.push([r, c, TextOps.merge3(ov, tv, cv)]);
+      }
       const ts = target.styles?.[r]?.[c] || null, os = other.styles?.[r]?.[c] || null;
       if (JSON.stringify(ts) !== JSON.stringify(os) && here(r, c)) p.styles.push([r, c, ts]);
     }
@@ -471,11 +476,16 @@ function tableUndoPatch(target, other, cur) {
 }
 
 // Nur die Felder zurücksetzen, die dieser Schritt geändert hat. Was andere inzwischen an anderen Feldern gemacht haben, bleibt.
+const TextOps = globalThis.TextOps;
+const TEXT_KEYS = ['text', 'title', 'label', 'description'];
+
 function withOwnChanges(target, other, cur) {
   const out = { ...cur };
   for (const k of new Set([...Object.keys(target), ...Object.keys(other)])) {
     if (k === 'priv' || k === 'privName' || JSON.stringify(target[k]) === JSON.stringify(other[k])) continue;
-    if (k in target) out[k] = clone(target[k]);
+    // Texte: Nur die eigene Änderung zurücknehmen, was andere dazugeschrieben haben, bleibt
+    if (TEXT_KEYS.includes(k) && [target[k] ?? '', other[k], cur[k]].every((v) => typeof v === 'string')) out[k] = TextOps.merge3(other[k], target[k] ?? '', cur[k]);
+    else if (k in target) out[k] = clone(target[k]);
     else delete out[k];
   }
   return out;
@@ -535,6 +545,7 @@ export function undo() {
   if (drag || tx) return;
   const e = undoStack.pop();
   if (!e) return;
+  app.sync.texts.dropBuffered(new Set(e.before.keys()));
   // Wird ein Element wieder entfernt, merkt sich Wiederholen dessen aktuellen Stand: auch Änderungen anderer daran
   for (const [id, b] of e.before) if (!b && app.els.has(id)) e.after.set(id, clone(app.els.get(id)));
   applySnapshot(e.before, e.after);
@@ -548,6 +559,7 @@ export function redo() {
   if (drag || tx) return;
   const e = redoStack.pop();
   if (!e) return;
+  app.sync.texts.dropBuffered(new Set(e.after.keys()));
   for (const [id, a] of e.after) if (!a && app.els.has(id)) e.before.set(id, clone(app.els.get(id)));
   applySnapshot(e.after, e.before);
   undoStack.push(e);
@@ -559,6 +571,8 @@ export const canRedo = () => redoStack.length > 0;
 
 export function applyRemoteOp(op) {
   if (op.op === 'upsert') {
+    // Eigene Eingaben, die noch unterwegs sind, gehören zum angezeigten Text
+    op = { ...op, el: app.sync?.texts ? app.sync.texts.overlay(op.el) : op.el };
     if (op.el.type === 'code') op = { ...op, el: autoHeight(op.el) };
     const prev = app.els.get(op.el.id);
     app.els.set(op.el.id, op.el);
@@ -566,14 +580,7 @@ export function applyRemoteOp(op) {
     if (op.el.z > maxZ) maxZ = op.el.z;
     markDirty(op.el.id);
     const ed = app.editing;
-    if (ed && ed.id === op.el.id) {
-      // Noch nichts getippt: fremden Text übernehmen; sonst gewinnt die eigene Eingabe beim nächsten Tastendruck
-      if (!ed.dirty) {
-        const v = ed.cell ? op.el.cells?.[ed.cell[0]]?.[ed.cell[1]] : op.el[ed.field];
-        if (v !== undefined && v !== editor.value) editor.value = v ?? '';
-      }
-      requestAnimationFrame(layoutEditor);
-    }
+    if (ed && ed.id === op.el.id) requestAnimationFrame(layoutEditor);
   } else if (op.op === 'delete') {
     app.els.delete(op.id);
     if (app.sel.delete(op.id)) selectionChanged();
@@ -687,6 +694,7 @@ export function tableStruct(t, st) {
   const n = TableOps.applyStruct(t, st);
   if (!n) return null;
   setEl(n, false);
+  app.sync.texts.moveCell(t.id, (r, c) => TableOps.mapCell({ op: 'tstruct', ...st }, r, c));
   if (!app.viewOnly) app.sync.op({ op: 'tstruct', id: t.id, ...st, opId: uid(), prev: t });
   return n;
 }
@@ -698,17 +706,13 @@ export function applyRemoteTableOp(op) {
   if (op.op === 'tstruct') {
     const n = TableOps.applyStruct(t, op);
     if (!n) return;
+    app.sync.texts.moveCell(op.id, (r, c) => TableOps.mapCell(op, r, c));
     // bearbeitete Zelle und Zellauswahl wandern mit der Strukturänderung
     const ed = app.editing;
     if (ed && ed.id === op.id && ed.cell) {
       const m = TableOps.mapCell(op, ed.cell[0], ed.cell[1]);
       if (m) {
         ed.cell = m;
-        // Eine angefangene Formel zeigt weiter auf dieselben Zellen; die nächste Taste überschriebe sonst die Anpassung
-        if (formulaEditing()) {
-          const count = Math.max(1, op.count | 0 || 1);
-          editor.value = Formula.adjust(editor.value, op.action, op.at | 0, count);
-        }
       } else abortEdit();
     }
     const cs = app.cellSel;
@@ -1202,14 +1206,16 @@ export function startEdit(id, opts = {}) {
     app.cellSel = { id, r0: cell[0], c0: cell[1], r1: cell[0], c1: cell[1] };
   }
   begin();
-  app.editing = { id, field, cell, isNew: !!opts.isNew, drop: !!opts.drop };
+  const first = cell ? el.cells?.[cell[0]]?.[cell[1]] ?? '' : el[field] ?? '';
+  const session = app.sync.texts.open({ id, field, cell }, first);
+  app.editing = { id, field, cell, isNew: !!opts.isNew, drop: !!opts.drop, session, plain: session.value, sawRemote: false };
+  session.listener = onRemoteText;
   if (cell) scheduleRender(true);
   if (el.mind) hintOnce('mindHint', T('Mindmap: Enter legt den nächsten Knoten an, Tab einen Unterknoten, Esc beendet.'));
   else if (el.type === 'sticky') hintOnce('stickyHint', T('Tipp: Tab legt die nächste Notiz daneben an, Esc beendet die Eingabe.'));
   else if (cell) hintOnce('tableHint', T('Tipp: Eine Zelle mit = rechnet, zum Beispiel =SUMME(B2:B5).'));
   setSelection([id]);
-  const val = cell ? el.cells?.[cell[0]]?.[cell[1]] ?? '' : el[field] ?? '';
-  editor.value = val;
+  editor.value = session.value;
   editor.style.display = 'block';
   layoutEditor();
   markDirty(id);
@@ -1322,23 +1328,78 @@ function cellValid(el, cell) {
   return el.type === 'table' && cell[0] < el.rows && cell[1] < el.cols && Array.isArray(el.cells?.[cell[0]]);
 }
 
+// Text im Element auf den Stand der Eingabe bringen. Der Text selbst geht als Schritte (ttext) zum Server; sync.upsert
+// nimmt ihn heraus, sodass nur übrig bleibt, was er nach sich zieht, etwa die Höhe.
+function showEditedText(ed, el, value) {
+  if (ed.cell) {
+    setEl(TableOps.applyPatch(el, { cells: [[ed.cell[0], ed.cell[1], value]] }), false);
+    scheduleRender(true);
+    return;
+  }
+  setEl(autoHeight({ ...el, [ed.field]: value }));
+}
+
 editor.addEventListener('input', () => {
   const ed = app.editing;
   if (!ed) return;
   const el = getEl(ed.id);
   if (!el || !cellValid(el, ed.cell)) return abortEdit();
   ed.dirty = true;
-  if (ed.cell) {
-    tablePatch(el, { cells: [[ed.cell[0], ed.cell[1], editor.value]] });
-    scheduleRender(true);
-  } else {
-    setEl(autoHeight({ ...el, [ed.field]: editor.value }));
+  // Während einer Silbenkomposition (z. B. Japanisch) bleibt das Feld unangetastet; übertragen wird das Ergebnis
+  if (!ed.composing) {
+    ed.session.type(editor.value, editor.selectionStart);
+    showEditedText(ed, el, ed.session.value);
   }
   layoutEditor();
 });
 
+editor.addEventListener('compositionstart', () => {
+  const ed = app.editing;
+  if (!ed) return;
+  ed.composing = { shown: editor.value, held: [] };
+});
+
+editor.addEventListener('compositionend', () => endComposition(app.editing));
+
+function endComposition(ed) {
+  if (!ed?.composing) return;
+  const { shown, held } = ed.composing;
+  ed.composing = null;
+  const own = TextOps.diff(shown, editor.value, editor.selectionStart);
+  const [steps] = TextOps.transform(own, held);
+  const caret = TextOps.mapPos(editor.selectionStart, held);
+  if (steps.length) ed.session.push(steps);
+  writeEditor(ed.session.value, caret, caret);
+  const el = getEl(ed.id);
+  if (el && cellValid(el, ed.cell)) showEditedText(ed, el, ed.session.value);
+}
+
+function writeEditor(value, from, to) {
+  if (editor.value !== value) editor.value = value;
+  editor.setSelectionRange(from, to);
+}
+
+// Jemand anders hat in denselben Text geschrieben; ops gelten für die bisher angezeigte Fassung
+function onRemoteText(ops, before) {
+  const ed = app.editing;
+  if (!ed) return;
+  ed.sawRemote = true;
+  // Stand ohne die eigene Eingabe mitführen: Rückgängig nimmt später nur sie heraus
+  const [mine] = TextOps.transform(ops, TextOps.diff(before, ed.plain));
+  ed.plain = TextOps.apply(ed.plain, mine);
+  if (ed.composing) {
+    ed.composing.held.push(...ops);
+    return;
+  }
+  const { selectionStart, selectionEnd } = editor;
+  writeEditor(ed.session.value, TextOps.mapPos(selectionStart, ops), TextOps.mapPos(selectionEnd, ops));
+  requestAnimationFrame(layoutEditor);
+}
+
 editor.addEventListener('keydown', (e) => {
   e.stopPropagation();
+  // Enter und Esc bestätigen hier nur die Silbenkomposition, nicht die Eingabe
+  if (e.isComposing) return;
   const ed = app.editing;
   if (!ed) return;
   // Neue Mindmap-Knoten und Tab-Notizen: Leer weiterzugehen ergäbe nur eine Kette leerer Objekte
@@ -1402,6 +1463,8 @@ editor.addEventListener('blur', () => setTimeout(() => {
 export function finishEdit() {
   const ed = app.editing;
   if (!ed) return;
+  // Offene Silbenkomposition gehört zum Text: Sonst wäre das Wort weg, bei einer neuen Notiz sogar die ganze Notiz
+  endComposition(ed);
   const el = getEl(ed.id);
   if (el && ((el.type === 'text' && !el.locked) || ed.drop) && !String(el.text || '').trim()) deleteEls([el.id]);
   cancelEditUI();
@@ -1432,6 +1495,14 @@ function createAndEdit(id, make, drop = true) {
 function cancelEditUI() {
   const ed = app.editing;
   app.editing = null;
+  if (ed) {
+    // Rückgängig setzt auf den Stand ohne die eigene Eingabe zurück, nicht auf den vor dem Tippen
+    const b = ed.sawRemote && tx?.before.get(ed.id);
+    if (b && ed.cell) {
+      if (b.cells?.[ed.cell[0]]) b.cells[ed.cell[0]][ed.cell[1]] = ed.plain;
+    } else if (b) b[ed.field] = ed.plain;
+    app.sync.texts.close(ed.session);
+  }
   editor.style.display = 'none';
   editor.blur();
   if (ed) markDirty(ed.id);
@@ -3853,7 +3924,7 @@ export function initCore() {
     const heavy = app.sync.hasLargePacket();
     app.sync.flushNow();
     // Speicherfehler des Servers betreffen nur, wer selbst noch ungespeicherte Änderungen hat
-    if (heavy || (unsent && (!app.sync.connected || app.sync.retrying)) || (app.sync.save.failed && app.sync.unsaved)) {
+    if (heavy || app.sync.texts.unsent || (unsent && (!app.sync.connected || app.sync.retrying)) || (app.sync.save.failed && app.sync.unsaved)) {
       e.preventDefault();
       e.returnValue = '';
     }
