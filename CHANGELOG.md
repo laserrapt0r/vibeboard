@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.14.0] – 2026-11-01
+
+### Hinzugefügt
+- Fremde Cursor: Wer in einem Text schreibt, ist für alle als farbiger Cursor mit Namen zu sehen, markierter Text wird farbig hinterlegt. Gilt für alle Elemente, die gemeinsames Tippen kennen. Anonyme Beiträge zeigen keinen Cursor.
+
+### Behoben
+- Ein Zellbezug, der gerade in eine Formel kommt, verrutscht nicht mehr, wenn jemand gleichzeitig in derselben Zelle schreibt.
+- Im Long-Polling verschwinden Weggegangene jetzt zuverlässig nach rund 4 Sekunden. Die Abmeldung beim Schließen aus 4.12.0 kam nicht immer an; der Server erkennt das Gehen nun selbst.
+- Zelländerungen, die während einer Änderung der Tabellenstruktur unterwegs sind, landen nicht mehr in der Nachbarzelle. Der Server rechnet sie um, Formeln passen sich an.
+
 ## [4.13.0] – 2026-11-01
 
 ### Hinzugefügt

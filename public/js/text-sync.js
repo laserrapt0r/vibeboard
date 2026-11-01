@@ -33,6 +33,7 @@ export class TextSession {
   type(next, caret = null) {
     const ops = Ops().diff(this.value, next, caret);
     if (ops.length) this.push(ops);
+    return ops;
   }
 
   push(ops) {
@@ -118,6 +119,11 @@ export class TextSession {
     if (this.fresh && !msg.refused && typeof msg.text === 'string') {
       this.fresh = false;
       this.align(msg);
+      // Noch unbestätigte Eingabe: auf dem neuen Stand erneut senden, ihre Kennung verhindert doppeltes Ausführen
+      if (this.flying) {
+        this.flying.at = Date.now();
+        this.post();
+      }
       this.flush();
       return;
     }

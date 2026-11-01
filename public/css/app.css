@@ -262,11 +262,24 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
 #stage.voting #world .el-image, #stage.voting #world .el-text, #stage.voting #world .el-emoji { cursor: pointer; }
 #stage.voting #world .el-sticky:hover, #stage.voting #world .el-shape:hover, #stage.voting #world .el-card:hover { filter: brightness(0.95); }
 
-#editor {
+#editor, #text-mirror {
   position: absolute; display: none; border: 0; outline: none; resize: none; overflow: hidden; margin: 0;
   padding: 0; background: transparent; font-family: var(--font); white-space: pre-wrap; overflow-wrap: break-word;
   caret-color: var(--accent); z-index: 5; user-select: text; -webkit-user-select: text;
 }
+
+#text-mirror { visibility: hidden; pointer-events: none; box-sizing: border-box; }
+
+/* Cursor anderer in einem Text */
+#text-carets { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 6; }
+body.presenting #text-carets { display: none; }
+.text-caret { position: absolute; width: 2px; border-radius: 1px; }
+.text-caret-mark { position: absolute; opacity: 0.25; }
+.text-caret-name {
+  position: absolute; left: 0; bottom: 100%; font-size: 11px; line-height: 1.5; padding: 0 5px; white-space: nowrap;
+  border-radius: 4px 4px 4px 0;
+}
+.text-caret.quiet .text-caret-name { opacity: 0; }
 
 /* Cursor anderer Teilnehmender */
 #cursors { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }

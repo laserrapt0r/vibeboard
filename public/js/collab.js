@@ -1,8 +1,9 @@
 // Zusammenarbeit: Teilnehmer, Cursor, Folgen, Timer, Abstimmung, Reaktionen, Laser, Präsentation
 import { T } from './i18n.js';
 import { applyPatch, equal, idOf } from './merge.js';
-import { h, append, api, ICONS, esc, toast, modal, initials, FONT, onAuthLost } from './util.js';
-import {
+import { textKey } from './text-sync.js';
+import { h, append, api, ICONS, esc, toast, modal, initials, FONT, onAuthLost, readableOn } from './util.js';
+import { followStruct, textCaretRects,
   app, $, stage, getEl, isAnonymous, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
   loadElements, applyRemoteOp, applyRemoteTableOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
   BUSY_TTL, resendBusy, stageRect,
@@ -172,6 +173,80 @@ document.addEventListener('visibilitychange', () => app.sync && app.sync.signal(
 // Anzeige „… schreibt“ an Elementen, die gerade bearbeitet werden
 // Anonyme Beiträge: keine Anzeige „… schreibt“, sonst wäre die Autorschaft erkennbar
 app.on('editing', (on) => app.sync && app.sync.signal('editing', on && app.editing && !isAnonymous(getEl(app.editing.id)) ? app.editing.id : null));
+
+/* ---------------- Cursor anderer in einem Text ---------------- */
+
+const caretLayer = $('#text-carets');
+const textEditor = $('#editor');
+const CARET_QUIET_MS = 3000;
+let caretFrame = 0;
+
+// Eigene Position melden. Anonyme Beiträge bleiben außen vor: Der Cursor verriete, wer schreibt.
+const secretText = (el) => !el || isAnonymous(el) || !!el.priv || !!globalThis.ConcealOps?.concealedIds(app.els).has(el.id);
+const sendCaret = throttle(() => {
+  const ed = app.editing;
+  if (!ed || !app.sync || secretText(getEl(ed.id))) return;
+  app.sync.signal('caret', { id: ed.id, ...(ed.cell ? { cell: ed.cell } : { field: ed.field }), pos: textEditor.selectionStart, end: textEditor.selectionEnd });
+}, 150);
+document.addEventListener('selectionchange', () => document.activeElement === textEditor && sendCaret());
+['input', 'keyup', 'mouseup', 'focus'].forEach((k) => textEditor.addEventListener(k, sendCaret));
+// Signale haben keine feste Reihenfolge: Ein später Cursor darf das Ende nicht überholen
+app.on('editing', (on) => {
+  if (!on) setTimeout(() => !app.editing && app.sync?.signal('caret', null), 400);
+});
+
+const sameText = (c, t) => c.id === t.id && (c.cell ? t.cell && c.cell[0] === t.cell[0] && c.cell[1] === t.cell[1] : c.field === t.field);
+
+// Text davor hat sich geändert: Die nächste Meldung der Person käme erst danach
+function shiftCarets(target, ops) {
+  const now = Date.now();
+  for (const p of app.peers.values()) {
+    // Gerade gemeldet: Die Position enthält diese Änderung vermutlich schon
+    if (!p.caret || !sameText(p.caret, target) || now - p.caret.t < 250) continue;
+    p.caret.pos = globalThis.TextOps.mapPos(p.caret.pos, ops);
+    p.caret.end = globalThis.TextOps.mapPos(p.caret.end, ops);
+  }
+  scheduleCarets();
+}
+app.on('textmoved', (t) => shiftCarets(t, t.ops));
+
+function renderCarets() {
+  caretFrame = 0;
+  const parts = [];
+  const now = Date.now();
+  const W = stage.clientWidth, H = stage.clientHeight;
+  for (const p of app.peers.values()) {
+    if (!p.caret || cursorsLayer.classList.contains('off')) continue;
+    const el = getEl(p.caret.id);
+    if (!el || el.hidden || isAnonymous(el)) continue;
+    let r = null;
+    try {
+      r = textCaretRects(el, p.caret, p.caret.pos, p.caret.end);
+    } catch {
+      continue; // Einzelne Anzeige, die nichts anderes aufhalten darf
+    }
+    if (!r || r.caret.x < 0 || r.caret.y < 0 || r.caret.x > W || r.caret.y > H) continue;
+    for (const l of r.lines) parts.push(h('div', { class: 'text-caret-mark', style: { left: l.x + 'px', top: l.y + 'px', width: l.w + 'px', height: l.h + 'px', background: p.color } }));
+    parts.push(h('div', { class: 'text-caret' + (now - p.caret.t > CARET_QUIET_MS ? ' quiet' : ''), style: { left: r.caret.x + 'px', top: r.caret.y + 'px', height: r.caret.h + 'px', background: p.color } },
+      h('span', { class: 'text-caret-name', style: { background: p.color, color: readableOn(p.color) } }, p.name)));
+  }
+  caretLayer.replaceChildren(...parts);
+}
+
+function scheduleCarets() {
+  if (!caretFrame) caretFrame = requestAnimationFrame(renderCarets);
+}
+// Auch wenn kein Cursor mehr da ist: Ein gerade verschwundener muss noch weggeräumt werden
+['render', 'view', 'peers'].forEach((k) => app.on(k, () => (caretLayer.childElementCount || [...app.peers.values()].some((p) => p.caret)) && scheduleCarets()));
+app.on('tablemoved', (op) => {
+  for (const p of app.peers.values()) {
+    if (!p.caret?.cell || p.caret.id !== op.id) continue;
+    const m = globalThis.TableOps.mapCell(op, p.caret.cell[0], p.caret.cell[1]);
+    if (m) p.caret.cell = m;
+    else p.caret = null;
+  }
+  scheduleCarets();
+});
 
 function removeCursor(id) {
   cursorEls.get(id)?.remove();
@@ -755,11 +830,20 @@ export function initCollab() {
   s.on('ops', (msg) => {
     for (const op of msg.ops) {
       if (op.op === 'upsert' || op.op === 'delete' || op.op === 'tpatch') app.sync.texts.incoming(op, msg.seq);
+      // Wer selbst im Text schreibt, rechnet das über die eigene Sitzung; sonst die Schritte des Servers
+      for (const e of op.edits || []) {
+        const target = { id: op.op === 'upsert' ? op.el.id : op.id, field: e.f, cell: e.c };
+        if (!app.sync.texts.map.get(textKey(target))?.attached) shiftCarets(target, e.ops);
+      }
       if (op.op === 'upsert' || op.op === 'delete') {
         const next = app.sync.incoming(op, msg.seq);
         if (next) show(next);
       } else if (op.op === 'tpatch' || op.op === 'tstruct') {
-        if (!app.sync.incomingPartial(op, msg.seq)) continue;
+        if (!app.sync.incomingPartial(op, msg.seq)) {
+          // Der Stand ist schon da (Antwort kam zuerst), Editor und Auswahl aber noch nicht umgezogen
+          if (op.op === 'tstruct') followStruct(op);
+          continue;
+        }
         applyRemoteTableOp(op);
         const next = app.sync.merge.has(op.id) && app.sync.resolved(op.id);
         if (next) show(next);
@@ -797,7 +881,10 @@ export function initCollab() {
     app.emit('peers');
     // Neu Hinzukommende kennen den eigenen Zustand noch nicht
     if (document.hidden) s.signal('presence', { away: true });
-    if (app.editing && !isAnonymous(getEl(app.editing.id))) s.signal('editing', app.editing.id);
+    if (app.editing && !isAnonymous(getEl(app.editing.id))) {
+      s.signal('editing', app.editing.id);
+      sendCaret();
+    }
     resendBusy();
     if (app.sel.size) s.signal('sel', [...app.sel].filter((id) => !isAnonymous(getEl(id))).slice(0, 200));
     toast(T`${msg.user.name} ist dem Board beigetreten`);
@@ -862,8 +949,22 @@ export function initCollab() {
         break;
       case 'editing':
         p.editing = typeof d === 'string' ? d.slice(0, 64) : null;
+        if (!p.editing) p.caret = null;
+        scheduleCarets();
         scheduleRender(true);
         break;
+      case 'caret': {
+        const whole = (n) => Number.isInteger(n) && n >= 0 && n <= 1000000;
+        const cell = Array.isArray(d?.cell) && d.cell.length === 2 && d.cell.every(whole) ? [d.cell[0], d.cell[1]] : null;
+        const field = ['text', 'title', 'label'].includes(d?.field) ? d.field : null;
+        p.caret = d && typeof d.id === 'string' && d.id.length <= 64 && (cell || field) && whole(d.pos) && whole(d.end)
+          ? { id: d.id, cell, field, pos: d.pos, end: d.end, t: Date.now() } : null;
+        scheduleCarets();
+        // Der Name verschwindet, wenn eine Weile nichts passiert
+        clearTimeout(p.caretTimer);
+        p.caretTimer = setTimeout(scheduleCarets, CARET_QUIET_MS + 50);
+        break;
+      }
       case 'busy': {
         const ids = d && Array.isArray(d.ids) ? d.ids.filter((x) => typeof x === 'string').slice(0, 200).map((x) => x.slice(0, 64)) : [];
         p.busy = ids.length && d && ['move', 'resize', 'card'].includes(d.what) ? { what: d.what, ids } : null;

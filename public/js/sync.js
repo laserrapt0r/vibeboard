@@ -76,6 +76,7 @@ export class Sync {
     this.started = new WeakSet(); // Pakete, die schon unterwegs sind und sich nicht mehr ändern dürfen
     this.transport = null;
     this.streamSeq = 0;
+    this.structSeen = new Map();
     this.texts = new TextSessions((o) => this.op(o), () => this.streamSeq, () => this.connected);
     this.pollLoop = 0;
     // Speicherstand des Servers (siehe lib/boards.js): eigene Änderungen gelten als gespeichert,
@@ -218,13 +219,6 @@ export class Sync {
   async connectPoll() {
     this.transport = 'poll';
     this.emit('transport', 'poll');
-    if (!this.leaveHook) {
-      this.leaveHook = () => {
-        if (this.stopped) return;
-        fetch(`/api/boards/${this.boardId}/leave`, { method: 'POST', keepalive: true, headers: { 'X-Vibeboard': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId: this.clientId }) }).catch(() => {});
-      };
-      addEventListener('pagehide', this.leaveHook);
-    }
     const loop = ++this.pollLoop;
     const p = new URLSearchParams({ client: this.clientId, transport: 'poll' });
     while (!this.stopped && this.pollLoop === loop) {
@@ -310,6 +304,10 @@ export class Sync {
   }
 
   // Tabellenänderung vom Server: false, wenn sie schon enthalten ist
+  tableSeq(id) {
+    return Math.max(this.streamSeq, this.structSeen.get(id) || 0);
+  }
+
   incomingPartial(op, seq) {
     return this.merge.partial(op, seq);
   }
@@ -425,7 +423,11 @@ export class Sync {
         for (const o of ops) {
           if (o.op === 'upsert' && refused.has(o.el.id) && !this.merge.known(o.el.id)) authoritative({ op: 'delete', id: o.el.id });
         }
-        for (const op of res.revert || []) authoritative(op);
+        for (const op of res.revert || []) {
+          authoritative(op);
+          // Ganzer Stand einer Tabelle: Ihre Struktur ist bekannt, auch wenn der Live-Stream noch nachkommt
+          if (op.op === 'upsert' && op.el.type === 'table') this.structSeen.set(op.el.id, res.seq);
+        }
         if (res.marks && res.marks.length) this.emit('marks', res.marks);
         // Zurückgenommenes auch dann anzeigen, wenn es einen Abgleich-Eintrag hat (z. B. mitgewanderte Kommentare)
         const ids = new Set([...ops.filter(tracked).map(idOf), ...direct.map(idOf), ...(res.revert || []).map(idOf)]);

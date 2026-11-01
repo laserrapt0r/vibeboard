@@ -85,12 +85,13 @@
     return [a2, [...b1, ...b2]];
   }
 
-  /** Cursor über Schritte verschieben. Text direkt am Cursor schiebt ihn nicht: Die eigene Eingabe geht dort weiter. */
-  function mapPos(pos, ops) {
+  /** Cursor über Schritte verschieben. Text direkt am Cursor schiebt ihn nicht: Die eigene Eingabe geht dort weiter.
+   *  behind: Text genau an der Stelle bleibt vor ihr stehen (für Bereiche, die nur Eigenes enthalten sollen). */
+  function mapPos(pos, ops, behind = false) {
     let p = pos;
     for (const o of ops) {
       if (o.i !== undefined) {
-        if (o.p < p) p += o.i.length;
+        if (o.p < p || (behind && o.p === p)) p += o.i.length;
       } else if (o.p < p) p -= Math.min(o.d, p - o.p);
     }
     return p;

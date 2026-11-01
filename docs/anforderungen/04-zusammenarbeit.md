@@ -10,7 +10,7 @@
   - Geändert in 3.7.0: Kommentare werden nicht mehr als ganzes Element überschrieben, sondern über eigene Operationen geändert ([REQ-ELEM-014](02-elemente.md)).
   - Geändert in 3.5.0: Bei Tabellen gilt das je Zelle. Änderungen an verschiedenen Zellen gehen nicht verloren, und eingefügte oder gelöschte Zeilen und Spalten verschieben die Zellen anderer Personen korrekt (REQ-ELEM-009).
   - Nur angemeldete Personen mit mindestens Leserecht erhalten den Echtzeitkanal; Änderungen erfordern Schreibrecht (Prüfung auf dem Server).
-  - Geändert in 4.12.0: Lehnt der Server eine Kommentaränderung ab, kehrt der angezeigte Stand zum Server zurück. Ändert jemand im Moment der Übertragung die Tabellenstruktur, kann eine Zelleingabe in der Nachbarzelle landen: Offene Zelleditoren wandern mit, nur Pakete unterwegs nicht.
+  - Geändert in 4.12.0: Lehnt der Server eine Kommentaränderung ab, kehrt der angezeigte Stand zum Server zurück.
 
 ### REQ-COLLAB-002 Echtzeit ohne WebSockets, mit Rückfalloption
 - **Seit:** 1.0.0 (Server-Sent Events), 3.0.0 (Long-Polling-Rückfall) · **Priorität:** Muss · **Status:** umgesetzt
@@ -48,7 +48,7 @@
   - Geändert in 4.7.0:
     - Auch Verschieben, Größe ändern und der offene Kartendialog erscheinen als „✎ Name …“ am Element; wer dieselbe Karte öffnet, sieht im Dialog, bei wem sie noch offen ist.
     - Die Hinweise sperren nichts, gelten nicht für anonyme Beiträge und verschwinden nach spätestens 12 Sekunden von selbst, wenn die Verbindung abreißt.
-  - Geändert in 4.12.0: Auch im Long-Polling meldet ein schließender Tab das Verlassen sofort. Nur nach einem Absturz dauert es weiterhin bis zu 75 Sekunden.
+  - Geändert in 4.14.0: Im Long-Polling erkennt der Server selbst, dass eine Abfrage abgerissen ist: Weggegangene verschwinden nach rund 4 Sekunden, auch nach einem Absturz des Tabs. Nur wenn die Verbindung gerade zwischen zwei Abfragen lag, dauert es wie zuvor bis zu 75 Sekunden.
 
 ### REQ-COLLAB-005 Folgen und Zusammenholen
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -209,4 +209,8 @@
   - Änderungen, die ein Text anders erhält (Rückgängig anderer, Einfügen), gelten als vollständiger Text und werden in laufende Eingaben eingerechnet.
   - Jede Änderung vom Server bringt den ganzen Text mit: Browser können nicht dauerhaft auseinanderlaufen.
   - Eingabeschritte unterliegen denselben Rechten und Sperren wie jede Änderung. Private und verborgene Inhalte erreichen niemanden sonst, auch nicht als Schritte.
+  - Wer in einem Text schreibt, ist für alle anderen als farbiger Cursor mit Namen zu sehen, auch für Personen, die selbst nicht in diesem Text arbeiten. Markierter Text wird farbig hinterlegt. Der Name blendet nach drei Sekunden ohne Änderung aus. Geändert in 4.14.0.
+  - Bei anonymen Beiträgen wird kein Cursor gezeigt, sonst wäre erkennbar, wer schreibt.
+  - Ein Zellbezug, der per Klick oder Ziehen in eine Formel kommt, bleibt an seiner Stelle, auch wenn jemand gleichzeitig in derselben Zelle schreibt. Geändert in 4.14.0.
+  - Zelländerungen, die unterwegs sind, während jemand die Tabellenstruktur ändert, landen an der neuen Stelle derselben Zeile und Spalte; Formeln passen sich an. Wurde die Zeile oder Spalte gelöscht, entfällt die Änderung. Das gilt für Tippen wie für Einfügen, Leeren und Formatieren. Geändert in 4.14.0.
   - Geprüft durch `npm run test:text` (Simulation mit der echten Logik) in der CI.

@@ -59,6 +59,7 @@ const layerEls = $('#layer-els');
 const layerOverlay = $('#layer-overlay');
 const layerDraft = $('#layer-draft');
 const editor = $('#editor');
+const mirror = $('#text-mirror');
 $('#defs').innerHTML = defsMarkup();
 
 export const getEl = (id) => app.els.get(id);
@@ -686,7 +687,8 @@ const TableOps = globalThis.TableOps;
 export function tablePatch(t, p) {
   const n = TableOps.applyPatch(t, p);
   setEl(n, false);
-  if (!app.viewOnly) app.sync.op({ op: 'tpatch', id: t.id, ...p, opId: uid(), prev: t });
+  // sb: bis hierher kennt dieser Browser die Tabellenstruktur; Neueres rechnet der Server um
+  if (!app.viewOnly) app.sync.op({ op: 'tpatch', id: t.id, ...p, opId: uid(), prev: t, sb: app.sync.tableSeq(t.id) });
   return n;
 }
 
@@ -695,6 +697,7 @@ export function tableStruct(t, st) {
   if (!n) return null;
   setEl(n, false);
   app.sync.texts.moveCell(t.id, (r, c) => TableOps.mapCell({ op: 'tstruct', ...st }, r, c));
+  app.emit('tablemoved', { op: 'tstruct', id: t.id, ...st });
   if (!app.viewOnly) app.sync.op({ op: 'tstruct', id: t.id, ...st, opId: uid(), prev: t });
   return n;
 }
@@ -706,23 +709,28 @@ export function applyRemoteTableOp(op) {
   if (op.op === 'tstruct') {
     const n = TableOps.applyStruct(t, op);
     if (!n) return;
-    app.sync.texts.moveCell(op.id, (r, c) => TableOps.mapCell(op, r, c));
-    // bearbeitete Zelle und Zellauswahl wandern mit der Strukturänderung
-    const ed = app.editing;
-    if (ed && ed.id === op.id && ed.cell) {
-      const m = TableOps.mapCell(op, ed.cell[0], ed.cell[1]);
-      if (m) {
-        ed.cell = m;
-      } else abortEdit();
-    }
-    const cs = app.cellSel;
-    if (cs && cs.id === op.id) {
-      const a = TableOps.mapCell(op, cs.r0, cs.c0), b = TableOps.mapCell(op, cs.r1, cs.c1);
-      app.cellSel = a && b ? { id: cs.id, r0: a[0], c0: a[1], r1: b[0], c1: b[1] } : null;
-      app.emit('selection');
-    }
+    followStruct(op);
     applyRemoteOp({ op: 'upsert', el: n });
   } else applyRemoteOp({ op: 'upsert', el: TableOps.applyPatch(t, op) });
+}
+
+/** Bearbeitete Zelle, Zellauswahl und Cursor wandern mit einer Strukturänderung mit. Eigens, weil der Stand selbst schon da
+ *  sein kann: Die Antwort auf eine eigene Änderung überholt den Live-Stream manchmal. */
+export function followStruct(op) {
+  app.sync.texts.moveCell(op.id, (r, c) => TableOps.mapCell(op, r, c));
+  app.emit('tablemoved', op);
+  const ed = app.editing;
+  if (ed && ed.id === op.id && ed.cell) {
+    const m = TableOps.mapCell(op, ed.cell[0], ed.cell[1]);
+    if (m) ed.cell = m;
+    else abortEdit();
+  }
+  const cs = app.cellSel;
+  if (cs && cs.id === op.id) {
+    const a = TableOps.mapCell(op, cs.r0, cs.c0), b = TableOps.mapCell(op, cs.r1, cs.c1);
+    app.cellSel = a && b ? { id: cs.id, r0: a[0], c0: a[1], r1: b[0], c1: b[1] } : null;
+    app.emit('selection');
+  }
 }
 
 export function loadElements(obj) {
@@ -1225,9 +1233,10 @@ export function startEdit(id, opts = {}) {
   app.emit('editing', true);
 }
 
-function editorGeometry(el) {
+// Lage eines Texts im Editor. ed: Zelle oder Feld; text: Inhalt, nach dem sich mehrzeilige Felder richten.
+// Gilt auch ohne offenen Editor, damit fremde Cursor an derselben Stelle stehen wie der Text.
+function editorGeometry(el, ed = app.editing, text = editor.value) {
   const z = app.view.z;
-  const ed = app.editing;
   let box, lay, align = 'center', valign = 'middle', color = '#1a1a1a';
   switch (el.type) {
     case 'sticky': {
@@ -1271,7 +1280,7 @@ function editorGeometry(el) {
     case 'code': {
       const m = codeMetrics(el);
       box = { x: el.x + m.gutter + m.pad, y: el.y + m.head + m.pad, w: el.w - m.gutter - m.pad * 2, h: el.h - m.head - m.pad * 2 };
-      lay = { size: m.fs, lines: String(editor.value).split('\n') };
+      lay = { size: m.fs, lines: String(text).split('\n') };
       align = 'left';
       valign = 'top';
       color = THEMES[el.theme === 'light' ? 'light' : 'dark'].text;
@@ -1282,7 +1291,7 @@ function editorGeometry(el) {
       const { xs, ys } = tableLayout(el);
       const st = cellStyle(el, r, c);
       box = { x: xs[c] + 8, y: ys[r] + 6, w: Math.max(40, xs[c + 1] - xs[c] - 16), h: Math.max(st.size, ys[r + 1] - ys[r] - 12) };
-      lay = { size: st.size, lines: wrap(editor.value, box.w, st.size, st.bold, st.italic), bold: st.bold, italic: st.italic, underline: st.underline, strike: st.strike };
+      lay = { size: st.size, lines: wrap(text, box.w, st.size, st.bold, st.italic), bold: st.bold, italic: st.italic, underline: st.underline, strike: st.strike };
       align = st.align;
       valign = st.valign;
       color = st.color;
@@ -1297,13 +1306,36 @@ export function layoutEditor() {
   if (!ed) return;
   const el = getEl(ed.id);
   if (!el || !cellValid(el, ed.cell)) return abortEdit();
-  const { box, lay, align, valign, color, z } = editorGeometry(el);
+  Object.assign(editor.style, editorStyle(el));
+}
+
+/** Wo ein Cursor oder eine Markierung in einem Text steht, in Bildschirmpunkten der Bühne. Null, wenn der Text nicht da ist. */
+export function textCaretRects(el, target, pos, end = pos) {
+  // Das Ziel kommt von anderen: Es muss zum Element passen, sonst gäbe es keine Lage zum Rechnen
+  const fits = target.cell ? el?.type === 'table' : { text: ['sticky', 'shape', 'text', 'code'], title: ['frame'], label: ['connector'] }[target.field]?.includes(el?.type);
+  if (!el || !fits || !cellValid(el, target.cell)) return null;
+  const text = String((target.cell ? el.cells?.[target.cell[0]]?.[target.cell[1]] : el[target.field]) ?? '');
+  const from = Math.min(pos, end, text.length), to = Math.min(Math.max(pos, end), text.length);
+  const sel = document.createElement('span'), mark = document.createElement('span');
+  sel.textContent = text.slice(from, to);
+  Object.assign(mirror.style, editorStyle(el, target, text), { display: 'block' });
+  // Ein leeres Element bricht keine Zeile um; das Zeichen ohne Breite hält die letzte, leere Zeile offen
+  mirror.replaceChildren(text.slice(0, from), sel, mark, `${text.slice(to)}\u200b`);
+  const base = stage.getBoundingClientRect();
+  const rel = (r) => ({ x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height });
+  const out = { caret: rel(mark.getBoundingClientRect()), lines: from === to ? [] : [...sel.getClientRects()].map(rel) };
+  mirror.style.display = 'none';
+  return out;
+}
+
+function editorStyle(el, ed = app.editing, text = editor.value) {
+  const { box, lay, align, valign, color, z } = editorGeometry(el, ed, text);
   const p = toScreen(box.x, box.y);
   const textH = Math.max(1, lay.lines.length) * lay.size * LH;
   let padTop = 0;
   if (valign === 'middle') padTop = Math.max(0, (box.h - textH) / 2);
   else if (valign === 'bottom') padTop = Math.max(0, box.h - textH);
-  Object.assign(editor.style, {
+  return {
     left: p.x + 'px',
     top: p.y + 'px',
     width: box.w * z + 'px',
@@ -1320,7 +1352,7 @@ export function layoutEditor() {
     whiteSpace: el.type === 'code' ? 'pre' : '',
     tabSize: '2',
     background: el.type === 'connector' || el.type === 'frame' ? (app.settings.dark ? '#2a2b31' : '#ffffff') : 'transparent',
-  });
+  };
 }
 
 function cellValid(el, cell) {
@@ -1347,8 +1379,9 @@ editor.addEventListener('input', () => {
   ed.dirty = true;
   // Während einer Silbenkomposition (z. B. Japanisch) bleibt das Feld unangetastet; übertragen wird das Ergebnis
   if (!ed.composing) {
-    ed.session.type(editor.value, editor.selectionStart);
+    const ops = ed.session.type(editor.value, editor.selectionStart);
     showEditedText(ed, el, ed.session.value);
+    if (ops.length) app.emit('textmoved', { id: ed.id, field: ed.field, cell: ed.cell, ops });
   }
   layoutEditor();
 });
@@ -1391,8 +1424,14 @@ function onRemoteText(ops, before) {
     ed.composing.held.push(...ops);
     return;
   }
+  // Ein Bezug, der gerade per Klick oder Ziehen in die Formel kommt, bleibt an seiner Stelle
+  if (drag?.mode === 'formula') {
+    drag.pick.start = TextOps.mapPos(drag.pick.start, ops, true);
+    drag.pick.end = TextOps.mapPos(drag.pick.end, ops, true);
+  }
   const { selectionStart, selectionEnd } = editor;
   writeEditor(ed.session.value, TextOps.mapPos(selectionStart, ops), TextOps.mapPos(selectionEnd, ops));
+  app.emit('textmoved', { id: ed.id, field: ed.field, cell: ed.cell, ops });
   requestAnimationFrame(layoutEditor);
 }
 

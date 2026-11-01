@@ -129,7 +129,7 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
   - Las personas fuera de tu vista aparecen como una flecha en el borde de la pantalla; un clic te lleva hasta ellas.
   - Las personas ausentes (otra pestaña) se muestran en gris; las vistas de todos aparecen como marcos en el minimapa.
   - Los punteros del ratón de otras personas se pueden ocultar en los ajustes.
-- **Escribir juntos:** Varias personas pueden escribir a la vez en la misma nota, forma, etiqueta o celda sin perder ningún carácter.
+- **Escribir juntos:** Varias personas pueden escribir a la vez en la misma nota, forma, etiqueta o celda sin perder ningún carácter. Todos ven dónde escriben los demás.
 - **Chat del cursor:** Con `/` muestras un mensaje breve junto a tu propio puntero del ratón, sin crear un comentario
 - Lista de participantes con «Seguir» (seguir la vista de una persona), «Traer a todos a mi vista» y «Todos me siguen»
 - **Modo privado:** Al principio todos reúnen ideas de forma oculta: el contenido nuevo solo lo ve quien lo creó, hasta

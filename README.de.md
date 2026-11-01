@@ -129,7 +129,7 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   - Personen außerhalb der eigenen Ansicht erscheinen als Pfeil am Bildschirmrand; ein Klick springt hin.
   - Abwesende (anderer Tab) werden ausgegraut; die Ansichten aller stehen als Rahmen in der Minimap.
   - Fremde Mauszeiger lassen sich in den Einstellungen ausblenden.
-- **Gemeinsam tippen:** Mehrere Personen schreiben gleichzeitig in derselben Notiz, Form, Beschriftung oder Tabellenzelle, ohne dass ein Zeichen verloren geht.
+- **Gemeinsam tippen:** Mehrere Personen schreiben gleichzeitig in derselben Notiz, Form, Beschriftung oder Tabellenzelle, ohne dass ein Zeichen verloren geht. Alle sehen, wo die anderen gerade schreiben.
 - **Cursor-Chat:** Mit `/` eine kurze Nachricht direkt am eigenen Mauszeiger zeigen, ohne einen Kommentar anzulegen
 - Teilnehmerliste mit „Folgen“ (der Ansicht einer Person folgen), „Alle zu mir holen“ und „Alle folgen mir“
 - **Privater Modus:** Alle sammeln zunächst verdeckt – neue Inhalte sieht nur, wer sie erstellt hat, bis gemeinsam

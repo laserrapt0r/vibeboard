@@ -128,7 +128,7 @@ Pasting multi-line text into the board automatically creates one sticky note per
   - People outside your own view appear as an arrow at the edge of the screen; a click jumps to them.
   - Absent people (other tab) are grayed out; everyone's views are shown as frames in the minimap.
   - Other people's mouse pointers can be hidden in the settings.
-- **Typing together:** Several people can write in the same note, shape, label or table cell at once, without losing a character.
+- **Typing together:** Several people can write in the same note, shape, label or table cell at once, without losing a character. Everyone sees where the others are writing.
 - **Cursor chat:** Press `/` to show a short message right at your own mouse pointer, without creating a comment
 - Participant list with “Follow” (follow a person's view), “Bring everyone to me” and “Everyone follows me”
 - **Private mode:** Everyone collects privately at first – new content is seen only by whoever created it, until it is

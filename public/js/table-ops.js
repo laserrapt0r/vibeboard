@@ -135,7 +135,24 @@
     return [r, c];
   }
 
-  const api = { applyPatch, applyStruct, mapCell, fractions, PROPS };
+  /** Zell-Einträge [r, c, wert] in die Lage nach Strukturänderungen bringen. text: Formeln passen sich mit an. */
+  function relocate(list, structs, text) {
+    if (!Array.isArray(list)) return list;
+    const out = [];
+    for (const item of list) {
+      if (!Array.isArray(item)) continue;
+      let [r, c, v] = item;
+      let pos = [r, c];
+      for (const s of structs) {
+        pos = pos && mapCell(s, pos[0], pos[1]);
+        if (pos && text && Formula && typeof v === 'string') v = Formula.adjust(v, s.action, s.at | 0, Math.max(1, s.count | 0 || 1));
+      }
+      if (pos) out.push([pos[0], pos[1], v]);
+    }
+    return out;
+  }
+
+  const api = { applyPatch, applyStruct, mapCell, relocate, fractions, PROPS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TableOps = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
