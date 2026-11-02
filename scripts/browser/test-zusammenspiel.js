@@ -1,5 +1,5 @@
 // Zusammenspiel: Rechte, verborgene Bereiche und Rückgängig, wenn mehrere Personen gleichzeitig arbeiten
-const { launch, BASE } = require('./lib');
+const { launch, BASE, server } = require('./lib');
 
 let f = 0;
 const ok = (c, m, x) => {
@@ -158,6 +158,37 @@ const el = (p, id) => p.evaluate(async (id) => JSON.parse(JSON.stringify((await 
   ok(u.text === 'Alt von Ben', 'Fremder Text bleibt nach Rückgängig', u.text);
   ok(u.x === 300, 'Die eigene Bewegung ist zurückgenommen', u.x);
 
+  console.log('=== Anonym über einen Neustart');
+  await run(A, (c) => c.app.sync.op({ op: 'privateMode', active: true, anonymous: true }));
+  await wait(500);
+  await run(B, (c) => {
+    const s = c.makeElement('sticky', 0, 0);
+    s.id = 'an';
+    s.x = 2000;
+    s.y = 300;
+    s.text = 'Anonym';
+    c.setEl(s);
+  });
+  await wait(500);
+  await run(A, (c) => c.app.sync.op({ op: 'privateMode', active: false }));
+  await wait(700);
+  ok((await el(A, 'an'))?.anon === true, 'Beitrag ist aufgedeckt und anonym', await el(A, 'an'));
+  await run(B, (c) => {
+    c.setSelection([]);
+    c.deleteEls(['an']);
+  });
+  await wait(600);
+  server('restart');
+  for (let i = 0; i < 80; i++) {
+    await wait(300);
+    if (await run(B, (c) => c.app.sync.connected).catch(() => false)) break;
+  }
+  await wait(1500);
+  await run(B, (c) => c.undo());
+  await wait(900);
+  const back = await el(A, 'an');
+  ok(back && back.anon === true && !back.author, 'Rückgängig nach Neustart bleibt anonym', back);
+
   console.log('=== Autor bei gelöschtem Element');
   await run(A, (c) => {
     const s = c.makeElement('sticky', 0, 0);
@@ -186,6 +217,21 @@ const el = (p, id) => p.evaluate(async (id) => JSON.parse(JSON.stringify((await 
     await api(A, 'DELETE', `/api/boards/${id}`);
     ok((await api(A, 'GET', `/api/guest/${token}`)).body.valid === false, 'Im Papierkorb gilt er nicht mehr');
   } else console.log('info Gastlink nicht verfügbar', link.status);
+
+  console.log('=== Server bleibt stehen');
+  const stay = await open('editor');
+  const health = () => A.evaluate(() => fetch('/healthz').then((r) => r.ok).catch(() => false));
+  await B.evaluate(async (id) => {
+    const c = await import('/js/core.js');
+    const clientId = c.app.sync.clientId;
+    for (let i = 0; i < 40; i++) fetch(`/api/boards/${id}/signal`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Vibeboard': '1' }, body: JSON.stringify({ clientId, kind: 'cursor', data: { x: i, y: i } }) }).catch(() => {});
+  }, stay);
+  await api(A, 'DELETE', `/api/boards/${stay}`).catch(() => null);
+  await wait(800);
+  await A.goto(`${BASE}/`, { waitUntil: 'load' }).catch(() => {});
+  ok((await health()) === true, 'Löschen während laufender Zeiger bringt den Server nicht zu Fall');
+  const hooks = await api(A, 'GET', '/api/webhooks/meta');
+  ok(hooks.body?.userEvents?.review, 'Prüfungen sind als Webhook-Ereignis wählbar', hooks.body);
 
   console.log('Fehler:', errs.length ? errs.slice(0, 4) : 'keine');
   ok(errs.length === 0, 'keine Browserfehler', errs.slice(0, 3));

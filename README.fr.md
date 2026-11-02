@@ -67,7 +67,7 @@ Tous les contenus des captures d'écran sont des données d'exemple.
 
 ### Canevas et navigation
 - Canevas infini avec zoom de 1 % à 800 %
-- Déplacement avec la barre d'espace, l'outil main, le bouton central de la souris ou le pavé tactile ; zoom par pincement sur les appareils tactiles
+- Déplacement avec le bouton droit ou central de la souris, la barre d'espace, l'outil main ou le pavé tactile ; la molette zoome ; zoom par pincement sur les appareils tactiles
 - Mini-carte, « Tout afficher », niveaux de zoom fixes
 - Grille de points, magnétisme de la grille, repères intelligents lors du déplacement
 - Thème clair et sombre ; l'affichage est mémorisé par tableau
@@ -672,6 +672,7 @@ Toutes les données se trouvent dans votre propre base de données PostgreSQL :
 | `board_activity` | Historique d'activité, résumé, 90 jours ou au plus 2000 entrées par tableau |
 | `guest_links` | Liens invités (uniquement sous forme de hash) avec rôle et expiration ; les accès invités sont des comptes avec le rôle `guest` |
 | `element_owners` | À quel invité appartient une note ; supprimé avec l’accès invité |
+| `anon_deleted` | Notes anonymes supprimées, pour qu’annuler les garde anonymes après un redémarrage |
 | `server_secrets` | Secret généré par le serveur pour vérifier les identifiants d’éléments ; créé au premier démarrage |
 | `reviews`, `review_people`, `review_rounds`, `review_round_people` | Vérifications, personnes chargées de la relecture et leurs décisions, tours précédents avec motifs |
 | `teams`, `team_members`, `folders`, `folder_boards` | Équipes, adhésions, dossiers |

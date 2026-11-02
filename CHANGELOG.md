@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.17.0] – 2026-11-02
+
+### Hinzugefügt
+- Ansicht verschieben mit gedrückter rechter Maustaste, wie in Miro, auch über Elementen. Rechtsklick und mittlere Maustaste funktionieren wie bisher.
+- Webhooks für Prüfungen: Angefordert, genehmigt und abgelehnt lassen sich im eigenen Webhook abonnieren.
+
+### Geändert
+- Das Mausrad zoomt immer, das Wischen auf dem Trackpad verschiebt weiter. Die Einstellung lässt sich umkehren.
+- Grenzen für Workshops: SSO-Anmeldungen 600 je Adresse in 10 Minuten, Team-Einladungen 150 je Stunde.
+
+### Behoben
+- Ein Schreibfehler auf einer abgerissenen Verbindung konnte den ganzen Server beenden, ohne vorher zu speichern. Solche Fehler treffen jetzt nur noch diese Verbindung. Bei jedem anderen schweren Fehler speichert der Server zuerst.
+- Tooltips ohne Tastenkürzel zeigten „null“. Dasselbe konnte im Timer für Betrachter, auf der Gastseite, im Einstieg und im Teilen-Dialog auftreten. `npm run check:dom` verhindert das jetzt dauerhaft.
+- Rückgängig einer gelöschten anonymen Notiz nach einem Neustart zeigte einen Namen. Der Server merkt sich anonyme Löschungen jetzt dauerhaft (Migration 15).
+
 ## [4.16.0] – 2026-11-01
 
 Überarbeitete Bedienung nach der Prüfung von Abläufen und Auffindbarkeit.

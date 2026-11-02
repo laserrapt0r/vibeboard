@@ -273,6 +273,7 @@ body.board-page { overflow: hidden; position: fixed; inset: 0; overscroll-behavi
   caret-color: var(--accent); z-index: 5; user-select: text; -webkit-user-select: text;
 }
 
+#stage.right-panning, #stage.right-panning * { cursor: grabbing !important; }
 #text-mirror { visibility: hidden; pointer-events: none; box-sizing: border-box; }
 
 /* Cursor anderer in einem Text */

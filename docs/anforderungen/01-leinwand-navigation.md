@@ -11,8 +11,9 @@
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Beschreibung:** Die Ansicht lässt sich zwischen 1 % und 800 % zoomen.
 - **Akzeptanzkriterien:**
-  - Zoom per Mausrad (Standard) oder Strg + Mausrad, per Strg +/−, über die Zoomleiste und per Pinch-Geste auf Touch-Geräten.
+  - Zoom per Mausrad oder Strg + Mausrad, per Strg +/−, über die Zoomleiste und per Pinch-Geste auf Touch-Geräten.
   - Der Punkt unter dem Mauszeiger bzw. der Gestenmitte bleibt beim Zoomen an Ort und Stelle.
+  - Geändert in 4.17.0: Das Mausrad zoomt immer, das Wischen auf dem Trackpad verschiebt weiter. In den Ansichtseinstellungen lässt sich das Rad aufs Verschieben umstellen.
   - Strg+0 setzt auf 100 %, Umschalt+1 zeigt alle Inhalte, Umschalt+2 die Auswahl.
   - Die Zoomstufe wird in der Zoomleiste angezeigt und ist dort über ein Menü wählbar.
 
@@ -23,6 +24,7 @@
   - Verschieben mit gehaltener Leertaste, Hand-Werkzeug, mittlerer Maustaste, Trackpad-Scrollen oder Umschalt + Mausrad (horizontal).
   - Geändert in 3.2.1: Verschieben mit der mittleren Maustaste fügt nichts ein (unter Linux löst der Mittelklick sonst das Einfügen der markierten Auswahl aus).
   - Wird die Leertaste losgelassen, während ein anderes Fenster aktiv ist, bleibt der Verschiebemodus nicht hängen.
+  - Geändert in 4.17.0: Auch mit gedrückter rechter Maustaste, wie in Miro, auch über Elementen. Ein Rechtsklick ohne Bewegung öffnet weiter das Kontextmenü, die mittlere Maustaste bleibt erhalten.
 
 ### REQ-CANVAS-004 Minimap
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt

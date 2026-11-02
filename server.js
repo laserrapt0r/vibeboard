@@ -16,7 +16,7 @@ const setup = require('./lib/setup');
 const versions = require('./lib/version');
 const { Router } = require('./lib/router');
 const fs = require('fs');
-const { HttpError, json, redirect, serveFile, serveStatic, isHttps } = require('./lib/http');
+const { isConnectionError, HttpError, json, redirect, serveFile, serveStatic, isHttps } = require('./lib/http');
 const pkg = require('./package.json');
 const settings = require('./lib/settings');
 const i18n = require('./lib/i18n');
@@ -220,13 +220,17 @@ async function shutdown() {
     log.error('Fehler beim Beenden', e);
   }
   log.info('Beendet');
-  process.exit(0);
+  process.exit(process.exitCode || 0);
 }
 process.on('unhandledRejection', (e) => log.error('Unbehandelte Promise-Ablehnung', { err: e instanceof Error ? e : new Error(String(e)) }));
-// Nach einer unbehandelten Ausnahme ist der Zustand unklar: protokollieren und beenden (Docker startet neu)
+// Abgerissene Verbindungen sind Alltag und treffen nur diese eine Verbindung: Der Server läuft für alle anderen weiter.
+// Alles andere lässt einen unklaren Zustand zurück: Dann erst speichern, was im Speicher liegt, und danach beenden.
 process.on('uncaughtException', (e) => {
-  log.fatal('Unbehandelte Ausnahme – Prozess wird beendet', e);
-  process.exit(1);
+  if (isConnectionError(e)) return log.warn('Verbindungsfehler abgefangen', { code: e.code });
+  log.fatal('Unbehandelte Ausnahme – es wird gespeichert, dann beendet', e);
+  process.exitCode = 1;
+  setTimeout(() => process.exit(1), 10000).unref(); // Hängt das Speichern, nicht ewig warten
+  Promise.resolve(shutdown()).catch(() => process.exit(1));
 });
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

@@ -227,6 +227,30 @@ const palette = async (p, q) => {
   await wait(400);
 
   console.log('=== Tooltips');
+  // Jeder Knopf, nicht nur einer mit Kürzel: Ohne Kürzel stand hier einmal „null“
+  const everyTip = await A.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const out = [];
+    for (const b of document.querySelectorAll('[data-tip]')) {
+      if (!b.offsetParent) continue;
+      b.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+      // Der erste Tooltip kommt verzögert, die folgenden sofort
+      let box = null;
+      for (let i = 0; i < 25 && !box; i++) {
+        await wait(25);
+        box = document.querySelector('.tooltip:not(.hidden)');
+      }
+      out.push({ tip: b.dataset.tip, text: box?.textContent ?? '' });
+    }
+    document.body.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    return out;
+  });
+  ok(everyTip.length > 15, 'Alle Tooltips geprüft', everyTip.length);
+  ok(everyTip.every((t) => t.text && !/null|undefined/.test(t.text)), 'Kein Tooltip zeigt null oder undefined', everyTip.filter((t) => /null|undefined/.test(t.text) || !t.text).slice(0, 6));
+  await A.mouse.move(640, 500);
+  await wait(900); // Kurz nach einem Tooltip erscheint der nächste absichtlich sofort
+  const stray = await A.evaluate(() => (document.body.innerText.match(/(^|\s)(null|undefined|NaN|\[object Object\])(\s|$)/g) || []).slice(0, 5));
+  ok(!stray.length, 'Im sichtbaren Text steht kein null, undefined oder NaN', stray);
   const bb = await (await A.$('#tools [data-tool="sticky"]')).boundingBox();
   await A.mouse.move(bb.x + 10, bb.y + 10);
   await wait(60);

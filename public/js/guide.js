@@ -1,6 +1,6 @@
 // Einstieg und Orientierung: Start auf dem leeren Board, Gliederung, gemerkte Ansichten
 import { T } from './i18n.js';
-import { h, ICONS, loadPref, savePref, promptDialog, toast } from './util.js';
+import { existing, h, ICONS, loadPref, savePref, promptDialog, toast } from './util.js';
 import { app, frames, fitTo, makeElement, setEl, act, startEdit, setSelection, viewCenter, visibleRect, bounds, getEl } from './core.js';
 import { openTemplates, renderSidePanel, currentSidePanel } from './ui.js';
 
@@ -33,12 +33,12 @@ function renderStart() {
   const choice = (icon, title, text, onclick) => h('button', { class: 'empty-choice', onclick },
     h('span', { class: 'empty-icon', html: ICONS[icon] }), h('span', {}, h('b', {}, title), h('span', { class: 'muted small' }, text)));
   start.replaceChildren(
-    h('h2', {}, T('Womit möchtest du anfangen?')),
+    ...existing(h('h2', {}, T('Womit möchtest du anfangen?')),
     choice('sticky', T('Notiz schreiben'), T('Oder irgendwo doppelklicken'), addNote),
     choice('template', T('Vorlage wählen'), T('Retro, Brainstorming, Kanban und mehr'), openTemplates),
     app.role === 'owner' ? choice('share', T('Personen einladen'), T('Gemeinsam auf diesem Board arbeiten'), () => app.emit('openShare')) : null,
     h('p', { class: 'muted small' }, T('Befehle und Inhalte findest du mit Strg+K.')),
-    h('button', { class: 'btn small', onclick: () => { startClosed = true; updateStart(); } }, T('Schließen')));
+    h('button', { class: 'btn small', onclick: () => { startClosed = true; updateStart(); } }, T('Schließen'))));
 }
 
 function updateStart() {

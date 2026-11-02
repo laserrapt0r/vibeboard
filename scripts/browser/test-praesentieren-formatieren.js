@@ -583,7 +583,7 @@ const clientOp = (p, op) =>
   await G.mouse.wheel({ deltaY: -100 });
   await G.keyboard.up('Control');
   await wait(200);
-  ok(/Strg\+Mausrad zoomt/.test(await toastText(G)), 'Erstes Zoomen erklärt die Bewegung', await toastText(G));
+  ok(/Mausrad zoomt/.test(await toastText(G)), 'Erstes Zoomen erklärt die Bewegung', await toastText(G));
   await G.evaluate(() => document.getElementById('toast').classList.remove('show'));
   await G.mouse.move(1100, 700);
   await G.keyboard.down('Control');

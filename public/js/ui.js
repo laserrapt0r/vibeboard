@@ -16,7 +16,7 @@ import { openHelp } from './help.js';
 import { bellButton, refresh as refreshBell } from './notifications.js';
 
 export { popover, closePop, menu };
-import { dropGesture,
+import { holdContextMenu, dropGesture,
   finishEdit, typeIntoEdit, layoutEditor,
   app, $, stage, getEl, bounds, setTool, saveToolOpts, selectedEls, selectionBounds, act, setEl, updateEl, deleteEls,
   canEdit, undo, redo, canUndo, canRedo, zoomBy, zoomAt, fitAll, fitTo, toScreen, visibleRect, viewCenter, applyView, startEdit,
@@ -1680,7 +1680,7 @@ function settingsItems(reopen) {
       reopen();
     } },
     t('smartGuides', T('Intelligente Hilfslinien')),
-    t('wheelZoom', T('Mausrad zoomt (statt verschieben)')),
+    t('wheelPan', T('Mausrad verschiebt die Ansicht (statt zu zoomen)')),
   ];
 }
 
@@ -1875,6 +1875,7 @@ window.addEventListener('pointerdown', (e) => e.pointerType === 'touch' && !e.is
 
 stage.addEventListener('contextmenu', (e) => {
   e.preventDefault();
+  if (holdContextMenu(e)) return;
   const g = e.target.closest && e.target.closest('g[data-id]');
   const el = g && getEl(g.dataset.id);
   // Betrachter: nur Reaktionen auf Elemente

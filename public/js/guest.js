@@ -1,6 +1,6 @@
 // Beitritt per Gastlink: Name angeben, Datenschutzhinweis bestätigen, Board öffnen
 import { T, LOCALE } from './i18n.js';
-import { h, api, loadPref } from './util.js';
+import { existing, h, api, loadPref } from './util.js';
 import { legalFooter, legalLinks } from './footer.js';
 
 const card = document.getElementById('guest');
@@ -41,7 +41,7 @@ async function main() {
   const err = h('div', { class: 'form-error hidden', role: 'alert' });
   const until = new Date(info.expiresAt).toLocaleString(LOCALE, { dateStyle: 'short', timeStyle: 'short' });
   card.append(
-    h('h1', {}, info.boardName),
+    ...existing(h('h1', {}, info.boardName),
     h('p', { class: 'muted' }, T`Du wurdest eingeladen, dieses Board als Gast ${ROLE[info.role] || 'anzusehen'}. Der Zugang gilt bis ${until}.`),
     info.role === 'contributor' ? h('p', {}, T`Du kannst bis zu ${info.noteLimit} eigene Notizen anlegen, bearbeiten, verschieben und löschen, kommentieren und abstimmen. Andere Inhalte bleiben unverändert. Deine Beiträge bleiben auf dem Board, auch wenn dein Zugang endet.`) : null,
     h('form', { class: 'form', onsubmit: async (e) => {
@@ -59,7 +59,7 @@ async function main() {
     h('label', { class: 'check' }, consent, h('span', {}, T('Ich habe zur Kenntnis genommen, dass mein Name, meine Beiträge und technisch nötige Daten (Sitzung, Zugriffszeit) gespeichert werden.'),
       legal.privacy ? [' ', h('a', { href: '/datenschutz', target: '_blank', rel: 'noopener' }, T('Datenschutzerklärung'))] : null)),
     err,
-    h('button', { type: 'submit', class: 'btn primary' }, T('Als Gast beitreten'))));
+    h('button', { type: 'submit', class: 'btn primary' }, T('Als Gast beitreten')))));
   card.append(await legalFooter({ newTab: true }));
   name.focus();
 }

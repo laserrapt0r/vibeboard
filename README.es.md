@@ -66,7 +66,7 @@ Todo el contenido de las capturas de pantalla son datos de ejemplo.
 
 ### Lienzo y navegación
 - Lienzo infinito con zoom del 1 % al 800 %
-- Desplazamiento con la barra espaciadora, la herramienta mano, el botón central del ratón o el trackpad; zoom de pellizco en dispositivos táctiles
+- Desplazamiento con el botón derecho o central del ratón, la barra espaciadora, la herramienta mano o el trackpad; la rueda hace zoom; zoom de pellizco en dispositivos táctiles
 - Minimapa, «Mostrar todo», niveles de zoom fijos
 - Cuadrícula de puntos, ajuste a la cuadrícula, guías inteligentes al mover
 - Tema claro y oscuro; la vista se recuerda por tablero
@@ -669,6 +669,7 @@ Todos los datos están en tu propia base de datos PostgreSQL:
 | `board_activity` | Historial de actividad, resumido, 90 días o como máximo 2000 entradas por tablero |
 | `guest_links` | Enlaces de invitado (solo como hash) con rol y caducidad; los accesos de invitado son cuentas con el rol `guest` |
 | `element_owners` | A qué invitado pertenece una nota; se elimina con el acceso de invitado |
+| `anon_deleted` | Notas anónimas eliminadas, para que deshacer las mantenga anónimas tras un reinicio |
 | `server_secrets` | Secreto generado por el servidor para comprobar los identificadores de elementos; se crea en el primer inicio |
 | `reviews`, `review_people`, `review_rounds`, `review_round_people` | Revisiones, personas revisoras y sus decisiones, rondas anteriores con motivos |
 | `teams`, `team_members`, `folders`, `folder_boards` | Equipos, pertenencias, carpetas |

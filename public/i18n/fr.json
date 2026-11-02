@@ -3913,5 +3913,12 @@
 "PDF wird erstellt: Seite {0} von {1}": "Création du PDF : page {0} sur {1}",
 "PDF mit 1 Seite exportiert": "PDF de 1 page exporté",
 "PDF mit {0} Seiten exportiert": "PDF de {0} pages exporté",
-"{0} darf Kommentare auf diesem Board nicht erledigen und kann daher nicht zuständig sein.": "{0} ne peut pas résoudre les commentaires de ce tableau et ne peut donc pas en être responsable."
+"{0} darf Kommentare auf diesem Board nicht erledigen und kann daher nicht zuständig sein.": "{0} ne peut pas résoudre les commentaires de ce tableau et ne peut donc pas en être responsable.",
+"Mausrad verschiebt die Ansicht (statt zu zoomen)": "La molette déplace la vue (au lieu de zoomer)",
+"Mausrad": "Molette",
+"Rechte oder mittlere Maustaste ziehen": "Glisser avec le bouton droit ou central",
+"Umschalt + Mausrad": "Maj + molette",
+"Waagerecht verschieben": "Déplacer horizontalement",
+"Das Mausrad zoomt. Mit gedrückter rechter oder mittlerer Maustaste, mit der Leertaste oder dem Werkzeug „Ansicht verschieben“ bewegst du die Ansicht. Ein Klick mit der rechten Taste öffnet das Kontextmenü.": "La molette zoome. Maintenez le bouton droit ou central, la barre d’espace, ou utilisez l’outil « Déplacer la vue » pour déplacer la vue. Un clic droit ouvre le menu contextuel.",
+"Tipp: Das Mausrad zoomt, die rechte Maustaste verschiebt die Ansicht, und mit Leertaste + Ziehen greifst du die Fläche. Mehr steht in der Hilfe (?).": "Astuce : la molette zoome, le bouton droit déplace la vue, et espace + glisser saisit le tableau. Plus d’infos dans l’aide (?)."
 }

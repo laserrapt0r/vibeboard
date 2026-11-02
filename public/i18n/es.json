@@ -3913,5 +3913,12 @@
 "PDF wird erstellt: Seite {0} von {1}": "Creando PDF: página {0} de {1}",
 "PDF mit 1 Seite exportiert": "PDF de 1 página exportado",
 "PDF mit {0} Seiten exportiert": "PDF de {0} páginas exportado",
-"{0} darf Kommentare auf diesem Board nicht erledigen und kann daher nicht zuständig sein.": "{0} no puede resolver comentarios en este tablero y por tanto no puede ser responsable."
+"{0} darf Kommentare auf diesem Board nicht erledigen und kann daher nicht zuständig sein.": "{0} no puede resolver comentarios en este tablero y por tanto no puede ser responsable.",
+"Mausrad verschiebt die Ansicht (statt zu zoomen)": "La rueda del ratón mueve la vista (en lugar de hacer zoom)",
+"Mausrad": "Rueda del ratón",
+"Rechte oder mittlere Maustaste ziehen": "Arrastrar con el botón derecho o central",
+"Umschalt + Mausrad": "Mayús + rueda del ratón",
+"Waagerecht verschieben": "Mover en horizontal",
+"Das Mausrad zoomt. Mit gedrückter rechter oder mittlerer Maustaste, mit der Leertaste oder dem Werkzeug „Ansicht verschieben“ bewegst du die Ansicht. Ein Klick mit der rechten Taste öffnet das Kontextmenü.": "La rueda del ratón hace zoom. Mantén pulsado el botón derecho o central, la barra espaciadora o usa la herramienta «Mover vista» para mover la vista. Un clic derecho abre el menú contextual.",
+"Tipp: Das Mausrad zoomt, die rechte Maustaste verschiebt die Ansicht, und mit Leertaste + Ziehen greifst du die Fläche. Mehr steht in der Hilfe (?).": "Consejo: la rueda del ratón hace zoom, el botón derecho mueve la vista y con espacio + arrastrar agarras el lienzo. Más en la ayuda (?)."
 }

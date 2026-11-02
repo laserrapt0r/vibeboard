@@ -1,6 +1,6 @@
 // Teilen-Dialog: Link-Freigabe und Mitglieder eines Boards verwalten
 import { T, LOCALE } from './i18n.js';
-import { h, api, modal, toast, initials, confirmDialog, relTime, ICONS } from './util.js';
+import { existing, h, api, modal, toast, initials, confirmDialog, relTime, ICONS } from './util.js';
 
 const LINK_OPTIONS = [
   ['private', T('🔒 Nur eingeladene Personen')],
@@ -243,7 +243,7 @@ async function guestSection(body, boardId) {
   };
   renderList(info.links);
   box.append(
-    h('p', { class: 'muted small' }, T('Gäste geben nur ihren Namen an und sehen ausschließlich dieses Board. Der Link läuft automatisch ab; danach werden die Gastzugänge gelöscht.')),
+    ...existing(h('p', { class: 'muted small' }, T('Gäste geben nur ihren Namen an und sehen ausschließlich dieses Board. Der Link läuft automatisch ab; danach werden die Gastzugänge gelöscht.')),
     contributions ? h('p', { class: 'muted small guest-contrib-hint' }, T`„Notizen beitragen“ heißt: Gäste legen bis zu ${noteLimit} eigene Notizen an, ändern nur diese, kommentieren und stimmen ab. Alles andere bleibt für sie unveränderlich.`) : null,
     h('div', { class: 'row wrap' }, role, days, label, h('button', { type: 'button', class: 'btn', onclick: async () => {
       try {
@@ -267,5 +267,5 @@ async function guestSection(body, boardId) {
         toast(ex.message);
       }
     } }, T('Gastlink erstellen'))),
-    result, list);
+    result, list));
 }

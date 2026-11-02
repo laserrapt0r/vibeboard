@@ -100,6 +100,9 @@ const SEEDS = {
   14: async (c) => {
     await c.query(`INSERT INTO server_secrets (name, value) VALUES ('element_ids', 'beispiel')`);
   },
+  15: async (c) => {
+    await c.query(`INSERT INTO anon_deleted (board_id, element_id) VALUES ('b1', 'e1')`);
+  },
 };
 
 async function structure(c, schema) {

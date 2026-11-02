@@ -8,7 +8,7 @@ const firstSteps = () => [
   app.viewOnly ? null : [T('Verbinden'), T('Wähle die Linie (L) und ziehe von einem Element zum anderen. Die Linie bleibt angedockt, wenn du Elemente verschiebst.')],
   app.guest ? null : [T('Teilen'), T('Über „Teilen“ oben rechts lädst du Personen ein oder erstellst einen Link.')],
   [T('Präsentieren'), T('Frames werden zu Folien. „Präsentieren“ oben rechts zeigt sie der Reihe nach, für alle oder nur für dich.')],
-  [T('Bewegen auf der Fläche'), T('Strg+Mausrad zoomt, das Mausrad verschiebt die Ansicht. Mit Leertaste oder mittlerer Maustaste greifst du die Fläche und ziehst sie, die Taste H hält das fest. Ziehen mit dem Auswahlwerkzeug zieht auf leerer Fläche einen Rahmen auf. Umschalt+1 zeigt alles.')],
+  [T('Bewegen auf der Fläche'), T('Das Mausrad zoomt. Mit gedrückter rechter oder mittlerer Maustaste, mit der Leertaste oder dem Werkzeug „Ansicht verschieben“ bewegst du die Ansicht. Ein Klick mit der rechten Taste öffnet das Kontextmenü.')],
 ].filter(Boolean);
 
 const guide = () => [
@@ -29,7 +29,7 @@ const shortcutGroups = () => [
   [T('Zusammenarbeit'), [['/', T('Cursor-Chat: Nachricht am Mauszeiger')], [T('Esc'), T('Cursor-Chat schließen')]]],
   [T('Verschieben & Größe'), [[T('Umschalt + Ziehen'), T('Nur waagerecht/senkrecht verschieben')], [T('Strg + Ziehen'), T('Ohne Einrasten')], [T('Seitengriff'), T('Nur Breite bzw. Höhe ändern')], [T('Umschalt + Griff'), T('Seitenverhältnis beibehalten')], [T('Alt + Griff'), T('Größe von der Mitte aus')], [T('Strg+D (wiederholt)'), T('Kopie mit zuletzt verwendetem Versatz')], [T('Klick in ausgewählte Gruppe'), T('Einzelnes Element der Gruppe wählen')], [T('Pfeiltasten'), T('Um 1 px (Umschalt: 10 px, mit Raster: eine Rasterweite) verschieben')], [T('Umschalt-/Strg-Klick'), T('Zur Auswahl hinzufügen bzw. entfernen (Ziehen verschiebt)')]]],
   [T('Präsentation'), [[T('→ / Leertaste'), T('Nächste Folie')], [T('← / Rücktaste'), T('Vorherige Folie')], ['Esc', T('Beenden')], [T('Esc (im Publikum)'), T('Selbst umsehen')]]],
-  [T('Ansicht'), [[T('Strg + Mausrad'), T('Zoomen')], [T('Strg + / −'), T('Zoomen')], [T('Strg+0'), T('Auf 100 %')], [T('Umschalt+1'), T('Alles anzeigen')], [T('Umschalt+2'), T('Auswahl anzeigen')], [T('Strg+F'), T('Suchen')]]],
+  [T('Ansicht'), [[T('Mausrad'), T('Zoomen')], [T('Rechte oder mittlere Maustaste ziehen'), T('Ansicht verschieben')], [T('Umschalt + Mausrad'), T('Waagerecht verschieben')], [T('Strg + / −'), T('Zoomen')], [T('Strg+0'), T('Auf 100 %')], [T('Umschalt+1'), T('Alles anzeigen')], [T('Umschalt+2'), T('Auswahl anzeigen')], [T('Strg+F'), T('Suchen')]]],
 ];
 
 const steps = (list) => h('dl', { class: 'help-list' }, list.flatMap(([title, text]) => [h('dt', {}, title), h('dd', {}, text)]));

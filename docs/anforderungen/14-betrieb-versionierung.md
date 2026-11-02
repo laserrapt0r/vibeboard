@@ -109,3 +109,11 @@
   - Kennwörter können aus einem vorhandenen Secret kommen; ein erzeugtes Datenbank-Kennwort bleibt bei Upgrades erhalten.
   - Datenbank- und Sicherungsvolumes sowie das Secret überstehen das Entfernen des Release.
   - Chart und Kustomize-Manifeste bestehen in der automatischen Prüfung `helm lint` und die Schemaprüfung; die Variante mit HTTPRoute wird mit gerendert, ihr Schema aber nicht geprüft.
+
+### REQ-OPS-014 Fehler treffen nur die Verbindung
+- **Seit:** 4.17.0 · **Priorität:** Muss · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Fehler auf einer Verbindung (abgerissen, schon beendet) lassen den Server für alle anderen weiterlaufen.
+  - Bei jedem anderen unerwarteten Fehler speichert der Server offene Änderungen, bevor er sich beendet.
+  - Ein geplanter Neustart (Update) speichert ebenfalls alles und verliert keine Änderungen.
+  - Geprüft durch `npm run test:robust` in der CI.

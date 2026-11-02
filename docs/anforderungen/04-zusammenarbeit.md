@@ -177,6 +177,7 @@
   - Die Adresse wird nach dem Speichern nur gekürzt (Host) angezeigt und nie protokolliert. „Testen“ schickt eine Testnachricht. Nach 20 Fehlern in Folge pausiert ein Webhook, bis ein Test gelingt.
   - Sicherheit: [REQ-SEC-012](11-sicherheit.md).
   - Geändert in 4.3.1: Sind Webhooks abgeschaltet, sind die Menüpunkte für Person und Team deaktiviert.
+  - Geändert in 4.17.0: Eigene Webhooks lassen sich auch für Prüfungen abonnieren.
 
 ### REQ-COLLAB-018 Prüfungen
 - **Seit:** 4.4.0 · **Priorität:** Muss · **Status:** umgesetzt

@@ -3913,5 +3913,12 @@
 "PDF wird erstellt: Seite {0} von {1}": "Creating PDF: page {0} of {1}",
 "PDF mit 1 Seite exportiert": "PDF with 1 page exported",
 "PDF mit {0} Seiten exportiert": "PDF with {0} pages exported",
-"{0} darf Kommentare auf diesem Board nicht erledigen und kann daher nicht zuständig sein.": "{0} may not resolve comments on this board and therefore can’t be assigned."
+"{0} darf Kommentare auf diesem Board nicht erledigen und kann daher nicht zuständig sein.": "{0} may not resolve comments on this board and therefore can’t be assigned.",
+"Mausrad verschiebt die Ansicht (statt zu zoomen)": "Mouse wheel moves the view (instead of zooming)",
+"Mausrad": "Mouse wheel",
+"Rechte oder mittlere Maustaste ziehen": "Drag with right or middle mouse button",
+"Umschalt + Mausrad": "Shift + mouse wheel",
+"Waagerecht verschieben": "Move horizontally",
+"Das Mausrad zoomt. Mit gedrückter rechter oder mittlerer Maustaste, mit der Leertaste oder dem Werkzeug „Ansicht verschieben“ bewegst du die Ansicht. Ein Klick mit der rechten Taste öffnet das Kontextmenü.": "The mouse wheel zooms. Hold the right or middle mouse button, the space bar, or use the “Move view” tool to move the view. A right click opens the context menu.",
+"Tipp: Das Mausrad zoomt, die rechte Maustaste verschiebt die Ansicht, und mit Leertaste + Ziehen greifst du die Fläche. Mehr steht in der Hilfe (?).": "Tip: The mouse wheel zooms, the right mouse button moves the view, and with space + drag you grab the canvas. More in the help (?)."
 }

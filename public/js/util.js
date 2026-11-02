@@ -444,8 +444,11 @@ export function h(tag, attrs = {}, ...children) {
 }
 
 // Element.append ohne null/false-Einträge (die sonst als Text "null" erscheinen)
+// Für die eingebauten DOM-Befehle: Sie schreiben null und undefined sonst wörtlich als Text hinein
+export const existing = (...kids) => kids.flat().filter((k) => k != null && k !== false);
+
 export function append(parent, ...kids) {
-  parent.append(...kids.flat().filter((k) => k != null && k !== false));
+  parent.append(...existing(...kids));
 }
 
 // Live-Region muss schon vor der ersten Meldung im Dokument stehen, sonst sagen Bildschirmleser sie nicht an

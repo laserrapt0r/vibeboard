@@ -66,7 +66,7 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 
 ### Leinwand und Navigation
 - Unendliche Leinwand mit Zoom von 1 % bis 800 %
-- Verschieben mit Leertaste, Hand-Werkzeug, mittlerer Maustaste oder Trackpad; Pinch-Zoom auf Touch-Geräten
+- Verschieben mit rechter oder mittlerer Maustaste, Leertaste, Hand-Werkzeug oder Trackpad; das Mausrad zoomt; Pinch-Zoom auf Touch-Geräten
 - Minimap, „Alles anzeigen“, feste Zoomstufen
 - Punktraster, Einrasten am Raster, intelligente Hilfslinien beim Verschieben
 - Helles und dunkles Design; die Ansicht wird pro Board gemerkt
@@ -663,6 +663,7 @@ Alle Daten liegen in der eigenen PostgreSQL-Datenbank:
 | `board_activity` | Aktivitätsverlauf, zusammengefasst, 90 Tage bzw. höchstens 2000 Einträge je Board |
 | `guest_links` | Gastlinks (nur als Hash) mit Rolle und Ablauf; Gastzugänge sind Konten mit der Rolle `guest` |
 | `element_owners` | Welchem Gast eine Notiz gehört; wird mit dem Gastzugang gelöscht |
+| `anon_deleted` | Gelöschte anonyme Notizen, damit Rückgängig sie auch nach einem Neustart anonym lässt |
 | `server_secrets` | Vom Server erzeugtes Geheimnis zum Prüfen von Element-Kennungen; entsteht beim ersten Start |
 | `reviews`, `review_people`, `review_rounds`, `review_round_people` | Prüfungen, Prüfende und ihre Entscheidungen, frühere Runden mit Begründungen |
 | `teams`, `team_members`, `folders`, `folder_boards` | Teams, Mitgliedschaften, Ordner |

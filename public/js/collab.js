@@ -2,7 +2,7 @@
 import { T } from './i18n.js';
 import { applyPatch, equal, idOf } from './merge.js';
 import { textKey } from './text-sync.js';
-import { h, append, api, ICONS, esc, toast, modal, initials, FONT, onAuthLost, readableOn, setIdKey } from './util.js';
+import { existing, h, append, api, ICONS, esc, toast, modal, initials, FONT, onAuthLost, readableOn, setIdKey } from './util.js';
 import { followStruct, textCaretRects, gestureActive,
   app, $, stage, getEl, isAnonymous, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
   loadElements, applyRemoteOp, applyRemoteTableOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
@@ -423,7 +423,7 @@ function renderTimer() {
   const rem = timerRemaining(t);
   if (!timerWidget.firstChild) {
     timerWidget.append(
-      h('span', { class: 'timer-icon', html: ICONS.timer }),
+      ...existing(h('span', { class: 'timer-icon', html: ICONS.timer }),
       h('span', { class: 'timer-time' }),
       app.viewOnly ? null : h('button', { class: 'icon-btn small', title: T('+1 Minute'), onclick: () => {
         const c = app.session.timer;
@@ -432,7 +432,7 @@ function renderTimer() {
         else setTimer({ ...c, remaining: c.remaining + 60000, duration: c.duration + 60000 });
       } }, '+1'),
       app.viewOnly ? null : h('button', { class: 'icon-btn small timer-pp' }),
-      app.viewOnly ? null : h('button', { class: 'icon-btn small', title: T('Timer beenden'), html: ICONS.stop, onclick: () => setTimer(null) }),
+      app.viewOnly ? null : h('button', { class: 'icon-btn small', title: T('Timer beenden'), html: ICONS.stop, onclick: () => setTimer(null) })),
     );
   }
   timerWidget.querySelector('.timer-time').textContent = fmt(rem);

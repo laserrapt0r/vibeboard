@@ -1,6 +1,6 @@
 // Eigene Tooltips für Kopfzeile und Werkzeugleiste: Name und Kürzel, kurz verzögert, auch bei Tastaturfokus.
 // Ein Knopf trägt sie als data-tip und data-key; Browser-title erscheint spät und nie für die Tastatur.
-import { h } from './util.js';
+import { existing, h } from './util.js';
 
 const DELAY = 350, STAY = 500;
 const box = h('div', { class: 'tooltip hidden', role: 'tooltip' });
@@ -17,7 +17,7 @@ function hide() {
 function show(el) {
   if (!el.isConnected) return;
   shownFor = el;
-  box.replaceChildren(h('span', {}, el.dataset.tip), el.dataset.key ? h('kbd', {}, el.dataset.key) : null);
+  box.replaceChildren(...existing(h('span', {}, el.dataset.tip), el.dataset.key ? h('kbd', {}, el.dataset.key) : null));
   if (!box.isConnected) document.body.append(box);
   box.classList.remove('hidden');
   const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();

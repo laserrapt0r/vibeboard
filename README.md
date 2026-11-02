@@ -64,7 +64,7 @@ All content in the screenshots is sample data.
 
 ### Canvas and navigation
 - Infinite canvas with zoom from 1 % to 800 %
-- Pan with the space bar, hand tool, middle mouse button or trackpad; pinch zoom on touch devices
+- Pan with the right or middle mouse button, space bar, hand tool or trackpad; the mouse wheel zooms; pinch zoom on touch devices
 - Minimap, “Show all”, fixed zoom levels
 - Dot grid, snap to grid, smart guides when moving
 - Light and dark theme; the view is remembered per board
@@ -662,6 +662,7 @@ All data is stored in your own PostgreSQL database:
 | `board_activity` | Activity history, summarized, 90 days or at most 2000 entries per board |
 | `guest_links` | Guest links (only as a hash) with role and expiry; guest accesses are accounts with the role `guest` |
 | `element_owners` | Which guest a note belongs to; deleted together with the guest access |
+| `anon_deleted` | Deleted anonymous notes, so that undo keeps them anonymous after a restart |
 | `server_secrets` | Server-generated secret used to verify element IDs; created on first start |
 | `reviews`, `review_people`, `review_rounds`, `review_round_people` | Reviews, reviewers and their decisions, earlier rounds with reasons |
 | `teams`, `team_members`, `folders`, `folder_boards` | Teams, memberships, folders |

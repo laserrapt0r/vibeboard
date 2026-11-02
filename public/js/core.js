@@ -1409,7 +1409,7 @@ function hintOnce(key, text) {
   toast(text, 6000);
 }
 
-const navigationHint = () => hintOnce('navHint', T('Tipp: Strg+Mausrad zoomt, das Mausrad verschiebt die Ansicht, und mit Leertaste + Ziehen greifst du die Fläche. Mehr steht in der Hilfe (?).'));
+const navigationHint = () => hintOnce('navHint', T('Tipp: Das Mausrad zoomt, die rechte Maustaste verschiebt die Ansicht, und mit Leertaste + Ziehen greifst du die Fläche. Mehr steht in der Hilfe (?).'));
 
 export function canEdit(el) {
   return el && (!isLocked(el) || textOpen(el)) && !el.hidden && ['sticky', 'shape', 'text', 'frame', 'connector', 'table', 'code'].includes(el.type);
@@ -2181,7 +2181,13 @@ function onDown(e) {
   app.emit('pointerdown', e);
   const w = toWorld(e.clientX, e.clientY);
   const start = { cx: e.clientX, cy: e.clientY, w, z: app.view.z };
-  if (e.button === 2) return;
+  // Rechte Taste: Ziehen verschiebt die Ansicht, Klicken öffnet das Kontextmenü. Was es war, zeigt erst das Loslassen.
+  if (e.button === 2) {
+    if (e.pointerType !== 'mouse' || drag) return;
+    drag = { mode: 'pan', start, vx: app.view.x, vy: app.view.y, right: true };
+    heldMenu = null;
+    return;
+  }
 
   if (e.button === 1 || spaceDown || app.tool === 'hand') {
     e.preventDefault();
@@ -2492,6 +2498,11 @@ function onMove(e) {
       return;
     }
     case 'pan':
+      if (drag.right && !drag.moved) {
+        if (!far) return;
+        drag.moved = true;
+        stage.classList.add('right-panning');
+      }
       app.view.x = drag.vx + dxs;
       app.view.y = drag.vy + dys;
       applyView();
@@ -3031,6 +3042,30 @@ function applyColumnStatus(from) {
   if (last) toast(T`Status: ${last}`, 1800);
 }
 
+// Das Kontextmenü meldet der Browser je nach System beim Drücken (Linux, macOS) oder nach dem Loslassen (Windows). Beim
+// Drücken steht noch nicht fest, ob gezogen wird: Dann wartet es hier. Nach dem Ziehen entfällt es in beiden Fällen.
+let heldMenu = null;
+let noMenuUntil = 0;
+export function holdContextMenu(e) {
+  if (e.released) return false;
+  if (drag?.right) {
+    heldMenu = { x: e.clientX, y: e.clientY, target: e.target };
+    return true;
+  }
+  return Date.now() < noMenuUntil;
+}
+
+function endRightDrag(d) {
+  stage.classList.remove('right-panning');
+  if (d.moved) noMenuUntil = Date.now() + 400;
+  else if (heldMenu) {
+    const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: heldMenu.x, clientY: heldMenu.y });
+    ev.released = true;
+    (heldMenu.target.isConnected ? heldMenu.target : stage).dispatchEvent(ev);
+  }
+  heldMenu = null;
+}
+
 function onUp(e) {
   pointers.delete(e.pointerId);
   if (!pointers.size) {
@@ -3039,6 +3074,11 @@ function onUp(e) {
   }
   if (!drag) return;
   const d = drag;
+  if (d.right) {
+    drag = null;
+    endRightDrag(d);
+    return;
+  }
   if (d.mode === 'pinch') {
     if (pointers.size < 2) drag = null;
     return;
@@ -3302,10 +3342,20 @@ stage.addEventListener('dblclick', (e) => {
 });
 
 /* Mausrad: Zoom (Strg/Pinch) bzw. Verschieben */
+// Mausrad oder Trackpad? Das Rad rastet in Vielfachen von 120, Trackpads liefern feine Werte und auch waagerechte.
+// Eine Trackpad-Geste bleibt eine: Die letzten, kleinen Ausläufer einer Wischbewegung dürfen nicht plötzlich zoomen.
+let trackpadUntil = 0;
+function fromTrackpad(e) {
+  if (e.deltaMode !== 0) return false;
+  const now = Date.now();
+  if (e.deltaX !== 0 || (e.wheelDeltaY || 0) % 120 !== 0) trackpadUntil = now + 300;
+  return now < trackpadUntil;
+}
+
 stage.addEventListener('wheel', (e) => {
   e.preventDefault();
   if (app.editing) layoutEditor();
-  if (e.ctrlKey || e.metaKey || (app.settings.wheelZoom && !e.shiftKey)) {
+  if (e.ctrlKey || e.metaKey || (!e.shiftKey && !fromTrackpad(e) && !app.settings.wheelPan)) {
     navigationHint();
     const f = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0022));
     zoomAt(e.clientX, e.clientY, app.view.z * f);
