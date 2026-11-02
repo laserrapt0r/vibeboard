@@ -40,10 +40,38 @@ const center = (p, id) => p.evaluate((id) => {
   const r = document.querySelector(`g[data-id="${id}"]`).getBoundingClientRect();
   return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };
 }, id);
-const fileIn = async (dir, ext, ms = 15000) => {
+// Downloads direkt aus der Seite holen: Wohin Chrome Dateien legt, hängt von Version und Kontext ab
+const CATCH_DOWNLOADS = `(() => {
+  const blobs = new Map();
+  const make = URL.createObjectURL.bind(URL);
+  URL.createObjectURL = (b) => {
+    const url = make(b);
+    blobs.set(url, b);
+    return url;
+  };
+  window.__files = [];
+  const click = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function () {
+    if (this.download && blobs.has(this.href)) window.__files.push({ name: this.download, blob: blobs.get(this.href) });
+    return click.call(this);
+  };
+})()`;
+const fileIn = async (page, dir, ext, ms = 15000) => {
   for (const end = Date.now() + ms; Date.now() < end; await wait(150)) {
-    const hit = fs.readdirSync(dir).find((n) => n.endsWith(ext));
-    if (hit) return path.join(dir, hit);
+    const hit = await page.evaluate(async (ext) => {
+      const i = window.__files.findIndex((f) => f.name.endsWith(ext));
+      if (i < 0) return null;
+      const [{ name, blob }] = window.__files.splice(i, 1);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let bin = '';
+      for (let n = 0; n < bytes.length; n += 32768) bin += String.fromCharCode(...bytes.subarray(n, n + 32768));
+      return { name, data: btoa(bin) };
+    }, ext);
+    if (hit) {
+      const file = path.join(dir, hit.name);
+      fs.writeFileSync(file, Buffer.from(hit.data, 'base64'));
+      return file;
+    }
   }
   return null;
 };
@@ -196,8 +224,7 @@ const card = (id, x, y, title, o = {}) => ({ id, type: 'card', x, y, w: 300, h: 
   console.log('=== PDF-Datei');
   const dir = path.join(TMP, 'pdf');
   fs.mkdirSync(dir, { recursive: true });
-  const dl = await A.createCDPSession();
-  await dl.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
+  await A.evaluateOnNewDocument(CATCH_DOWNLOADS);
   const pid = await newBoard(A, 'Folien Ü', [
     { id: 'f1', type: 'frame', x: 2000, y: 0, w: 800, h: 450, title: 'Zweite Folie', order: 2, z: 1 },
     { id: 'f2', type: 'frame', x: 0, y: 0, w: 1600, h: 900, title: 'Erste Folie äöü', order: 1, z: 2 },
@@ -209,7 +236,7 @@ const card = (id, x, y, title, o = {}) => ({ id, type: 'card', x, y, w: 300, h: 
   const onReq = (r) => requests.push(r.url());
   A.on('request', onReq);
   await boardMenu(A, 'Exportieren', 'Als PDF-Datei');
-  const pdf = await fileIn(dir, '.pdf');
+  const pdf = await fileIn(A, dir, '.pdf');
   A.off('request', onReq);
   ok(!!pdf, 'Die PDF-Datei kommt ohne Druckdialog an');
   const bytes = fs.readFileSync(pdf);
@@ -234,7 +261,7 @@ const card = (id, x, y, title, o = {}) => ({ id, type: 'card', x, y, w: 300, h: 
   const nid = await newBoard(A, 'Ohne', [note('o1', 0, 0, 'Eins'), note('o2', 4000, 3000, 'Zwei')]);
   await open(A, nid);
   await boardMenu(A, 'Exportieren', 'Als PDF-Datei');
-  const pdf2 = await fileIn(dir, '.pdf');
+  const pdf2 = await fileIn(A, dir, '.pdf');
   const raw2 = fs.readFileSync(pdf2).toString('latin1');
   ok((raw2.match(/\/Type \/Page\b/g) || []).length === 1, 'Ohne Frames eine Seite');
   const width = Number(/\/Width (\d+)/.exec(raw2)[1]);
@@ -309,7 +336,7 @@ const card = (id, x, y, title, o = {}) => ({ id, type: 'card', x, y, w: 300, h: 
 
   console.log('=== Folientitel in PowerPoint');
   await boardMenu(A, 'Exportieren', 'Als PowerPoint-Datei');
-  const pptx = await fileIn(dir, '.pptx');
+  const pptx = await fileIn(A, dir, '.pptx');
   ok(!!pptx, 'PowerPoint-Datei kommt an');
   const read = `import sys,zipfile,xml.dom.minidom as m
 z=zipfile.ZipFile(sys.argv[1])
