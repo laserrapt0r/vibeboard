@@ -224,6 +224,7 @@
   - Jede Änderung vom Server bringt den ganzen Text mit: Browser können nicht dauerhaft auseinanderlaufen.
   - Eingabeschritte unterliegen denselben Rechten und Sperren wie jede Änderung. Private und verborgene Inhalte erreichen niemanden sonst, auch nicht als Schritte.
   - Wer in einem Text schreibt, ist für alle anderen als farbiger Cursor mit Namen zu sehen, auch für Personen, die selbst nicht in diesem Text arbeiten. Markierter Text wird farbig hinterlegt. Der Name blendet nach drei Sekunden ohne Änderung aus. Geändert in 4.14.0.
+  - Geändert in 4.18.0: In gedrehtem Text (Pool, Lane) liegt der fremde Cursor quer zur Zeile an der richtigen Stelle.
   - Bei anonymen Beiträgen wird kein Cursor gezeigt, sonst wäre erkennbar, wer schreibt.
   - Ein Zellbezug, der per Klick oder Ziehen in eine Formel kommt, bleibt an seiner Stelle, auch wenn jemand gleichzeitig in derselben Zelle schreibt. Geändert in 4.14.0.
   - Zelländerungen, die unterwegs sind, während jemand die Tabellenstruktur ändert, landen an der neuen Stelle derselben Zeile und Spalte; Formeln passen sich an. Wurde die Zeile oder Spalte gelöscht, entfällt die Änderung. Das gilt für Tippen wie für Einfügen, Leeren und Formatieren. Geändert in 4.14.0.

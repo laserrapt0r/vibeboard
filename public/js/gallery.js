@@ -3,6 +3,7 @@ import { T } from './i18n.js';
 import { h, api, toast, confirmDialog, design } from './util.js';
 import { renderSvgDocument } from './render.js';
 import { TEMPLATES, CATEGORIES } from './templates.js';
+import { hasIcons, iconsLoaded } from './icons.js';
 
 const previewCache = new Map();
 export const hideBuiltin = () => !!design().hideBuiltin;
@@ -12,7 +13,10 @@ const ORG = 'Unsere Vorlagen';
 export function templatePreview(t, els) {
   if (!previewCache.has(t.id)) {
     const list = els || t.build();
-    previewCache.set(t.id, list.length ? renderSvgDocument(list, { padding: 30, background: '#ffffff' }).svg : '<div class="tpl-blank">+</div>');
+    const svg = list.length ? renderSvgDocument(list, { padding: 30, background: '#ffffff' }).svg : '<div class="tpl-blank">+</div>';
+    // Noch ohne Symboldatei zeigt die Vorschau Platzhalter: Die darf sie sich nicht merken
+    if (iconsLoaded() || !hasIcons(list)) previewCache.set(t.id, svg);
+    return svg;
   }
   return previewCache.get(t.id);
 }

@@ -3,7 +3,7 @@ import { T, LOCALE, guestName } from './i18n.js';
 import {
   h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect, colorName,
   initials, relTime, rectsIntersect, throttle, uid, api, contrastText, readableOn } from './util.js';
-import { shownCells, sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
+import { shownCells, sortForRender, SHAPES, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery, markTemplateUsed } from './gallery.js';
 import { popover, closePop, menu, menuAt, tidyMenu } from './menu.js';
@@ -13,6 +13,9 @@ import { openShareDialog } from './share.js';
 import { accountMenuItems } from './account.js';
 import { legalLinks } from './footer.js';
 import { openHelp } from './help.js';
+import { SHAPE_PACKS } from './shape-catalog.js';
+import { isIconKey, iconsFor } from './icons.js';
+import { shapePreview, shapeName, mountShapesPanel, openShapesPanel, availablePacks, shapeUsable } from './shapes-panel.js';
 import { bellButton, refresh as refreshBell } from './notifications.js';
 
 export { popover, closePop, menu };
@@ -204,6 +207,19 @@ function swatchGrid(colors, current, onPick, cls = '') {
   })));
 }
 
+// Schnellzugriff: zuletzt verwendet und Grundformen, alles andere liegt im Panel
+function shapePopover(o, done) {
+  const groups = [[T('Zuletzt verwendet'), (o.recentShapes || []).filter(shapeUsable)], [SHAPE_PACKS[0].name, SHAPE_PACKS[0].keys]].filter(([, keys]) => keys.length);
+  return h('div', { class: 'shape-pop' }, groups.flatMap(([group, keys]) => [
+    h('div', { class: 'pop-title' }, group),
+    h('div', { class: 'shape-grid' }, keys.map((k) => h('button', {
+      class: 'shape-btn' + (o.shape === k ? ' active' : ''), title: shapeName(k),
+      html: shapePreview(k),
+      onclick: () => { o.shape = k; done(); },
+    }))),
+  ]), h('button', { class: 'btn small shape-all', type: 'button', onclick: openShapesPanel }, T('Alle Formen')));
+}
+
 function showFlyout(id, anchor) {
   const o = app.toolOpts;
   const done = () => {
@@ -217,14 +233,7 @@ function showFlyout(id, anchor) {
       content = h('div', {}, h('div', { class: 'pop-title' }, T('Farbe der Notiz')), swatchGrid(STICKY_COLORS, o.stickyColor, (c) => { o.stickyColor = c; done(); }));
       break;
     case 'shape':
-      content = h('div', { class: 'shape-pop' }, [[T('Zuletzt verwendet'), (o.recentShapes || []).filter((k) => SHAPES.some((x) => x[0] === k))], ...SHAPE_GROUPS].filter(([, keys]) => keys.length).flatMap(([group, keys]) => [
-        h('div', { class: 'pop-title' }, group),
-        h('div', { class: 'shape-grid' }, keys.map((k) => h('button', {
-          class: 'shape-btn' + (o.shape === k ? ' active' : ''), title: SHAPES.find((x) => x[0] === k)[1],
-          html: shapePreview(k),
-          onclick: () => { o.shape = k; done(); },
-        }))),
-      ]));
+      content = shapePopover(o, done);
       break;
     case 'code':
       content = h('div', {}, h('div', { class: 'pop-title' }, T('Sprache für neue Code-Blöcke')), h('div', { class: 'lang-list' }, LANGUAGES.map(([k, l]) =>
@@ -339,6 +348,7 @@ const actBtn = (icon, title, onClick, cls = '') => h('button', { class: 'ctx-btn
 const sep = () => h('span', { class: 'ctx-sep' });
 
 const FONT_SIZES = [[10, '10'], [12, '12'], [14, '14'], [16, '16'], [18, '18'], [20, '20'], [24, '24'], [28, '28'], [32, '32'], [40, '40'], [48, '48'], [64, '64'], [80, '80'], [96, '96'], [128, '128']];
+const ICON_STROKE = [[1, T('Fein')], [1.5, T('Dünn')], [2, T('Normal')], [2.5, T('Kräftig')], [3, T('Fett')]];
 const STROKE_W = [[0, T('Ohne')], [1, T('1 px')], [2, T('2 px')], [3, T('3 px')], [4, T('4 px')], [6, T('6 px')], [8, T('8 px')], [12, T('12 px')]];
 
 // Stets sichtbare Einstellungen je Elementart: Farbe und Text; bei mehreren Reglern öffnen sie eine Zusatzzeile
@@ -354,6 +364,13 @@ function styleControls(sel) {
     text.push(colorBtn(f.textColor || contrastText(f.fill), T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
     text.push(selectBtn(f.fontSize ?? 'auto', [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
     text.push(...textStyleBtns(f), alignBtn(f.align || 'center'), valignBtn(f.valign || 'middle'));
+  } else if (only === 'shape' && sel.every((e) => isIconKey(e.shape))) {
+    // Symbole sind Linien: Sie haben keine Füllung und keinen Linienstil. 0,5 bis 4 zählen im Raster des Symbols.
+    color.push(colorBtn(f.stroke === 'none' ? '#1a1a1a' : f.stroke, T('Linienfarbe'), PALETTE.slice(1), (c) => applySel({ stroke: c })));
+    color.push(selectBtn(f.strokeWidth ?? 2, ICON_STROKE, T('Linienstärke'), (v) => applySel({ strokeWidth: v }), 60));
+    text.push(colorBtn(f.textColor || '#1a1a1a', T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
+    text.push(selectBtn(f.fontSize ?? 14, [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
+    text.push(...textStyleBtns(f), alignBtn(f.align || 'center'));
   } else if (only === 'shape') {
     color.push(colorBtn(f.fill, T('Füllfarbe'), PALETTE, (c) => applySel({ fill: c })));
     color.push(colorBtn(f.stroke === 'none' ? 'transparent' : f.stroke, T('Rahmenfarbe'), PALETTE, (c) => applySel({ stroke: c === 'transparent' ? 'none' : c, strokeWidth: c === 'transparent' ? 0 : f.strokeWidth || 2 }), { ring: true }));
@@ -415,10 +432,18 @@ function styleControls(sel) {
 // Auswahl als Untermenü: Häkchen am aktuellen Wert
 const pickItem = (label, icon, value, options, onPick) => ({ label, icon, items: () => options.map(([v, l]) => ({ label: l, checked: v === value, onClick: () => onPick(v) })) });
 
+// Grundformen direkt, die übrigen Pakete als eigene Untermenüs: Über hundert Einträge liest niemand in einer Liste
+function shapeChoices(current) {
+  const name = (k) => SHAPES.find((x) => x[0] === k)?.[1] || k;
+  const entry = (labels) => (k) => ({ label: labels?.[k] || name(k), checked: k === current, onClick: () => applySel({ shape: k }) });
+  const [basic, ...rest] = availablePacks().filter((p) => p.keys.length);
+  return [...basic.keys.map(entry()), ...rest.map((p) => ({ label: p.name, items: () => p.keys.map(entry(p.labels?.())) }))];
+}
+
 function formatItems(sel, one, only) {
   const f = sel[0];
   const out = [];
-  if (only === 'shape') out.push(pickItem(T('Form ändern'), 'shape', f.shape, SHAPES, (v) => applySel({ shape: v })));
+  if (only === 'shape' && !sel.some((e) => isIconKey(e.shape))) out.push({ label: T('Form ändern'), icon: 'shape', items: () => shapeChoices(f.shape) });
   if (only === 'connector') {
     out.push(pickItem(T('Linienführung'), 'connector', f.routing || 'curve', [['curve', T('⤴ Kurve')], ['elbow', T('⌐ Gewinkelt')], ['straight', T('／ Gerade')]], (v) => applySel({ routing: v })));
     out.push(pickItem(T('Linienende am Anfang'), 'arrowStart', headType(f.arrowStart, 'none'), ARROW_HEADS, (v) => applySel({ arrowStart: v })));
@@ -1249,11 +1274,13 @@ app.on('render', () => sidePanel === 'frames' && renderSideThrottled());
 
 export function renderSidePanel() {
   side.classList.toggle('hidden', !sidePanel);
+  side.classList.toggle('left', sidePanel === 'shapes');
   document.querySelectorAll('[data-panel]').forEach((b) => {
     b.classList.toggle('active', b.dataset.panel === sidePanel);
     b.setAttribute('aria-pressed', String(b.dataset.panel === sidePanel));
   });
   if (!sidePanel) return;
+  if (sidePanel === 'shapes') return mountShapesPanel(side, () => iconBtn('close', T('Schließen'), () => toggleSidePanel('shapes')));
   // Nicht neu aufbauen, während jemand in ein Textfeld des Panels tippt (Checkboxen sind unkritisch)
   const ae = document.activeElement;
   if (side.contains(ae) && ae.tagName === 'INPUT' && ae.type !== 'checkbox') return;
@@ -1420,10 +1447,11 @@ async function exportPng(selection = false) {
   }
 }
 
-function exportSvg() {
+async function exportSvg() {
   try {
     const els = [...app.els.values()];
     if (!els.length) return toast(T('Nichts zu exportieren'));
+    await iconsFor(els);
     download(safeName(app.name) + '.svg', new Blob([svgString(els)], { type: 'image/svg+xml' }));
     toast(T('SVG exportiert'));
   } catch (e) {
@@ -2252,10 +2280,3 @@ export function initUI() {
   });
 }
 
-// Vorschau einer Form in der Formenauswahl; Flächen in Hintergrundfarbe, damit sich überlappende Teile verdecken
-function shapePreview(k) {
-  const tall = ['rack', 'mobile'].includes(k);
-  const [x, y, w, h] = tall ? [11, 2, 18, 26] : k === 'forkbar' ? [3, 12, 34, 6] : [3, 3, 34, 24];
-  const deco = shapeDecor(k, x, y, w, h, { fill: 'none', stroke: 'currentColor', sw: 1.6, full: true, cls: 'pv-fill' });
-  return `<svg viewBox="0 0 40 30" width="40" height="30">${deco.before}${shapeGeom(k, x, y, w, h, true)} class="pv-fill" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>${deco.after}</svg>`;
-}

@@ -128,6 +128,7 @@
 - **Akzeptanzkriterien:**
   - Doppelklick aufs Werkzeug hält Notiz, Form, Text, Frame, Karte, Tabelle, Code und Mindmap aktiv, sichtbar am Rahmen der Schaltfläche. Werkzeuge mit Taste gehen auch mit Umschalt+Taste. Esc oder ein anderes Werkzeug beendet das.
   - Das Formen-Menü zeigt bis zu sechs zuletzt verwendete Formen; die Auswahl bleibt im Browser gespeichert.
+  - Geändert in 4.18.0: Das Formen-Menü zeigt nur noch zuletzt verwendete Formen und Grundformen, alles Weitere liegt im Panel „Alle Formen“ (REQ-ELEM-022). „Form ändern“ gliedert die übrigen Pakete in Untermenüs.
 
 ### REQ-EDIT-013 Befehlspalette
 - **Seit:** 4.9.0 · **Priorität:** Soll · **Status:** umgesetzt

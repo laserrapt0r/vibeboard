@@ -76,7 +76,7 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 |---------|---------------|
 | **Notizen** | 16 Farben, automatische Schriftgröße, optional mit Name der Autorin bzw. des Autors |
 | **Text** | Schriftgröße, Farbe, fett, kursiv, Ausrichtung, Hintergrund |
-| **Formen** | Über 60 Formen in sieben Gruppen: Grundformen, Flussdiagramm (Dokument, mehrere Dokumente, manuelle Eingabe, Anzeige u. a.), UML (Klasse mit Abschnitten, Akteur, Paket, Komponente, Knoten, Start/Ende, Gabelung, Signale), BPMN (Ereignisse, Gateways), Netzwerk & Rechenzentrum (Router, Switch, Firewall, Load Balancer, Access Point, Internet, Server, Serverschrank, Speichersystem, PC, Smartphone), Software & IT, Container-Plattform (Pod, Deployment, Service, Ingress, Node, ConfigMap, Secret, Volume) – alles eigene Zeichnungen, mit Füllung, Rahmen, Strichart und Text |
+| **Formen** | 146 Formen in elf Paketen: Grundformen, Flussdiagramm nach ISO 5807, BPMN (Ereignisse je Art, Aufgaben, Gateways, Pool, Lane), UML (Klasse, Schnittstelle, Objekt, Lebenslinie, Fragment u. a.), ERD, Data Flow, Value Stream, Architektur, Netzwerk & Rechenzentrum (Router, Switch, Firewall, Load Balancer, Access Point, Internet, Server, Serverschrank, Speichersystem, PC, Smartphone), Software & IT, Container-Plattform (Pod, Deployment, Service, Ingress, Node, ConfigMap, Secret, Volume) – alles eigene Zeichnungen, mit Füllung, Rahmen, Strichart und Text |
 | **Verbindungen** | gerade, gewinkelt oder als Kurve; docken an jeder Stelle des Umrisses an (oder automatisch); Linie ziehen biegt sie, Knickpunkte einfügen, verschieben und entfernen; verschiebbare Beschriftung; 9 Linienenden (Pfeil, Raute, Kreis, Krähenfuß u. a.), Strichart |
 | **Quick Connect** | Punkte an einem ausgewählten Element anklicken oder ziehen, um verbundene Elemente zu erzeugen |
 | **Freihand** | Stift, Marker, Radierer |
@@ -111,6 +111,8 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Notiz pro Zeil
   - Gleiche Breite, Höhe oder Größe; Größe kopieren und übernehmen; am Raster ausrichten.
 - **Intelligentes Duplizieren:** Strg+D wiederholt den zuletzt verwendeten Versatz.
 - Notizen nach Farbe clustern
+- **Panel „Alle Formen“:** Formen nach Name oder Synonym suchen, auch mit Tippfehler, aufs Board ziehen und unter „Formen verwalten“ die eigenen Pakete wählen. Die Administration legt fest, welche Pakete verfügbar sind.
+- **Allgemeine Symbole:** Rund 4.800 Liniensymbole aus [Tabler Icons](https://tabler.io/icons) (MIT) als Paket im Panel, gegliedert etwa in Pfeile und Navigation, Kommunikation, Personen, Dateien und Wetter. Die Suche findet Formen und Symbole zusammen, auf Deutsch und Englisch, häufige Motive auch auf Spanisch und Französisch. Symbole haben Linienfarbe, Linienstärke und Beschriftung, Linien docken an ihnen an. Die Daten kommen erst bei Bedarf, normale Boards starten dadurch nicht langsamer.
 - Schnell arbeiten: Tab beim Tippen legt die nächste Notiz oder Form daneben an, ein Doppelklick hält ein Werkzeug aktiv, und das Formen-Menü zeigt die zuletzt verwendeten Formen. In Vorlagen lassen sich Beschriftungen direkt ändern, Hintergründe bleiben gesperrt; Retro- und Brainstorming-Vorlagen bieten den passenden Ablauf oder Timer an. Eine Karte in eine Kanban-Spalte zu ziehen setzt ihren Status, und ein Frame lässt sich samt Inhalt löschen.
 - Befehlspalette (Strg+K) für Befehle, Einstellungen, Frames, Vorlagen und Board-Inhalte; Format übertragen (Menü „Mehr“ der Kontextleiste, Strg+Alt+C/V).
 - Formeln in Tabellen: `=SUMME(B2:B5)`, `=B2*C2` und mehr; ein Klick auf eine Zelle fügt den Bezug ein, Σ rechnet die Zellauswahl zusammen.
@@ -761,6 +763,7 @@ Ausnahmen und Inhalte Dritter, Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_N
 
 - **Business Model Canvas**: Adaption des „Business Model Canvas“ von Strategyzer AG (strategyzer.com), lizenziert unter
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+- **Allgemeine Symbole**: [Tabler Icons](https://tabler.io/icons) von Paweł Kuna, npm-Paket `@tabler/icons` 3.50.0, [MIT-Lizenz](public/vendor/icons/LICENSE). Marken-Logos aus dem Satz sind nicht enthalten.
 - **Lean Canvas**: Adaption des „Lean Canvas“ von Ash Maurya (leanstack.com), basierend auf dem Business Model Canvas,
   lizenziert unter [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Icons**: teilweise aus bzw. nach [Lucide](https://lucide.dev) (ISC) und [Feather](https://feathericons.com) (MIT).

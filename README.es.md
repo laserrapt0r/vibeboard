@@ -76,7 +76,7 @@ Todo el contenido de las capturas de pantalla son datos de ejemplo.
 |---------|---------------|
 | **Notas** | 16 colores, tamaño de letra automático, opcionalmente con el nombre de la persona autora |
 | **Texto** | Tamaño de letra, color, negrita, cursiva, alineación, fondo |
-| **Formas** | Más de 60 formas en siete grupos: formas básicas, diagrama de flujo (documento, varios documentos, entrada manual, pantalla, etc.), UML (clase con compartimentos, actor, paquete, componente, nodo, inicio/fin, bifurcación, señales), BPMN (eventos, pasarelas), red y centro de datos (router, switch, firewall, balanceador de carga, punto de acceso, internet, servidor, armario de servidores, sistema de almacenamiento, PC, smartphone), software y TI, plataforma de contenedores (pod, deployment, service, ingress, node, ConfigMap, secret, volume): todo de dibujo propio, con relleno, borde, tipo de trazo y texto |
+| **Formas** | 146 formas en once paquetes: formas básicas, diagrama de flujo según ISO 5807, BPMN (eventos por tipo, tareas, pasarelas, pool, carril), UML (clase, interfaz, objeto, línea de vida, fragmento y más), ERD, flujo de datos, flujo de valor, arquitectura, red y centro de datos (router, switch, firewall, balanceador de carga, punto de acceso, internet, servidor, armario de servidores, sistema de almacenamiento, PC, smartphone), software y TI, plataforma de contenedores (pod, deployment, service, ingress, node, ConfigMap, secret, volume): todo de dibujo propio, con relleno, borde, tipo de trazo y texto |
 | **Conectores** | rectos, en ángulo o curvos; se anclan en cualquier punto del contorno (o automáticamente); al arrastrar la línea se curva, se pueden insertar, mover y quitar puntos de quiebre; etiqueta movible; 9 extremos de línea (flecha, rombo, círculo, pata de gallo, etc.), tipo de trazo |
 | **Conexión rápida** | Haz clic en los puntos de un elemento seleccionado, o arrástralos, para crear elementos conectados |
 | **Mano alzada** | Lápiz, resaltador, borrador |
@@ -110,6 +110,8 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
     separación fija, ordenar en cuadrícula.
   - Mismo ancho, alto o tamaño; copiar y aplicar tamaño; alinear a la cuadrícula.
 - **Duplicado inteligente:** Ctrl+D repite el último desplazamiento utilizado.
+- **Panel «Todas las formas»:** busca formas por nombre o sinónimo, incluso con una errata, arrástralas al tablero y elige tus paquetes en «Gestionar formas». La administración decide qué paquetes están disponibles.
+- **Iconos generales:** unos 4800 iconos de línea de [Tabler Icons](https://tabler.io/icons) (MIT) como paquete en el panel, ordenados en grupos como flechas y navegación, comunicación, personas, archivos y tiempo atmosférico. La búsqueda encuentra formas e iconos a la vez, en alemán e inglés, y los motivos más habituales también en español y francés. Los iconos tienen color y grosor de línea y una etiqueta, y las líneas se acoplan a ellos. Los datos se cargan solo cuando hacen falta, así que los tableros normales no tardan más en abrirse.
 - Trabajo rápido: Tab al escribir añade la siguiente nota o forma al lado, un doble clic mantiene activa una herramienta y el menú de formas muestra las usadas recientemente. En las plantillas, las etiquetas se editan directamente y los fondos siguen bloqueados; las plantillas de retro y brainstorming ofrecen su flujo o temporizador. Arrastrar una tarjeta a una columna Kanban fija su estado, y un marco se puede eliminar con su contenido.
 - Paleta de comandos (Ctrl+K) para comandos, ajustes, marcos, plantillas y contenido del tablero; copiar formato (menú «Más» de la barra contextual, Ctrl+Alt+C/V).
 - Fórmulas en tablas: `=SUMA(B2:B5)`, `=B2*C2` y más; un clic en una celda inserta su referencia, y Σ calcula sobre las celdas seleccionadas.
@@ -767,6 +769,7 @@ Excepciones y contenido de terceros, detalles en [THIRD_PARTY_NOTICES.md](THIRD_
 
 - **Business Model Canvas**: adaptación del «Business Model Canvas» de Strategyzer AG (strategyzer.com), con licencia
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+- **Iconos generales**: [Tabler Icons](https://tabler.io/icons) de Paweł Kuna, paquete npm `@tabler/icons` 3.50.0, [licencia MIT](public/vendor/icons/LICENSE). Los logotipos de marcas del conjunto no están incluidos.
 - **Lean Canvas**: adaptación del «Lean Canvas» de Ash Maurya (leanstack.com), basado en el Business Model Canvas,
   con licencia [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Iconos**: en parte procedentes de o basados en [Lucide](https://lucide.dev) (ISC) y [Feather](https://feathericons.com) (MIT).

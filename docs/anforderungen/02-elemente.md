@@ -37,6 +37,8 @@
     - Symbole (Router, Pod, …) behalten ihr Seitenverhältnis; die Beschriftung steht darunter. Bei kleinen Formen (Ereignisse, Gateways, Start/Ende, Gabelung) steht sie unter der Form.
     - Neue Formen erhalten eine passende Standardgröße. Legt man eine Form mit Beschriftung außerhalb im dunklen Design an, ist die Beschriftung hell.
     - Alle Symbole sind eigene, allgemeine Zeichnungen. Herstellersymbole (z. B. von Cisco), Logos und die Gestaltung fremder Symbolsätze (z. B. das Siebeneck der Kubernetes-Symbole) werden nicht verwendet.
+  - Geändert in 4.18.0: Der Katalog wächst auf 146 Formen in elf Paketen. Neu sind weitere Grundformen (Fünfeck, Achteck, runde Sprechblase, Doppelpfeil, Linkspfeil, geschweifte Klammern, Chevron, Pfeilfähnchen, Prozess mit Seitenbalken, Wolkenvarianten, Rechteck mit Eckenschnitt), das vollständige Flussdiagramm nach ISO 5807, BPMN (Ereignisse je Art mit Nachricht, Zeit, Fehler, Signal und Abbruch, Aufgabentypen, Teilprozess, weitere Gateways, Datenobjekt, Datenspeicher, Pool, Lane), UML (Schnittstelle, Objekt, Lebenslinie, Aktivierung, Fragment), ERD, Data Flow, Value Stream und Architektur. Jede Form hat Textbereich und Andockpunkte; BPMN-Ereignisse zeigen ihre Art an der Kontur. Eine unbekannte Form erscheint als Rechteck mit ihrem Text, ihr Name bleibt am Element erhalten. Der Formname ist auf dem Server auf Buchstaben, Ziffern, `_` und `-` begrenzt. Siehe REQ-ELEM-022 und REQ-ADMIN-012.
+  - Geändert in 4.18.0: Alle neuen Formen sind eigene Zeichnungen aus allgemeiner Geometrie und offenen Notationen.
 
 ### REQ-ELEM-004 Verbindungen
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -241,3 +243,31 @@
   - Bezüge gelten innerhalb derselben Tabelle. Diagramme und Exporte nutzen die Ergebnisse. Die Suche findet die Formel, nicht das Ergebnis.
   - Formeln werden nie als Code ausgeführt. Berechnungen sind begrenzt, damit gegenseitige Bezüge ein Board nicht einfrieren. Eine zu tiefe oder zu große Berechnung zeigt `#NUM!`, die Tabelle bleibt sichtbar.
   - Grenze: Schreibt jemand eine Zelle, während eine andere Person im selben Moment davor eine Zeile einfügt, bezieht sich die Zelle auf die alte Position. Alle sehen denselben Stand; er lässt sich rückgängig machen oder korrigieren.
+
+### REQ-ELEM-022 Panel „Alle Formen“ und Formenpakete
+- **Seit:** 4.18.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Das Formen-Menü bleibt für den schnellen Zugriff. Der ganze Katalog liegt in einem Seitenpanel, und jede Person wählt die Pakete, die sie braucht.
+- **Akzeptanzkriterien:**
+  - Das Formen-Menü zeigt zuletzt verwendete Formen, die Grundformen und „Alle Formen“. Das Panel ist auch über die Befehlssuche erreichbar, liegt links und öffnet in unter 200 ms.
+  - Das Suchfeld findet Namen und Synonyme auch mit einem Tippfehler. Gruppen lassen sich klappen, „Zuletzt verwendet“ steht oben, jede Form hat Vorschau und Tooltip.
+  - Ein Klick wählt Form und Werkzeug wie im Menü, die nächste Stelle auf dem Board bekommt die Form. Ziehen aufs Board legt sie an der Stelle ab. Enter legt sie in der Mitte der Ansicht an, Pfeiltasten bewegen sich im Raster, Esc leert die Suche und schließt das Panel.
+  - Auf dem Handy macht Antippen einer Form das Board frei, Antippen des Boards legt sie ab.
+  - „Formen verwalten“ blendet Pakete je Person aus und speichert das im Konto. Die Grundformen bleiben immer da. Vorhandene Elemente ändern sich dadurch nicht.
+  - Wer nur lesen darf und Gäste bekommen das Panel nicht; Gäste legen weiterhin nur Notizen an.
+  - Geändert in 4.18.0: Das Panel enthält auch die Allgemeinen Symbole, die Suche findet Formen und Symbole zusammen. Siehe REQ-ELEM-023.
+
+### REQ-ELEM-023 Allgemeine Symbole
+- **Seit:** 4.18.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Neben den Diagrammformen stehen rund 4700 Liniensymbole aus Tabler Icons (MIT) bereit: Pfeile, Kommunikation, Personen, Dateien, Geräte, Geschäft, Wetter, Zeit und mehr. Logos fremder Marken gehören nicht dazu.
+- **Akzeptanzkriterien:**
+  - Eine statische Symboldatei unter `public/vendor/icons/` liegt im Repo, `scripts/build-icons.js` erzeugt sie. Das Paket `@tabler/icons` wird nur zum Erzeugen gebraucht, im Betrieb gibt es keinen Build-Schritt. Die Lizenz wird mit ausgeliefert, die Content-Security-Policy bleibt unverändert.
+  - Die Datei lädt nur beim Öffnen des Panels oder beim ersten Zeichnen eines Symbols. Eine Boardseite ohne Symbole lädt sie nicht.
+  - Ein Symbol ist eine Form mit dem Namen `ti-…`. Das Element trägt nur den Namen. Der Server prüft ihn streng und entfernt mitgeschickte Pfade oder SVG-Inhalte. Das Zeichnen nimmt die Pfade immer aus der Symboldatei.
+  - Linienfarbe und Linienstärke lassen sich ändern. Die Stärke zählt im 24er-Raster des Symbols und wächst mit der Größe. Das Symbol verzerrt nicht, es sitzt mittig im Rahmen. Die Standardfarbe folgt dem Untergrund, auch in Exporten.
+  - Beschriftung steht unter dem Symbol, Linien docken am Rahmen an, Vorlagen und Kopien behalten das Symbol. „Format übertragen“ überträgt Linie und Schrift, das Symbol bleibt das Symbol.
+  - Solange die Datei fehlt, zeigt das Board einen gestrichelten Rahmen und zeichnet danach ohne Zutun neu. Ein unbekannter Name erscheint als Rahmen mit dem Namen, ohne Fehler.
+  - SVG, PNG, PDF, Druck und PPTX warten auf die Daten. Fehlen sie endgültig, meldet der Export das, statt Platzhalter auszugeben.
+  - Das Paket steht im Panel in Untergruppen und baut seine Knöpfe seitenweise auf. Das Panel öffnet auch mit dem Paket unter 200 ms.
+  - Die Suche arbeitet auf Deutsch über eine gepflegte Liste von mindestens 400 Motiven und auf Englisch über die Stichwörter des Satzes. Die Liste gilt in jeder Sprache der Oberfläche, die häufigsten Motive haben auch spanische und französische Wörter. Der Tooltip nennt den Namen.
+  - In der Befehlssuche stehen keine einzelnen Symbole. Sie führt über „Alle Formen“ zum Paket.
+  - Das Paket lässt sich wie die anderen abwählen, persönlich und in der Administration. Vorhandene Symbole bleiben sichtbar. Gäste der Stufe „Beiträge“ legen keine Symbole an, auch nicht direkt über die Schnittstelle.

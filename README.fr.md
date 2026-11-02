@@ -77,7 +77,7 @@ Tous les contenus des captures d'écran sont des données d'exemple.
 |---------|---------------|
 | **Notes** | 16 couleurs, taille de police automatique, en option avec le nom de l'auteur ou de l'autrice |
 | **Texte** | Taille de police, couleur, gras, italique, alignement, arrière-plan |
-| **Formes** | Plus de 60 formes en sept groupes : formes de base, organigramme (document, plusieurs documents, saisie manuelle, affichage, etc.), UML (classe avec compartiments, acteur, paquetage, composant, nœud, début/fin, fourche, signaux), BPMN (événements, passerelles), réseau et centre de données (routeur, switch, pare-feu, répartiteur de charge, point d'accès, internet, serveur, baie de serveurs, système de stockage, PC, smartphone), logiciel et informatique, plateforme de conteneurs (pod, deployment, service, ingress, node, ConfigMap, secret, volume) – toutes des dessins originaux, avec remplissage, bordure, type de trait et texte |
+| **Formes** | 146 formes en onze packs : formes de base, organigramme selon ISO 5807, BPMN (événements par type, tâches, passerelles, pool, couloir), UML (classe, interface, objet, ligne de vie, fragment, etc.), ERD, flux de données, chaîne de valeur, architecture, réseau et centre de données (routeur, switch, pare-feu, répartiteur de charge, point d'accès, internet, serveur, baie de serveurs, système de stockage, PC, smartphone), logiciel et informatique, plateforme de conteneurs (pod, deployment, service, ingress, node, ConfigMap, secret, volume) – toutes des dessins originaux, avec remplissage, bordure, type de trait et texte |
 | **Connecteurs** | droits, coudés ou courbes ; s'ancrent à n'importe quel endroit du contour (ou automatiquement) ; tirer sur la ligne la courbe, les points d'inflexion peuvent être insérés, déplacés et supprimés ; étiquette déplaçable ; 9 extrémités de ligne (flèche, losange, cercle, patte de corbeau, etc.), type de trait |
 | **Connexion rapide** | Cliquer sur les points d'un élément sélectionné, ou les faire glisser, pour créer des éléments reliés |
 | **Dessin libre** | Stylo, surligneur, gomme |
@@ -112,6 +112,8 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
   - Même largeur, hauteur ou taille ; copier et appliquer la taille ; aligner sur la grille.
 - **Duplication intelligente :** Ctrl+D répète le dernier décalage utilisé.
 - Regrouper les notes par couleur
+- **Panneau « Toutes les formes » :** cherchez une forme par nom ou synonyme, même avec une faute de frappe, glissez-la sur le tableau et choisissez vos packs dans « Gérer les formes ». L'administration décide quels packs sont disponibles.
+- **Icônes générales :** environ 4 800 icônes au trait de [Tabler Icons](https://tabler.io/icons) (MIT), sous forme de pack dans le panneau, classées par groupes : flèches et navigation, communication, personnes, fichiers, météo, etc. La recherche trouve formes et icônes ensemble, en allemand et en anglais, et aussi en espagnol et en français pour les motifs courants. Les icônes ont une couleur et une épaisseur de trait et une légende, et les connecteurs s'y accrochent. Les données ne se chargent qu'au besoin : les tableaux normaux ne démarrent pas plus lentement.
 - Travailler vite : Tab en tapant ajoute la note ou forme suivante à côté, un double-clic garde un outil actif et le menu des formes montre celles récemment utilisées. Dans les modèles, les libellés se modifient directement et les fonds restent verrouillés ; les modèles de rétro et de brainstorming proposent leur déroulé ou minuteur. Glisser une carte dans une colonne Kanban définit son statut, et un cadre peut être supprimé avec son contenu.
 - Palette de commandes (Ctrl+K) pour les commandes, réglages, cadres, modèles et contenus du tableau ; reproduction du format (menu « Plus » de la barre contextuelle, Ctrl+Alt+C/V).
 - Formules dans les tableaux : `=SOMME(B2:B5)`, `=B2*C2` et plus ; un clic sur une cellule insère sa référence, Σ calcule sur les cellules sélectionnées.
@@ -770,6 +772,7 @@ Exceptions et contenus de tiers, détails dans [THIRD_PARTY_NOTICES.md](THIRD_PA
 
 - **Business Model Canvas** : adaptation du « Business Model Canvas » de Strategyzer AG (strategyzer.com), sous licence
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+- **Icônes générales** : [Tabler Icons](https://tabler.io/icons) de Paweł Kuna, paquet npm `@tabler/icons` 3.50.0, [licence MIT](public/vendor/icons/LICENSE). Les logos de marques du jeu ne sont pas inclus.
 - **Lean Canvas** : adaptation du « Lean Canvas » d'Ash Maurya (leanstack.com), fondé sur le Business Model Canvas,
   sous licence [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Icônes** : en partie issues de ou d'après [Lucide](https://lucide.dev) (ISC) et [Feather](https://feathericons.com) (MIT).

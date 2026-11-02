@@ -4,8 +4,18 @@ import { inflateRaw } from './zip.js';
 
 const SHAPES = {
   rhombus: 'diamond', ellipse: 'ellipse', triangle: 'triangle', hexagon: 'hexagon', parallelogram: 'parallelogram', trapezoid: 'trapezoid',
-  cylinder: 'cylinder', cylinder3: 'cylinder', cloud: 'cloud', document: 'document', process: 'subprocess', note: 'note', step: 'pill', actor: 'actor',
-  umlActor: 'actor', 'mxgraph.flowchart.decision': 'diamond', 'mxgraph.flowchart.terminator': 'pill',
+  cylinder: 'cylinder', cylinder3: 'cylinder', cloud: 'cloud', document: 'document', process: 'subprocess', note: 'note', step: 'chevron', actor: 'actor',
+  umlActor: 'actor', umlLifeline: 'lifeline', umlFrame: 'fragment', umlState: 'roundrect', card: 'punchcard', tape: 'punchtape', folder: 'package', module: 'component', component: 'component', cube: 'umlnode',
+  callout: 'callout', singleArrow: 'arrow', doubleArrow: 'doublearrow', curlyBracket: 'braceleft', offPageConnector: 'offpage', internalStorage: 'internalstorage', dataStorage: 'storeddata',
+  delay: 'delay', display: 'display', manualInput: 'manualinput', or: 'fcor', sumEllipse: 'fcsum', sortShape: 'fcsort', collate: 'collate', loopLimit: 'fcloop', datastore: 'datastore', flexArrow: 'arrow',
+  'mxgraph.flowchart.decision': 'diamond', 'mxgraph.flowchart.terminator': 'pill', 'mxgraph.flowchart.process': 'rect', 'mxgraph.flowchart.predefined_process': 'subprocess',
+  'mxgraph.flowchart.document': 'document', 'mxgraph.flowchart.multi-document': 'multidoc', 'mxgraph.flowchart.manual_input': 'manualinput', 'mxgraph.flowchart.manual_operation': 'manualop',
+  'mxgraph.flowchart.data': 'parallelogram', 'mxgraph.flowchart.database': 'cylinder', 'mxgraph.flowchart.direct_data': 'directstorage', 'mxgraph.flowchart.internal_storage': 'internalstorage',
+  'mxgraph.flowchart.delay': 'delay', 'mxgraph.flowchart.display': 'display', 'mxgraph.flowchart.preparation': 'preparation', 'mxgraph.flowchart.on-page_reference': 'fcconnector',
+  'mxgraph.flowchart.off-page_reference': 'offpage', 'mxgraph.flowchart.or': 'fcor', 'mxgraph.flowchart.summing_function': 'fcsum', 'mxgraph.flowchart.sort': 'fcsort',
+  'mxgraph.flowchart.merge_or_storage': 'fcmerge', 'mxgraph.flowchart.extract_or_measurement': 'fcextract', 'mxgraph.flowchart.collate': 'collate', 'mxgraph.flowchart.loop_limit': 'fcloop',
+  'mxgraph.flowchart.stored_data': 'storeddata', 'mxgraph.flowchart.annotation_1': 'annotleft', 'mxgraph.flowchart.annotation_2': 'annotright', 'mxgraph.flowchart.sequential_data': 'seqaccess',
+  'mxgraph.flowchart.paper_tape': 'punchtape', 'mxgraph.flowchart.start_1': 'ellipse', 'mxgraph.flowchart.start_2': 'pill',
 };
 const PAGE_GAP = 200;
 

@@ -74,7 +74,7 @@ All content in the screenshots is sample data.
 |---------|---------|
 | **Notes** | 16 colors, automatic font size, optionally with the author's name |
 | **Text** | Font size, color, bold, italic, alignment, background |
-| **Shapes** | More than 60 shapes in seven groups: basic shapes, flowchart (document, multiple documents, manual input, display, etc.), UML (class with compartments, actor, package, component, node, start/end, fork, signals), BPMN (events, gateways), network & data center (router, switch, firewall, load balancer, access point, internet, server, server rack, storage system, PC, smartphone), software & IT, container platform (pod, deployment, service, ingress, node, ConfigMap, secret, volume) – all custom drawings, with fill, border, line style and text |
+| **Shapes** | 146 shapes in eleven packs: basic shapes, flowchart per ISO 5807, BPMN (events by type, tasks, gateways, pool, lane), UML (class, interface, object, lifeline, fragment and more), ERD, data flow, value stream, architecture, network & data center (router, switch, firewall, load balancer, access point, internet, server, server rack, storage system, PC, smartphone), software & IT, container platform (pod, deployment, service, ingress, node, ConfigMap, secret, volume) – all custom drawings, with fill, border, line style and text |
 | **Connectors** | straight, angled or curved; attach at any point of the outline (or automatically); dragging the line curves it, bend points can be inserted, moved and removed; movable label; 9 line ends (arrow, diamond, circle, crow's foot, etc.), line style |
 | **Quick connect** | Click or drag the dots on a selected element to create connected elements |
 | **Freehand** | Pen, highlighter, eraser |
@@ -109,6 +109,8 @@ Pasting multi-line text into the board automatically creates one note per line.
   - Same width, height or size; copy and apply size; align to grid.
 - **Smart duplicate:** Ctrl+D repeats the most recently used offset.
 - Cluster notes by color
+- **All shapes panel:** Search shapes by name or synonym, even with a typo, drag them onto the board, and choose your packs under "Manage shapes". Admins set which packs are available.
+- **General icons:** About 4,800 line icons from [Tabler Icons](https://tabler.io/icons) (MIT) as a pack in the panel, sorted into groups such as arrows and navigation, communication, people, files and weather. Search finds shapes and icons together, in German and English, and for common motifs also in Spanish and French. Icons have a line color, a line width and a label, and connectors dock to them. The data loads only when needed, so normal boards do not start slower.
 - Working quickly: Tab while typing adds the next note or shape alongside, double-clicking a tool keeps it active, and the shape menu shows recently used shapes. In templates, labels can be edited directly while backgrounds stay locked; retro and brainstorming templates offer their matching flow or timer. Dragging a card into a Kanban column on the board sets its status, and a frame can be deleted together with its content.
 - Command palette (Ctrl+K) for commands, settings, frames, templates and board content; format painter (brush in the context bar, Ctrl+Alt+C/V).
 - Formulas in tables: `=SUM(B2:B5)`, `=B2*C2`, and more; click a cell to insert its reference, or use Σ on selected cells.
@@ -760,6 +762,7 @@ Exceptions and third-party content, details in [THIRD_PARTY_NOTICES.md](THIRD_PA
 
 - **Business Model Canvas**: Adaptation of the “Business Model Canvas” by Strategyzer AG (strategyzer.com), licensed under
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+- **General icons**: [Tabler Icons](https://tabler.io/icons) by Paweł Kuna, npm package `@tabler/icons` 3.50.0, [MIT License](public/vendor/icons/LICENSE). Brand logos from the set are not included.
 - **Lean Canvas**: Adaptation of the “Lean Canvas” by Ash Maurya (leanstack.com), based on the Business Model Canvas,
   licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Icons**: partly from or after [Lucide](https://lucide.dev) (ISC) and [Feather](https://feathericons.com) (MIT).

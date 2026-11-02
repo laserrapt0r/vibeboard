@@ -43,6 +43,7 @@
 ### REQ-IO-006 Import aus draw.io
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
+  - Geändert in 4.18.0: Der draw.io-Import bildet auch die Flussdiagramm-Formen und weitere Formen auf den neuen Katalog ab, Unbekanntes wird zum Rechteck.
   - `.drawio`-Dateien, auch komprimiert und mit mehreren Seiten, werden zu bearbeitbaren Formen, Texten, Frames und angedockten Verbindungen. Beschriftungen kommen als reiner Text.
 
 ### REQ-IO-007 Import aus PowerPoint
@@ -55,6 +56,8 @@
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Jeder Frame wird eine Folie (16:9), ohne Frames das ganze Board. Notizen, Text, Formen, Linien, Bilder und Tabellen bleiben bearbeitbar, alles andere kommt als Bild. Private Inhalte und verborgene Bereiche fehlen.
+  - Geändert in 4.18.0: Formen mit passender PowerPoint-Vorlage bleiben als Form bearbeitbar, die übrigen kommen als Bild. Eine Beschriftung unter der Form gehört mit ins Bild.
+  - Geändert in 4.18.0: Allgemeine Symbole kommen in SVG als Vektor, in PNG, PDF und PPTX als Bild. Alle Exporte warten auf die Symboldatei (REQ-ELEM-023).
   - Geändert in 4.16.0: Der Frame-Titel steht im Titelfeld der Folie (Platzhalter `title`, sichtbar in der Gliederung von PowerPoint), die Inhalte rücken darunter. Folien ohne Titel und der Export ohne Frames nutzen die ganze Fläche.
 
 ### REQ-IO-009 PDF-Datei

@@ -262,6 +262,46 @@ const toast = (p) =>
   ok(c.length === 1, 'Im Code', c.length);
   await stop(B);
   await idle();
+  console.log('=== Gedrehter Text (Pool, Lane)');
+  for (const [id, shape, y] of [['pl', 'pool', 900], ['ln', 'lane', 1300]]) {
+    await ev(A, async (id, shape, y) => {
+      const c = await import('/js/core.js');
+      c.addElements([c.makeElement('shape', 0, 0, { id, shape, x: 200, y, w: 700, h: 240, text: 'Vertrieb Nord' })], { select: false });
+    }, id, shape, y);
+    await wait(500);
+    await view(A, 0, -y + 200);
+    await view(B, 0, -y + 200);
+    await edit(B, id, { at: 0 });
+    await nap();
+    const start = (await ev(A, () => [...document.querySelectorAll('.text-caret')].map((c) => {
+      const r = c.getBoundingClientRect();
+      return { x: r.x, y: r.y, w: r.width, h: r.height };
+    })))[0];
+    await ev(B, () => {
+      const t = document.getElementById('editor');
+      t.setSelectionRange(8, 8);
+      t.dispatchEvent(new Event('select', { bubbles: true }));
+      document.dispatchEvent(new Event('selectionchange'));
+    });
+    await nap();
+    const later = (await ev(A, () => [...document.querySelectorAll('.text-caret')].map((c) => {
+      const r = c.getBoundingClientRect();
+      return { x: r.x, y: r.y, w: r.width, h: r.height };
+    })))[0];
+    const shown = await ev(A, (id) => {
+      const g = document.querySelector(`[data-id="${id}"] g[transform*="rotate"] text`).getBoundingClientRect();
+      const box = document.querySelector(`[data-id="${id}"]`).getBoundingClientRect();
+      return { x: g.x, r: g.right, y: g.y, bottom: g.bottom, box: box.x };
+    }, id);
+    ok(start && start.w > 8 && start.h <= 3, `${shape}: Der Cursor liegt quer zur gedrehten Zeile`, start);
+    ok(start.x > shown.box && start.x < shown.r + 12 && start.x + start.w > shown.x - 12, `${shape}: Er steht im Kopfstreifen auf dem Text`, [start, shown]);
+    ok(Math.abs(start.y - shown.bottom) < 12, `${shape}: Am Textanfang steht er unten`, [start, shown]);
+    ok(later && later.y < start.y - 20 && Math.abs(later.x - start.x) < 3, `${shape}: Mit der Stelle wandert er nach oben`, [start, later]);
+    await stop(B);
+    await idle();
+  }
+  await view(A, 0, 0);
+  await view(B, 0, 0);
   console.log('=== Abgeblendet');
   await edit(B, 'n1');
   await B.keyboard.type('y');

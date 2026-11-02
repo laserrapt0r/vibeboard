@@ -103,6 +103,9 @@ const SEEDS = {
   15: async (c) => {
     await c.query(`INSERT INTO anon_deleted (board_id, element_id) VALUES ('b1', 'e1')`);
   },
+  16: async (c) => {
+    await c.query(`UPDATE users SET shape_packs_off = '["vsm", "dfd"]' WHERE id = 1`);
+  },
 };
 
 async function structure(c, schema) {

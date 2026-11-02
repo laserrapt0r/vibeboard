@@ -8,6 +8,37 @@ Arbeiten Dritter. Für sie gelten die folgenden Lizenzen.
 Ein Teil der Icon-Pfade in `public/js/util.js` stammt aus den Icon-Sets **Lucide** (https://lucide.dev) bzw.
 **Feather** (https://feathericons.com) oder ist an sie angelehnt.
 
+Die Allgemeinen Symbole in `public/vendor/icons/tabler-outline-3.50.0.json` stammen unverändert aus **Tabler Icons**
+(https://tabler.io/icons, npm-Paket `@tabler/icons` 3.50.0, nur Umrissvarianten). Die Datei erzeugt `scripts/build-icons.js`,
+das Skript prüft dabei die Lizenz des Pakets. Die Kategorie „Brand“ und weitere Marken und Figuren fehlen mit Absicht (`NAME_OUT` im Skript): Das sind Logos Dritter, an denen die
+MIT-Lizenz keine Markenrechte einräumt. Der Lizenztext liegt in `public/vendor/icons/LICENSE` und wird mit ausgeliefert.
+
+### Tabler Icons – MIT License
+
+```
+MIT License
+
+Copyright (c) 2020-2026 Paweł Kuna
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ### Lucide – ISC License
 
 ```
@@ -123,6 +154,7 @@ Diese Pakete sind nicht im Repository enthalten. Sie werden bei der Installation
 | node-addon-api, prebuild-install und dessen Abhängigkeiten (von kerberos, zum Bauen) | MIT, ISC, BSD, Apache-2.0 |
 | [uqr](https://github.com/unjs/uqr) (QR-Codes für die Zwei-Faktor-Einrichtung) | MIT |
 | [acorn](https://github.com/acornjs/acorn), acorn-walk (nur Entwicklung: Prüfung der Übersetzungen) | MIT |
+| [@tabler/icons](https://github.com/tabler/tabler-icons) (nur Entwicklung: Quelle der Symboldatei, im Betrieb nicht nötig) | MIT |
 | `@napi-rs/canvas` (optional von pdfjs-dist; wird im Docker-Image nicht installiert) | MIT |
 | [pdfjs-dist](https://mozilla.github.io/pdf.js/) (Mozilla pdf.js – Vorschau von PDF-Anhängen im Browser; der Server liefert die Dateien `build/pdf.min.mjs` und `build/pdf.worker.min.mjs` unverändert unter `/vendor/pdfjs/` aus, der Lizenztext liegt im Paket; Copyright Mozilla Foundation, https://www.apache.org/licenses/LICENSE-2.0) | Apache-2.0 |
 

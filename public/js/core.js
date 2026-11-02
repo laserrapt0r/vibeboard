@@ -1,11 +1,12 @@
 // Kern des Board-Editors: Zustand, Ansicht, Rendering, Historie, Interaktion
 import { T } from './i18n.js';
+import { isIconKey, ICON_DEFAULTS, onIconsLoaded } from './icons.js';
 import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
   debounce, throttle, toast, contrastText, STICKY_COLORS, api, columnName, fontPx, MAX_FONT_SIZE,
 } from './util.js';
 import { shownCells, renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, renderOrder, isBackdrop, shapeTextColor, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
-  outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions, SHAPE_DEFAULTS, labelBelow, labelOutside, setElementLookup } from './render.js';
+  outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions, SHAPE_DEFAULTS, labelBelow, labelOutside, textRotated, setElementLookup } from './render.js';
 import { THEMES } from './highlight.js';
 import { Sync } from './sync.js';
 
@@ -286,7 +287,7 @@ const solid = (fill) => (fill && fill !== 'transparent' && fill !== 'none' ? fil
 function surfaceFill(el) {
   if (el.hidden) return null;
   if (el.type === 'frame') return solid(el.fill) || (el.fill ? null : '#ffffff');
-  if (el.type === 'sticky' || el.type === 'shape') return solid(el.fill);
+  if (el.type === 'sticky' || el.type === 'shape') return isIconKey(el.shape) ? null : solid(el.fill);
   if (el.type === 'table') return el.fill || '#ffffff';
   return el.type === 'card' ? '#ffffff' : null;
 }
@@ -916,6 +917,12 @@ export function loadElements(obj) {
   surfaces = null;
 }
 
+// Sobald die Symboldatei da ist, ersetzen die Symbole ihre Platzhalter
+onIconsLoaded(() => {
+  for (const el of app.els.values()) if (el.type === 'shape' && isIconKey(el.shape)) markDirty(el.id);
+  scheduleRender();
+});
+
 /* Vorschaubild für die Board-Übersicht */
 async function saveThumb() {
   if (app.viewOnly || app.session.privateMode?.active) return;
@@ -958,7 +965,7 @@ export function makeElement(type, x, y, o = {}) {
       return { ...base, x: x - 100, y: y - 100, w: 200, h: 200, fill: app.toolOpts.stickyColor, text: '', fontSize: 'auto', ...o };
     case 'shape': {
       const kind = o.shape || app.toolOpts.shape;
-      const d = SHAPE_DEFAULTS[kind] || {};
+      const d = isIconKey(kind) ? ICON_DEFAULTS : SHAPE_DEFAULTS[kind] || {};
       const w = d.w || 200, h = d.h || 140;
       // Beschriftung auf dem Board-Hintergrund: im dunklen Design hell, wie beim Textwerkzeug
       const label = {};
@@ -1555,7 +1562,8 @@ export function textCaretRects(el, target, pos, end = pos) {
   mirror.replaceChildren(text.slice(0, from), sel, mark, `${text.slice(to)}\u200b`);
   const base = stage.getBoundingClientRect();
   const rel = (r) => ({ x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height });
-  const out = { caret: rel(mark.getBoundingClientRect()), lines: from === to ? [] : [...sel.getClientRects()].map(rel) };
+  // Gedrehter Text: Der Spiegel ist mitgedreht, also ist die Marke kein senkrechter Strich, sondern ein waagerechter
+  const out = { caret: rel(mark.getBoundingClientRect()), rotated: el.type === 'shape' && textRotated(el.shape), lines: from === to ? [] : [...sel.getClientRects()].map(rel) };
   mirror.style.display = 'none';
   return out;
 }
@@ -1584,6 +1592,7 @@ function editorStyle(el, ed = app.editing, text = editor.value) {
     whiteSpace: el.type === 'code' ? 'pre' : '',
     tabSize: '2',
     background: el.type === 'connector' || el.type === 'frame' ? (app.settings.dark ? '#2a2b31' : '#ffffff') : 'transparent',
+    transform: el.type === 'shape' && textRotated(el.shape) ? 'rotate(-90deg)' : '',
   };
 }
 
@@ -1992,6 +2001,9 @@ export function holdTool(t) {
   toast(matchMedia('(pointer: coarse)').matches ? T('Werkzeug bleibt aktiv') : T('Werkzeug bleibt aktiv – Esc beendet'), 2500);
 }
 
+// Neue Elemente beginnen mit der Eingabe. Ein Symbol ist sofort fertig, die Beschriftung kommt bei Bedarf mit Enter oder Doppelklick.
+const typesFirst = (el) => ['sticky', 'shape', 'text', 'code'].includes(el.type) && !isIconKey(el.shape);
+
 const CREATE_AT_CENTER = new Set(['sticky', 'shape', 'frame', 'text', 'card', 'table', 'code']);
 
 function createAtCenter() {
@@ -2011,8 +2023,32 @@ function createAtCenter() {
   if (app.tool === 'shape') rememberShape(el.shape);
   afterCreate();
   setSelection([el.id]);
-  if (['sticky', 'shape', 'text', 'code'].includes(el.type)) startEdit(el.id, { isNew: true });
+  if (typesFirst(el)) startEdit(el.id, { isNew: true });
   else if (el.type === 'frame') startEdit(el.id);
+}
+
+// Form aus dem Panel: ohne Punkt in die Mitte der Ansicht (Tastatur), sonst an die Stelle, an der sie abgelegt wurde
+export function placeShape(kind, at) {
+  if (app.viewOnly) return;
+  app.toolOpts.shape = kind;
+  saveToolOpts();
+  if (!at) {
+    setTool('shape');
+    createAtCenter();
+    return;
+  }
+  const el = inColumn(makeElement('shape', snapV(at.x), snapV(at.y), { shape: kind }));
+  rememberShape(kind);
+  afterCreate();
+  if (!typesFirst(el)) {
+    act(() => setEl(el));
+    setSelection([el.id]);
+    return;
+  }
+  createAndEdit(el.id, () => {
+    setEl(el);
+    setSelection([el.id]);
+  }, false);
 }
 
 // Der Titel entsteht direkt auf der Karte wie der Text einer Notiz. Bleibt er leer, verschwindet die Karte wieder.
@@ -2092,6 +2128,7 @@ function rememberShape(k) {
   if (!k) return;
   app.toolOpts.recentShapes = [k, ...(app.toolOpts.recentShapes || []).filter((x) => x !== k)].slice(0, 6);
   saveToolOpts();
+  app.emit('shapeUsed', k);
 }
 
 /* ================================================================== */
@@ -3148,7 +3185,7 @@ function onUp(e) {
         createCard(el);
         break;
       }
-      if (['sticky', 'shape', 'text', 'code'].includes(el.type)) {
+      if (typesFirst(el)) {
         createAndEdit(el.id, () => {
           setEl(el);
           setSelection([el.id]);
@@ -3633,7 +3670,9 @@ export function copyFormat() {
 }
 
 function formatted(el) {
-  const keys = (FORMAT_KEYS[el.type] || []).filter((k) => FORMAT_KEYS[copiedFormat.type].includes(k));
+  // Ein Symbol bleibt das Symbol: Es überträgt nur Linie und Schrift, und nur die nimmt es an
+  const icon = isIconKey(el.shape) || isIconKey(copiedFormat.style.shape);
+  const keys = (FORMAT_KEYS[el.type] || []).filter((k) => FORMAT_KEYS[copiedFormat.type].includes(k) && !(icon && ['shape', 'fill', 'dash', 'valign'].includes(k)));
   const patch = {};
   for (const k of keys) {
     const v = copiedFormat.style[k];

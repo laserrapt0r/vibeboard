@@ -9,6 +9,7 @@ import { TEMPLATES } from './templates.js';
 import { hideBuiltin } from './gallery.js';
 import { insertTemplate, elementText, openShortcuts, exportItems, importItems, headerCommands, selectionCommands } from './ui.js';
 import { retroItems } from './retro.js';
+import { openShapesPanel } from './shapes-panel.js';
 import { savedViews, goToView, saveCurrentView, headings, goToHeading } from './guide.js';
 
 const SOURCES = [['#tools', () => T('Werkzeug')], ['#topbar', () => T('Board')], ['#topright', () => T('Board')], ['#bottom-left', () => T('Board')], ['#zoomctl', () => T('Ansicht')], ['#ctxbar', () => T('Auswahl')]];
@@ -111,6 +112,7 @@ function boardTexts() {
 
 function fromBoard(q, texts) {
   const out = frames().filter((f) => !f.hidden).map((f) => ({ id: 'f:' + f.id, label: f.title || T('Frame'), group: T('Frame'), run: () => jump(f.id) }));
+  if (!app.viewOnly) out.push({ id: 'shapes:all', label: T('Alle Formen'), group: T('Werkzeug'), also: T('formen symbole bibliothek flussdiagramm bpmn uml erd'), run: openShapesPanel });
   out.push({ id: 'view:new', label: T('Aktuelle Ansicht merken'), group: T('Ansicht'), run: saveCurrentView });
   savedViews().forEach((v, i) => out.push({ id: 'view:' + v.name, label: v.name, group: T('Gemerkte Ansicht'), hint: i < 9 ? `Alt+${i + 1}` : '', run: () => goToView(v) }));
   // Überschriften, Inhalte und Vorlagen nur bei einer Suche: Sonst überdecken sie die Befehle

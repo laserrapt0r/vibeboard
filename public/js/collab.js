@@ -231,7 +231,8 @@ function renderCarets() {
     }
     if (!r || r.caret.x < 0 || r.caret.y < 0 || r.caret.x > W || r.caret.y > H) continue;
     for (const l of r.lines) parts.push(h('div', { class: 'text-caret-mark', style: { left: l.x + 'px', top: l.y + 'px', width: l.w + 'px', height: l.h + 'px', background: p.color } }));
-    parts.push(h('div', { class: 'text-caret' + (now - p.caret.t > CARET_QUIET_MS ? ' quiet' : ''), style: { left: r.caret.x + 'px', top: r.caret.y + 'px', height: r.caret.h + 'px', background: p.color } },
+    const size = r.rotated ? { width: r.caret.w + 'px', height: '2px' } : { height: r.caret.h + 'px' };
+    parts.push(h('div', { class: 'text-caret' + (now - p.caret.t > CARET_QUIET_MS ? ' quiet' : ''), style: { left: r.caret.x + 'px', top: r.caret.y + 'px', ...size, background: p.color } },
       h('span', { class: 'text-caret-name', style: { background: p.color, color: readableOn(p.color) } }, p.name)));
   }
   caretLayer.replaceChildren(...parts);

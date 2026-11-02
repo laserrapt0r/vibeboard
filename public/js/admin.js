@@ -1,5 +1,6 @@
 // Administrationsoberfläche
 import { T, LOCALE, DEC } from './i18n.js';
+import { SHAPE_PACKS } from './shape-catalog.js';
 import { h, append, api, ICONS, toast, modal, confirmDialog, initials, relTime, fmtDate, loadPref, readableOn } from './util.js';
 import { menu } from './menu.js';
 import { accountMenuItems, openSecurityDialog } from './account.js';
@@ -795,11 +796,17 @@ async function brand() {
   const palette = h('textarea', { rows: 2, spellcheck: 'false', placeholder: '#1a1a1a #4262ff #12b886' }, d.palette);
   const sticky = h('textarea', { rows: 2, spellcheck: 'false', placeholder: '#fff9b1 #a6ccf5 #93d275' }, d.stickyColors);
   const hideBuiltin = h('input', { type: 'checkbox', checked: d.hideBuiltin });
+  const packsOff = String(d.shapePacksOff || '').split(/\s+/);
+  const packBoxes = SHAPE_PACKS.filter((p) => p.id !== 'basic').map((p) => {
+    const box = h('input', { type: 'checkbox', checked: !packsOff.includes(p.id) });
+    box.dataset.pack = p.id;
+    return box;
+  });
   const form = h('form', { class: 'form admin-form', onsubmit: async (e) => {
     e.preventDefault();
     err.hide();
     try {
-      await api('/api/admin/settings', { method: 'PUT', body: { design: { accent: accent.value, palette: palette.value, stickyColors: sticky.value, hideBuiltin: hideBuiltin.checked } } });
+      await api('/api/admin/settings', { method: 'PUT', body: { design: { accent: accent.value, palette: palette.value, stickyColors: sticky.value, hideBuiltin: hideBuiltin.checked, shapePacksOff: packBoxes.filter((b) => !b.checked).map((b) => b.dataset.pack).join(' ') } } });
       toast(T('Einstellungen gespeichert'));
       location.reload();
     } catch (ex) {
@@ -814,6 +821,9 @@ async function brand() {
   h('fieldset', {}, h('legend', {}, T('Vorlagen')),
     h('label', { class: 'check' }, hideBuiltin, T('Nur zentrale und eigene Vorlagen anbieten (mitgelieferte ausblenden)')),
     h('p', { class: 'muted small' }, T('Zentrale Vorlagen legst du im Board an: Exportieren & Importieren → Board als Vorlage speichern → Sichtbar für alle. Sie erscheinen bei allen unter „Unsere Vorlagen“.'))),
+  h('fieldset', {}, h('legend', {}, T('Formenpakete')),
+    packBoxes.map((box) => h('label', { class: 'check' }, box, SHAPE_PACKS.find((p) => p.id === box.dataset.pack).name)),
+    h('p', { class: 'muted small' }, T('Abgewählte Pakete erscheinen niemandem mehr in der Formenauswahl. Vorhandene Elemente bleiben unverändert, die Grundformen stehen immer zur Verfügung.'))),
   err.el,
   h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, T('Speichern'))));
   const { templates } = await api('/api/templates');

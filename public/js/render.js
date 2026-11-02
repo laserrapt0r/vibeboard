@@ -2,6 +2,9 @@
 import { T, LOCALE, DEC } from './i18n.js';
 import { esc, FONT, wrap, fitText, measure, contrastText, initials, unionRect, fontPx } from './util.js';
 import { tokenize, THEMES, MAX_LINES } from './highlight.js';
+import { CATALOG_SHAPES, CATALOG_DRAW, CATALOG_DEFAULTS, CATALOG_BELOW, CATALOG_ROUND, CATALOG_HIT, CATALOG_COLUMNS, CATALOG_VERTICAL, CATALOG_OUTLINES, CATALOG_OUTLINE_OF, catalogTextBox,
+  circleD, ellipseD, rectD, rrectD, lineD, diamondD } from './shape-catalog.js';
+import { isIconKey, iconReady, iconBody, iconsLoaded, loadIcons } from './icons.js';
 
 const own = (map, key) => (Object.hasOwn(map, key) ? map[key] : undefined);
 
@@ -28,17 +31,7 @@ export const SHAPES = [
   ['gear', T('Dienst / Konfiguration')], ['lock', T('Sicherheit / Zugriffsschutz')],
   ['pod', T('Pod')], ['deployment', T('Deployment / ReplicaSet')], ['k8sservice', T('Service')], ['ingress', T('Ingress')],
   ['k8snode', T('Knoten (Node)')], ['configmap', T('ConfigMap')], ['secret', T('Secret')], ['volume', T('Volume')],
-];
-
-// Gruppierung für die Formenauswahl
-export const SHAPE_GROUPS = [
-  [T('Grundformen'), ['rect', 'roundrect', 'ellipse', 'diamond', 'triangle', 'hexagon', 'parallelogram', 'trapezoid', 'star', 'pill', 'arrow', 'callout', 'cross', 'cloud']],
-  [T('Flussdiagramm'), ['pill', 'rect', 'diamond', 'parallelogram', 'document', 'multidoc', 'subprocess', 'manualinput', 'manualop', 'display', 'delay', 'cylinder', 'internalstorage', 'offpage', 'note']],
-  [T('UML'), ['umlclass', 'actor', 'ellipse', 'package', 'component', 'umlnode', 'note', 'roundrect', 'initial', 'final', 'diamond', 'forkbar', 'send', 'receive']],
-  [T('BPMN (Prozesse)'), ['roundrect', 'event', 'eventinter', 'eventend', 'gatewayx', 'gatewayplus', 'gatewayo', 'note', 'cylinder']],
-  [T('Netzwerk & Rechenzentrum'), ['router', 'switch', 'firewall', 'loadbalancer', 'accesspoint', 'internet', 'cloud', 'server', 'rack', 'storage', 'desktop', 'laptop', 'mobile', 'users']],
-  [T('Software & IT'), ['server', 'cylinder', 'queue', 'container', 'browser', 'laptop', 'firewall', 'cloud', 'actor', 'component', 'gear', 'lock']],
-  [T('Container-Plattform'), ['pod', 'deployment', 'k8sservice', 'ingress', 'k8snode', 'configmap', 'secret', 'volume']],
+  ...CATALOG_SHAPES,
 ];
 
 // Standardgröße und -werte neuer Formen (sonst 200 × 140)
@@ -54,6 +47,7 @@ export const SHAPE_DEFAULTS = {
   send: { w: 200, h: 90 }, receive: { w: 200, h: 90 },
   event: { w: 56, h: 56, fontSize: 12 }, eventinter: { w: 56, h: 56, fontSize: 12 }, eventend: { w: 56, h: 56, fontSize: 12 },
   gatewayx: { w: 72, h: 72, fontSize: 12 }, gatewayplus: { w: 72, h: 72, fontSize: 12 }, gatewayo: { w: 72, h: 72, fontSize: 12 },
+  ...CATALOG_DEFAULTS,
 };
 
 export const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace";
@@ -155,11 +149,13 @@ const r1 = (v) => Math.round(v * 10) / 10;
 const ICON_SHAPES = new Set(['router', 'loadbalancer', 'accesspoint', 'internet', 'gear', 'lock', 'users',
   'pod', 'deployment', 'k8sservice', 'ingress', 'k8snode', 'configmap', 'secret', 'volume']);
 const ICON_F = 0.7;
-const LABEL_BELOW = new Set(['event', 'eventinter', 'eventend', 'gatewayx', 'gatewayplus', 'gatewayo', 'initial', 'final', 'forkbar']);
-export const labelBelow = (k) => LABEL_BELOW.has(k);
+const LABEL_BELOW = new Set(['event', 'eventinter', 'eventend', 'gatewayx', 'gatewayplus', 'gatewayo', 'initial', 'final', 'forkbar', ...CATALOG_BELOW]);
+export const labelBelow = (k) => LABEL_BELOW.has(k) || isIconKey(k);
 // Beschriftung liegt auf dem Board-Hintergrund statt auf der Füllung der Form
-export const labelOutside = (k) => LABEL_BELOW.has(k) || ICON_SHAPES.has(k) || k === 'actor';
+export const labelOutside = (k) => labelBelow(k) || ICON_SHAPES.has(k) || k === 'actor';
 const iconSize = (w, h) => Math.min(w, h * ICON_F);
+// Text steht um 90° gedreht (Kopfstreifen von Pool und Lane)
+export const textRotated = (k) => CATALOG_VERTICAL.has(k);
 
 // full = Symbol füllt die ganze Fläche (Vorschau in der Formenauswahl)
 function iconBox(x, y, w, h, full) {
@@ -168,14 +164,6 @@ function iconBox(x, y, w, h, full) {
   const X = (u) => ix + u * s, Y = (v) => iy + v * s;
   return { s, X, Y, P: (u, v) => `${r1(X(u))},${r1(Y(v))}` };
 }
-const circleD = (cx, cy, r) => ellipseD(cx, cy, r, r);
-const ellipseD = (cx, cy, rx, ry) => `M${r1(cx - rx)},${r1(cy)} A${r1(rx)},${r1(ry)} 0 1 0 ${r1(cx + rx)},${r1(cy)} A${r1(rx)},${r1(ry)} 0 1 0 ${r1(cx - rx)},${r1(cy)} Z`;
-const rectD = (x, y, w, h) => `M${r1(x)},${r1(y)} H${r1(x + w)} V${r1(y + h)} H${r1(x)} Z`;
-function rrectD(x, y, w, h, r) {
-  r = Math.max(0, Math.min(r, w / 2, h / 2));
-  return `M${r1(x + r)},${r1(y)} H${r1(x + w - r)} A${r1(r)},${r1(r)} 0 0 1 ${r1(x + w)},${r1(y + r)} V${r1(y + h - r)} A${r1(r)},${r1(r)} 0 0 1 ${r1(x + w - r)},${r1(y + h)} H${r1(x + r)} A${r1(r)},${r1(r)} 0 0 1 ${r1(x)},${r1(y + h - r)} V${r1(y + r)} A${r1(r)},${r1(r)} 0 0 1 ${r1(x + r)},${r1(y)} Z`;
-}
-const lineD = (x1, y1, x2, y2) => `M${r1(x1)},${r1(y1)} L${r1(x2)},${r1(y2)}`;
 // Pfeil: Linie bis kurz vor die Spitze und gefüllte Spitze
 function arrowD(x1, y1, x2, y2, size) {
   const a = Math.atan2(y2 - y1, x2 - x1);
@@ -426,13 +414,11 @@ DRAW.umlnode = (x, y, w, h) => {
   const d = nodeDepth(w, h);
   return { main: `M${r1(x)},${r1(y + d)} H${r1(x + w - d)} V${r1(y + h)} H${r1(x)} Z M${r1(x)},${r1(y + d)} L${r1(x + d)},${r1(y)} H${r1(x + w)} V${r1(y + h - d)} L${r1(x + w - d)},${r1(y + h)} M${r1(x + w - d)},${r1(y + d)} L${r1(x + w)},${r1(y)}` };
 };
-function diamondD(x, y, w, h) {
-  return `M${r1(x + w / 2)},${r1(y)} L${r1(x + w)},${r1(y + h / 2)} L${r1(x + w / 2)},${r1(y + h)} L${r1(x)},${r1(y + h / 2)} Z`;
-}
+Object.assign(DRAW, CATALOG_DRAW);
 
 // Zusätzliche Teile einer Form: davor (under) und danach (Linien, gefüllte Details).
 // cls: Klasse für gefüllte Flächen (Vorschau in der Formenauswahl)
-export function shapeDecor(kind, x, y, w, h, { fill, stroke, sw, dash, full = false, cls = '' }) {
+export function shapeDecor(kind, x, y, w, h, { fill, stroke, sw, dash, full = false, cls = '', ink }) {
   const f = Object.hasOwn(DRAW, kind) ? DRAW[kind](x, y, w, h, full) : null;
   if (!f) return { before: '', after: '' };
   const c = cls ? T` class="${cls}"` : '';
@@ -440,6 +426,8 @@ export function shapeDecor(kind, x, y, w, h, { fill, stroke, sw, dash, full = fa
   let before = '', after = '';
   for (const d of f.under || []) before += `<path${c} d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${da} stroke-linejoin="round"/>`;
   if (f.lines) after += `<path d="${f.lines}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // Teile außerhalb der Füllung liegen auf dem Board und folgen dessen Farbe
+  if (f.outer) after += `<path d="${f.outer}" fill="none" stroke="${ink || stroke}" stroke-width="${sw}"${f.outerDash ? ` stroke-dasharray="${sw * 4} ${sw * 3}"` : ''} stroke-linecap="round"/>`;
   if (f.solid && stroke !== 'none') after += `<path d="${f.solid}" fill="${stroke}"/>`;
   if (f.ring && stroke !== 'none') after += `<path d="${f.ring}" fill="${stroke}" fill-rule="evenodd"/>`;
   return { before, after };
@@ -540,7 +528,7 @@ export const splitClassText = (text) => String(text || '').split('\n').reduce((a
 function umlClassSvg(el, x, y, w, h, outline, stroke, sw, color) {
   const size = fontPx(el.fontSize, 14), lh = size * LH, pad = 8, padY = 6;
   const secs = splitClassText(el.text);
-  while (secs.length < 3) secs.push([]);
+  while (secs.length < (el.shape === 'umlclass' ? 3 : 2)) secs.push([]);
   let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" ${outline}`;
   let cy = y, seps = '';
   secs.forEach((sec, i) => {
@@ -556,7 +544,7 @@ function umlClassSvg(el, x, y, w, h, outline, stroke, sw, color) {
       const ty = cy + padY + k * lh;
       if (ty + lh > y + h + 0.5) return;
       out += textSvg({ x: x + pad, y: ty, w: w - pad * 2, h: lh },
-        { size, lines: [ln.t], bold: ln.bold || (!name && !!el.bold), italic: !!el.italic }, { color, align: name ? 'center' : 'left', valign: 'top', underline: el.underline, strike: el.strike });
+        { size, lines: [ln.t], bold: ln.bold || (!name && !!el.bold), italic: !!el.italic }, { color, align: name ? 'center' : 'left', valign: 'top', underline: el.underline || (name && el.shape === 'umlobject'), strike: el.strike });
     });
     cy += sh;
     if (!last && cy < y + h - 1) seps += lineD(x, cy, x + w, cy) + ' ';
@@ -568,10 +556,12 @@ function umlClassSvg(el, x, y, w, h, outline, stroke, sw, color) {
 export function shapeTextBox(kind, x, y, w, h, pad = 10) {
   let ix = 0, iy = 0, iw = 1, ih = 1;
   // Kleine Formen (BPMN-Ereignisse, Gateways, Start/Ende): Beschriftung wie üblich unter der Form
-  if (LABEL_BELOW.has(kind)) {
+  if (labelBelow(kind)) {
     const bw = Math.max(w, 160);
     return { x: x + w / 2 - bw / 2, y: y + h + 4, w: bw, h: 60 };
   }
+  const own = catalogTextBox(kind, x, y, w, h, pad);
+  if (own) return own;
   // Symbole: Text im Streifen unter dem Symbol
   if (ICON_SHAPES.has(kind)) {
     const s = iconSize(w, h);
@@ -644,7 +634,7 @@ export function safeEl(el) {
     if (typeof o[k] === 'string' && COLOR_RE.test(o[k].trim())) o[k] = o[k].trim();
     else delete o[k];
   }
-  if (o.type === 'shape' && !SHAPE_KEYS.has(o.shape)) o.shape = 'rect';
+  if (o.type === 'shape' && !SHAPE_KEYS.has(o.shape) && !isIconKey(o.shape)) o.shape = 'rect';
   if (o.type === 'pen') o.points = Array.isArray(o.points) ? o.points.map((p) => (p && p.length > 2 ? [fin(p[0]), fin(p[1]), fin(p[2])] : [fin(p && p[0]), fin(p && p[1])])) : [];
   if (o.type === 'image' && o.crop) o.crop = { x: fin(o.crop.x), y: fin(o.crop.y), w: fin(o.crop.w) || 1, h: fin(o.crop.h) || 1 };
   if (o.type === 'connector') {
@@ -707,7 +697,7 @@ function autoSide(b, toward) {
 }
 
 // Schnittpunkt eines Strahls von der Mitte in Richtung (ax, ay) – normiert auf die halbe Breite/Höhe – mit dem Umriss
-const ROUND_SHAPES = new Set(['ellipse', 'cloud', 'initial', 'final', 'event', 'eventend', 'eventinter']);
+const ROUND_SHAPES = new Set(['ellipse', 'cloud', 'initial', 'final', 'event', 'eventend', 'eventinter', ...CATALOG_ROUND]);
 
 // Umrisse vieleckiger Formen in normierten Koordinaten (−1 … 1), passend zu shapeGeom()
 const STAR = Array.from({ length: 10 }, (_, i) => {
@@ -730,6 +720,8 @@ const POLYGONS = {
   receive: [[-1, -1], [1, -1], [1, 1], [-1, 1], [-0.7, 0]],
 };
 POLYGONS.gatewayx = POLYGONS.gatewayplus = POLYGONS.gatewayo = POLYGONS.diamond;
+Object.assign(POLYGONS, CATALOG_OUTLINES);
+for (const [k, base] of Object.entries(CATALOG_OUTLINE_OF)) POLYGONS[k] = POLYGONS[base];
 
 // Abstand k entlang des Strahls (0,0) + k·(dx,dy) bis zum ersten Schnitt mit dem Vieleck
 function rayPolygon(poly, dx, dy) {
@@ -1028,6 +1020,50 @@ export function shapeTextColor(el, env) {
   const open = !el.fill || el.fill === 'transparent' || el.fill === 'none';
   if (labelOutside(el.shape) || open) return inked(env, el, el.textColor || '#1a1a1a');
   return el.textColor || contrastText(el.fill);
+}
+
+/* ---------------- Allgemeine Symbole ---------------- */
+
+const ICON_GRID = 24;
+const AUTO_LINE = new Set(['#1a1a1a', '#f1f1f1', '#e6e6e6']);
+
+// Solange die Daten fehlen, zeigt der Rahmen an, wo das Symbol hinkommt. Kennt der Satz den Namen nicht, steht er im Rahmen.
+function iconPlaceholder(el, x, y, w, h, color) {
+  const frame = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w, h) * 0.1}" fill="none" stroke="#868e96" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  if (!iconsLoaded()) return frame;
+  const size = Math.max(8, Math.min(13, w / 8));
+  const name = String(el.shape).slice(3);
+  return frame + `<text x="${r1(x + w / 2)}" y="${r1(y + h / 2 + size / 3)}" font-family="${esc(FONT)}" font-size="${size}" text-anchor="middle" fill="${color}">${esc(name.length * size * 0.55 > w ? name.slice(0, Math.floor(w / (size * 0.55))) + '…' : name)}</text><title>${esc(name)}</title>`;
+}
+
+// Die Strichstärke zählt im Raster des Symbols und wächst mit der Größe mit. Das Symbol verzerrt nicht, es sitzt mittig im Rahmen.
+function iconSvg(el, env, x, y, w, h) {
+  const stroke = inked(env, el, el.stroke && el.stroke !== 'none' ? el.stroke : '#1a1a1a');
+  const sw = Math.max(0.5, Math.min(4, el.strokeWidth || 2));
+  const hit = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent" class="hit"/>`;
+  const box = shapeTextBox(el.shape, x, y, w, h);
+  const color = shapeTextColor(el, env);
+  const label = textSvg(box, textLayout(el, box), { color, align: el.align || 'center', valign: 'top', underline: el.underline, strike: el.strike });
+  if (!iconsLoaded()) loadIcons().catch(() => {});
+  if (!iconReady(el.shape)) return hit + iconPlaceholder(el, x, y, w, h, color) + label;
+  const s = Math.min(w, h) / ICON_GRID;
+  const tx = r1(x + (w - ICON_GRID * s) / 2), ty = r1(y + (h - ICON_GRID * s) / 2);
+  return `${hit}<g transform="translate(${tx} ${ty}) scale(${Math.round(s * 1000) / 1000})" color="${stroke}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${iconBody(el.shape)}</g>${label}`;
+}
+
+// Exporte kennen die Farbe des Untergrunds nicht. Für Symbole wird sie hier bestimmt: list steht in der Zeichenreihenfolge.
+export function iconForExport(el, list) {
+  if (!isIconKey(el.shape) || !AUTO_LINE.has(String(el.stroke || '#1a1a1a').toLowerCase())) return el;
+  const cx = fin(el.x) + fin(el.w) / 2, cy = fin(el.y) + fin(el.h) / 2;
+  let under = null;
+  for (const s of list) {
+    if (s.id === el.id) break;
+    const open = !s.fill || s.fill === 'transparent' || s.fill === 'none';
+    if (['sticky', 'shape', 'frame'].includes(s.type) && !open && !isIconKey(s.shape) && cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h) under = s.fill;
+  }
+  if (!under) return el;
+  const c = contrastText(under);
+  return { ...el, stroke: c, textColor: el.textColor || c };
 }
 
 export function cellNumber(v) {
@@ -1353,19 +1389,21 @@ function renderBody(el, env) {
       const sw = el.strokeWidth ?? 2;
       const dash = dashFor(el);
       const kind = el.shape || 'rect';
+      if (isIconKey(kind)) return iconSvg(el, env, x, y, w, h);
       // 'none' = ohne Füllung und innen durchklickbar (z. B. Rahmen von Blöcken im Sequenzdiagramm)
       const fillAttr = fill === 'transparent' ? 'rgba(255,255,255,0.001)' : fill;
       const color = shapeTextColor(el, env);
       const outline = T`fill="${fillAttr}" stroke="${stroke}" stroke-width="${sw}"${dash ? T` stroke-dasharray="${dash}"` : ''} stroke-linejoin="round"/>`;
-      if (kind === 'umlclass') return umlClassSvg(el, x, y, w, h, outline, stroke, sw, color);
+      if (kind === 'umlclass' || CATALOG_COLUMNS.has(kind)) return umlClassSvg(el, x, y, w, h, outline, stroke, sw, color);
       const geo = shapeGeom(kind, x, y, w, h);
-      const deco = shapeDecor(kind, x, y, w, h, { fill: fillAttr, stroke, sw, dash });
+      const deco = shapeDecor(kind, x, y, w, h, { fill: fillAttr, stroke, sw, dash, ink: inked(env, el, el.stroke || '#1a1a1a') });
       // Symbole mit Beschriftung darunter: auch neben dem Symbol und auf dem Text anklickbar
-      const hit = ICON_SHAPES.has(kind) ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent" class="hit"/>` : '';
+      const hit = ICON_SHAPES.has(kind) || CATALOG_HIT.has(kind) ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent" class="hit"/>` : '';
       const box = shapeTextBox(kind, x, y, w, h);
       const lay = textLayout(el, box);
+      const label = textSvg(box, lay, { color, align: el.align || 'center', valign: LABEL_BELOW.has(kind) ? 'top' : el.valign || 'middle', underline: el.underline, strike: el.strike });
       return hit + deco.before + `${geo} ${outline}` + deco.after +
-        textSvg(box, lay, { color, align: el.align || 'center', valign: LABEL_BELOW.has(kind) ? 'top' : el.valign || 'middle', underline: el.underline, strike: el.strike });
+        (label && CATALOG_VERTICAL.has(kind) ? `<g transform="rotate(-90 ${r1(box.x + box.w / 2)} ${r1(box.y + box.h / 2)})">${label}</g>` : label);
     }
     case 'text': {
       const pad = 4;
@@ -1623,7 +1661,7 @@ export function renderSvgDocument(elements, { padding = 40, background = '#fffff
     vb.y -= 40;
     vb.h += 40;
   }
-  const body = list.map((e) => `<g>${renderElement(e, { get, redactPrivate, seesConcealed, noExternal: true })}</g>`).join('');
+  const body = list.map((e) => `<g>${renderElement(iconForExport(e, list), { get, redactPrivate, seesConcealed, noExternal: true })}</g>`).join('');
   return {
     svg: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" width="${width || vb.w}" height="${height || vb.h}"><defs>${defsMarkup()}</defs>` +
       (background ? `<rect x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="${esc(background)}"/>` : '') + body + '</svg>',

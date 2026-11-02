@@ -110,6 +110,7 @@
 - **Akzeptanzkriterien:**
   - Akzentfarbe sowie die Farben für Formen, Text und Notizen sind einstellbar; die Auswahl zeigt dann nur diese Farben. Bestehende Elemente bleiben unverändert.
   - Schrift auf der Akzentfarbe und Links passen sich an, damit der Kontrast nach REQ-NFR-009 erhalten bleibt.
+  - Geändert in 4.18.0: Unter „Formenpakete“ legt die Administration fest, welche Pakete verfügbar sind. Standard: alle eingebauten. Die Grundformen lassen sich nicht abschalten. Abgeschaltete Pakete verschwinden aus Menü, Panel und persönlicher Verwaltung, vorhandene Elemente bleiben unverändert. Das gilt auch für das Paket „Allgemeine Symbole“.
 
 ### REQ-ADMIN-013 Anbindungen
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt

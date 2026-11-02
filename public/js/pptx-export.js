@@ -1,8 +1,9 @@
 // Export nach PowerPoint: Jeder Frame wird eine Folie. Text, Formen, Linien, Bilder und Tabellen bleiben in PowerPoint
 // bearbeitbar, alles andere (Karten, Diagramme, Code, Zeichnungen) kommt als Bild.
-import { connectorGeom, textLayout, elBounds, shownCells } from './render.js';
+import { connectorGeom, textLayout, elBounds, shownCells, labelBelow, shapeTextBox, iconForExport } from './render.js';
+import { isIconKey, iconsFor } from './icons.js';
 import { pngDataUrl } from './exporter.js';
-import { contrastText } from './util.js';
+import { contrastText, unionRect } from './util.js';
 import { writeZip } from './zip.js';
 
 const EMU = 9525;
@@ -12,6 +13,10 @@ const TITLE_BAND = TITLE_BOX.y + TITLE_BOX.h + 8;
 const PRST = {
   rect: 'rect', roundrect: 'roundRect', ellipse: 'ellipse', triangle: 'triangle', diamond: 'diamond', hexagon: 'hexagon', parallelogram: 'parallelogram',
   trapezoid: 'trapezoid', star: 'star5', pill: 'flowChartTerminator', cloud: 'cloud', cylinder: 'can', document: 'flowChartDocument',
+  pentagon: 'pentagon', octagon: 'octagon', leftarrow: 'leftArrow', doublearrow: 'leftRightArrow', chevron: 'chevron', arrowflag: 'homePlate', snipcorner: 'snip1Rect',
+  braceleft: 'leftBrace', braceright: 'rightBrace', preparation: 'flowChartPreparation', directstorage: 'flowChartMagneticDrum', punchcard: 'flowChartPunchedCard', punchtape: 'flowChartPunchedTape',
+  fcsort: 'flowChartSort', fcmerge: 'flowChartMerge', fcextract: 'flowChartExtract', collate: 'flowChartCollate', storeddata: 'flowChartOnlineStorage', fcconnector: 'flowChartConnector',
+  seqaccess: 'flowChartMagneticTape', erkey: 'ellipse', dfdprocess: 'ellipse', cloudround: 'cloud', cloudwide: 'cloud',
 };
 const XMLNS = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"';
 const REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
@@ -90,7 +95,13 @@ class Slide {
   }
 }
 
-async function addElement(slide, el, map, s, get) {
+// Auch Schriftgröße „auto“: Sonst wäre die Fläche ungültig und die Form fehlte ohne Meldung auf der Folie
+function labelHeight(el, box) {
+  const lay = textLayout(el, box);
+  return lay.lines.length * lay.size * 1.3;
+}
+
+async function addElement(slide, el, map, s, get, all) {
   const b0 = elBounds(el, get);
   const b = map(b0);
   // Gewählte Größen messen wie auf dem Board im Innenrahmen, sonst stünde die verkleinerte Schrift hier wieder groß
@@ -102,8 +113,8 @@ async function addElement(slide, el, map, s, get) {
     case 'text':
       return slide.shape(b, { text: el.text, size, color: el.color || '#1a1a1a', italic: el.italic, underline: el.underline, strike: el.strike, bold: el.bold, align: el.align || 'left', anchor: 't', txBox: true, name: 'Text' });
     case 'shape':
-      if (PRST[el.shape || 'rect']) {
-        return slide.shape(b, { prst: PRST[el.shape || 'rect'], fill: el.fill, stroke: el.stroke, width: el.strokeWidth ?? 2, text: el.text, size, color: el.textColor || contrastText(el.fill), bold: el.bold, align: el.align || 'center' });
+      if (Object.hasOwn(PRST, el.shape || 'rect')) {
+        return slide.shape(b, { prst: PRST[el.shape || 'rect'], fill: el.fill, stroke: el.stroke, width: el.strokeWidth ?? 2, text: el.text, size, color: el.textColor || contrastText(el.fill), bold: el.bold, underline: el.underline, align: el.align || 'center' });
       }
       break;
     case 'frame':
@@ -131,8 +142,13 @@ async function addElement(slide, el, map, s, get) {
   }
   if (el.type === 'comment' || el.hidden) return undefined;
   // Alles andere als Bild, damit nichts verloren geht
-  const url = await pngDataUrl([el], { scale: 2, maxSize: 2000, padding: 0, background: 'transparent', bounds: b0, redactPrivate: true }).catch(() => null);
-  if (url) slide.image(b, url);
+  // Eine Beschriftung unter der Form gehört mit ins Bild
+  const below = el.type === 'shape' && el.text && labelBelow(el.shape) ? shapeTextBox(el.shape, el.x, el.y, el.w, el.h) : null;
+  const area = below ? unionRect([b0, { ...below, h: labelHeight(el, below) }]) : b0;
+  // Symbole sind Linien und klein: Mit mehr Bildpunkten bleiben sie auch auf großen Folien scharf
+  const icon = isIconKey(el.shape);
+  const url = await pngDataUrl([icon ? iconForExport(el, all) : el], { scale: icon ? 6 : 2, maxSize: 2000, padding: 0, background: 'transparent', bounds: area, redactPrivate: true }).catch(() => null);
+  if (url) slide.image(below ? map(area) : b, url);
   return undefined;
 }
 
@@ -157,7 +173,8 @@ export async function buildPptx(slides, get) {
     const map = (b) => ({ x: ox + (b.x - bounds.x) * s, y: oy + (b.y - bounds.y) * s, w: (b.w || 0) * s, h: (b.h || 0) * s });
     const slide = new Slide(i + 1, media);
     if (title) slide.title(title);
-    for (const el of elements) await addElement(slide, el, map, s, get);
+    await iconsFor(elements);
+    for (const el of elements) await addElement(slide, el, map, s, get, elements);
     parts.push({ name: `ppt/slides/slide${i + 1}.xml`, data: slide.render() });
     parts.push({ name: `ppt/slides/_rels/slide${i + 1}.xml.rels`, data: `${HEAD}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${slide.rels.join('')}</Relationships>` });
   }

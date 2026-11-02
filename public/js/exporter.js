@@ -2,6 +2,7 @@
 import { T } from './i18n.js';
 import { renderSvgDocument } from './render.js';
 import { esc } from './util.js';
+import { iconsFor } from './icons.js';
 
 export function download(name, blobOrUrl) {
   const a = document.createElement('a');
@@ -23,6 +24,7 @@ export function svgString(elements, opts) {
 }
 
 async function renderCanvas(elements, { scale = 2, maxSize = 8000, background = '#ffffff', bounds, padding, redactPrivate, seesConcealed = true } = {}) {
+  await iconsFor(elements);
   const { svg, viewBox } = renderSvgDocument(elements, { background, bounds, padding, redactPrivate, seesConcealed });
   let s = scale;
   if (viewBox.w * s > maxSize || viewBox.h * s > maxSize) s = Math.min(maxSize / viewBox.w, maxSize / viewBox.h);
@@ -159,6 +161,12 @@ export async function printFrames(list, rawTitle) {
   const win = window.open('', '_blank');
   if (!win) throw new Error(T('Pop-up wurde blockiert'));
   win.document.write(`<!doctype html><title>${title}</title><p style="font-family:sans-serif">${T('PDF wird vorbereitet …')}</p>`);
+  try {
+    await iconsFor(list.flatMap((p) => p.elements));
+  } catch (e) {
+    win.close();
+    throw e;
+  }
   // Der viewBox schneidet auf die Seite zu
   const pages = list.map(({ elements, bounds, padding }) => renderSvgDocument(elements, { bounds, padding }).svg);
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>

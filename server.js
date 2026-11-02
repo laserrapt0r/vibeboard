@@ -16,7 +16,7 @@ const setup = require('./lib/setup');
 const versions = require('./lib/version');
 const { Router } = require('./lib/router');
 const fs = require('fs');
-const { isConnectionError, HttpError, json, redirect, serveFile, serveStatic, isHttps } = require('./lib/http');
+const { isConnectionError, HttpError, json, redirect, serveFile, serveStatic, serveVersioned, isHttps } = require('./lib/http');
 const pkg = require('./package.json');
 const settings = require('./lib/settings');
 const i18n = require('./lib/i18n');
@@ -117,6 +117,7 @@ async function handlePage(req, res, url) {
   if (p === '/vendor/pdfjs/pdf.min.mjs' || p === '/vendor/pdfjs/pdf.worker.min.mjs') {
     return serveFile(res, path.join(__dirname, 'node_modules', 'pdfjs-dist', 'build', path.basename(p)));
   }
+  if (/^\/vendor\/icons\/tabler-outline-\d+\.\d+\.\d+\.json$/.test(p)) return serveVersioned(req, res, path.join(PUBLIC_DIR, p));
   // Service Worker der installierbaren App: muss vom Wurzelpfad kommen und immer frisch geprüft werden
   if (p === '/sw.js') return serveFile(res, page('sw.js'), { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' });
   // Unbekannte Seiten bekommen eine erklärende Seite, fehlende Dateien weiter nur den Status

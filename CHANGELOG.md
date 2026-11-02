@@ -4,10 +4,30 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.18.0] – 2026-11-02
+
+### Hinzugefügt
+- Formenkatalog auf 146 Formen erweitert: mehr Grundformen, Flussdiagramm nach ISO 5807, BPMN mit Ereignisarten, Aufgabentypen, Pool und Lane, UML mit Lebenslinie, Aktivierung und Fragment, dazu ERD, Data Flow, Value Stream und Bausteine für Architekturdiagramme.
+- Panel „Alle Formen“ links, erreichbar aus dem Formen-Menü und der Befehlssuche: Suche mit Synonymen und Tippfehlertoleranz, klappbare Gruppen, „Zuletzt verwendet“, Ablegen per Ziehen, Tastatur und Handy.
+- „Formen verwalten“: Pakete je Person ein- und ausblenden, im Konto gespeichert (Migration 16). Die Administration legt unter „Design & Vorlagen“ fest, welche Pakete verfügbar sind.
+- Allgemeine Symbole: 4711 Liniensymbole aus Tabler Icons (MIT, Version 3.50.0) als Paket im Panel, in 14 Untergruppen und seitenweise angezeigt. Die Suche findet Formen und Symbole zusammen, mit einer gepflegten deutschen Liste für über 600 Motive, englisch über die Stichwörter des Satzes, häufige Motive auch auf Spanisch und Französisch. Die Symboldatei (1,2 MB, gepackt 0,27 MB) kommt erst beim Öffnen des Panels oder mit dem ersten Symbol auf dem Board.
+- Symbole auf dem Board: Linienfarbe, Linienstärke, Beschriftung unter dem Symbol, Andockpunkte, Vorlagen, Kopien und Format übertragen. SVG, PNG, PDF und PPTX warten auf die Daten und zeigen die Symbole richtig.
+- `npm run build:icons` erzeugt die Symboldatei neu, wenn `@tabler/icons` aktualisiert wird. Im Betrieb läuft dieser Schritt nicht.
+
+### Geändert
+- Das Formen-Menü zeigt nur noch zuletzt verwendete Formen, Grundformen und „Alle Formen“. „Form ändern“ gliedert die übrigen Pakete in Untermenüs.
+- PowerPoint-Export: Mehr Formen bleiben bearbeitbar. Eine Beschriftung unter einer Form, die als Bild exportiert wird, wird nicht mehr abgeschnitten.
+- draw.io-Import: Flussdiagramm-Formen und weitere Formen werden abgebildet; `step` wird zum Chevron statt zur Pille.
+- Der Server begrenzt Formnamen auf Buchstaben, Ziffern, `_` und `-`. Unbekannte, harmlose Namen bleiben erhalten und erscheinen als Rechteck.
+- Die Befehlssuche findet „Alle Formen“ auch über das Wort „Symbole“. Einzelne Symbole stehen dort bewusst nicht.
+
+### Behoben
+- Fremde Cursor in gedrehtem Text (Pool, Lane) standen falsch: Sie lagen längs der Zeile statt quer dazu und waren kaum zu sehen.
+
 ## [4.17.0] – 2026-11-02
 
 ### Hinzugefügt
-- Ansicht verschieben mit gedrückter rechter Maustaste, wie in Miro, auch über Elementen. Rechtsklick und mittlere Maustaste funktionieren wie bisher.
+- Ansicht verschieben mit gedrückter rechter Maustaste, auch über Elementen. Rechtsklick und mittlere Maustaste funktionieren wie bisher.
 - Webhooks für Prüfungen: Angefordert, genehmigt und abgelehnt lassen sich im eigenen Webhook abonnieren.
 
 ### Geändert
