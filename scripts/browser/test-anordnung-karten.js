@@ -1,6 +1,6 @@
 // Anordnung neuer Elemente, Kanban und Karten, Live-Listen, Automatikfarbe im hellen Design
 const fs = require('fs');
-const { launch, BASE, TMP } = require('./lib');
+const { launch, BASE, TMP, boardMenu } = require('./lib');
 let f = 0;
 const ok = (c, m, x) => {
   console.log((c ? 'ok  ' : 'FAIL') + ' ' + m + (c || x === undefined ? '' : ' → ' + JSON.stringify(x).slice(0, 400)));
@@ -218,15 +218,17 @@ const template = (p, id) =>
     const i = document.querySelector('.modal input[type=text]');
     return i ? { v: i.value, s: i.selectionStart, e: i.selectionEnd, f: document.activeElement === i } : null;
   });
-  const d = await inDlg();
-  ok(d && d.f && d.s === 0 && d.e === d.v.length && d.v === 'Neue Karte', 'Titel ist markiert', d);
+  // Das Kartenwerkzeug legt die Karte an, der Titel entsteht direkt auf ihr
+  const inEditor = () => A.evaluate(() => ({ f: document.activeElement?.id === 'editor', v: document.getElementById('editor').value, dialog: !!document.querySelector('.modal') }));
+  const d = await inEditor();
+  ok(d.f && d.v === '' && !d.dialog, 'Der Fokus steht im Titel, ohne Dialog', d);
   await A.keyboard.type('Login mit SSO');
-  ok((await inDlg()).v === 'Login mit SSO', 'Tippen ersetzt den Titel', await inDlg());
-  await A.evaluate(() => document.querySelector('.modal button[type=submit]').click());
+  ok((await inEditor()).v === 'Login mit SSO', 'Tippen schreibt den Titel', await inEditor());
+  await key(A, 'Enter');
   await wait(300);
   const made = (await cardsNow()).find((e) => e.title === 'Login mit SSO');
   ok(made && made.status === names[2], 'Neue Karte hat den Status der Spalte', made);
-  // Esc und Knopf: unveränderte neue Karte verschwindet
+  // Esc und Klick daneben: unveränderte neue Karte verschwindet
   const beforeUndo = await core(A, (c) => c.canUndo());
   await core(A, (c) => c.undo());
   await wait(200);
@@ -243,10 +245,10 @@ const template = (p, id) =>
   await core(A, (c) => c.redo());
   await wait(200);
   await cardIn(zones[0]);
-  await A.evaluate(() => [...document.querySelectorAll('.modal button')].find((b) => /Abbrechen/.test(b.textContent)).click());
+  await A.mouse.click(30, 450);
   await wait(300);
-  ok((await cardsNow()).length === n0 + 1, 'Abbrechen entfernt sie ebenso');
-  // Mit Eingabe bleibt sie beim Abbrechen, bestehende Karten bleiben immer
+  ok((await cardsNow()).length === n0 + 1, 'Klick daneben entfernt sie ebenso');
+  // Mit Eingabe bleibt sie, bestehende Karten bleiben immer
   await cardIn(zones[0]);
   await A.keyboard.type('Getippt');
   await key(A, 'Escape');
@@ -403,7 +405,7 @@ const template = (p, id) =>
     await key(A, 'Enter');
     await wait(250);
     await A.keyboard.type('Eins');
-    await A.evaluate(() => document.querySelector('.modal button[type=submit]').click());
+    await key(A, 'Enter');
     await wait(250);
   };
   await enterShape();
@@ -524,7 +526,7 @@ const template = (p, id) =>
   ok(/Treffer|1 \/ 1/.test(await cnt()) && (await core(A, (c) => c.app.searchHits.length)) === 1, 'Neuer Treffer erscheint', await cnt());
   await key(A, 'Escape');
   await wait(100);
-  await A.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.title || b.getAttribute('aria-label')) === 'Elementliste').click());
+  await boardMenu(A, 'Elementliste');
   await wait(300);
   const liste = () => A.evaluate(() => [...document.querySelectorAll('.element-list button')].map((b) => b.textContent));
   ok((await liste()).length === 1, 'Elementliste zeigt den Stand', await liste());

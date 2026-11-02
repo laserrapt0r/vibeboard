@@ -166,6 +166,8 @@ const api = (p, m, u, b) =>
     c.setSelection(['n']);
   });
   await wait(300);
+  await p.evaluate(() => document.querySelector('#ctxbar [title="Text"]').click());
+  await wait(200);
   ok(await p.evaluate(() => !!document.querySelector('#ctxbar [title="Textfarbe"]')), 'Notiz hat Schaltfläche für die Textfarbe');
   ok(errs.length === 0, 'keine Browserfehler', errs.slice(0, 3));
   await b.close();

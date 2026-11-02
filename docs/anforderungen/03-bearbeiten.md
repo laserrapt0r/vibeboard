@@ -28,6 +28,7 @@
     - Elemente rasten auch an Tabellenlinien ein (z. B. Wochen im Gantt-Diagramm) und an gleichen Abständen zu Nachbarn in derselben Reihe oder Spalte (Abstandsmarken mit Zahl). Die Position wird angezeigt.
     - Mit eingeschaltetem Raster bewegen die Pfeiltasten um eine Rasterweite.
   - Geändert in 3.4.0 – Exakte Werte: Über „B×H“ in der Kontextleiste lassen sich X, Y, Breite und Höhe eingeben, optional mit festem Seitenverhältnis. Bei Mehrfachauswahl verschieben X/Y die Auswahl, Breite/Höhe gelten für jedes Element.
+  - Geändert in 4.16.0: Die exakten Werte stehen im Menü „Mehr“ der Kontextleiste unter „Position und Größe …“ statt hinter „B×H“.
 
 ### REQ-EDIT-003 Texteingabe direkt auf dem Board
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -40,7 +41,7 @@
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Links, horizontal mittig, rechts, oben, vertikal mittig, unten; horizontal/vertikal gleichmäßig verteilen; als Raster anordnen.
-  - Sticky Notes lassen sich nach Farbe in Gruppen clustern.
+  - Notizen lassen sich nach Farbe in Gruppen clustern.
   - Geändert in 3.4.0:
     - Gleiche Breite, gleiche Höhe oder gleiche Größe; Referenz ist das zuerst ausgewählte Element.
     - Lückenlos oder mit festem Abstand aneinanderreihen (Reihenfolge nach Lage).
@@ -67,7 +68,7 @@
 - **Akzeptanzkriterien:**
   - Strg+C/X/V über die System-Zwischenablage, auch zwischen Boards; Strg+D dupliziert.
   - Verbindungen zwischen kopierten Elementen bleiben erhalten; Frames werden mit Inhalt kopiert.
-  - Mehrzeiliger Text erzeugt eine Sticky Note pro Zeile; eine einzelne URL wird als Link-Text eingefügt.
+  - Mehrzeiliger Text erzeugt eine Notiz pro Zeile; eine einzelne URL wird als Link-Text eingefügt.
   - Geändert in 4.15.0: Einfügen und Enter mit Werkzeug legen nichts deckungsgleich ab, sondern versetzen um ein Rastermaß. Ein Verbinder, dessen eines Ende nicht mitkopiert wurde, bekommt beim Kopieren ein freies Ende an derselben Stelle und kommt so auch in anderen Boards an.
 
 ### REQ-EDIT-007 Rückgängig und Wiederholen
@@ -92,6 +93,11 @@
   - Geändert in 4.15.0: Suche und Elementliste folgen dem Board, auch bei Änderungen anderer, ohne die Ansicht zu bewegen. Ein inzwischen gelöschtes Element in der Elementliste wird gemeldet und nicht ausgewählt.
   - Geändert in 4.15.0: Das Kontextmenü ist ein vollwertiges Menü: Rollen, Pfeiltasten, Pos1, Ende, Esc, Symbole und Trenner; die Tasten wirken nicht auf die Auswahl dahinter. Menütaste und Umschalt+F10 öffnen es. Neu ist „Text bearbeiten“, die Einträge sind gruppiert: Bearbeiten, Zwischenablage, Anordnen, Sperren, Zusammenarbeit, Löschen.
   - Geändert in 4.15.0: „Frame samt Inhalt löschen“ meldet die Menge mit dem Knopf „Rückgängig“.
+  - Geändert in 4.16.0: Die Leiste zeigt nur Farbe, Text, Link, Kommentar, Sperren, Mehr und Löschen, siehe [REQ-EDIT-017](#req-edit-017-kontextleiste-und-menü-mehr). Das Kontextmenü folgt denselben Gruppen.
+  - Geändert in 4.16.0: Die Tastenkürzel-Übersicht führt B für die Tabelle und D für den Code-Block. Die Taste H heißt „Ansicht verschieben“.
+  - Geändert in 4.16.0: Die Übersicht liegt in der Hilfe, hat ein Suchfeld und zeigt Häufiges zuerst, siehe [REQ-EDIT-021](#req-edit-021-hilfe). `?` öffnet sie weiterhin direkt.
+  - Geändert in 4.16.0: Strg+Umschalt+Pfeil hoch und runter legen die Auswahl ganz nach vorn und ganz nach hinten, auch auf deutscher Tastatur.
+  - Geändert in 4.16.0: Die Kontextleiste bleibt beim Tippen sichtbar, siehe [REQ-EDIT-020](#req-edit-020-formatieren-beim-tippen).
 
 ### REQ-EDIT-009 Automatisches Layout und Swimlanes
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -135,6 +141,7 @@
   - Vollständig per Tastatur und mit Bildschirmleser bedienbar: Pfeiltasten wählen, Enter führt aus, Esc schließt. Der Fokus kehrt danach zurück.
   - Geändert in 4.11.5: Die Palette bietet keine Vorlagen an, die die Administration ausgeblendet hat.
   - Geändert in 4.15.0: Die Suche kennt Synonyme je Befehl und sucht in Gruppennamen. Export-Formate, Import, Retro-Einträge und „Personen einladen“ sind eigene Befehle, was die Rolle nicht darf, erscheint nicht. Filter und Retro sind auch in schmalen Fenstern zu finden.
+  - Geändert in 4.16.0: Die Palette findet auch, was in Menüs oder hinter „Mehr“ liegt: Boardmenü, Moderieren, Importieren und die Einträge für die Auswahl. Untermenüs werden ab zwei Zeichen durchsucht, doppelte Einträge erscheinen einmal.
 
 ### REQ-EDIT-014 Format übertragen
 - **Seit:** 4.9.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -143,6 +150,7 @@
   - Über die Tastatur: Strg+Alt+C kopiert das Format, Strg+Alt+V wendet es auf die Auswahl an. Beides steht auch im Menü „Mehr“ und im Kontextmenü, dort auch „Format übertragen“.
   - Übertragen wird nach Bedeutung, auch zwischen Elementarten: Fläche (bei Karten die Farbe), Linie, Textfarbe, Schrift und Ausrichtung, zwischen Formen auch die Form, bei Verbindern auch Linienverlauf und Enden. Haben zwei Elementarten nicht alles gemeinsam, zum Beispiel eine Notiz ohne Rahmen, weist ein Hinweis darauf hin. Text, Größe und Lage bleiben. Tabellen übertragen ihr Gesamtformat, nicht das einzelner Zellen.
   - Hat das Ausgangselement keine eigene Fläche oder Linie, behält das Ziel seine. Die automatische Schriftfarbe wird dagegen mit übertragen; nur Textelemente behalten ihre feste Farbe. Notizen haben dafür auch eine Schaltfläche für die Textfarbe. Gesperrte und fixierte Elemente bleiben unverändert. Das Übertragen lässt sich rückgängig machen.
+  - Geändert in 4.16.0: Format übertragen steht im Menü „Mehr“ und im Kontextmenü, „Format mehrfach übertragen“ ersetzt den Doppelklick. Solange der Pinsel läuft, zeigt die Leiste einen Knopf zum Beenden.
 
 ### REQ-EDIT-015 Einstieg
 - **Seit:** 4.10.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -150,3 +158,62 @@
 - **Akzeptanzkriterien:**
   - Ein leeres Board bietet Personen mit Bearbeitungsrecht an: Notiz schreiben, Vorlage wählen und für Besitzer Personen einladen. Das Angebot lässt sich schließen und verschwindet mit dem ersten Element, auch wenn es jemand anderes anlegt, sowie solange ein Werkzeug gewählt ist. Beim Hereinziehen einer Datei schließt es sich, damit sie auf der Zeichenfläche landet.
   - Beim ersten Bearbeiten einer Notiz, einer Tabellenzelle und eines Mindmap-Knotens erscheint je einmal ein kurzer Hinweis. Betrachter sehen nichts davon.
+
+### REQ-EDIT-016 Kopfzeile und Boardmenü
+- **Seit:** 4.16.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Die Kopfzeile des Boards ist nach Aufgaben geordnet statt einer Reihe unbeschrifteter Symbole.
+- **Akzeptanzkriterien:**
+  - Das Boardmenü neben dem Namen enthält Exportieren, Importieren, Als Vorlage speichern, Verlauf, Aktivität, Elementliste sowie Board duplizieren, In Ordner verschieben und Board löschen.
+  - „Moderieren“ ist ein beschrifteter Knopf mit Timer, Abstimmung, Retro, Privater Modus, Moderation, Schätzrunde, Umfrage, Zufallsauswahl, Redereihenfolge und Aufzeichnung. Läuft etwas davon, ist der Knopf hervorgehoben.
+  - „Teilen“ und „Präsentieren“ sind beschriftet und bei jeder Fensterbreite sichtbar. Gäste sehen „Teilen“ nicht.
+  - Was nicht mehr passt, wandert ins Menü „Mehr“; keine Leiste scrollt oder lässt Funktionen ersatzlos verschwinden. Auf dem Handy liegen dort auch Moderieren und Einstellungen.
+  - Der eigene Avatar öffnet überall das Kontomenü, auch für Gäste. Das Zahnrad enthält nur Ansicht und Bearbeitung.
+  - Es erscheint nur, was die Rolle kann: Betrachter sehen weder Importieren noch Verlauf noch Löschen, Gäste keine Funktionen, die ein Konto brauchen. Der Server prüft die Rechte weiterhin selbst.
+  - Es gibt keine leeren Menüs und keine Gruppen ohne Einträge. Untermenüs öffnen an derselben Stelle, mit „Zurück“, Pfeil rechts und Pfeil links.
+
+### REQ-EDIT-017 Kontextleiste und Menü „Mehr“
+- **Seit:** 4.16.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Die Kontextleiste zeigt das Häufige, alles Übrige steht geordnet im Menü „Mehr“.
+- **Akzeptanzkriterien:**
+  - Sichtbar sind je nach Elementart nur Farbe, Text, Link, Kommentar, Sperren, Mehr und Löschen. Gibt es mehrere Regler für Farbe oder Text, öffnet der Knopf eine Zusatzzeile, die nach Änderungen offen bleibt.
+  - Retro-Knöpfe stehen nur bei laufender Retro in der Leiste, sonst im Menü „Mehr“. Die Symbole folgen dem Stil der übrigen Knöpfe, ohne Farb-Emojis.
+  - „Mehr“ gliedert sich in Bearbeiten (Kopieren, Ausschneiden, Duplizieren), Aktionen der Elementart, Anordnen, Format, Größe (mit „Position und Größe …“), Sperren, Zusammenarbeit und Exportieren. Das Kontextmenü verwendet denselben Aufbau.
+
+### REQ-EDIT-018 Werkzeugleiste
+- **Seit:** 4.16.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Vorlagen stehen oben, darunter die Gruppen Auswählen und Ansicht verschieben; Notiz, Text, Form, Linie, Bild oder Datei einfügen; Stift, Marker, Radierer; Frame, Karte, Tabelle, Mindmap, Code, Diagramm, Sticker; Kommentar, Laser.
+  - Reicht Höhe oder (auf dem Handy) Breite nicht, wandert Seltenes hinter „Mehr“. Ein Werkzeug von dort bleibt am Knopf als aktiv erkennbar.
+  - Taste B wählt die Tabelle, Taste D den Code-Block.
+
+### REQ-EDIT-019 Tooltips und Farbnamen
+- **Seit:** 4.16.0 · **Priorität:** Kann · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Knöpfe in Kopfzeile und Werkzeugleiste zeigen nach kurzer Verzögerung einen eigenen Tooltip mit Name und Kürzel, auch bei Tastaturfokus.
+  - Geändert in 4.16.0: Der Tooltip verschwindet auch, wenn der Knopf ersetzt wird oder der Zeiger das Fenster verlässt.
+  - Farbfelder nennen einen Farbnamen statt eines Hexwerts, auch für Farben aus dem Design (nächstliegender Name).
+
+### REQ-EDIT-020 Formatieren beim Tippen
+- **Seit:** 4.16.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Strg+B, Strg+I und Strg+U schalten fett, kursiv und unterstrichen. Während der Eingabe gelten sie für das ganze Element, in einer Tabellenzelle für die Zelle, außerhalb für die Auswahl. Einzelne Wörter lassen sich nicht formatieren.
+  - Die Kontextleiste bleibt beim Tippen sichtbar und verdeckt den Editor nicht, solange neben dem Element Platz ist; sonst steht sie am Fensterrand gegenüber dem Text.
+  - Format, Farbe, Größe, Ausrichtung und Link lassen sich dort ändern, ohne den Editor zu schließen. Der Fokus und die Einfügestelle bleiben, der Editor zeigt die Änderung sofort.
+  - Knöpfe, die nicht den Text betreffen (Kommentar, Sperren, Mehr, Löschen, Retro), beenden die Eingabe zuerst.
+  - Gemeinsames Tippen und fremde Cursor laufen dabei weiter.
+
+### REQ-EDIT-021 Hilfe
+- **Seit:** 4.16.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Akzeptanzkriterien:**
+  - Ein Fragezeichen unten links öffnet die Hilfe mit „Erste Schritte“ (Verbinden, Teilen, Präsentieren, Bewegen auf der Fläche), „Kurzanleitung“ und „Tastenkürzel“. Was die Rolle nicht kann, steht dort nicht.
+  - Die Tastenkürzel haben ein Suchfeld, „Häufig“ steht zuerst. Die Befehlssuche findet „Hilfe“.
+  - Beim ersten Zoomen oder Ziehen auf leerer Fläche erklärt ein einmaliger Tipp das Bewegen auf der Fläche (nicht auf Touch-Geräten).
+
+### REQ-EDIT-022 Mehrfachauswahl auf Touch-Geräten
+- **Seit:** 4.16.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Ohne Umschalttaste braucht Touch einen eigenen Weg zur Mehrfachauswahl.
+- **Akzeptanzkriterien:**
+  - Auf Geräten mit Touch als Hauptzeiger steht neben den Auswahlwerkzeugen „Mehrere auswählen“. Auf Geräten mit Maus gibt es den Schalter nicht.
+  - Im Modus nimmt Tippen Elemente in die Auswahl auf oder heraus, Ziehen auf leerer Fläche erweitert sie um einen Rahmen. Flächen, Frames und Gesperrtes zählen dabei als leere Fläche.
+  - Zwei schnelle Tipps öffnen im Modus keinen Editor. Wer das Werkzeug wechselt, verlässt den Modus.
+  - Im Retro-Schritt „Gruppieren“ bietet die Retro-Leiste den Modus an, „Themengruppe bilden“ ist danach erreichbar.

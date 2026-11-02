@@ -4,6 +4,7 @@ import { T } from './i18n.js';
 import { h, append, ICONS, toast } from './util.js';
 import { app, setTool, finishEdit, setSelection, scheduleRender } from './core.js';
 import { menu, rebuildTools } from './ui.js';
+import { foldable } from './banners.js';
 
 const banner = h('div', { id: 'moderation-banner', class: 'panel chrome hidden', role: 'status' });
 document.body.append(banner);
@@ -45,7 +46,11 @@ function apply() {
     wasLocked = locked;
     // Bearbeitungssperre: wie „nur ansehen“ – Kommentieren, Abstimmen und Schätzen bleiben möglich
     app.viewOnly = locked || app.baseViewOnly;
-    if (app.sync) app.sync.viewOnly = app.viewOnly;
+    app.notesOpen = app.contributor && !locked;
+    if (app.sync) {
+      app.sync.viewOnly = app.viewOnly;
+      app.sync.notes = app.notesOpen;
+    }
     const name = document.getElementById('board-name');
     if (name) name.readOnly = app.viewOnly;
     if (locked) {
@@ -58,7 +63,6 @@ function apply() {
   }
   if (wasActive !== null && !!m !== wasActive) toast(m ? T`${m.by || T('Jemand')} hat die Moderation gestartet` : T('Moderation beendet'), 3500);
   wasActive = !!m;
-  document.getElementById('btn-moderation')?.classList.toggle('active', !!m);
   banner.classList.toggle('hidden', !m);
   banner.innerHTML = '';
   if (m) {
@@ -67,10 +71,11 @@ function apply() {
       h('span', { class: 'pm-icon', html: ICONS.shield }),
       h('span', {}, h('b', {}, T('Moderation')), names.length ? ` · ${names.join(', ')}` : '',
         locked ? h('span', { class: 'mod-chip' }, T('🔒 Bearbeiten gesperrt')) : m.editLock ? h('span', { class: 'mod-chip' }, T('🔒 Teilnehmende können nicht bearbeiten')) : null,
-        m.reserveTools ? h('span', { class: 'muted small' }, T(' · Timer, Abstimmung & Co. nur für Moderierende')) : null),
+        m.reserveTools ? h('span', { class: 'muted small banner-detail' }, T(' · Timer, Abstimmung & Co. nur für Moderierende')) : null),
       // Alle Moderierenden sind weg: Sonst weiß niemand, wie die Sperre endet
       !names.length ? h('span', { class: 'muted small' }, T` · gestartet von ${m.by || T('Jemand')}, gerade nicht da`) : null,
       !names.length && (app.role === 'editor' || app.role === 'owner') ? h('button', { class: 'btn small', onclick: () => app.sync.op({ op: 'moderation', active: false }) }, T('Moderation beenden')) : null);
+    if (m.reserveTools) foldable(banner, 'moderation', !app.isFacilitator);
   }
   scheduleRender(true);
   app.emit('moderation');
@@ -100,18 +105,16 @@ function openMenu(anchor) {
     { header: T('Moderation') },
     { label: m.editLock ? T('Bearbeiten wieder freigeben') : T('Bearbeiten für Teilnehmende sperren'), icon: m.editLock ? 'unlock' : 'lock', onClick: () => setModeration({ editLock: !m.editLock }) },
     { label: m.reserveTools ? T('Werkzeuge für alle freigeben') : T('Timer, Abstimmung & Co. nur für Moderierende'), icon: 'timer', onClick: () => setModeration({ reserveTools: !m.reserveTools }) },
-    { label: T('Elemente sperren: auswählen → Schild-Symbol'), icon: 'shield', disabled: true },
+    { label: T('Elemente sperren: auswählen, dann Mehr → Für Teilnehmende sperren'), icon: 'shield', disabled: true },
     '-',
     { label: T('Moderation beenden'), icon: 'close', danger: true, onClick: () => setModeration({ active: false }) },
   ]);
 }
 
-app.on('buildCollabTools', (box) => {
+app.on('moderateItems', (list) => {
   // Moderieren kann nur, wer bearbeiten darf
   if (app.guest || app.baseViewOnly) return;
-  const b = h('button', { class: 'icon-btn', id: 'btn-moderation', title: T('Moderation'), html: ICONS.shield });
-  b.onclick = () => openMenu(b);
-  box.prepend(b);
+  list.push({ key: 'moderation', order: 50, label: T('Moderation'), icon: 'shield', active: !!mod(), onClick: openMenu });
 });
 
 // Einträge im Menü einer teilnehmenden Person (Avatar)
@@ -131,6 +134,10 @@ const REASONS = {
   reserved: T('Das ist während der Moderation den Moderierenden vorbehalten.'),
   retroLead: T('Die Retro steuert, wer sie gestartet hat.'),
   voting: T('Die Abstimmung beendet, wer sie gestartet hat.'),
+  presenting: T('Gerade präsentiert schon jemand für alle.'),
+  contributor: T('Als Gast kannst du nur eigene Notizen ändern.'),
+  noteLimit: T('Du hast die höchste Zahl an Notizen auf diesem Board erreicht. Lösche eine eigene Notiz, um eine neue anzulegen.'),
+  noteSize: T('Diese Notiz ist zu groß oder liegt zu weit außerhalb.'),
 };
 let lastBlocked = 0;
 app.on('blocked', (why) => {

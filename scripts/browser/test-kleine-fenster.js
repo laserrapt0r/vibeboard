@@ -53,13 +53,12 @@ const sleep = (n) => new Promise((r) => setTimeout(r, n));
   });
   ok(cover.t <= cover.r, 'Kopfleiste überdeckt rechte Leiste nicht (1366 px)', cover);
   const reach = await J(() => {
-    const b = document.querySelector('#topbar [aria-label*="Exportieren"]');
-    b.scrollIntoView({ inline: 'nearest' });
+    const b = document.getElementById('btn-board-menu');
     const r = b.getBoundingClientRect();
     const e = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
     return b.contains(e);
   });
-  ok(reach, 'Export-Knopf erreichbar');
+  ok(reach, 'Boardmenü mit dem Export erreichbar');
   await J(async () => {
     (await import('/js/core.js')).setSelection(['f1']);
   });

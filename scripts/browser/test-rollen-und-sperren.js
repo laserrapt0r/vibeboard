@@ -160,6 +160,8 @@ const toast = (p) =>
   await ev(A, async () => {
     (await import('/js/core.js')).app.emit('present', null);
   });
+  await wait(250);
+  await A.evaluate(() => [...document.querySelectorAll('.modal-back .btn')].find((x) => x.textContent === 'Nur für mich').click());
   await wait(600);
   ok(await ev(A, () => document.body.classList.contains('presenting')), 'Präsentation läuft');
   const nA = (await all(A)).length;

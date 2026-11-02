@@ -3,12 +3,11 @@
 import { T } from './i18n.js';
 import { h, modal, loadPref, savePref, ICONS } from './util.js';
 import {
-  app, getEl, bounds, fitTo, frames, setSelection, selectedEls, saveSettings, bringToFront, sendToBack, duplicateEls, collectForCopy, groupSel,
-  ungroupSel, toggleLock, togglePin, copyFormat, pasteFormat, hasCopiedFormat, canCopyFormat, deleteFramesWithContent, applyView, isLocked,
+  app, getEl, bounds, fitTo, frames, setSelection, saveSettings, applyView,
 } from './core.js';
 import { TEMPLATES } from './templates.js';
 import { hideBuiltin } from './gallery.js';
-import { insertTemplate, elementText, openShortcuts, exportItems } from './ui.js';
+import { insertTemplate, elementText, openShortcuts, exportItems, importItems, headerCommands, selectionCommands } from './ui.js';
 import { retroItems } from './retro.js';
 import { savedViews, goToView, saveCurrentView, headings, goToHeading } from './guide.js';
 
@@ -16,17 +15,18 @@ const SOURCES = [['#tools', () => T('Werkzeug')], ['#topbar', () => T('Board')],
 const MAX_SHOWN = 40;
 const RECENT_KEY = 'paletteRecent';
 
-// Filter und Retro stehen in schmalen Fenstern nur im Einstellungsmenü: Ihre Knöpfe sind dann ausgeblendet, aber nicht verboten
-const FOLDED = '#btn-filter, #btn-retro';
+// Knöpfe, die in schmalen Fenstern hinter „Mehr“ gewandert sind, sind ausgeblendet, aber nicht verboten
+const FOLDED = '.folded';
 
 // Weitere Suchwörter je Knopf (Werkzeug, Kennung oder Beschriftung). Der Wortlaut der Oberfläche ist selten das, was man eintippt.
 const synonyms = () => ({
-  sticky: T('notiz haftnotiz zettel post-it'), text: T('schrift beschriftung'), shape: T('rechteck kreis ellipse figur'), connector: T('verbinden verbindung pfeil linie'),
+  sticky: T('sticky haftnotiz zettel post-it'), text: T('schrift beschriftung'), shape: T('rechteck kreis ellipse figur'), connector: T('verbinden verbindung pfeil linie'),
   pen: T('zeichnen malen freihand'), highlighter: T('hervorheben markieren'), eraser: T('löschen wegradieren'), frame: T('folie rahmen bereich'),
   card: T('ticket todo'), table: T('zellen spalten zeilen'), code: T('programm quelltext'), mindmap: T('gedanken ideen'), comment: T('anmerkung rückmeldung'),
   emoji: T('smiley aufkleber'), image: T('foto datei upload pdf'), laser: T('zeiger pointer'), template: T('muster'), diagram: T('flussdiagramm mermaid'),
-  'btn-vote': T('wählen punkte dot voting'), 'btn-timer': T('stoppuhr countdown zeit'), 'btn-retro': T('retrospektive umfrage'), 'btn-private': T('verdeckt geheim anonym sammeln'),
-  'btn-moderation': T('leiten sperren'), [T('Präsentieren')]: T('folien vortrag vorführen'),
+  vote: T('wählen punkte dot voting'), timer: T('stoppuhr countdown zeit'), retro: T('retrospektive umfrage'), private: T('verdeckt geheim anonym sammeln'),
+  'btn-help': T('anleitung erste schritte einführung bewegen navigieren'), moderation: T('leiten sperren'), [T('Präsentieren')]: T('folien vortrag vorführen'), estimate: T('planning poker story points'), poll: T('schnellumfrage'),
+  picker: T('rad glücksrad los'), order: T('reihenfolge reihum'), recording: T('rundgang video'), versions: T('versionsverlauf historie'), activity: T('protokoll wer hat geändert'),
 });
 
 const plain = (s) => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
@@ -40,7 +40,7 @@ function fromButtons() {
     for (const b of root.querySelectorAll('button')) {
       const title = b.title || b.getAttribute('aria-label') || b.textContent.trim();
       // Auf dem Handy liegen Kollaborations-Knöpfe im Scrollbereich: sichtbar ist, was im Layout steckt
-      if (!title || b.disabled || (b.offsetParent === null && getComputedStyle(b).position !== 'fixed' && !b.matches(FOLDED))) continue;
+      if (!title || b.disabled || b.dataset.more || (b.offsetParent === null && getComputedStyle(b).position !== 'fixed' && !b.matches(FOLDED))) continue;
       // „Suchen (Strg+F)“ → Name und Tastenkürzel. Nicht jede Klammer ist ein Kürzel („… (Mermaid-Syntax)“)
       const m = /^(.*?)\s*\(([^()]{1,24})\)$/.exec(title);
       const key = m && /[+−]|^\S{1,6}$/.test(m[2]) ? m[2] : '';
@@ -53,41 +53,28 @@ function fromButtons() {
   return out;
 }
 
-// Einträge aus Menüs: Die Überschrift wird zur Gruppe. Was die Rolle nicht darf, ist dort schon deaktiviert.
-function fromMenu(items) {
-  let group = '';
+// Einträge aus Menüs: Die Überschrift wird zur Gruppe. Was die Rolle nicht darf, steht dort gar nicht oder deaktiviert.
+// Untermenüs nur bei einer Suche: Sonst verdrängen ihre vielen Einträge die Befehle aus der Liste.
+function fromMenu(items, deep = true, start = '') {
+  let group = start;
   const out = [];
+  const also = synonyms();
   for (const it of items) {
     if (!it || it === '-') continue;
     if (it.header) group = it.header;
-    else if (!it.disabled) out.push({ id: 'm:' + it.label, label: it.label, group, icon: ICONS[it.icon], run: it.onClick });
+    else if (it.items) out.push(...(deep ? fromMenu(typeof it.items === 'function' ? it.items() : it.items, deep, it.label) : []));
+    else if (!it.disabled && it.onClick) out.push({ id: 'm:' + it.label, label: it.label, group, hint: it.hint, also: also[it.key], icon: ICONS[it.icon], run: it.onClick });
   }
   return out;
 }
 
-function fromCommands() {
+function fromCommands(deep) {
   const invite = app.role === 'owner' ? [{ id: 'invite', label: T('Personen einladen'), group: T('Board'), also: T('teilen freigeben mitglied'), icon: ICONS.share, run: () => app.emit('openShare') }] : [];
-  return [...invite, ...fromMenu(exportItems()), ...fromMenu(retroItems())];
+  return [...invite, ...fromMenu(exportItems()), ...fromMenu(importItems()), ...fromMenu(retroItems()), ...fromMenu(headerCommands(), deep)];
 }
 
-function fromSelection() {
-  if (app.viewOnly || !app.sel.size) return [];
-  const sel = selectedEls();
-  const group = T('Auswahl');
-  const c = (id, label, hint, run, on = true) => (on ? { id, label, group, hint, run } : null);
-  const free = !sel.every(isLocked);
-  return [
-    c('dup', T('Duplizieren'), T('Strg+D'), () => duplicateEls(collectForCopy([...app.sel])), free),
-    c('front', T('In den Vordergrund'), T('Strg+]'), bringToFront, free),
-    c('back', T('In den Hintergrund'), T('Strg+['), sendToBack, free),
-    c('group', T('Gruppieren'), T('Strg+G'), groupSel, free && sel.length > 1),
-    c('ungroup', T('Gruppierung aufheben'), T('Strg+Umschalt+G'), ungroupSel, free && sel.some((e) => e.groupId)),
-    c('lock', T('Sperren oder entsperren'), T('Strg+L'), toggleLock),
-    c('pin', T('Position fixieren (Text bleibt bearbeitbar)'), '', togglePin),
-    c('fmtc', T('Format kopieren'), T('Strg+Alt+C'), copyFormat, sel.some(canCopyFormat)),
-    c('fmtv', T('Format einfügen'), T('Strg+Alt+V'), pasteFormat, hasCopiedFormat()),
-    c('frdel', T('Frame samt Inhalt löschen'), '', deleteFramesWithContent, sel.some((e) => e.type === 'frame')),
-  ].filter(Boolean);
+function fromSelection(deep) {
+  return fromMenu(selectionCommands(), deep).map((c) => ({ ...c, group: T('Auswahl') }));
 }
 
 function fromSettings() {
@@ -98,9 +85,9 @@ function fromSettings() {
   } });
   return [
     toggle('grid', T('Raster anzeigen')), toggle('dark', T('Dunkles Design')), toggle('snap', T('Am Raster einrasten')),
-    toggle('smartGuides', T('Intelligente Hilfslinien')), toggle('showAuthor', T('Autor auf Sticky Notes')),
+    toggle('smartGuides', T('Intelligente Hilfslinien')), toggle('showAuthor', T('Autor auf Notizen')),
     toggle('hideCursors', T('Mauszeiger anderer ausblenden')),
-    { id: 'help', label: T('Tastenkürzel'), group: T('Hilfe'), run: openShortcuts },
+    { id: 'help', label: T('Tastenkürzel'), group: T('Hilfe'), also: T('tasten übersicht'), run: openShortcuts },
   ];
 }
 
@@ -154,7 +141,15 @@ function score(words, cmd) {
 
 function search(query, recent, texts) {
   const q = plain(query.trim());
-  const all = [...fromSelection(), ...fromButtons(), ...fromBoard(q, texts), ...fromCommands(), ...fromSettings()];
+  const seen = new Map();
+  // Dasselbe steht oft in mehreren Menüs: Die Suche zeigt es nur einmal, findet es aber über alle Gruppen
+  const all = [...fromSelection(q.length >= 2), ...fromButtons(), ...fromBoard(q, texts), ...fromCommands(q.length >= 2), ...fromSettings()].filter((c) => {
+    if (c.low) return true;
+    const first = seen.get(c.label);
+    if (first) first.also = `${first.also || ''} ${c.group} ${c.also || ''}`;
+    else seen.set(c.label, c);
+    return !first;
+  });
   const rank = (c) => {
     const i = recent.indexOf(c.id);
     return i < 0 ? 0 : (recent.length - i) / recent.length;

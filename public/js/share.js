@@ -9,7 +9,7 @@ const LINK_OPTIONS = [
   ['edit', T('✏️ Alle angemeldeten Nutzer mit dem Link können bearbeiten')],
 ];
 const ROLE_OPTIONS = [['editor', T('bearbeiten')], ['commenter', T('kommentieren')], ['viewer', T('ansehen')]];
-const ROLE_TEXT = { editor: T('darf bearbeiten'), commenter: T('darf kommentieren'), viewer: T('darf ansehen') };
+const ROLE_TEXT = { editor: T('darf bearbeiten'), contributor: T('darf Notizen beitragen'), commenter: T('darf kommentieren'), viewer: T('darf ansehen') };
 const roleSelect = (cur, onchange) => h('select', { onchange }, ROLE_OPTIONS.map(([v, l]) => h('option', { value: v, selected: v === cur }, l)));
 
 // onClose: z. B. Startseite neu laden, damit Team, Freigabe und Mitglieder sofort stimmen
@@ -47,7 +47,7 @@ export async function openShareDialog(boardId, { me, onLeave, onClose } = {}) {
       try {
         await api(`/api/boards/${boardId}`, { method: 'PATCH', body: { linkAccess: e.target.value } });
         info.linkAccess = e.target.value;
-        toast(T('Freigabe geändert'));
+        toast(T('Zugriff geändert'));
       } catch (ex) {
         e.target.value = info.linkAccess;
         toast(ex.message);
@@ -202,11 +202,11 @@ async function teamSection(body, boardId) {
     h('div', { class: 'row' }, team, h('span', { class: 'muted small' }, T('alle Mitglieder dürfen')), role)));
 }
 
-// Gastlinks: Zugang ohne Konto, befristet, nur ansehen oder kommentieren
+// Gastlinks: Zugang ohne Konto, befristet, zum Ansehen, Kommentieren oder (falls erlaubt) mit eigenen Notizen
 async function guestSection(body, boardId) {
-  let info, maxDays = 30;
+  let info, maxDays = 30, contributions = false, noteLimit = 50;
   try {
-    [info, { features: { guestMaxDays: maxDays = 30 } = {} }] = await Promise.all([api(`/api/boards/${boardId}/guest-links`), api(`/api/boards/${boardId}`)]);
+    [info, { features: { guestMaxDays: maxDays = 30, guestContributions: contributions = false, guestNoteLimit: noteLimit = 50 } = {} }] = await Promise.all([api(`/api/boards/${boardId}/guest-links`), api(`/api/boards/${boardId}`)]);
   } catch {
     return;
   }
@@ -216,7 +216,7 @@ async function guestSection(body, boardId) {
     box.append(h('p', { class: 'muted small' }, T('Der Gastzugang ist in dieser Installation abgeschaltet. Ein Administrator kann ihn unter „Zusammenarbeit“ einschalten.')));
     return;
   }
-  const role = h('select', { 'aria-label': T('Rolle') }, h('option', { value: 'commenter' }, T('darf kommentieren')), h('option', { value: 'viewer' }, T('darf ansehen')));
+  const role = h('select', { 'aria-label': T('Rolle') }, contributions ? h('option', { value: 'contributor' }, ROLE_TEXT.contributor) : null, h('option', { value: 'commenter', selected: true }, T('darf kommentieren')), h('option', { value: 'viewer' }, T('darf ansehen')));
   // Nur Laufzeiten bis zur Grenze der Administration anbieten
   const choices = [...new Set([1, 7, 14, 30, maxDays].filter((d) => d <= maxDays))].sort((a, b) => a - b);
   const days = h('select', { 'aria-label': T('Gültigkeit') }, choices.map((d) => h('option', { value: d, selected: d === Math.min(7, maxDays) }, d === 1 ? T('1 Tag') : T`${d} Tage`)));
@@ -244,6 +244,7 @@ async function guestSection(body, boardId) {
   renderList(info.links);
   box.append(
     h('p', { class: 'muted small' }, T('Gäste geben nur ihren Namen an und sehen ausschließlich dieses Board. Der Link läuft automatisch ab; danach werden die Gastzugänge gelöscht.')),
+    contributions ? h('p', { class: 'muted small guest-contrib-hint' }, T`„Notizen beitragen“ heißt: Gäste legen bis zu ${noteLimit} eigene Notizen an, ändern nur diese, kommentieren und stimmen ab. Alles andere bleibt für sie unveränderlich.`) : null,
     h('div', { class: 'row wrap' }, role, days, label, h('button', { type: 'button', class: 'btn', onclick: async () => {
       try {
         const r = await api(`/api/boards/${boardId}/guest-links`, { method: 'POST', body: { role: role.value, days: Number(days.value), label: label.value } });

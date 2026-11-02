@@ -371,7 +371,7 @@ async function boards() {
     const rows = list.filter((b) => !q || (b.name + ' ' + (b.owner || '')).toLowerCase().includes(q));
     table.innerHTML = '';
     table.append(h('table', { class: 'admin-table' },
-      h('thead', {}, h('tr', {}, [T('Board'), T('Besitzer'), T('Elemente'), T('Mitglieder'), T('Freigabe'), T('Geändert'), ''].map((t) => h('th', {}, t)))),
+      h('thead', {}, h('tr', {}, [T('Board'), T('Besitzer'), T('Elemente'), T('Mitglieder'), T('Zugriff'), T('Geändert'), ''].map((t) => h('th', {}, t)))),
       h('tbody', {}, rows.map((b) => {
         const actions = h('button', { class: 'icon-btn small', title: T('Aktionen'), html: ICONS.more });
         actions.onclick = () => menu(actions, [
@@ -673,6 +673,8 @@ async function collab() {
   const mentionEmails = h('input', { type: 'checkbox', checked: c.mentionEmails });
   const guestLinks = h('input', { type: 'checkbox', checked: c.guestLinks });
   const guestMaxDays = h('input', { type: 'number', min: 1, max: 365, value: c.guestMaxDays });
+  const guestContributions = h('input', { type: 'checkbox', checked: c.guestContributions });
+  const guestNoteLimit = h('input', { type: 'number', min: 1, max: 500, value: c.guestNoteLimit });
   const teamCreation = h('select', {}, h('option', { value: 'all', selected: c.teamCreation === 'all' }, T('alle angemeldeten Benutzer')), h('option', { value: 'admins', selected: c.teamCreation === 'admins' }, T('nur Administratoren')));
   const recordings = h('input', { type: 'checkbox', checked: c.recordings });
   const recordingMax = h('input', { type: 'number', min: 1, max: 30, value: c.recordingMaxMinutes });
@@ -685,9 +687,11 @@ async function collab() {
     e.preventDefault();
     err.hide();
     if (c.guestLinks && !guestLinks.checked && !(await confirmDialog(T('Gastzugang abschalten'), T('Alle bestehenden Gastlinks werden gesperrt und alle Gäste sofort abgemeldet.'), T('Abschalten'), true))) return;
+    if (c.guestLinks && guestLinks.checked && c.guestContributions && !guestContributions.checked && !(await confirmDialog(T('Stufe „Beiträge“ abschalten'), T('Alle Gastlinks mit dieser Stufe werden gesperrt und ihre Gäste sofort abgemeldet. Ihre Notizen bleiben auf den Boards.'), T('Abschalten'), true))) return;
     try {
       await api('/api/admin/settings', { method: 'PUT', body: { collab: {
         mentionEmails: mentionEmails.checked, guestLinks: guestLinks.checked, guestMaxDays: Number(guestMaxDays.value),
+        guestContributions: guestContributions.checked, guestNoteLimit: Number(guestNoteLimit.value),
         teamCreation: teamCreation.value, recordings: recordings.checked, recordingMaxMinutes: Number(recordingMax.value),
         files: files.checked, fileMaxMb: Number(fileMax.value), trashDays: Number(trashDays.value),
         webhooks: webhooks.checked, webhookPrivate: webhookPrivate.checked,
@@ -704,7 +708,9 @@ async function collab() {
   h('fieldset', {}, h('legend', {}, T('Gastzugang per Link')),
     h('label', { class: 'check' }, guestLinks, T('Besitzer dürfen Gastlinks erstellen (Zugang ohne Konto)')),
     h('label', {}, T('Längste Gültigkeit eines Gastlinks (Tage)'), guestMaxDays),
-    h('p', { class: 'muted small' }, T('Gäste geben nur einen Namen an, sehen ausschließlich das eine Board und dürfen höchstens kommentieren. Ihre Zugänge werden mit Ablauf oder Sperre des Links gelöscht. Bitte die Datenschutzerklärung ergänzen (Vorlage unter „Rechtliches“).'))),
+    h('label', { class: 'check' }, guestContributions, T('Gastlinks mit der Stufe „Beiträge“ erlauben (Gäste legen eigene Notizen an)')),
+    h('label', {}, T('Höchstzahl eigener Notizen je Gast'), guestNoteLimit),
+    h('p', { class: 'muted small' }, T('Gäste geben nur einen Namen an und sehen ausschließlich das eine Board. Sie dürfen ansehen oder kommentieren, mit der Stufe „Beiträge“ zusätzlich eigene Notizen anlegen, ändern und löschen. Ihre Zugänge werden mit Ablauf oder Sperre des Links gelöscht, ihre Beiträge bleiben. Bitte die Datenschutzerklärung ergänzen (Vorlage unter „Rechtliches“).'))),
   h('fieldset', {}, h('legend', {}, T('Teams')),
     h('label', {}, T('Teams anlegen dürfen'), teamCreation)),
   h('fieldset', {}, h('legend', {}, T('Aufzeichnungen (Rundgänge)')),
@@ -803,7 +809,7 @@ async function brand() {
   h('fieldset', {}, h('legend', {}, T('Designvorgaben')),
     h('label', {}, T('Akzentfarbe'), h('div', { class: 'row' }, picker, accent), h('span', { class: 'field-hint' }, T('Schrift auf Akzentfarbe und Links passen sich an, damit der Kontrast stimmt. Leer = Standard.'))),
     h('label', {}, T('Farben für Formen und Text'), palette, h('span', { class: 'field-hint' }, T('Hexwerte, getrennt durch Leerzeichen. Nur diese Farben stehen dann zur Auswahl. Leer = Standard.'))),
-    h('label', {}, T('Farben für Haftnotizen'), sticky),
+    h('label', {}, T('Farben für Notizen'), sticky),
     h('p', { class: 'muted small' }, T('Die Vorgaben gelten für neue Inhalte. Bestehende Elemente behalten ihre Farbe.'))),
   h('fieldset', {}, h('legend', {}, T('Vorlagen')),
     h('label', { class: 'check' }, hideBuiltin, T('Nur zentrale und eigene Vorlagen anbieten (mitgelieferte ausblenden)')),

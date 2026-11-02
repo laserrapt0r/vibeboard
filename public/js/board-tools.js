@@ -315,25 +315,21 @@ function shapeFrom(pens) {
 
 /* ---------------- Kontextleiste ---------------- */
 
-app.on('ctxItems', (items, sel, { locked, one, actBtn }) => {
+app.on('ctxItems', (items, sel, { locked, one }) => {
   if (locked) return;
   if (sel.filter(isNode).length >= 1 && (sel.length > 1 || connectors().some((c) => c.from.id === one?.id || c.to.id === one?.id))) {
-    const b = actBtn('sitemap', T('Automatisch anordnen'), () => arrangeMenu(b, sel));
-    items.push(b);
+    items.push({ label: T('Automatisch anordnen'), icon: 'sitemap', group: 'arrange', onClick: (anchor) => arrangeMenu(anchor, sel) });
   }
   if (one?.type === 'frame' && one.kind !== 'topic') {
-    items.push(actBtn('lanes', T('Swimlanes'), () => editLanes(latest(one))));
-    if (one.lanes?.length) items.push(actBtn('sitemap', T('In den Bahnen anordnen'), () => arrangeLanes(latest(one))));
+    items.push({ label: T('Swimlanes'), icon: 'lanes', onClick: () => editLanes(latest(one)) });
+    if (one.lanes?.length) items.push({ label: T('In den Bahnen anordnen'), icon: 'sitemap', group: 'arrange', onClick: () => arrangeLanes(latest(one)) });
   }
-  if (one?.type === 'table') {
-    const b = actBtn('chart', T('Diagramm aus Tabelle'), () => chartMenu(b, (k) => addChart(one, k)));
-    items.push(b);
-  }
+  if (one?.type === 'table') items.push({ label: T('Diagramm aus Tabelle'), icon: 'chart', onClick: (anchor) => chartMenu(anchor, (k) => addChart(one, k)) });
   if (one?.type === 'chart') {
-    const b = actBtn('chart', T('Diagrammart'), () => chartMenu(b, (k) => act(() => updateEl(one.id, { chartKind: k })), latest(one).chartKind));
-    items.push(b, actBtn('edit', T('Titel des Diagramms'), () => chartTitle(latest(one))));
+    items.push({ label: T('Diagrammart'), icon: 'chart', onClick: (anchor) => chartMenu(anchor, (k) => act(() => updateEl(one.id, { chartKind: k })), latest(one).chartKind) });
+    items.push({ label: T('Titel des Diagramms'), icon: 'edit', onClick: () => chartTitle(latest(one)) });
   }
-  if (one?.type === 'image' && one.src) items.push(actBtn('crop', T('Zuschneiden'), () => cropImage(latest(one))));
-  if (sel.length && sel.every((e) => e.type === 'pen')) items.push(actBtn('magic', T('In Form umwandeln'), () => shapeFrom(selectedEls())));
+  if (one?.type === 'image' && one.src) items.push({ label: T('Zuschneiden'), icon: 'crop', onClick: () => cropImage(latest(one)) });
+  if (sel.length && sel.every((e) => e.type === 'pen')) items.push({ label: T('In Form umwandeln'), icon: 'magic', onClick: () => shapeFrom(selectedEls()) });
 });
 

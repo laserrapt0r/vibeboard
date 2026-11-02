@@ -1,6 +1,6 @@
 // Darstellung der Board-Elemente als SVG-Markup (für Board, Vorschau & Export)
 import { T, LOCALE, DEC } from './i18n.js';
-import { esc, FONT, wrap, fitText, measure, contrastText, initials, unionRect } from './util.js';
+import { esc, FONT, wrap, fitText, measure, contrastText, initials, unionRect, fontPx } from './util.js';
 import { tokenize, THEMES, MAX_LINES } from './highlight.js';
 
 const own = (map, key) => (Object.hasOwn(map, key) ? map[key] : undefined);
@@ -73,7 +73,7 @@ export function textLayout(el, box) {
     const r = fitText(el.text || '', box.w, box.h, bold, LH);
     return { size: r.size, lines: r.lines, bold, italic };
   }
-  const size = Number(el.fontSize) || 16;
+  const size = fontPx(el.fontSize);
   const lines = wrap(el.text || '', box.w, size, bold, italic);
   // Notizen und Formen wachsen nicht mit: Mehrzeiliger Text wird so wenig wie nötig kleiner, statt aus der Form zu laufen.
   // Eine einzelne Zeile bleibt: Flache Formen sind oft knapp so hoch wie ihre Schrift.
@@ -139,7 +139,7 @@ export function cellStyle(el, r, c) {
     bold: st.b ?? header, italic: !!st.i, underline: !!st.u, strike: !!st.s,
     align: ['left', 'center', 'right'].includes(st.al) ? st.al : 'left',
     valign: ['top', 'middle', 'bottom'].includes(st.va) ? st.va : 'middle',
-    size: Number(st.fs) || Number(el.fontSize) || 14,
+    size: Number(st.fs) || fontPx(el.fontSize, 14),
     color: st.c || el.textColor || '#1a1a1a',
     bg: st.bg || (header ? el.headerFill || '#eef1ff' : null),
   };
@@ -538,7 +538,7 @@ export const splitClassText = (text) => String(text || '').split('\n').reduce((a
 }, [[]]);
 
 function umlClassSvg(el, x, y, w, h, outline, stroke, sw, color) {
-  const size = Number(el.fontSize) || 14, lh = size * LH, pad = 8, padY = 6;
+  const size = fontPx(el.fontSize, 14), lh = size * LH, pad = 8, padY = 6;
   const secs = splitClassText(el.text);
   while (secs.length < 3) secs.push([]);
   let out = `<rect x="${x}" y="${y}" width="${w}" height="${h}" ${outline}`;
@@ -638,7 +638,7 @@ const SHAPE_KEYS = new Set(SHAPES.map(([k]) => k));
 export function safeEl(el) {
   const o = { ...el };
   for (const k of ['x', 'y', 'w', 'h', 'strokeWidth', 'rows', 'cols', 'opacity']) if (k in o) o[k] = fin(o[k]);
-  if (o.fontSize != null && o.fontSize !== 'auto') o.fontSize = fin(o.fontSize) || 16;
+  if (o.fontSize != null && o.fontSize !== 'auto') o.fontSize = fontPx(o.fontSize);
   for (const k of ['fill', 'stroke', 'textColor', 'color', 'headerFill', 'borderColor']) {
     if (!(k in o)) continue;
     if (typeof o[k] === 'string' && COLOR_RE.test(o[k].trim())) o[k] = o[k].trim();
@@ -1183,7 +1183,7 @@ function chartSvg(el, get) {
   return out + (el.chartKind === 'pie' ? pieSvg(data, ...area) : axisChart(el, data, ...area));
 }
 
-/* ---------------- Swimlanes und Status der Freigabe ---------------- */
+/* ---------------- Swimlanes und Status der Prüfung ---------------- */
 
 function lanesSvg(el) {
   const { x, y, w, h } = el;
@@ -1200,8 +1200,8 @@ function lanesSvg(el) {
 }
 
 const REVIEW_LOOK = {
-  open: ['#fff4e6', '#a35200', () => T('In Prüfung')], approved: ['#d3f9d8', '#1f6b30', () => T('Freigegeben')], rejected: ['#ffe3e3', '#c92a2a', () => T('Abgelehnt')],
-  outdated: ['#fff4e6', '#a35200', () => T('Geändert nach Freigabe')],
+  open: ['#fff4e6', '#a35200', () => T('In Prüfung')], approved: ['#d3f9d8', '#1f6b30', () => T('Genehmigt')], rejected: ['#ffe3e3', '#c92a2a', () => T('Abgelehnt')],
+  outdated: ['#fff4e6', '#a35200', () => T('Geändert nach Prüfung')],
 };
 
 function reviewBadgeSvg(el, env) {
@@ -1246,7 +1246,7 @@ export function renderElement(el, env = {}) {
   return renderBody(el, env) + reviewBadgeSvg(el, env) + (el.link ? linkBadge(el) : '') + own + (el.type === 'sticky' || el.type === 'shape' ? stickyTags(el) : '') + reactionsMarkup(el, env);
 }
 
-// Schlagwörter auf Sticky Notes und Formen: kleine Etiketten oben links (zu lange werden gekürzt)
+// Schlagwörter auf Notizen und Formen: kleine Etiketten oben links (zu lange werden gekürzt)
 function stickyTags(el) {
   const tags = cardTags(el);
   if (!tags.length) return '';
@@ -1328,7 +1328,7 @@ function concealMarkup(el, env) {
 
 // Höhe eines Code-Blocks aus der Zeilenzahl
 export function codeMetrics(el) {
-  const fs = Number(el.fontSize) || 14;
+  const fs = fontPx(el.fontSize, 14);
   const lines = Math.min(MAX_LINES, String(el.text || '').split('\n').length);
   const gutter = el.lineNumbers === false ? 0 : String(lines).length * fs * 0.62 + 18;
   return { fs, lh: fs * LH, head: 30, pad: 12, gutter, lines };
@@ -1404,7 +1404,7 @@ function renderBody(el, env) {
       out += arrowHead(headType(el.arrowEnd, 'arrow'), g.p2, g.endDir, ah, color, bg, sw);
       out += arrowHead(headType(el.arrowStart, 'none'), g.p1, g.startDir, ah, color, bg, sw);
       if (el.label) {
-        const fs = el.fontSize || 14;
+        const fs = fontPx(el.fontSize, 14);
         const lines = String(el.label).split('\n');
         const lw = Math.max(...lines.map((l) => measure(l, fs))) + 12;
         const lh = lines.length * fs * LH + 6;

@@ -507,7 +507,7 @@ const toast = (p) =>
   const ban = await ev(
     C,
     () =>
-      document.querySelector('#mod-banner, .mod-banner, [id*=moder]')?.textContent ||
+      document.querySelector('#moderation-banner')?.textContent ||
       [...document.querySelectorAll('.panel')].map((x) => x.textContent).find((t) => /Moderation/.test(t)) ||
       '',
   );

@@ -38,7 +38,7 @@
 ### REQ-TPL-005 Weitere Retro-Vorlagen
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
-  - Neu: Seestern, DAKI, Zeitstrahl, Heißluftballon, Speedcar, Offene Themenrunde, Team-Radar (Kategorie „Meetings & Retros“).
+  - Neu: Seestern, DAKI, Zeitleiste, Heißluftballon, Speedcar, Offene Themenrunde, Team-Radar (Kategorie „Meetings & Retros“).
 
 ### REQ-TPL-007 Zuletzt verwendete Vorlagen zuerst
 - **Seit:** 4.3.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -52,6 +52,7 @@
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Ein Board oder die Auswahl lässt sich als persönliche Vorlage oder als Vorlage eines eigenen Teams speichern (Name, Symbol, Beschreibung).
+  - Geändert in 4.16.0: „Als Vorlage speichern“ steht im Boardmenü, im Menü „Mehr“ der Auswahl und im Vorlagen-Dialog.
   - Nicht übernommen werden Kommentare, Dateianhänge, Reaktionen, Autorennamen, Zuweisungen, Moderationssperren und private Inhalte. Geändert in 4.8.0: Klargestellt, dass eigene Sperren und Fixierungen erhalten bleiben; sie gehören zum Aufbau einer Vorlage. Bilder werden geprüft. Höchstens 10 MB und 100 Vorlagen je Person bzw. Team.
   - Die Galerie (Startseite und Board) zeigt sie unter „Eigene Vorlagen“ mit Vorschau. Team-Vorlagen sehen alle Mitglieder.
   - Löschen dürfen, wer sie angelegt hat, und bei Team-Vorlagen die Team-Verwaltung.
@@ -81,4 +82,4 @@
   - Zieht man Karten auf dem Board in eine andere Kanban-Spalte der Vorlagen „Kanban-Board“ und „Entwicklungs-Kanban“, erhalten sie deren Überschrift als Status, ohne führendes Emoji und ohne Zusatz nach „·“ (z. B. WIP-Limit). Das lässt sich zusammen mit dem Verschieben rückgängig machen. Liegende Karten behalten nach dem Umbenennen einer Spalte ihren Status bis zum nächsten Wechsel.
   - Züge innerhalb einer Spalte und Karten außerhalb einer Spalte ändern den Status nicht. Karten aus Jira oder Azure DevOps bleiben ausgenommen: Ihr Status kommt aus dem Ticket. Geändert in 4.11.4: Eine Statusänderung in der Kanban-Ansicht verschiebt die Karte in die passende Spalte auf dem Board; Spalten des Boards bleiben dort auch leer sichtbar.
   - Geändert in 4.15.0: Eine volle Spalte wird länger, ihr Frame wächst mit; Karten liegen nicht mehr aufeinander. Darf die Spalte nicht wachsen (Sperre der Moderation), läuft sie nach unten über. Neue Karten erhalten den Status der Spalte, in der sie entstehen.
-  - Gantt-Diagramm und Zeitstrahl bestehen aus Karten mit Terminen. Die Lage auf dem Board ändert die Termine nicht.
+  - Gantt-Diagramm und Zeitleiste bestehen aus Karten mit Terminen. Die Lage auf dem Board ändert die Termine nicht.

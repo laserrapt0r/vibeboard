@@ -188,7 +188,7 @@ async function leitung(A, B, C, V) {
   for (const p of [A, B, C, V]) await open(p, id);
   await op(B, { op: 'retro', action: 'start', steps: ['checkin', 'collect', 'vote'], opts: {} });
   await wait(500);
-  const barC = await texts(C, '#retro-bar button');
+  const barC = await texts(C, '#retro-bar button:not(.banner-fold)'); // Einklappen ist kein Steuern
   ok(barC.length === 0, 'Andere sehen keine Steuerknöpfe', barC);
   ok((await texts(B, '#retro-bar button')).some((t) => /Weiter/.test(t)), 'Die Leitung sieht sie');
   ok((await texts(A, '#retro-bar button')).some((t) => /Weiter/.test(t)), 'Der Besitzer sieht sie');

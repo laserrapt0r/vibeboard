@@ -7,6 +7,8 @@ import { writeZip } from './zip.js';
 
 const EMU = 9525;
 const SLIDE_W = 1280, SLIDE_H = 720; // 16:9 in Pixeln
+const TITLE_BOX = { x: 40, y: 16, w: 1200, h: 56 }; // Folientitel: Die Inhalte rücken darunter
+const TITLE_BAND = TITLE_BOX.y + TITLE_BOX.h + 8;
 const PRST = {
   rect: 'rect', roundrect: 'roundRect', ellipse: 'ellipse', triangle: 'triangle', diamond: 'diamond', hexagon: 'hexagon', parallelogram: 'parallelogram',
   trapezoid: 'trapezoid', star: 'star5', pill: 'flowChartTerminator', cloud: 'cloud', cylinder: 'can', document: 'flowChartDocument',
@@ -48,6 +50,11 @@ class Slide {
   shape(b, { prst = 'rect', fill, stroke, width = 1, text, size = 18, color, bold, italic, underline, strike, align = 'center', anchor = 'ctr', txBox = false, name = 'Form' }) {
     const id = this.nextId++;
     this.xml.push(`<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${x(name)} ${id}"/><p:cNvSpPr${txBox ? ' txBox="1"' : ''}/><p:nvPr/></p:nvSpPr><p:spPr>${this.box(b)}<a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${fillXml(fill)}<a:ln w="${emu(width)}">${fillXml(stroke)}</a:ln></p:spPr><p:txBody><a:bodyPr wrap="square" anchor="${anchor}" lIns="45720" rIns="45720" tIns="45720" bIns="45720"><a:normAutofit/></a:bodyPr><a:lstStyle/>${paragraphs(text, size, { color, bold, align, italic, underline, strike })}</p:txBody></p:sp>`);
+  }
+  // Echtes Titelfeld: PowerPoint zeigt es in der Gliederung und liest es als Folientitel vor
+  title(text) {
+    const id = this.nextId++;
+    this.xml.push(`<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="Titel ${id}"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:spPr>${this.box(TITLE_BOX)}</p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="de-DE"/><a:t>${x(text)}</a:t></a:r></a:p></p:txBody></p:sp>`);
   }
   image(b, dataUrl, crop) {
     const ext = (/^data:image\/(png|jpe?g|gif)/.exec(dataUrl) || [])[1];
@@ -130,21 +137,26 @@ async function addElement(slide, el, map, s, get) {
 }
 
 const THEME = `${HEAD}<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="vibeboard"><a:themeElements><a:clrScheme name="vibeboard"><a:dk1><a:srgbClr val="1A1A1A"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4262FF"/></a:accent1><a:accent2><a:srgbClr val="12B886"/></a:accent2><a:accent3><a:srgbClr val="F59F00"/></a:accent3><a:accent4><a:srgbClr val="E64980"/></a:accent4><a:accent5><a:srgbClr val="7048E8"/></a:accent5><a:accent6><a:srgbClr val="1098AD"/></a:accent6><a:hlink><a:srgbClr val="4262FF"/></a:hlink><a:folHlink><a:srgbClr val="7048E8"/></a:folHlink></a:clrScheme><a:fontScheme name="vibeboard"><a:majorFont><a:latin typeface="Arial"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont><a:minorFont><a:latin typeface="Arial"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme><a:fmtScheme name="vibeboard"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln w="6350"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>`;
-const TREE = '<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree>';
+const TITLE_XFRM = `<a:xfrm><a:off x="${emu(TITLE_BOX.x)}" y="${emu(TITLE_BOX.y)}"/><a:ext cx="${emu(TITLE_BOX.w)}" cy="${emu(TITLE_BOX.h)}"/></a:xfrm>`;
+const TITLE_SHAPE = `<p:sp><p:nvSpPr><p:cNvPr id="2" name="Titel"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:spPr>${TITLE_XFRM}</p:spPr><p:txBody><a:bodyPr anchor="ctr"/><a:lstStyle/><a:p><a:endParaRPr lang="de-DE"/></a:p></p:txBody></p:sp>`;
+const TREE = `<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${TITLE_SHAPE}</p:spTree>`;
+const TITLE_STYLE = '<p:txStyles><p:titleStyle><a:lvl1pPr algn="l"><a:defRPr sz="2800" b="1"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill><a:latin typeface="+mj-lt"/></a:defRPr></a:lvl1pPr></p:titleStyle></p:txStyles>';
 
 /**
- * slides: [{ bounds, elements }]; get: Nachschlagen von Elementen (Verbindungen).
+ * slides: [{ bounds, elements, title }]; get: Nachschlagen von Elementen (Verbindungen).
  * Liefert die Datei als Blob.
  */
 export async function buildPptx(slides, get) {
   const media = [];
   const parts = [];
   for (let i = 0; i < slides.length; i++) {
-    const { bounds, elements } = slides[i];
-    const s = Math.min(SLIDE_W / (bounds.w || 1), SLIDE_H / (bounds.h || 1));
-    const ox = (SLIDE_W - bounds.w * s) / 2, oy = (SLIDE_H - bounds.h * s) / 2;
+    const { bounds, elements, title } = slides[i];
+    const top = title ? TITLE_BAND : 0;
+    const s = Math.min(SLIDE_W / (bounds.w || 1), (SLIDE_H - top) / (bounds.h || 1));
+    const ox = (SLIDE_W - bounds.w * s) / 2, oy = top + (SLIDE_H - top - bounds.h * s) / 2;
     const map = (b) => ({ x: ox + (b.x - bounds.x) * s, y: oy + (b.y - bounds.y) * s, w: (b.w || 0) * s, h: (b.h || 0) * s });
     const slide = new Slide(i + 1, media);
+    if (title) slide.title(title);
     for (const el of elements) await addElement(slide, el, map, s, get);
     parts.push({ name: `ppt/slides/slide${i + 1}.xml`, data: slide.render() });
     parts.push({ name: `ppt/slides/_rels/slide${i + 1}.xml.rels`, data: `${HEAD}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${slide.rels.join('')}</Relationships>` });
@@ -155,8 +167,8 @@ export async function buildPptx(slides, get) {
   const ids = slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 2}"/>`).join('');
   const presentation = `${HEAD}<p:presentation ${XMLNS}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst>${ids}</p:sldIdLst><p:sldSz cx="${SLIDE_W * EMU}" cy="${SLIDE_H * EMU}"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>`;
   const presRels = `${HEAD}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${REL}/slideMaster" Target="slideMasters/slideMaster1.xml"/>${slides.map((_, i) => `<Relationship Id="rId${i + 2}" Type="${REL}/slide" Target="slides/slide${i + 1}.xml"/>`).join('')}<Relationship Id="rId${slides.length + 2}" Type="${REL}/theme" Target="theme/theme1.xml"/></Relationships>`;
-  const master = `${HEAD}<p:sldMaster ${XMLNS}><p:cSld><p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>${TREE}</p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst></p:sldMaster>`;
-  const layout = `${HEAD}<p:sldLayout ${XMLNS} type="blank" preserve="1"><p:cSld name="Leer">${TREE}</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>`;
+  const master = `${HEAD}<p:sldMaster ${XMLNS}><p:cSld><p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>${TREE}</p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>${TITLE_STYLE}</p:sldMaster>`;
+  const layout = `${HEAD}<p:sldLayout ${XMLNS} type="titleOnly" preserve="1"><p:cSld name="Nur Titel">${TREE}</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>`;
   const rel = (items) => `${HEAD}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${items}</Relationships>`;
   return writeZip([
     { name: '[Content_Types].xml', data: contentTypes },

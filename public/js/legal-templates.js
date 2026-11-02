@@ -78,9 +78,9 @@ Kommentare speichern wir mit deinem Anzeigenamen und dem Zeitpunkt. Erwähnst du
 
 Boards können mit [Jira/Azure DevOps] verbunden sein. Dann gleichen wir Titel, Beschreibung, Status, Termine, Priorität und Schlagwörter von Karten mit dem jeweiligen Ticket ab und zeigen die dort eingetragene zuständige Person an. Anbieter des Dienstes ist [Anbieter].
 
-# Freigaben
+# Prüfungen
 
-Legst du Inhalte zur Freigabe vor oder entscheidest darüber, speichern wir die beteiligten Personen, ihre Entscheidungen, Begründungen und den Zeitpunkt, bis die Freigabe entfernt oder das Board gelöscht wird.
+Legst du Inhalte zur Prüfung vor oder entscheidest darüber, speichern wir die beteiligten Personen, ihre Entscheidungen, Begründungen und den Zeitpunkt, bis die Prüfung entfernt oder das Board gelöscht wird.
 
 [Nur aufnehmen, wenn Keycloak, SAML, LDAP, Kerberos oder SCIM in der Administration eingeschaltet sind:] # Anmeldung über den Anmeldedienst der Organisation
 
@@ -100,7 +100,7 @@ Teams bestehen aus ihren Mitgliedern (Name, Rolle im Team). Mitglied wird man nu
 
 # Gastzugang
 
-[Nur aufnehmen, wenn der Gastzugang in der Administration eingeschaltet ist:] Über einen Gastlink können Personen ohne Benutzerkonto ein einzelnes Board ansehen oder kommentieren. Dabei verarbeiten wir den angegebenen Namen, die Inhalte, die der Gast erstellt (z. B. Kommentare), sowie die technisch notwendigen Sitzungsdaten (Cookie, IP-Adresse, Browser-Kennung, Zeitpunkt der letzten Aktivität). Der Gastzugang und seine Sitzung werden gelöscht, sobald der Link abläuft oder gesperrt wird; erstellte Kommentare bleiben mit dem angegebenen Namen auf dem Board, bis sie gelöscht werden. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b bzw. f DSGVO (Durchführung der Zusammenarbeit, zu der eingeladen wurde).
+[Nur aufnehmen, wenn der Gastzugang in der Administration eingeschaltet ist:] Über einen Gastlink können Personen ohne Benutzerkonto ein einzelnes Board ansehen, kommentieren oder, falls eingeschaltet, eigene Notizen beitragen. Dabei verarbeiten wir den angegebenen Namen, die Inhalte, die der Gast erstellt (z. B. Kommentare und Notizen), die Zuordnung eigener Notizen zum Gastzugang sowie die technisch notwendigen Sitzungsdaten (Cookie, IP-Adresse, Browser-Kennung, Zeitpunkt der letzten Aktivität). Der Gastzugang und seine Sitzung werden gelöscht, sobald der Link abläuft oder gesperrt wird; die Zuordnung entfällt damit. Erstellte Kommentare und Notizen bleiben mit dem angegebenen Namen auf dem Board, bis sie gelöscht werden. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b bzw. f DSGVO (Durchführung der Zusammenarbeit, zu der eingeladen wurde).
 
 # Anmeldesitzungen und Cookies
 

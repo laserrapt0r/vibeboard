@@ -2,7 +2,7 @@
 import { T } from './i18n.js';
 import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
-  debounce, throttle, toast, contrastText, STICKY_COLORS, api, columnName,
+  debounce, throttle, toast, contrastText, STICKY_COLORS, api, columnName, fontPx, MAX_FONT_SIZE,
 } from './util.js';
 import { shownCells, renderElement, elBounds, isOrphan, connectorGeom, defsMarkup, sortForRender, renderOrder, isBackdrop, shapeTextColor, LH, textLayout, shapeTextBox, penPath, sidePoint, codeMetrics, MONO,
   outlinePoint, sideAnchor, waypointsOf, projectOnPath, pointAlong, tableLayout, cellAt, cellStyle, fractions, SHAPE_DEFAULTS, labelBelow, labelOutside, setElementLookup } from './render.js';
@@ -15,6 +15,9 @@ export const app = {
   boardId,
   viewOnly: false,   // wird nach dem Laden aus der Rolle gesetzt (auch während einer Bearbeitungssperre der Moderation)
   canComment: false, // Rolle „Kommentieren“ oder höher
+  contributor: false, // Gaststufe „Beiträge“: bleibt viewOnly, darf aber eigene Notizen
+  notesOpen: false,  // contributor und gerade keine Bearbeitungssperre
+  mine: new Set(),   // eigene Notizen, die Liste kommt vom Server
   isFacilitator: false, // moderiert gerade (Besitzer immer)
   role: null,
   user: { id: '', name: '', color: '#4262ff' },
@@ -524,11 +527,16 @@ function record(id) {
   if (tx && !tx.before.has(id)) tx.before.set(id, app.els.has(id) ? clone(app.els.get(id)) : null);
 }
 
+// Beiträge: Das ist nur die Bedienung, entscheiden tut der Server
+export const ownNote = (el) => app.notesOpen && !!el && el.type === 'sticky' && app.mine.has(el.id) && !isLocked(el) && !el.hidden;
+const mayWrite = (el) => !app.viewOnly || (app.notesOpen && el.type === 'sticky' && (!app.els.has(el.id) || app.mine.has(el.id)));
+
 export function setEl(el, send = true) {
   // Verdeckte private Elemente anderer sind unveränderlich
-  if (app.viewOnly || el.hidden || app.els.get(el.id)?.hidden) return;
+  if (!mayWrite(el) || el.hidden || app.els.get(el.id)?.hidden) return;
   record(el.id);
   const prev = app.els.get(el.id);
+  if (!prev && app.notesOpen) app.mine.add(el.id);
   app.els.set(el.id, el);
   if (!prev || renderOrder(prev, el)) orderDirty = true;
   if (el.z > maxZ) maxZ = el.z;
@@ -544,7 +552,7 @@ export function updateEl(id, patch) {
 }
 
 export function deleteEl(id) {
-  if (app.viewOnly || !app.els.has(id) || app.els.get(id).hidden) return;
+  if ((app.viewOnly && !ownNote(app.els.get(id))) || !app.els.has(id) || app.els.get(id).hidden) return;
   record(id);
   const prev = app.els.get(id);
   app.els.delete(id);
@@ -553,15 +561,13 @@ export function deleteEl(id) {
   app.sync.remove(id, prev);
 }
 
-// Neu angelegt und unverändert verworfen: Auch der Eintrag im Verlauf verschwindet. Woran andere inzwischen etwas gehängt haben, bleibt.
-export function discardCreated(id) {
-  const used = [...app.els.values()].some((e) => (e.type === 'connector' && (e.from.id === id || e.to.id === id)) || (e.type === 'comment' && e.anchor?.id === id));
-  if (used) return;
-  const i = undoStack.findLastIndex((u) => u.before.size === 1 && u.before.has(id) && !u.before.get(id));
-  if (i >= 0) undoStack.splice(i, 1);
-  deleteEl(id);
-  selectionChanged();
-  app.emit('history');
+// Karte ohne Titel: Sie bleibt nur, wenn andere inzwischen etwas an ihr geändert oder an sie gehängt haben
+const CARD_DETAILS = ['description', 'assignee', 'status', 'start', 'due', 'priority', 'points', 'key', 'tags', 'blockedBy'];
+
+function newCardInUse(el, created) {
+  const same = (k) => JSON.stringify(el[k] ?? '') === JSON.stringify(created[k] ?? '');
+  const id = el.id;
+  return !CARD_DETAILS.every(same) || [...app.els.values()].some((e) => (e.type === 'connector' && (e.from.id === id || e.to.id === id)) || (e.type === 'comment' && e.anchor?.id === id) || e.blockedBy?.includes(id));
 }
 
 // Löschen aus der Oberfläche: Gesperrtes bleibt stehen, wie bei Entf
@@ -680,7 +686,7 @@ function applySnapshot(map, opposite = new Map()) {
 }
 
 export function undo() {
-  if (app.viewOnly) return app.baseViewOnly ? undefined : toast(T('Das Bearbeiten ist gerade gesperrt'));
+  if (app.viewOnly && !app.notesOpen) return app.baseViewOnly && !app.contributor ? undefined : toast(T('Das Bearbeiten ist gerade gesperrt'));
   if (app.editing) finishEdit();
   if (drag || tx) return;
   const e = undoStack.pop();
@@ -694,7 +700,7 @@ export function undo() {
 }
 
 export function redo() {
-  if (app.viewOnly) return app.baseViewOnly ? undefined : toast(T('Das Bearbeiten ist gerade gesperrt'));
+  if (app.viewOnly && !app.notesOpen) return app.baseViewOnly && !app.contributor ? undefined : toast(T('Das Bearbeiten ist gerade gesperrt'));
   if (app.editing) finishEdit();
   if (drag || tx) return;
   const e = redoStack.pop();
@@ -939,7 +945,7 @@ export function autoHeight(el) {
     return Math.abs(h - el.h) > 0.5 ? { ...el, h } : el;
   }
   if (el.type !== 'text') return el;
-  const size = Number(el.fontSize) || 16;
+  const size = fontPx(el.fontSize);
   const lines = wrap(el.text || '', el.w - 8, size, el.bold, el.italic).length;
   const h = Math.max(1, lines) * size * LH + 8;
   return Math.abs(h - el.h) > 0.5 ? { ...el, h } : el;
@@ -1013,7 +1019,7 @@ function scaleEl(o, ob, nb, singleCorner) {
   if (o.type === 'pen') n.points = o.points.map(([px, py, ...p]) => [px * fx, py * fy, ...p]);
   if (o.type === 'code') return autoHeight(n);
   if (o.type === 'text') {
-    if (singleCorner && typeof o.fontSize === 'number') n.fontSize = Math.max(6, Math.round(o.fontSize * fy * 10) / 10);
+    if (singleCorner && typeof o.fontSize === 'number') n.fontSize = Math.min(MAX_FONT_SIZE, Math.max(6, Math.round(o.fontSize * fy * 10) / 10));
     return autoHeight(n);
   }
   return n;
@@ -1151,7 +1157,7 @@ const sendBusy = () => app.sync && app.sync.signal('busy', busy);
 export function setBusy(what, ids) {
   clearInterval(busyTimer);
   const list = ids.filter((id) => !isAnonymous(app.els.get(id))).slice(0, 200);
-  busy = !app.viewOnly && list.length ? { what, ids: list } : null;
+  busy = (!app.viewOnly || app.notesOpen) && list.length ? { what, ids: list } : null;
   if (!busy) return;
   sendBusy();
   busyTimer = setInterval(sendBusy, BUSY_BEAT);
@@ -1285,7 +1291,7 @@ function renderOverlay() {
     out += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="none" stroke="${isLocked(el) ? '#868e96' : '#4262ff'}" stroke-width="${sw}"${isLocked(el) ? T` stroke-dasharray="${4 / z} ${3 / z}"` : ''}/>`;
   }
   const dragging = drag && (drag.mode === 'move' || drag.mode === 'marquee');
-  if (!app.viewOnly && sel.length && !app.editing && !dragging) {
+  if ((!app.viewOnly || (app.notesOpen && sel.every(ownNote))) && sel.length && !app.editing && !dragging) {
     const hs = 9 / z;
     if (sel.length === 1 && sel[0].type === 'connector') {
       const c = sel[0];
@@ -1347,7 +1353,7 @@ function renderOverlay() {
         for (let c = 1; c < cols; c++) out += `<rect data-handle="col-${c - 1}" class="tab-col" x="${xs[c] - hw / 2}" y="${t.y}" width="${hw}" height="${t.h}" fill="transparent"><title>${T('Ziehen: Spaltenbreite ändern')}</title></rect>`;
         for (let r = 1; r < rows; r++) out += `<rect data-handle="row-${r - 1}" class="tab-row" x="${t.x}" y="${ys[r] - hw / 2}" width="${t.w}" height="${hw}" fill="transparent"><title>${T('Ziehen: Zeilenhöhe ändern')}</title></rect>`;
       }
-      if (sel.length === 1 && ['sticky', 'shape', 'card', 'text', 'image'].includes(sel[0].type)) {
+      if (!app.viewOnly && sel.length === 1 && ['sticky', 'shape', 'card', 'text', 'image'].includes(sel[0].type)) {
         const off = 24 / z;
         const qc = { top: [b.x + b.w / 2, b.y - off], right: [b.x + b.w + off, b.y + b.h / 2], bottom: [b.x + b.w / 2, b.y + b.h + off], left: [b.x - off, b.y + b.h / 2] };
         for (const [k, [px, py]] of Object.entries(qc)) {
@@ -1403,22 +1409,27 @@ function hintOnce(key, text) {
   toast(text, 6000);
 }
 
+const navigationHint = () => hintOnce('navHint', T('Tipp: Strg+Mausrad zoomt, das Mausrad verschiebt die Ansicht, und mit Leertaste + Ziehen greifst du die Fläche. Mehr steht in der Hilfe (?).'));
+
 export function canEdit(el) {
   return el && (!isLocked(el) || textOpen(el)) && !el.hidden && ['sticky', 'shape', 'text', 'frame', 'connector', 'table', 'code'].includes(el.type);
 }
 
+/** Wer kann den Titel dieser Karte direkt auf der Karte tippen? Details stehen im Dialog „Karte bearbeiten“. */
+const cardTitleOpen = (el) => el.type === 'card' && !isLocked(el) && !el.hidden;
+
 export function startEdit(id, opts = {}) {
   const el = getEl(id);
-  if (!el || app.viewOnly) return;
-  if (el.type === 'card') return app.emit('editCard', id);
+  if (!el || (app.viewOnly && !ownNote(el))) return;
+  if (el.type === 'card' && !opts.isNew) return app.emit('editCard', id);
   // Beschriftung als eigenes Textelement in derselben Gruppe (z. B. Nachrichten im Sequenzdiagramm)
   if (el.type === 'connector' && !el.label && el.groupId) {
     const txt = [...app.els.values()].find((t) => t.type === 'text' && t.groupId === el.groupId);
     if (txt) return startEdit(txt.id, opts);
   }
-  if (!canEdit(el)) return;
+  if (!canEdit(el) && !cardTitleOpen(el)) return;
   if (app.editing) finishEdit();
-  const field = el.type === 'frame' ? 'title' : el.type === 'connector' ? 'label' : 'text';
+  const field = el.type === 'frame' || el.type === 'card' ? 'title' : el.type === 'connector' ? 'label' : 'text';
   let cell = null;
   if (el.type === 'table') {
     cell = opts.cell || [0, 0];
@@ -1432,6 +1443,7 @@ export function startEdit(id, opts = {}) {
   if (cell) scheduleRender(true);
   if (el.mind) hintOnce('mindHint', T('Mindmap: Enter legt den nächsten Knoten an, Tab einen Unterknoten, Esc beendet.'));
   else if (el.type === 'sticky') hintOnce('stickyHint', T('Tipp: Tab legt die nächste Notiz daneben an, Esc beendet die Eingabe.'));
+  else if (el.type === 'card') hintOnce('cardHint', T('Tipp: Enter übernimmt den Titel, Tab legt die nächste Karte an. Details stehen unter „Karte bearbeiten“.'));
   else if (cell) hintOnce('tableHint', T('Tipp: Eine Zelle mit = rechnet, zum Beispiel =SUMME(B2:B5).'));
   setSelection([id]);
   editor.value = session.value;
@@ -1480,9 +1492,18 @@ function editorGeometry(el, ed = app.editing, text = editor.value) {
       color = frameTitleInk(el, el.x + 2, el.y - ts * 0.5);
       break;
     }
+    case 'card': {
+      // Dieselbe Stelle wie der Titel in render.js
+      const pad = 14;
+      box = { x: el.x + pad, y: el.y + 16 + (el.key ? 16 : 0), w: el.w - pad * 2, h: 60 };
+      lay = { size: 15, bold: true, lines: wrap(text, box.w, 15, true) };
+      align = 'left';
+      valign = 'top';
+      break;
+    }
     case 'connector': {
       const g = connectorGeom(el, getEl) || { mid: { x: 0, y: 0 } };
-      const fs = el.fontSize || 14;
+      const fs = fontPx(el.fontSize, 14);
       box = { x: g.mid.x - 100, y: g.mid.y - fs, w: 200, h: fs * 2 };
       lay = { size: fs, lines: (el.label || ' ').split('\n') };
       color = el.stroke;
@@ -1523,7 +1544,7 @@ export function layoutEditor() {
 /** Wo ein Cursor oder eine Markierung in einem Text steht, in Bildschirmpunkten der Bühne. Null, wenn der Text nicht da ist. */
 export function textCaretRects(el, target, pos, end = pos) {
   // Das Ziel kommt von anderen: Es muss zum Element passen, sonst gäbe es keine Lage zum Rechnen
-  const fits = target.cell ? el?.type === 'table' : { text: ['sticky', 'shape', 'text', 'code'], title: ['frame'], label: ['connector'] }[target.field]?.includes(el?.type);
+  const fits = target.cell ? el?.type === 'table' : { text: ['sticky', 'shape', 'text', 'code'], title: ['frame', 'card'], label: ['connector'] }[target.field]?.includes(el?.type);
   if (!el || !fits || !cellValid(el, target.cell)) return null;
   const text = String((target.cell ? el.cells?.[target.cell[0]]?.[target.cell[1]] : el[target.field]) ?? '');
   const from = Math.min(pos, end, text.length), to = Math.min(Math.max(pos, end), text.length);
@@ -1618,6 +1639,16 @@ function endComposition(ed) {
   if (el && cellValid(el, ed.cell)) showEditedText(ed, el, ed.session.value);
 }
 
+/** Dialog ändert den Text, der gerade im Editor offen ist: Das läuft wie Getipptes, ein anderer Weg nähme ihn nicht zum Server (TextSessions.mask). */
+export function typeIntoEdit(id, field, text) {
+  const ed = app.editing;
+  if (ed?.id !== id || ed.field !== field || ed.cell) return false;
+  endComposition(ed);
+  editor.value = text;
+  editor.dispatchEvent(new Event('input'));
+  return true;
+}
+
 function writeEditor(value, from, to) {
   if (editor.value !== value) editor.value = value;
   editor.setSelectionRange(from, to);
@@ -1662,6 +1693,11 @@ editor.addEventListener('keydown', (e) => {
     app.emit('openPalette');
     return;
   }
+  if (styleKey(e)) {
+    e.preventDefault();
+    toggleTextStyle(styleKey(e));
+    return;
+  }
   if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
     e.preventDefault();
     finishEdit();
@@ -1694,7 +1730,7 @@ editor.addEventListener('keydown', (e) => {
       if (blank()) return;
       finishEdit();
       mindAddChild(el);
-    } else if (el && (el.type === 'sticky' || el.type === 'shape') && !el.locked) {
+    } else if (el && (el.type === 'sticky' || el.type === 'shape' || el.type === 'card') && !el.locked) {
       if (!String(el[ed.field] ?? '').trim()) return;
       finishEdit();
       addNextTo(el);
@@ -1708,9 +1744,13 @@ editor.addEventListener('keydown', (e) => {
   }
 });
 
+// Wer in der Kontextleiste formatiert, schreibt danach weiter: Menüs, Farbwahl und Dialoge dieser Leiste beenden die Eingabe nicht
+const KEEPS_EDIT = '#ctxbar, .popover, .modal-back';
 editor.addEventListener('blur', () => setTimeout(() => {
-  if (app.editing && document.activeElement !== editor) finishEdit();
+  if (app.editing && document.activeElement !== editor && !document.activeElement?.closest?.(KEEPS_EDIT)) finishEdit();
 }, 0));
+// Ein Menü gibt den Fokus an seinen Knopf zurück, die Eingabe geht aber im Editor weiter. Die Einfügestelle hält das Textfeld selbst.
+$('#ctxbar').addEventListener('focusin', () => app.editing && editor.focus({ preventScroll: true }));
 
 export function finishEdit() {
   const ed = app.editing;
@@ -1718,7 +1758,8 @@ export function finishEdit() {
   // Offene Silbenkomposition gehört zum Text: Sonst wäre das Wort weg, bei einer neuen Notiz sogar die ganze Notiz
   endComposition(ed);
   const el = getEl(ed.id);
-  if (el && ((el.type === 'text' && !el.locked) || ed.drop) && !String(el.text || '').trim()) {
+  const keep = el?.type === 'card' && ed.created && newCardInUse(el, ed.created);
+  if (el && !keep && ((el.type === 'text' && !el.locked) || ed.drop) && !String(el[ed.field] || '').trim()) {
     deleteEls([el.id]);
     // Für den verworfenen Knoten beiseitegeschobene Äste kehren zurück
     for (const [id, y] of ed.pushed || []) if (getEl(id)) setEl({ ...getEl(id), y });
@@ -1744,7 +1785,7 @@ function createAndEdit(id, make, drop = true) {
   begin();
   const pushed = make();
   startEdit(id, { isNew: true, drop });
-  if (app.editing?.id === id) Object.assign(app.editing, { created: true, pushed });
+  if (app.editing?.id === id) Object.assign(app.editing, { created: clone(getEl(id)), pushed });
   else commit();
 }
 
@@ -1867,6 +1908,7 @@ export function mindAddSibling(node) {
 // Frame, geht es erst daneben und dann darunter weiter. Ist die Spalte voll, läuft es unten über: In die Nachbarspalte zu
 // rutschen ergäbe eine falsche Kategorie.
 const NEXT_GAP = 20, NEXT_COLS = 5, NEXT_ROWS = 40;
+const NEXT_CARD_DROP = ['text', 'description', 'key', 'points', 'start', 'due', 'assignee', 'assigneeId', 'blockedBy', 'action', 'priority'];
 const NEXT_DROP = ['id', 'text', 'locked', 'modLock', 'groupId', 'priv', 'privName', 'anon', 'reactions', 'votes', 'mind', 'link', 'order', 'kind', 'backdrop', 'statusCol', 'tags', 'ext', 'fileRef', 'approval'];
 
 function freeSpotNextTo(el) {
@@ -1923,6 +1965,10 @@ export function addNextTo(el) {
   const spot = freeSpotNextTo(el);
   const n = { ...clone(el), id: uid(), z: nextZ(), author: app.user.name || '', x: spot.x, y: spot.y, text: '' };
   for (const k of NEXT_DROP) if (k !== 'id' && k !== 'text') delete n[k];
+  if (n.type === 'card') {
+    for (const k of NEXT_CARD_DROP) delete n[k];
+    n.title = '';
+  }
   createAndEdit(n.id, () => {
     setEl(n);
     setSelection([n.id]);
@@ -1957,13 +2003,25 @@ function createAtCenter() {
   let el = makeElement(app.tool, snapV(c.x), snapV(c.y));
   const off = twinShift([el]);
   el = inColumn(translated(el, off, off));
+  if (el.type === 'card') {
+    afterCreate();
+    return createCard(el);
+  }
   act(() => setEl(el));
   if (app.tool === 'shape') rememberShape(el.shape);
   afterCreate();
   setSelection([el.id]);
   if (['sticky', 'shape', 'text', 'code'].includes(el.type)) startEdit(el.id, { isNew: true });
   else if (el.type === 'frame') startEdit(el.id);
-  else if (el.type === 'card') app.emit('editCard', el.id, { isNew: true });
+}
+
+// Der Titel entsteht direkt auf der Karte wie der Text einer Notiz. Bleibt er leer, verschwindet die Karte wieder.
+function createCard(el) {
+  el = { ...el, title: '' };
+  createAndEdit(el.id, () => {
+    setEl(el);
+    setSelection([el.id]);
+  });
 }
 
 // Liegt Neues genau auf etwas Gleichgroßem, sähe man es nicht: Versatz in Rastermaßen, der das vermeidet
@@ -1998,15 +2056,25 @@ function explainReadOnly() {
   if (!app.baseViewOnly) return toast(T('Das Bearbeiten ist gerade gesperrt'));
   if (roleHinted) return;
   roleHinted = true;
-  const text = app.guest
+  const text = app.contributor
+    ? T('Als Gast kannst du eigene Notizen anlegen und ändern, kommentieren und abstimmen. Andere Inhalte bleiben unverändert. Neue Notiz: Taste N.')
+    : app.guest
     ? (app.canComment ? T('Als Gast kannst du dieses Board ansehen und kommentieren, aber nicht bearbeiten. Kommentar: Taste C.') : T('Als Gast kannst du dieses Board nur ansehen. Abstimmen und Reagieren gehen trotzdem.'))
     : (app.canComment ? T('Du kannst dieses Board ansehen und kommentieren, aber nicht bearbeiten. Kommentar: Taste C.') : T('Du kannst dieses Board nur ansehen. Abstimmen und Reagieren gehen trotzdem.'));
   toast(text, 6000);
 }
 
+/** Auswahlmodus für Touch: Tippen nimmt Elemente in die Auswahl auf oder heraus, Ziehen auf leerer Fläche erweitert sie. */
+export function setTouchPick(on) {
+  app.touchPick = !!on;
+  if (on && app.tool !== 'select') setTool('select');
+  app.emit('touchPick', app.touchPick);
+}
+
 export function setTool(t) {
-  if (app.viewOnly && !['select', 'hand', 'laser'].includes(t) && !(t === 'comment' && app.canComment)) return;
+  if (app.viewOnly && !['select', 'hand', 'laser'].includes(t) && !(t === 'comment' && app.canComment) && !(t === 'sticky' && app.notesOpen)) return;
   if (t !== app.tool) app.toolHeld = false;
+  if (t !== 'select' && app.touchPick) setTouchPick(false);
   if (t !== 'select') stopBrush();
   app.tool = t;
   stage.dataset.tool = t;
@@ -2031,6 +2099,9 @@ function rememberShape(k) {
 /* ================================================================== */
 
 let drag = null;
+
+// Läuft gerade eine Geste auf der Fläche (Ziehen, Zeichnen, Aufziehen)?
+export const gestureActive = () => !!drag;
 let spaceDown = false;
 const pointers = new Map();
 let lastCursorWorld = { x: 0, y: 0 };
@@ -2128,6 +2199,9 @@ function onDown(e) {
   const hit = hitInfo(e.target);
   const handle = e.target.closest && e.target.closest('[data-handle]');
   const qc = e.target.closest && e.target.closest('[data-qc]');
+  // Touch hat keine Umschalttaste: Der Auswahlmodus wirkt wie gehaltenes Strg
+  const picking = !!app.touchPick && e.pointerType === 'touch';
+  const adding = e.shiftKey || e.ctrlKey || e.metaKey || picking;
 
   // Abstimmungsmodus
   const v = app.session.voting;
@@ -2160,7 +2234,10 @@ function onDown(e) {
     else newComment(w);
     return;
   }
-  if (app.viewOnly) {
+  // Beiträge: eigene Notizen greifen und neue anlegen, sonst wie Ansehen
+  const noteGesture = app.notesOpen && (app.tool === 'sticky' || (app.tool === 'select' && (handle || ownNote(hit?.el))));
+  if (app.viewOnly && !noteGesture) {
+    if (app.notesOpen && app.sel.size) setSelection([]);
     if (hit && hit.el.type === 'comment') app.emit('openComment', hit.el.id);
     drag = { mode: 'pan', start, vx: app.view.x, vy: app.view.y };
     stage.classList.add('panning');
@@ -2200,19 +2277,21 @@ function onDown(e) {
       if (hit) {
         const el = hit.el;
         const preSelected = new Set(app.sel);
-        if (el.type === 'frame' && !hit.frameTitle && !(app.sel.has(el.id) && app.sel.size === 1)) {
-          startMarquee(e, start, el.id);
+        // Flächen und Gesperrtes tragen Beiträge: Im Auswahlmodus zählen sie als leere Fläche, sonst wählte ein Tipp daneben die ganze Spalte
+        if (el.type === 'frame' && !hit.frameTitle && (picking || !(app.sel.has(el.id) && app.sel.size === 1))) {
+          startMarquee(e, start, picking ? null : el.id, picking);
           return;
         }
         if (isLocked(el)) {
-          startMarquee(e, start, el.id);
+          startMarquee(e, start, picking ? null : el.id, picking);
           return;
         }
         if (el.hidden) {
-          startMarquee(e, start, null);
+          startMarquee(e, start, null, picking);
           return;
         }
         if (el.type === 'comment') {
+          if (picking) return;
           setSelection([el.id]);
           drag = { mode: 'move', start, origs: [clone(el)], tx: true, clickComment: el.id };
           begin();
@@ -2222,7 +2301,7 @@ function onDown(e) {
         const inMulti = app.sel.size > 1 && app.sel.has(el.id);
         // Verbinder in einer Gruppe: Ziehen verschiebt die Gruppe (zum Biegen erst in die Gruppe klicken)
         const groupWhole = el.groupId && !(app.sel.size === 1 && app.sel.has(el.id));
-        if (el.type === 'connector' && !inMulti && !groupWhole && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (el.type === 'connector' && !inMulti && !groupWhole && !adding && !e.altKey) {
           // Beschriftung entlang der Linie verschieben
           if (e.target.closest && e.target.closest('.conn-label')) {
             setSelection([el.id]);
@@ -2244,7 +2323,7 @@ function onDown(e) {
           }
         }
         let toggleOff = null;
-        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+        if (adding) {
           const ids = withGroups([el.id]);
           // Bereits ausgewählt: erst beim Loslassen ohne Ziehen abwählen – Umschalt-/Strg-Ziehen verschiebt
           if (app.sel.has(el.id)) toggleOff = el.type === 'table' && app.sel.size === 1 ? null : ids;
@@ -2260,8 +2339,8 @@ function onDown(e) {
         startMove(e, start);
         if (toggleOff) drag.toggleOff = [...toggleOff];
         // Klick in eine bereits ausgewählte Tabelle wählt eine Zelle (Umschalt: Bereich)
-        if (el.type === 'table' && preSelected.size === 1 && preSelected.has(el.id) && !isLocked(el)) drag.cellClick = { id: el.id, cell: cellAt(el, w.x, w.y), extend: e.shiftKey };
-        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        if (el.type === 'table' && preSelected.size === 1 && preSelected.has(el.id) && !isLocked(el) && !picking) drag.cellClick = { id: el.id, cell: cellAt(el, w.x, w.y), extend: e.shiftKey };
+        if (!adding) {
           // Klick ohne Ziehen auf ein Element einer Mehrfachauswahl wählt nur dieses aus
           if (app.sel.size > grp.size) drag.clickSelect = el.id;
           // Erneuter Klick in eine bereits ausgewählte Gruppe wählt nur das angeklickte Element (Bearbeiten in der Gruppe)
@@ -2269,7 +2348,7 @@ function onDown(e) {
         }
         return;
       }
-      startMarquee(e, start, null);
+      startMarquee(e, start, null, picking);
       return;
     }
     case 'sticky': case 'shape': case 'frame': case 'text': case 'card': case 'table': case 'code':
@@ -2316,9 +2395,10 @@ function overlappingConnector(hitEl, w) {
   return { current: list[cur], next: list[(cur + 1) % list.length], count: list.length };
 }
 
-function startMarquee(e, start, pendingSelect) {
-  drag = { mode: 'marquee', start, additive: e.shiftKey, base: new Set(e.shiftKey ? app.sel : []), pendingSelect };
-  if (!e.shiftKey && !pendingSelect) {
+function startMarquee(e, start, pendingSelect, picking = false) {
+  const additive = e.shiftKey || picking;
+  drag = { mode: 'marquee', start, additive, picking, base: new Set(additive ? app.sel : []), pendingSelect };
+  if (!additive && !pendingSelect) {
     app.sel = new Set();
     selectionChanged();
   }
@@ -2581,6 +2661,7 @@ function onMove(e) {
       marquee = r;
       const s2 = new Set(drag.base);
       for (const el of app.els.values()) {
+        if (drag.picking && (el.hidden || isLocked(el) || isBackdrop(el))) continue;
         const b = bounds(el);
         if (el.type === 'frame' ? rectContains(r, b) : rectsIntersect(r, b)) s2.add(el.id);
       }
@@ -2859,6 +2940,34 @@ export const boardColumns = () => [...app.els.values()].filter((z) => z.statusCo
 // Kanban-Ansicht rückgängig. Karten aus Jira oder Azure bleiben außen vor: Ziehen auf dem Board darf kein Ticket umstellen.
 const columnsOfSelection = () => new Map(selectedEls().filter((e) => e.type === 'card').map((e) => [e.id, columnAt(e)]));
 
+/** Sichtbare Karten, die diese Karte blockieren. Gelöschte und fremde private Karten entfallen. */
+export const cardBlockers = (card) => (card.blockedBy || []).map(getEl).filter((c) => c?.type === 'card' && !c.hidden);
+
+/** Würde „card wird von other blockiert“ einen Kreis schließen? */
+export function closesCycle(card, other) {
+  const seen = new Set();
+  const todo = [other.id];
+  while (todo.length) {
+    const id = todo.pop();
+    if (id === card.id) return true;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    todo.push(...(getEl(id)?.blockedBy || []));
+  }
+  return false;
+}
+
+/** Neue Karte mit Titel in einer Spalte der Kanban-Ansicht. Liegt die Spalte auf dem Board, landet die Karte dort. */
+export function addCardToColumn(title, status) {
+  const c = freeCenter(300, 140);
+  const el = makeElement('card', snapV(c.x), snapV(c.y), { title, ...(status ? { status } : {}) });
+  act(() => {
+    setEl(el);
+    if (status) cardToColumn(el.id, status);
+  });
+  return el.id;
+}
+
 // Status aus der Kanban-Ansicht: Die Karte zieht auf dem Board in die passende Spalte, sonst widersprächen sich beide
 export function cardToColumn(id, status) {
   const card = getEl(id);
@@ -2937,6 +3046,7 @@ function onUp(e) {
   drag = null;
   const w = toWorld(e.clientX, e.clientY);
   const far = Math.hypot(e.clientX - d.start.cx, e.clientY - d.start.cy) > 4;
+  if (far && (d.mode === 'marquee' || d.mode === 'pan')) navigationHint();
   stage.classList.remove('panning');
   guides = [];
   const hadHover = hoverTarget;
@@ -2994,6 +3104,10 @@ function onUp(e) {
       el = inColumn(el);
       if (d.type === 'shape') rememberShape(el.shape);
       afterCreate();
+      if (el.type === 'card') {
+        createCard(el);
+        break;
+      }
       if (['sticky', 'shape', 'text', 'code'].includes(el.type)) {
         createAndEdit(el.id, () => {
           setEl(el);
@@ -3004,7 +3118,6 @@ function onUp(e) {
       act(() => setEl(el));
       setSelection([el.id]);
       if (el.type === 'frame') startEdit(el.id);
-      else if (el.type === 'card') app.emit('editCard', el.id, { isNew: true });
       break;
     }
     case 'connect': {
@@ -3137,11 +3250,17 @@ function quickConnect(d, w, target) {
 
 /* Doppelklick: bearbeiten bzw. neue Notiz */
 stage.addEventListener('dblclick', (e) => {
+  // Zwei schnelle Tipps im Auswahlmodus heißen an und wieder ab, nicht bearbeiten
+  if (app.touchPick) return;
   // Dateianhänge öffnen auch Betrachter (Vorschau bzw. Download)
   const fh = hitInfo(e.target);
   if (fh && fh.el.type === 'file') return app.emit('openFile', fh.el.id);
   if (e.target === editor || stage.classList.contains('voting')) return;
-  if (app.viewOnly) {
+  if (app.notesOpen && fh && !ownNote(fh.el) && !(fh.el.type === 'frame' && !fh.frameTitle)) {
+    if (fh.el.type !== 'comment') explainReadOnly();
+    return;
+  }
+  if (app.viewOnly && !app.notesOpen) {
     if (fh?.el.type !== 'comment') explainReadOnly();
     return;
   }
@@ -3187,6 +3306,7 @@ stage.addEventListener('wheel', (e) => {
   e.preventDefault();
   if (app.editing) layoutEditor();
   if (e.ctrlKey || e.metaKey || (app.settings.wheelZoom && !e.shiftKey)) {
+    navigationHint();
     const f = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0022));
     zoomAt(e.clientX, e.clientY, app.view.z * f);
   } else {
@@ -3245,6 +3365,8 @@ export function duplicateEls(list, dx = 20, dy = 20, select = true) {
       delete n.ext; // Die Kopie ist nicht mit demselben Ticket verbunden
       delete n.reactions; // Reaktionen galten dem Original
       if (n.type === 'chart' && idMap.has(n.sourceId)) n.sourceId = idMap.get(n.sourceId);
+      // Mitkopierte Blockierer: Die Kopie hängt an der Kopie. Andere gelten weiter, der Server streicht sie auf fremden Boards.
+      if (n.blockedBy) n.blockedBy = n.blockedBy.map((id) => idMap.get(id) || id);
       // nur lokal benötigt (Auswahl beim Alt-Ziehen) – nicht aufzählbar, wird also nie gespeichert oder gesendet
       Object.defineProperty(n, '_src', { value: o.id, enumerable: false, configurable: true });
       n.id = idMap.get(o.id);
@@ -3396,6 +3518,35 @@ export function formatCells(patch) {
   act(() => tablePatch(rg.t, { styles }));
   // Während der Bearbeitung einer Zelle zeigt der Editor das neue Format sofort
   if (app.editing && app.editing.cell) layoutEditor();
+}
+
+/* ---------------- Fett, kursiv, unterstrichen per Taste ---------------- */
+
+const STYLE_KEYS = { b: 'bold', i: 'italic', u: 'underline' };
+const CELL_STYLE = { bold: 'b', italic: 'i', underline: 'u' };
+const STYLED_TYPES = new Set(['sticky', 'shape', 'text']);
+
+function styleKey(e) {
+  return (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey ? STYLE_KEYS[e.key.toLowerCase()] : undefined;
+}
+
+// Wie die Knöpfe der Kontextleiste: während der Eingabe für das ganze Element oder die Zelle, sonst für die Auswahl
+export function toggleTextStyle(prop) {
+  if (app.viewOnly && !app.notesOpen) return;
+  const ed = app.editing;
+  const rg = tableRange();
+  if (rg && (!ed || ed.cell)) {
+    if (isLocked(rg.t)) return;
+    formatCells({ [CELL_STYLE[prop]]: !cellStyle(rg.t, rg.r0, rg.c0)[prop] });
+    app.emit('selection');
+    return;
+  }
+  const list = (ed ? [getEl(ed.id)] : selectedEls()).filter((el) => el && STYLED_TYPES.has(el.type) && !isLocked(el));
+  if (!list.length) return;
+  const on = !list[0][prop];
+  act(() => list.forEach((el) => setEl(autoHeight({ ...el, [prop]: on }))));
+  if (ed) layoutEditor();
+  app.emit('selection');
 }
 
 /* ---------------- Format übertragen ---------------- */
@@ -3762,7 +3913,7 @@ function smartDuplicate() {
 
 export function clusterByColor() {
   const stickies = selectedEls().filter((e) => e.type === 'sticky' && !isLocked(e));
-  if (stickies.length < 2) return toast(T('Bitte mehrere Sticky Notes auswählen'));
+  if (stickies.length < 2) return toast(T('Bitte mehrere Notizen auswählen'));
   const groups = new Map();
   for (const s of stickies) {
     if (!groups.has(s.fill)) groups.set(s.fill, []);
@@ -3841,6 +3992,7 @@ export function deleteFramesWithContent() {
 }
 
 export function toggleLock() {
+  if (app.viewOnly) return;
   const sel = selectedEls();
   const lock = !sel.every((e) => e.locked);
   act(() => sel.forEach((el) => setEl({ ...el, locked: lock })));
@@ -3909,9 +4061,27 @@ function isTyping(e) {
   return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) && t !== editor;
 }
 
-const TOOL_KEYS = { v: 'select', h: 'hand', n: 'sticky', t: 'text', s: 'shape', l: 'connector', p: 'pen', e: 'eraser', f: 'frame', c: 'comment', k: 'card', m: 'mindmap', x: 'laser' };
+const TOOL_KEYS = { v: 'select', h: 'hand', n: 'sticky', t: 'text', s: 'shape', l: 'connector', p: 'pen', e: 'eraser', f: 'frame', c: 'comment', k: 'card', m: 'mindmap', x: 'laser', b: 'table', d: 'code' };
 
 let keysPausedUntil = 0;
+
+// Beiträge: die Tasten, die eigene Notizen betreffen. Alles andere bleibt wie beim Ansehen.
+function noteKey(e, key) {
+  const one = app.sel.size === 1 ? selectedEls()[0] : null;
+  if (key === 'n' && !e.altKey) setTool('sticky');
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && app.sel.size) deleteSelection();
+  else if (e.key === 'Escape') {
+    if (app.tool !== 'select') setTool('select');
+    else setSelection([]);
+  } else if (e.key.startsWith('Arrow') && app.sel.size) {
+    const s = app.settings.snap ? gridSize() : e.shiftKey ? 10 : 1;
+    nudge(e.key === 'ArrowLeft' ? -s : e.key === 'ArrowRight' ? s : 0, e.key === 'ArrowUp' ? -s : e.key === 'ArrowDown' ? s : 0);
+  } else if (e.key === 'Enter' && app.tool === 'sticky') createAtCenter();
+  else if (e.key === 'Enter' && one) startEdit(one.id, { selectAll: false });
+  else return false;
+  e.preventDefault();
+  return true;
+}
 
 window.addEventListener('keydown', (e) => {
   if (isTyping(e) || app.editing) return;
@@ -3952,7 +4122,12 @@ window.addEventListener('keydown', (e) => {
   }
   if (mod && key === 'a') {
     e.preventDefault();
-    setSelection([...app.els.keys()]);
+    setSelection(app.notesOpen ? [...app.els.values()].filter(ownNote).map((el) => el.id) : [...app.els.keys()]);
+    return;
+  }
+  if (styleKey(e)) {
+    e.preventDefault();
+    toggleTextStyle(styleKey(e));
     return;
   }
   if (mod && key === 'd') {
@@ -3994,12 +4169,12 @@ window.addEventListener('keydown', (e) => {
     animateView({ z: 1, x: r.width / 2 - c.x, y: r.height / 2 - c.y });
     return;
   }
-  if (mod && (e.key === ']' || e.key === 'PageUp')) {
+  if (mod && (e.key === ']' || e.key === 'PageUp' || (e.shiftKey && e.key === 'ArrowUp'))) {
     e.preventDefault();
     bringToFront();
     return;
   }
-  if (mod && (e.key === '[' || e.key === 'PageDown')) {
+  if (mod && (e.key === '[' || e.key === 'PageDown' || (e.shiftKey && e.key === 'ArrowDown'))) {
     e.preventDefault();
     sendToBack();
     return;
@@ -4015,6 +4190,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (mod) return;
+  if (app.notesOpen && noteKey(e, key)) return;
   if (app.viewOnly) {
     if (key === 'v' || key === 'h' || key === 'x' || (key === 'c' && app.canComment)) setTool(TOOL_KEYS[key]);
     else if (TOOL_KEYS[key] || key === 'r' || key === 'o') explainReadOnly();
@@ -4232,7 +4408,7 @@ document.addEventListener('cut', (e) => {
 });
 
 // Mittlere Maustaste = Verschieben. Unter Linux fügt sie sonst zusätzlich die markierte Auswahl ein
-// („Primary Selection“), was eine ungewollte Sticky Note erzeugen würde.
+// („Primary Selection“), was eine ungewollte Notiz erzeugen würde.
 let lastMiddleClick = 0;
 for (const type of ['mousedown', 'mouseup', 'auxclick']) {
   stage.addEventListener(type, (e) => {
@@ -4304,14 +4480,14 @@ export function pasteText(text, at) {
     addElements([translated(el, off, off)]);
     return;
   }
-  // Mehrere Zeilen -> eine Sticky Note pro Zeile
+  // Mehrere Zeilen -> eine Notiz pro Zeile
   const cols = Math.ceil(Math.sqrt(lines.length));
   const size = 200, gap = 20;
   const ox = at.x - (cols * (size + gap)) / 2, oy = at.y - (Math.ceil(lines.length / cols) * (size + gap)) / 2;
   const list = lines.slice(0, 400).map((l, i) => makeElement('sticky', 0, 0, { x: ox + (i % cols) * (size + gap), y: oy + Math.floor(i / cols) * (size + gap), text: l }));
   const off = twinShift(list);
   addElements(list.map((e) => translated(e, off, off)));
-  toast(T`${list.length} Sticky Notes erstellt`);
+  toast(T`${list.length} Notizen erstellt`);
 }
 
 /* ================================================================== */
@@ -4375,7 +4551,7 @@ stage.addEventListener('drop', (e) => {
 /* ================================================================== */
 
 export function initCore() {
-  app.sync = new Sync(boardId, app.user, { viewOnly: app.viewOnly, canComment: app.canComment });
+  app.sync = new Sync(boardId, app.user, { viewOnly: app.viewOnly, canComment: app.canComment, notes: app.notesOpen });
   const saved = loadPref('view.' + boardId, null);
   if (saved) app.view = saved;
   stage.dataset.tool = app.tool;

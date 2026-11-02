@@ -113,6 +113,7 @@ BSI IT-Grundschutz.
 - **Seit:** 4.5.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Bei jedem Push auf `main` und jedem Pull Request wird jede Route aus dem Router gelesen und mit echten Gegenständen aufgerufen: ohne Anmeldung, als fremde Person, mit den Rollen Ansehen, Kommentieren und Gast; Bearbeiten für die Rechte des Besitzers und die Administration. Neue Routen sind ohne Zutun erfasst.
+  - Geändert in 4.16.0: Auch die Gaststufe „Beiträge“ läuft mit. Die Gegenprobe führt aus, was Bearbeitende dürfen, und zeigt, dass dieselben Operationen von dieser Stufe nichts bewirken.
   - Eine Gegenprobe stellt für jede Leseroute sicher, dass Berechtigte sie erreichen. Abbrüche gelten als Fehler, Ablehnen zählt nur mit 401, 403, 404, 405, 409 oder 410.
   - Kopien (Board duplizieren, Version kopieren) dürfen keine verborgenen Inhalte und Dateien mitnehmen.
   - Öffentliche Routen stehen mit Begründung in einer Liste; alles andere muss ohne Anmeldung scheitern. Die Administration ist nur für Administratoren erreichbar.

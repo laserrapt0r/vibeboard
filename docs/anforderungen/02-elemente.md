@@ -1,6 +1,6 @@
 # 02 – Board-Elemente
 
-### REQ-ELEM-001 Sticky Notes
+### REQ-ELEM-001 Notizen
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Beschreibung:** Farbige Notizzettel mit Text.
 - **Akzeptanzkriterien:**
@@ -10,6 +10,7 @@
   - Optional wird der Name der Person angezeigt, die die Notiz erstellt hat.
   - Anlegen per Werkzeug (N), Doppelklick auf eine freie Fläche oder Kontextmenü.
   - Geändert in 4.12.0: Passt Text in der gewählten Größe nicht in Notiz oder Form, wird er so weit verkleinert, dass er hineinpasst. Die gewählte Größe bleibt gespeichert und gilt wieder, sobald der Text passt.
+  - Geändert in 4.16.0: Die Schriftgröße liegt für alle Elemente zwischen 1 und 128. Der Server begrenzt neue Werte, die Darstellung klemmt ältere, gespeicherte Daten bleiben unverändert, bis das Element sich ändert. Text wächst beim Ziehen an der Ecke höchstens bis 128.
 
 ### REQ-ELEM-002 Text
 - **Seit:** 1.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -92,6 +93,9 @@
   - Überfällige Termine werden rot dargestellt.
   - Geändert in 3.2.0: zusätzlich Schlüssel/Ticketnummer (z. B. „VB-42“), Priorität (Kritisch, Hoch, Mittel, Niedrig – auch über die Kontextleiste), Story Points und bis zu 8 Labels. Alle Angaben erscheinen auf der Karte, ohne sich zu überlappen.
   - Karten bilden die Aufgaben des Boards (Aufgaben-Panel, „Meine Aufgaben“, siehe [16](16-projektarbeit.md)).
+  - Geändert in 4.16.0: Das Karten-Werkzeug legt die Karte an, der Titel entsteht direkt auf der Karte wie der Text einer Notiz, auch beim gemeinsamen Tippen. Enter oder Esc beendet die Eingabe, Tab legt die nächste Karte an. Details stehen unter „Karte bearbeiten“. Der Dialog öffnet sich nicht mehr von selbst.
+  - Geändert in 4.16.0: Bleibt der Titel einer neuen Karte leer, verschwindet sie ohne Eintrag im Verlauf. Sie bleibt, wenn jemand sie inzwischen geändert oder mit Linie, Kommentar oder Abhängigkeit genutzt hat.
+  - Geändert in 4.16.0: Wer bei offener Schnelleingabe „Karte bearbeiten“ wählt, speichert den Titel aus dem Dialog wie Getipptes, Speichern beendet die Eingabe.
   - Geändert in 4.15.0: Beim Öffnen einer neuen Karte ist der Titel markiert. Bricht man sie unverändert ab (Esc, Abbrechen, Schließen), verschwindet sie ohne Eintrag im Verlauf. Das Statusfeld bietet die Spalten und vorhandenen Status an und gleicht die Schreibweise an eine vorhandene an; eine Änderung nimmt die Karte auf dem Board in die passende Spalte mit.
 
 ### REQ-ELEM-009 Tabellen
@@ -164,6 +168,7 @@
     - Schreiben, Antworten, Erledigen, Zuweisen und Löschen laufen über eigene Operationen: Autor (Benutzer-ID und Name) und Zeitpunkt legt der Server fest. Ein Verschieben des Kommentars kann den Thread nicht überschreiben; neue Kommentare oder die Umwandlung anderer Elemente in Kommentare über normale Änderungen lehnt der Server ab. Rückgängig nach dem Löschen stellt den gespeicherten Kommentar wieder her.
     - Geändert in 3.7.1: Beim Kopieren, Duplizieren und JSON-Import in ein bestehendes Board werden Kommentare nicht übernommen (wie beim Export); ein Hinweis nennt die Anzahl. Ein neues Board aus einem Import übernimmt Kommentare, aber ohne Benutzerkennungen der Beiträge, ohne Zuweisungen und ohne Moderationssperren. Tasten im Kommentarfenster wirken nie als Board-Kürzel; ein angefangener Kommentar übersteht das Wiederverbinden.
     - Ein Thread fasst höchstens 500 Beiträge; Kommentare sind je Person auf 120 pro Minute begrenzt. Von der Moderation gesperrte Kommentare ändern nur Moderierende.
+    - Geändert in 4.16.0: Zuständig kann nur sein, wer den Kommentar auch erledigen darf; Gäste der Stufe „Beiträge“ stehen nicht zur Wahl, der Server lehnt sie ab.
     - Beim Tippen von „@“ schlägt das Eingabefeld Personen mit Bezug zum Board vor (Besitzer, Mitglieder, Team, aktive Gäste, bei Link-Freigabe auch Besucher); Pfeiltasten wählen, Enter oder Tab übernimmt. Erwähnungen der eigenen Person sind hervorgehoben. Die Personenliste erhalten nur Personen ab der Rolle „Kommentieren“; Gäste sehen dabei keine Anmeldenamen (sie erwähnen über den Anzeigenamen).
     - Geändert in 4.0.0: Erwähnt wird über den Namen (`@Vorname Nachname`). Da Namen nicht eindeutig sind, schickt das Eingabefeld die IDs der ausgewählten Personen mit; maßgeblich sind diese, solange „@Name“ im Text steht. Von Hand getippte Namen zählen nur, wenn sie unter den Personen des Boards eindeutig sind. Der Kommentar speichert die erwähnten Personen; hervorgehoben wird danach (die eigene Person anhand der ID).
     - Löschen dürfen Bearbeitende jeden Kommentar, alle anderen nur eigene Threads ohne Antworten anderer.
@@ -187,7 +192,7 @@
 - **Seit:** 3.2.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Beschreibung:** Fluss- und Sequenzdiagramme aus einer Textbeschreibung in der verbreiteten Mermaid-Schreibweise erzeugen („Diagrams as Code“).
 - **Akzeptanzkriterien:**
-  - Dialog „Diagramm aus Text“ (Werkzeugleiste und Export-/Importmenü) mit Live-Vorschau, Beispielen und Kurzreferenz; Fehler werden verständlich auf Deutsch gemeldet.
+  - Dialog „Diagramm aus Text“ (Werkzeugleiste und Boardmenü → Importieren) mit Live-Vorschau, Beispielen und Kurzreferenz; Fehler werden verständlich auf Deutsch gemeldet.
   - Flussdiagramme (`flowchart`/`graph` mit TD, LR, BT, RL): Knotenformen Rechteck, abgerundet, Raute, Kreis, Start/Ende, Datenbank, Unterprozess, Sechseck, Parallelogramm, Trapez; Kanten mit/ohne Pfeil, gestrichelt, dick, beidseitig, mit Beschriftung; `A & B --> C`; Gruppen (`subgraph … end`); Kommentare `%%`. Die Anordnung erfolgt automatisch in Ebenen, auch bei Zyklen.
   - Sequenzdiagramme (`sequenceDiagram`): Teilnehmer und Akteure (mit `as`-Namen), synchrone/asynchrone Nachrichten, Antworten, Selbstnachrichten, Notizen, `autonumber`, Blöcke `alt/else`, `loop`, `opt`, `par`, `critical`, `break`.
   - Ergebnis sind normale, frei bearbeitbare Formen, Verbindungen und Texte; sie werden ohne Überlappung mit bestehenden Inhalten eingefügt und ausgewählt.

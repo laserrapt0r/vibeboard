@@ -3,7 +3,7 @@
 [English](README.md) · [Deutsch](README.de.md) · [Español](README.es.md) · **Français**
 
 Un tableau blanc collaboratif en ligne, auto-hébergé. Plusieurs personnes travaillent en même temps sur un canevas
-infini : avec des notes adhésives, des formes, des connecteurs, des cartes mentales, des commentaires, des votes et plus
+infini : avec des notes, des formes, des connecteurs, des cartes mentales, des commentaires, des votes et plus
 de 75 modèles pour des ateliers, des rétrospectives, le travail stratégique, le développement logiciel, la gestion de
 projet et la gestion des services informatiques. Pour les équipes de développement, il y a des blocs de code, des
 diagrammes à partir d'un texte (syntaxe Mermaid), des sessions d'estimation et un import de cartes depuis des exports
@@ -75,7 +75,7 @@ Tous les contenus des captures d'écran sont des données d'exemple.
 ### Contenus
 | Élément | Possibilités |
 |---------|---------------|
-| **Notes adhésives** | 16 couleurs, taille de police automatique, en option avec le nom de l'auteur ou de l'autrice |
+| **Notes** | 16 couleurs, taille de police automatique, en option avec le nom de l'auteur ou de l'autrice |
 | **Texte** | Taille de police, couleur, gras, italique, alignement, arrière-plan |
 | **Formes** | Plus de 60 formes en sept groupes : formes de base, organigramme (document, plusieurs documents, saisie manuelle, affichage, etc.), UML (classe avec compartiments, acteur, paquetage, composant, nœud, début/fin, fourche, signaux), BPMN (événements, passerelles), réseau et centre de données (routeur, switch, pare-feu, répartiteur de charge, point d'accès, internet, serveur, baie de serveurs, système de stockage, PC, smartphone), logiciel et informatique, plateforme de conteneurs (pod, deployment, service, ingress, node, ConfigMap, secret, volume) – toutes des dessins originaux, avec remplissage, bordure, type de trait et texte |
 | **Connecteurs** | droits, coudés ou courbes ; s'ancrent à n'importe quel endroit du contour (ou automatiquement) ; tirer sur la ligne la courbe, les points d'inflexion peuvent être insérés, déplacés et supprimés ; étiquette déplaçable ; 9 extrémités de ligne (flèche, losange, cercle, patte de corbeau, etc.), type de trait |
@@ -92,7 +92,7 @@ Tous les contenus des captures d'écran sont des données d'exemple.
 | **Liens** | Associer une URL à des éléments ; une icône de lien l'ouvre |
 | **Commentaires** | Fils de discussion n'importe où ou liés à un élément (ils le suivent), @mentions avec liste de suggestions et notification, statut « Terminé », attribution comme tâche (avec échéance), aperçu des commentaires avec le filtre « Attribué à moi » |
 
-Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une note adhésive par ligne.
+Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une note par ligne.
 
 ### Édition
 - Sélection multiple par cadre de sélection ou par clic avec Maj
@@ -111,16 +111,21 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
     écart fixe, disposer en grille.
   - Même largeur, hauteur ou taille ; copier et appliquer la taille ; aligner sur la grille.
 - **Duplication intelligente :** Ctrl+D répète le dernier décalage utilisé.
-- Regrouper les notes adhésives par couleur
+- Regrouper les notes par couleur
 - Travailler vite : Tab en tapant ajoute la note ou forme suivante à côté, un double-clic garde un outil actif et le menu des formes montre celles récemment utilisées. Dans les modèles, les libellés se modifient directement et les fonds restent verrouillés ; les modèles de rétro et de brainstorming proposent leur déroulé ou minuteur. Glisser une carte dans une colonne Kanban définit son statut, et un cadre peut être supprimé avec son contenu.
-- Palette de commandes (Ctrl+K) pour les commandes, réglages, cadres, modèles et contenus du tableau ; reproduction du format (pinceau dans la barre contextuelle, Ctrl+Alt+C/V).
+- Palette de commandes (Ctrl+K) pour les commandes, réglages, cadres, modèles et contenus du tableau ; reproduction du format (menu « Plus » de la barre contextuelle, Ctrl+Alt+C/V).
 - Formules dans les tableaux : `=SOMME(B2:B5)`, `=B2*C2` et plus ; un clic sur une cellule insère sa référence, Σ calcule sur les cellules sélectionnées.
 - Orientation : un tableau vide propose comment démarrer, le panneau des cadres affiche titres et vues enregistrées (Alt+1–9), et le filtre couvre aussi le statut des cartes. Les grands tableaux ne dessinent que ce qui est proche de la vue.
 - Grouper, verrouiller, calques (premier plan et arrière-plan), dupliquer (aussi par glissement avec Alt) ; un deuxième
   clic dans un groupe sélectionne un seul élément pour le modifier
 - Copier et coller, y compris entre tableaux
 - Annuler et rétablir, menu contextuel, recherche (Ctrl+F)
-- De nombreux raccourcis clavier (aperçu avec `?`)
+- De nombreux raccourcis clavier (aperçu avec recherche via `?`, les plus fréquents d’abord)
+- **Bouton d’aide** en bas à gauche avec premiers pas, guide rapide et raccourcis ; également dans la recherche de commandes
+- **Mise en forme pendant la saisie :** Ctrl+B, Ctrl+I et Ctrl+U s’appliquent à tout l’élément ou à la cellule, et la barre contextuelle reste utilisable sans fermer l’éditeur
+- **En-tête épuré :** menu du tableau à côté du nom (exporter, importer, historique, activité, liste des éléments, enregistrer comme modèle, dupliquer, déplacer, supprimer), « Animer », boutons libellés « Partager » et « Présenter » ; ce qui ne tient pas passe dans « Plus »
+- **Barre contextuelle compacte :** couleur, texte, lien, commentaire, verrouiller, plus, supprimer ; le menu « Plus » et le clic droit ont la même structure
+- **Barre d'outils par fréquence d'usage** avec infobulles propres (nom et raccourci, aussi au clavier) ; touche B pour le tableau, D pour le code ; les nuanciers indiquent le nom des couleurs
 
 ### Collaboration en temps réel
 - Les modifications apparaissent immédiatement chez tous les participants
@@ -171,12 +176,12 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
   encore inscrites. Après une demande de confirmation, un e-mail d'invitation est envoyé ; après l'inscription via le
   lien, le tableau est partagé ou la personne fait partie de l'équipe.
 - **Liens invités :** Les personnes sans compte consultent ou commentent un seul tableau : limité dans le temps, blocable à
-  tout moment, désactivé par défaut.
+  tout moment, désactivé par défaut. Avec le niveau facultatif « Contributions », les invités créent aussi leurs propres notes et ne modifient que celles-ci.
 - **Enregistrer des visites guidées :** Vue, pointeur de souris et pointeur laser, avec le son si souhaité ; d'autres
   personnes lisent la visite guidée et peuvent naviguer elles-mêmes pendant ce temps.
-- **Réactions :** Emojis directement sur les notes adhésives, les cartes et autres, avec nombre et noms, y compris pour les
+- **Réactions :** Emojis directement sur les notes, les cartes et autres, avec nombre et noms, y compris pour les
   lecteurs (clic droit).
-- **Étiquettes et filtres :** Étiqueter les notes adhésives, les cartes et les formes ; le filtre estompe tout le reste
+- **Étiquettes et filtres :** Étiqueter les notes, les cartes et les formes ; le filtre estompe tout le reste
   (par étiquette, couleur, personne, réactions, actions), uniquement dans votre propre vue.
 - **Pièces jointes :** Déposez sur le tableau des fichiers PDF, Word, Excel, PowerPoint, OpenDocument, texte, CSV et JSON ;
   les PDF avec aperçu de la première page et visionneuse (pdf.js), le tout avec analyse antivirus et en téléchargement.
@@ -191,10 +196,11 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
   verrous.
 - **Minuteur** pour tous les participants, avec pause, prolongation et signal sonore
 - **Votes** avec un nombre de voix réglable par personne ; les voix restent masquées jusqu'à la fin, puis une liste de résultats s'affiche
-- **Session d'estimation** avec cartes masquées pour une carte : jeu de Fibonacci, de tailles de t-shirt ou d'heures ;
+- **Session d'estimation** avec cartes masquées pour une carte ou une file de plusieurs (progression visible par tous, « Carte suivante ») : jeu de Fibonacci, de tailles de t-shirt ou d'heures ;
   les valeurs restent masquées jusqu'à la révélation. Ensuite apparaissent la moyenne, la médiane et l'étendue, et le
   résultat peut être repris comme story points.
 - **Mode présentation** : les cadres deviennent des diapositives (plein écran, touches fléchées et espace, environnement masqué)
+- **Présenter à tout le monde :** les participants suivent automatiquement les diapositives dans une vue réduite, les retardataires sont intégrés, et « Explorer par moi-même » et « Suivre de nouveau » leur laissent le choix ; les saisies en cours ne sont pas interrompues
 - **Zones masquées :** Les animateurs masquent un cadre ; les participants ne voient qu'un cache jusqu'à la révélation.
   Le serveur ne communique pas le contenu auparavant.
 
@@ -229,8 +235,10 @@ Coller du texte sur plusieurs lignes dans le tableau crée automatiquement une n
 
 ### Relecture et tâches
 - **Relire des documents sur le tableau :** Placez toutes les pages d'un PDF dans un cadre, puis commentez et dessinez dessus. Les fichiers Office fonctionnent avec le convertisseur facultatif.
-- **Validations :** Soumettez des cadres et des fichiers à la relecture. Le rôle de commentaire suffit, toute modification annule une validation et le statut s'affiche sur l'élément.
-- **Kanban et chronologie :** D'autres vues des mêmes cartes, utilisables sans souris.
+- **Validations :** Soumettez des cadres et des fichiers à la relecture. Le rôle de commentaire suffit, toute modification annule une validation et le statut s'affiche sur l'élément. Les vérifications ouvertes figurent sous « À vérifier » dans « Mes tâches », et chaque tour est conservé avec ses motifs.
+- **Kanban et chronologie :** D'autres vues des mêmes cartes, utilisables sans souris. Chaque colonne a un « + » pour la saisie rapide et affiche son total de story points ; « Bloquée par » relie les cartes, avec des flèches sur la chronologie.
+- **Saisie rapide des cartes :** Avec l'outil carte, vous tapez le titre directement sur la carte ; les détails se trouvent sous « Modifier la carte ».
+- **Sur téléphone :** « Sélectionner plusieurs » pour la sélection multiple tactile ; les bandeaux se replient pour les participants et les messages s'affichent en haut.
 - **Jira et Azure DevOps :** Cartes et tickets synchronisés dans les deux sens.
 - **Mise en page automatique et couloirs :** Organisez des éléments reliés ou des cartes mentales en un clic.
 - **Graphiques à partir de tableaux :** Barres, courbes et secteurs qui suivent les données.
@@ -240,7 +248,8 @@ Plus d'informations : [docs/integrations.md](docs/integrations.md) (en anglais)
 
 ### Export et import
 - PNG (tableau entier ou sélection) et SVG
-- PDF avec un cadre par page (via la boîte de dialogue d'impression du navigateur)
+- PowerPoint : une diapositive par cadre avec texte et formes modifiables, le titre du cadre dans le champ de titre
+- Fichier PDF avec une page image par cadre dans l'ordre et la taille du cadre, titres en signets, généré dans le navigateur ; « Imprimer en PDF » garde le texte sélectionnable
 - JSON comme sauvegarde ; import dans le tableau ou comme nouveau tableau
 - Cartes depuis CSV/tableaux, diagrammes à partir d'un texte (voir ci-dessus)
 
@@ -264,7 +273,7 @@ Plus d'informations : [docs/integrations.md](docs/integrations.md) (en anglais)
 | Catégorie | Modèles |
 |-----------|----------|
 | Brainstorming | Brainstorming, Carte mentale, Six perspectives, Crazy 8s, Pour et contre |
-| Réunions et rétros | Start · Stop · Continue, Mad · Sad · Glad, 4L, voilier, étoile de mer, DAKI, rétro frise chronologique, montgolfière, Speedcar, Tour de sujets ouverts, Radar d'équipe, Daily Stand-up, Check-in / Icebreaker |
+| Réunions et rétros | Start · Stop · Continue, Mad · Sad · Glad, 4L, voilier, étoile de mer, DAKI, rétro chronologie, montgolfière, Speedcar, Tour de sujets ouverts, Radar d'équipe, Daily Stand-up, Check-in / Icebreaker |
 | Agile et projets | Kanban, Matrice d'Eisenhower, Matrice impact/effort, Project Canvas, Roadmap produit, Frise chronologique, Diagramme de Gantt, User Story Map, Planificateur hebdomadaire |
 | Stratégie | Analyse SWOT, Carte des parties prenantes, Business Model Canvas¹, Lean Canvas¹, Planification OKR, Matrice de décision |
 | Design et UX | Customer Journey Map, Empathy Map, User Persona, Moodboard, Wireframe |
@@ -419,6 +428,8 @@ En plus des comptes locaux, vibeboard peut utiliser **Keycloak**, **SAML**, **LD
 - Les **lecteurs** voient le tableau en direct et peuvent voter, estimer, envoyer des réactions, utiliser le chat du
   curseur et le pointeur laser. L'historique des versions n'est visible que par les éditeurs.
 - Les **commentateurs** peuvent en plus commenter, attribuer et résoudre des commentaires, et enregistrer des visites guidées.
+- Les **invités avec « Contributions »** (désactivé par défaut) peuvent aussi créer des notes et modifier, déplacer et supprimer les leurs,
+  jusqu’à un nombre fixé par invité. Tout le reste leur reste inaccessible en écriture. Le serveur décide de ce qui appartient à un invité.
 - Lorsqu'un rôle provient de plusieurs sources (adhésion, équipe, lien), le plus élevé s'applique. Les changements de
   droits prennent effet immédiatement.
 - Les **invités** ne voient que le tableau de leur lien : pas de page d'accueil, pas d'autres tableaux, pas de
@@ -454,7 +465,7 @@ Sous `/admin`, réservé aux administrateurs :
 - **Général :** Nom de l'instance, adresse publique, mode d'inscription
 - **Sécurité :** Longueur minimale du mot de passe, comparaison avec « Have I Been Pwned », adresses jetables, domaines
   bloqués ou autorisés, deux facteurs obligatoires pour les administrateurs
-- **Collaboration :** E-mails pour les mentions, accès invité (désactivé par défaut) et sa durée de validité maximale, qui peut
+- **Collaboration :** E-mails pour les mentions, accès invité (désactivé par défaut) et sa durée de validité maximale, le niveau invité « Contributions » (désactivé par défaut) et sa limite de notes, qui peut
   créer des équipes, autoriser les enregistrements et leur durée maximale, pièces jointes et taille maximale de fichier, conservation
   dans la corbeille, webhooks (désactivés par défaut) et si les cibles de webhooks internes sont autorisées
 - **Serveur de messagerie :** Hôte SMTP, port, chiffrement (STARTTLS, SSL/TLS, aucun), connexion, expéditeur,
@@ -476,7 +487,7 @@ Sous `/admin`, réservé aux administrateurs :
 
   Les espaces réservés figurent entre [crochets]. Les modèles ne remplacent pas un conseil juridique.
 - Les pages `/impressum` et `/datenschutz` sont accessibles **sans connexion**.
-- Elles sont liées sur la page de connexion et d'inscription, dans l'aperçu des tableaux, dans le menu des paramètres des
+- Elles sont liées sur la page de connexion et d'inscription, dans l'aperçu des tableaux, dans le menu du compte des
   tableaux et dans l'administration.
 - Les textes vides ne sont pas publiés ; leurs liens disparaissent alors automatiquement.
 - Les textes sont affichés sans HTML. Le balisage saisi apparaît comme texte brut, les liens ne sont autorisés qu'avec http(s),
@@ -660,6 +671,9 @@ Toutes les données se trouvent dans votre propre base de données PostgreSQL :
 | `notifications` | Notifications (mention, réponse, attribution), conservées 90 jours |
 | `board_activity` | Historique d'activité, résumé, 90 jours ou au plus 2000 entrées par tableau |
 | `guest_links` | Liens invités (uniquement sous forme de hash) avec rôle et expiration ; les accès invités sont des comptes avec le rôle `guest` |
+| `element_owners` | À quel invité appartient une note ; supprimé avec l’accès invité |
+| `server_secrets` | Secret généré par le serveur pour vérifier les identifiants d’éléments ; créé au premier démarrage |
+| `reviews`, `review_people`, `review_rounds`, `review_round_people` | Vérifications, personnes chargées de la relecture et leurs décisions, tours précédents avec motifs |
 | `teams`, `team_members`, `folders`, `folder_boards` | Équipes, adhésions, dossiers |
 | `board_recordings` | Visites guidées enregistrées avec piste temporelle et piste audio facultative |
 | `team_invitations`, `pending_invites` | Invitations en attente dans des équipes ou à des adresses sans compte (adresse, rôle, personne qui invite ; 30 jours au maximum) |
@@ -729,7 +743,7 @@ public/
   guest.html           Beitritt per Gastlink                         → js/guest.js
   board.html           Board-Editor                                  → js/main.js (core, ui, collab, render, sync, …)
                        teamwork.js (privater Modus, Schätzrunde), planning.js (Aufgaben, Versionen, CSV-Import),
-                       moderation.js, activity.js, recording.js, notifications.js (Arbeiten im Team),
+                       moderation.js, activity.js, recording.js, notifications.js, banners.js (Arbeiten im Team),
                        diagram-parse.js / diagram-text.js (Diagramm aus Text), highlight.js (Code-Blöcke),
                        templates.js / templates-tech.js / templates-diagrams.js / template-kit.js (Vorlagen)
   admin.html           Administration                                → js/admin.js

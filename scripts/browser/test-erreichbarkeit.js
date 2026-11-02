@@ -1,5 +1,5 @@
 // Erreichbarkeit und sichtbare Fehler
-const { launch, BASE, TMP, server } = require('./lib');
+const { launch, BASE, TMP, server, pickMenu } = require('./lib');
 let f = 0;
 const ok = (c, m, x) => {
   console.log((c ? 'ok  ' : 'FAIL') + ' ' + m + (c || x === undefined ? '' : ' → ' + JSON.stringify(x).slice(0, 260)));
@@ -76,13 +76,13 @@ const toast = (p) =>
     ev(
       p,
       () =>
-        [...document.querySelectorAll('#tools [data-tool]')].filter((b) => {
-          const r = b.getBoundingClientRect(),
+        [...document.querySelectorAll('#tools [data-tool]:not(.folded), #tools-more:not(.folded)')].filter((x) => {
+          const r = x.getBoundingClientRect(),
             t = document.getElementById('tools').getBoundingClientRect();
           return r.bottom <= t.bottom + 1 && r.top >= t.top - 1 && r.bottom <= innerHeight;
         }).length +
         '/' +
-        document.querySelectorAll('#tools [data-tool]').length,
+        document.querySelectorAll('#tools [data-tool]:not(.folded), #tools-more:not(.folded)').length,
     );
   for (const [w, h] of [
     [1366, 650],
@@ -94,7 +94,8 @@ const toast = (p) =>
     await wait(250);
     const r = await seen(A);
     const [a, t] = r.split('/');
-    ok(a === t, `${w}×${h}: alle Werkzeuge sichtbar`, r);
+    ok(a === t, `${w}×${h}: Werkzeuge und „Mehr“ im Fenster`, r);
+    ok(await ev(A, () => !document.querySelector('#tools [data-tool].folded') || !document.getElementById('tools-more').classList.contains('folded')), `${w}×${h}: Ausgeblendetes liegt hinter „Mehr“`);
   }
   await A.setViewport({ width: 800, height: 768 });
   await ev(A, async () => {
@@ -122,13 +123,13 @@ const toast = (p) =>
   await M.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
   await M.goto(BASE + '/board/' + id, { waitUntil: 'load' });
   await wait(1400);
+  await ev(M, () => document.getElementById('btn-top-more').click());
+  await pickMenu(M, 'Moderieren');
   ok(
-    await ev(M, () => {
-      const b = document.getElementById('btn-timer');
-      return !!b && b.offsetParent !== null;
-    }),
-    'Handy: Timer erreichbar',
+    await ev(M, () => [...document.querySelectorAll('.popover .mi-label')].some((x) => x.textContent === 'Timer')),
+    'Handy: Timer über Mehr → Moderieren erreichbar',
   );
+  await M.keyboard.press('Escape');
   await M.screenshot({ path: S + 'm1.png' });
   await ev(M, async () => {
     const c = await import('/js/core.js');

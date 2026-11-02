@@ -3,7 +3,7 @@
 [English](README.md) · [Deutsch](README.de.md) · **Español** · [Français](README.fr.md)
 
 Una pizarra colaborativa en línea de alojamiento propio. Varias personas trabajan a la vez sobre un lienzo infinito:
-con notas adhesivas, formas, conectores, mapas mentales, comentarios, votaciones y más de 75 plantillas para talleres,
+con notas, formas, conectores, mapas mentales, comentarios, votaciones y más de 75 plantillas para talleres,
 retrospectivas, trabajo estratégico, desarrollo de software, gestión de proyectos y gestión de servicios de TI. Para los
 equipos de desarrollo hay bloques de código, diagramas a partir de texto (sintaxis Mermaid), rondas de estimación y una
 importación de tarjetas desde exportaciones de Jira o Excel. Para el trabajo en equipo hay notificaciones de @menciones,
@@ -74,7 +74,7 @@ Todo el contenido de las capturas de pantalla son datos de ejemplo.
 ### Contenido
 | Elemento | Posibilidades |
 |---------|---------------|
-| **Notas adhesivas** | 16 colores, tamaño de letra automático, opcionalmente con el nombre de la persona autora |
+| **Notas** | 16 colores, tamaño de letra automático, opcionalmente con el nombre de la persona autora |
 | **Texto** | Tamaño de letra, color, negrita, cursiva, alineación, fondo |
 | **Formas** | Más de 60 formas en siete grupos: formas básicas, diagrama de flujo (documento, varios documentos, entrada manual, pantalla, etc.), UML (clase con compartimentos, actor, paquete, componente, nodo, inicio/fin, bifurcación, señales), BPMN (eventos, pasarelas), red y centro de datos (router, switch, firewall, balanceador de carga, punto de acceso, internet, servidor, armario de servidores, sistema de almacenamiento, PC, smartphone), software y TI, plataforma de contenedores (pod, deployment, service, ingress, node, ConfigMap, secret, volume): todo de dibujo propio, con relleno, borde, tipo de trazo y texto |
 | **Conectores** | rectos, en ángulo o curvos; se anclan en cualquier punto del contorno (o automáticamente); al arrastrar la línea se curva, se pueden insertar, mover y quitar puntos de quiebre; etiqueta movible; 9 extremos de línea (flecha, rombo, círculo, pata de gallo, etc.), tipo de trazo |
@@ -91,7 +91,7 @@ Todo el contenido de las capturas de pantalla son datos de ejemplo.
 | **Enlaces** | Adjunta una URL a los elementos; un icono de enlace la abre |
 | **Comentarios** | Hilos en cualquier lugar o unidos a un elemento (lo siguen), @menciones con lista de sugerencias y notificación, estado «Hecho», asignar como tarea (con vencimiento), resumen de comentarios con el filtro «Asignado a mí» |
 
-Al pegar texto de varias líneas en el tablero se crea automáticamente una nota adhesiva por línea.
+Al pegar texto de varias líneas en el tablero se crea automáticamente una nota por línea.
 
 ### Edición
 - Selección múltiple con un marco de selección o con clic mientras mantienes Mayús
@@ -111,15 +111,20 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
   - Mismo ancho, alto o tamaño; copiar y aplicar tamaño; alinear a la cuadrícula.
 - **Duplicado inteligente:** Ctrl+D repite el último desplazamiento utilizado.
 - Trabajo rápido: Tab al escribir añade la siguiente nota o forma al lado, un doble clic mantiene activa una herramienta y el menú de formas muestra las usadas recientemente. En las plantillas, las etiquetas se editan directamente y los fondos siguen bloqueados; las plantillas de retro y brainstorming ofrecen su flujo o temporizador. Arrastrar una tarjeta a una columna Kanban fija su estado, y un marco se puede eliminar con su contenido.
-- Paleta de comandos (Ctrl+K) para comandos, ajustes, marcos, plantillas y contenido del tablero; copiar formato (pincel en la barra contextual, Ctrl+Alt+C/V).
+- Paleta de comandos (Ctrl+K) para comandos, ajustes, marcos, plantillas y contenido del tablero; copiar formato (menú «Más» de la barra contextual, Ctrl+Alt+C/V).
 - Fórmulas en tablas: `=SUMA(B2:B5)`, `=B2*C2` y más; un clic en una celda inserta su referencia, y Σ calcula sobre las celdas seleccionadas.
 - Orientación: un tablero vacío sugiere cómo empezar, el panel de marcos muestra títulos y vistas guardadas (Alt+1–9) y el filtro incluye el estado de las tarjetas. Los tableros grandes solo dibujan lo que está cerca de la vista.
-- Agrupar notas adhesivas por color
+- Agrupar notas por color
 - Agrupar, bloquear, capas (primer plano y fondo), duplicar (también arrastrando con Alt); un segundo clic en un grupo
   selecciona un solo elemento para editarlo
 - Copiar y pegar, también entre tableros
 - Deshacer y rehacer, menú contextual, búsqueda (Ctrl+F)
-- Numerosos atajos de teclado (resumen con `?`)
+- Numerosos atajos de teclado (resumen con búsqueda con `?`, primero los habituales)
+- **Botón de ayuda** abajo a la izquierda con primeros pasos, guía rápida y atajos; también en la búsqueda de comandos
+- **Formato al escribir:** Ctrl+B, Ctrl+I y Ctrl+U se aplican a todo el elemento o la celda, y la barra contextual sigue disponible sin cerrar el editor
+- **Cabecera ordenada:** menú del tablero junto al nombre (exportar, importar, historial, actividad, lista de elementos, guardar como plantilla, duplicar, mover, eliminar), «Moderar», botones con texto «Compartir» y «Presentar»; lo que no cabe pasa a «Más»
+- **Barra contextual compacta:** color, texto, enlace, comentario, bloquear, más, eliminar; el menú «Más» y el clic derecho tienen la misma estructura
+- **Barra de herramientas por frecuencia de uso** con descripciones propias (nombre y atajo, también con teclado); tecla B para tabla, D para código; las muestras de color indican el nombre del color
 
 ### Colaboración en tiempo real
 - Los cambios aparecen al instante para todos los participantes
@@ -168,12 +173,12 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
   registradas. Tras una confirmación se envía un correo de invitación; después de registrarse mediante el enlace, el
   tablero queda compartido o la persona entra en el equipo.
 - **Enlaces de invitado:** Las personas sin cuenta ven o comentan un único tablero: con caducidad, bloqueables en
-  cualquier momento y desactivados por defecto.
+  cualquier momento y desactivados por defecto. Con el nivel opcional «Aportaciones», los invitados también crean notas propias y solo cambian esas.
 - **Grabar recorridos:** Vista, puntero del ratón y puntero láser, con sonido si se desea; otras personas reproducen el
   recorrido y pueden navegar por su cuenta mientras tanto.
-- **Reacciones:** Emojis directamente en notas adhesivas, tarjetas y demás, con número y nombres, también para lectores
+- **Reacciones:** Emojis directamente en notas, tarjetas y demás, con número y nombres, también para lectores
   (clic derecho).
-- **Etiquetas y filtros:** Etiqueta notas adhesivas, tarjetas y formas; el filtro atenúa todo lo demás (por etiqueta,
+- **Etiquetas y filtros:** Etiqueta notas, tarjetas y formas; el filtro atenúa todo lo demás (por etiqueta,
   color, persona, reacciones, acciones), solo en tu propia vista.
 - **Archivos adjuntos:** Coloca en el tablero PDF, Word, Excel, PowerPoint, OpenDocument, texto, CSV y JSON; los PDF con
   vista previa de la primera página y visor (pdf.js), todo con análisis antivirus y como descarga.
@@ -188,10 +193,11 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
   bloqueos.
 - **Temporizador** para todos los participantes, con pausa, ampliación y tono de aviso
 - **Votaciones** con un número de votos por persona ajustable; los votos permanecen ocultos hasta el final y después hay una lista de resultados
-- **Ronda de estimación** con tarjetas ocultas para una tarjeta: baraja de Fibonacci, de tallas de camiseta o de horas;
+- **Ronda de estimación** con tarjetas ocultas para una tarjeta o una cola de varias (progreso visible para todos, «Siguiente tarjeta»): baraja de Fibonacci, de tallas de camiseta o de horas;
   los valores permanecen ocultos hasta que se revelan. Después aparecen el promedio, la mediana y el rango, y el
   resultado se puede adoptar como story points.
 - **Modo de presentación**: los marcos se convierten en diapositivas (pantalla completa, teclas de flecha y espacio, entorno oculto)
+- **Presentar para todos:** los participantes siguen las diapositivas automáticamente en una vista reducida, quien llega tarde se incorpora, y «Explorar por mi cuenta» y «Volver a seguir» dejan la elección en sus manos; lo que se está escribiendo no se interrumpe
 - **Áreas ocultas:** Los moderadores tapan un marco; los participantes solo ven una cubierta hasta que se revela.
   Antes de eso el servidor no entrega el contenido.
 
@@ -226,8 +232,10 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
 
 ### Revisión y tareas
 - **Revisar documentos en el tablero:** Coloca todas las páginas de un PDF como marco y comenta o dibuja sobre ellas. Los archivos de Office funcionan con el conversor opcional.
-- **Aprobaciones:** Presenta marcos y archivos a personas revisoras. Basta con el rol de comentar, los cambios invalidan una aprobación y el estado se muestra en el elemento.
-- **Kanban y cronología:** Otras vistas de las mismas tarjetas, también sin ratón.
+- **Revisiones:** Presenta marcos y archivos a personas revisoras. Basta con el rol de comentar, los cambios invalidan una aprobación y el estado se muestra en el elemento. Las revisiones abiertas aparecen en «Por revisar» dentro de «Mis tareas» y cada ronda se conserva con sus motivos.
+- **Kanban y cronología:** Otras vistas de las mismas tarjetas, también sin ratón. Cada columna tiene un «+» para añadir rápido y muestra su total de story points; «Bloqueada por» enlaza tarjetas, con flechas en la cronología.
+- **Entrada rápida de tarjetas:** Con la herramienta de tarjeta escribes el título directamente en la tarjeta; los detalles están en «Editar tarjeta».
+- **En el móvil:** «Seleccionar varios» para la selección múltiple táctil; los avisos se pliegan para los participantes y los mensajes aparecen arriba.
 - **Jira y Azure DevOps:** Tarjetas y tickets sincronizados en ambas direcciones.
 - **Diseño automático y carriles:** Ordena elementos conectados o mapas mentales con un clic.
 - **Gráficos a partir de tablas:** Barras, líneas y circular, que siguen a la tabla.
@@ -237,7 +245,8 @@ Más información: [docs/integrations.md](docs/integrations.md) (en inglés).
 
 ### Exportación e importación
 - PNG (todo el tablero o la selección) y SVG
-- PDF con un marco por página (mediante el cuadro de impresión del navegador)
+- PowerPoint: una diapositiva por marco con texto y formas editables y el título del marco en el campo de título
+- Archivo PDF con una página de imagen por marco en el orden y tamaño del marco, títulos como marcadores, generado en el navegador; «Imprimir a PDF» mantiene el texto seleccionable
 - JSON como copia de seguridad; importación al tablero o como tablero nuevo
 - Tarjetas desde CSV/tablas, diagramas a partir de texto (véase arriba)
 
@@ -261,7 +270,7 @@ Más información: [docs/integrations.md](docs/integrations.md) (en inglés).
 | Categoría | Plantillas |
 |-----------|----------|
 | Brainstorming | Brainstorming, Mapa mental, Seis perspectivas, Crazy 8s, Pros y contras |
-| Reuniones y retros | Start · Stop · Continue, Mad · Sad · Glad, 4L, velero, estrella de mar, DAKI, retro de línea de tiempo, globo aerostático, coche de carreras, Ronda de temas abiertos, Radar del equipo, Daily Stand-up, Check-in / Icebreaker |
+| Reuniones y retros | Start · Stop · Continue, Mad · Sad · Glad, 4L, velero, estrella de mar, DAKI, retro de cronología, globo aerostático, coche de carreras, Ronda de temas abiertos, Radar del equipo, Daily Stand-up, Check-in / Icebreaker |
 | Ágil y proyectos | Kanban, Matriz de Eisenhower, Matriz impacto/esfuerzo, Project Canvas, Roadmap de producto, Línea de tiempo, Diagrama de Gantt, User Story Map, Planificador semanal |
 | Estrategia | Análisis FODA, Mapa de stakeholders, Business Model Canvas¹, Lean Canvas¹, Planificación de OKR, Matriz de decisión |
 | Diseño y UX | Customer Journey Map, Empathy Map, User Persona, Moodboard, Wireframe |
@@ -416,6 +425,8 @@ Además de las cuentas locales, vibeboard puede usar **Keycloak**, **SAML**, **L
 - Los **lectores** ven el tablero en vivo y pueden votar, estimar, enviar reacciones y usar el chat del cursor y el
   puntero láser. El historial de versiones solo lo ven quienes editan.
 - Los **comentaristas** pueden además comentar, asignar y resolver comentarios, y grabar recorridos.
+- Los **invitados con «Aportaciones»** (desactivado por defecto) también pueden crear notas y editar, mover y eliminar las suyas,
+  hasta un número fijado por invitado. Todo lo demás es de solo lectura para ellos. Qué pertenece a un invitado lo decide el servidor.
 - Si un rol procede de varias fuentes (pertenencia, equipo, enlace), cuenta el más alto. Los cambios de permisos surten
   efecto de inmediato.
 - Los **invitados** ven exclusivamente el tablero de su enlace: ni página de inicio, ni otros tableros, ni funciones
@@ -451,7 +462,7 @@ En `/admin`, solo para administradores:
 - **General:** Nombre de la instancia, dirección pública, modo de registro
 - **Seguridad:** Longitud mínima de la contraseña, comparación con «Have I Been Pwned», direcciones desechables,
   dominios bloqueados o permitidos, obligatoriedad de los dos pasos para administradores
-- **Colaboración:** Correos por menciones, acceso de invitados (desactivado por defecto) y su validez máxima, quién puede
+- **Colaboración:** Correos por menciones, acceso de invitados (desactivado por defecto) y su validez máxima, el nivel de invitado «Aportaciones» (desactivado por defecto) y su límite de notas, quién puede
   crear equipos, permitir grabaciones y su duración máxima, archivos adjuntos y tamaño máximo de archivo, conservación en la
   papelera, webhooks (desactivados por defecto) y si se permiten destinos internos de webhooks
 - **Servidor de correo:** Host SMTP, puerto, cifrado (STARTTLS, SSL/TLS, ninguno), inicio de sesión, remitente,
@@ -473,7 +484,7 @@ En `/admin`, solo para administradores:
 
   Los marcadores de posición están entre [corchetes]. Las plantillas no sustituyen el asesoramiento jurídico.
 - Las páginas `/impressum` y `/datenschutz` son accesibles **sin iniciar sesión**.
-- Están enlazadas en la página de inicio de sesión y de registro, en el resumen de tableros, en el menú de ajustes de los
+- Están enlazadas en la página de inicio de sesión y de registro, en el resumen de tableros, en el menú de cuenta de los
   tableros y en la administración.
 - Los textos vacíos no se publican; sus enlaces desaparecen entonces automáticamente.
 - Los textos se muestran sin HTML. El marcado introducido aparece como texto sin formato; los enlaces solo se permiten con http(s),
@@ -657,6 +668,9 @@ Todos los datos están en tu propia base de datos PostgreSQL:
 | `notifications` | Notificaciones (mención, respuesta, asignación), conservadas 90 días |
 | `board_activity` | Historial de actividad, resumido, 90 días o como máximo 2000 entradas por tablero |
 | `guest_links` | Enlaces de invitado (solo como hash) con rol y caducidad; los accesos de invitado son cuentas con el rol `guest` |
+| `element_owners` | A qué invitado pertenece una nota; se elimina con el acceso de invitado |
+| `server_secrets` | Secreto generado por el servidor para comprobar los identificadores de elementos; se crea en el primer inicio |
+| `reviews`, `review_people`, `review_rounds`, `review_round_people` | Revisiones, personas revisoras y sus decisiones, rondas anteriores con motivos |
 | `teams`, `team_members`, `folders`, `folder_boards` | Equipos, pertenencias, carpetas |
 | `board_recordings` | Recorridos grabados con pista de tiempo y pista de audio opcional |
 | `team_invitations`, `pending_invites` | Invitaciones pendientes a equipos o a direcciones sin cuenta (dirección, rol, persona que invita; como máximo 30 días) |
@@ -726,7 +740,7 @@ public/
   guest.html           Beitritt per Gastlink                         → js/guest.js
   board.html           Board-Editor                                  → js/main.js (core, ui, collab, render, sync, …)
                        teamwork.js (privater Modus, Schätzrunde), planning.js (Aufgaben, Versionen, CSV-Import),
-                       moderation.js, activity.js, recording.js, notifications.js (Arbeiten im Team),
+                       moderation.js, activity.js, recording.js, notifications.js, banners.js (Arbeiten im Team),
                        diagram-parse.js / diagram-text.js (Diagramm aus Text), highlight.js (Code-Blöcke),
                        templates.js / templates-tech.js / templates-diagrams.js / template-kit.js (Vorlagen)
   admin.html           Administration                                → js/admin.js

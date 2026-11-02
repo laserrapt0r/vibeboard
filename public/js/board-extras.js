@@ -1,7 +1,7 @@
 // Ergänzungen im Board: Reaktionen auf Elemente, Schlagwörter und Filteransicht, verborgene Bereiche,
 // Speichern als eigene Vorlage
 import { T, LOCALE } from './i18n.js';
-import { h, api, ICONS, toast, modal } from './util.js';
+import { h, api, ICONS, toast, modal, colorName } from './util.js';
 import { app, getEl, act, updateEl, rerenderAll, collectForCopy, $ } from './core.js';
 import { popover, closePop, showSidePanel, toggleSidePanel, currentSidePanel, renderSidePanel } from './ui.js';
 import { REACTIONS, REACT_TYPES, cardTags } from './render.js';
@@ -136,11 +136,11 @@ app.on('renderPanel', (kind, side, close) => {
   const tags = allTags();
   side.append(h('div', { class: 'filter-group' }, h('div', { class: 'label' }, T('Schlagwörter')),
     tags.length ? h('div', { class: 'tag-chips' }, tags.map((t) => h('button', { class: 'tag-chip' + (filter.tags.has(t.toLowerCase()) ? ' active' : ''), 'aria-pressed': String(filter.tags.has(t.toLowerCase())), onclick: () => toggle(filter.tags, t.toLowerCase()) }, t)))
-      : h('p', { class: 'muted small' }, (app.viewOnly ? T('Noch keine Schlagwörter.') : T('Noch keine Schlagwörter. Sticky Note auswählen → Etikett-Symbol.')))));
+      : h('p', { class: 'muted small' }, (app.viewOnly ? T('Noch keine Schlagwörter.') : T('Noch keine Schlagwörter. Notiz auswählen → Etikett-Symbol.')))));
   const colors = [...new Set([...app.els.values()].filter((e) => e.type === 'sticky' && !e.hidden).map((e) => String(e.fill || '#fff9b1').toLowerCase()))];
   if (colors.length) {
-    side.append(h('div', { class: 'filter-group' }, h('div', { class: 'label' }, T('Farbe (Sticky Notes)')),
-      h('div', { class: 'tag-chips' }, colors.map((c) => h('button', { class: 'swatch' + (filter.colors.has(c) ? ' active' : ''), title: c, 'aria-pressed': String(filter.colors.has(c)), style: { background: c }, onclick: () => toggle(filter.colors, c) })))));
+    side.append(h('div', { class: 'filter-group' }, h('div', { class: 'label' }, T('Farbe (Notizen)')),
+      h('div', { class: 'tag-chips' }, colors.map((c) => h('button', { class: 'swatch' + (filter.colors.has(c) ? ' active' : ''), title: colorName(c), 'aria-label': colorName(c), 'aria-pressed': String(filter.colors.has(c)), style: { background: c }, onclick: () => toggle(filter.colors, c) })))));
   }
   const authors = [...new Set([...app.els.values()].filter((e) => e.author && !e.anon && !e.hidden).map((e) => e.author))].sort();
   if (authors.length) {
@@ -161,7 +161,7 @@ app.on('renderPanel', (kind, side, close) => {
 app.on('render', () => app.filter && renderFilterBanner());
 
 app.on('buildCollabTools', (box) => {
-  const b = h('button', { class: 'icon-btn', id: 'btn-filter', title: T('Filter (Schlagwörter, Farbe, Person, Status)'), html: ICONS.filter, 'data-panel': 'filter', onclick: () => toggleSidePanel('filter') });
+  const b = h('button', { class: 'icon-btn', id: 'btn-filter', 'aria-label': T('Filter (Schlagwörter, Farbe, Person, Status)'), 'data-tip': T('Filter'), html: ICONS.filter, 'data-panel': 'filter', onclick: () => toggleSidePanel('filter') });
   box.append(b);
 });
 
@@ -169,20 +169,16 @@ app.on('buildCollabTools', (box) => {
 /* Kontextleiste: Schlagwörter, Reaktion, verborgener Bereich          */
 /* ================================================================== */
 
-app.on('ctxItems', (items, sel, { locked, one, actBtn, toggleBtn }) => {
+app.on('ctxItems', (items, sel, { locked, one }) => {
   if (!locked && sel.length && sel.every((e) => e.type === 'sticky' || e.type === 'card' || e.type === 'shape')) {
-    const tb = actBtn('tag', T('Schlagwörter'), () => tagEditor(tb, sel));
-    items.push(tb);
+    items.push({ label: T('Schlagwörter'), icon: 'tag', group: 'format', onClick: (anchor) => tagEditor(anchor, sel) });
   }
-  if (one && REACT_TYPES.has(one.type)) {
-    const rb = actBtn('smile', T('Reagieren'), () => reactPicker(rb, one));
-    items.push(rb);
-  }
+  if (one && REACT_TYPES.has(one.type)) items.push({ label: T('Reagieren'), icon: 'smile', group: 'collab', onClick: (anchor) => reactPicker(anchor, one) });
   if (one && one.type === 'frame' && app.isFacilitator) {
-    items.push(toggleBtn('eyeOff', !!one.concealed, one.concealed ? T('Bereich für Teilnehmende aufdecken') : T('Bereich für Teilnehmende verbergen'), () => {
+    items.push({ label: one.concealed ? T('Bereich für Teilnehmende aufdecken') : T('Bereich für Teilnehmende verbergen'), icon: 'eyeOff', group: 'collab', onClick: () => {
       act(() => updateEl(one.id, { concealed: !one.concealed || undefined }));
       toast(one.concealed ? T('Bereich aufgedeckt – alle sehen den Inhalt') : T('Bereich verborgen – nur Moderierende sehen den Inhalt'), 3500);
-    }));
+    } });
   }
 });
 

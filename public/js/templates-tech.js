@@ -186,7 +186,7 @@ export const TECH_TEMPLATES = [
     build: () => {
       const b = new B();
       b.frame(0, 0, 2400, 1180, T('Event Storming'));
-      b.heading(60, 40, T('Event Storming'), T('Zeitstrahl von links nach rechts · zuerst Events sammeln, dann ordnen und anreichern'), 1600);
+      b.heading(60, 40, T('Event Storming'), T('Zeitleiste von links nach rechts · zuerst Events sammeln, dann ordnen und anreichern'), 1600);
       const legend = [[T('Domain Event'), '#ff9d48', T('Etwas ist passiert (Vergangenheit)')], [T('Command'), '#a6ccf5', T('Auslöser / Absicht')], [T('Aggregat'), '#fff9b1', T('Hält Regeln & Zustand')],
         [T('Policy'), '#c9b2e8', T('„Immer wenn … dann …“')], [T('Read Model'), '#93d275', T('Informationen für Entscheidungen')], [T('Externes System'), '#ffcee0', T('Fremdsystem')], [T('Hotspot'), '#f99fb1', T('Problem / offene Frage')], [T('Akteur'), '#fffbe0', T('Person / Rolle')]];
       legend.forEach(([t, c, hint], i) => {

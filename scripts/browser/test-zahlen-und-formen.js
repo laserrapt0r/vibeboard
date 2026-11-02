@@ -1,5 +1,5 @@
 // Zahlenformate und Formen
-const { launch, login, BASE } = require('./lib');
+const { launch, login, BASE, ctxMore, boardMenu } = require('./lib');
 const fs = require('fs');
 let f = 0;
 const ok = (c, m, x) => {
@@ -188,9 +188,7 @@ const sleep = (n) => new Promise((r) => setTimeout(r, n));
     m.act(() => m.updateEl('im', { x: 500 }));
   });
   await sleep(300);
-  await J(() =>
-    [...document.querySelectorAll('#ctxbar button')].find((b) => /Zuschneiden/.test(b.title + b.getAttribute('aria-label'))).click(),
-  );
+  await ctxMore(A, 'Zuschneiden');
   await sleep(300);
   await J(() => {
     const i = document.querySelector('.modal input[type=number]');
@@ -204,9 +202,7 @@ const sleep = (n) => new Promise((r) => setTimeout(r, n));
     return { x: e.x, w: e.w, c: e.crop };
   });
   ok(im.x === 600 && im.w === 100, 'Zuschnitt nutzt aktuellen Stand', im);
-  await J(() =>
-    [...document.querySelectorAll('#ctxbar button')].find((b) => /Zuschneiden/.test(b.title + b.getAttribute('aria-label'))).click(),
-  );
+  await ctxMore(A, 'Zuschneiden');
   await sleep(300);
   ok((await J(() => document.querySelector('.modal input[type=number]').value)) === '50', 'erneut zuschneiden zeigt den Zuschnitt');
   await A.keyboard.press('Escape');
@@ -221,10 +217,8 @@ const sleep = (n) => new Promise((r) => setTimeout(r, n));
     return svgString([c.getEl('ch')]);
   });
   ok(!/Keine Zahlen|No numbers/.test(part), 'Diagramm im Teilexport hat Daten');
-  await J(() => document.querySelector('#topbar [aria-label*="Exportieren"]').click());
-  await sleep(200);
   for (const f0 of fs.readdirSync('.').filter((x) => x.endsWith('.pptx') && x.startsWith('Fix'))) fs.unlinkSync(f0);
-  await J(() => [...document.querySelectorAll('[role=menuitem]')].find((b) => /PowerPoint-Datei/.test(b.textContent)).click());
+  await boardMenu(A, 'Exportieren', 'PowerPoint-Datei');
   await sleep(2500);
   ok(
     fs.existsSync('Fix.pptx'),

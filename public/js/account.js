@@ -1,6 +1,6 @@
 // Konto-Dialoge (Profil, Kennwort, Zwei-Faktor, Geräte) und Benutzermenü – genutzt von Übersicht, Board und Administration
 import { T, LOCALE } from './i18n.js';
-import { h, api, modal, toast, initials, USER_COLORS, logout, relTime, fmtDate, confirmDialog } from './util.js';
+import { h, api, modal, toast, initials, USER_COLORS, logout, relTime, fmtDate, confirmDialog, colorName } from './util.js';
 import { passwordMeter } from './pwmeter.js';
 
 let minLength = 12;
@@ -14,10 +14,10 @@ export const webhooksEnabled = () => webhooks;
 
 function colorPicker(current, onPick) {
   const sw = h('div', { class: 'swatches' }, USER_COLORS.map((c) => h('button', {
-    type: 'button', class: 'swatch' + (c === current ? ' active' : ''), style: { background: c }, title: c,
+    type: 'button', class: 'swatch' + (c === current ? ' active' : ''), style: { background: c }, title: colorName(c), 'aria-label': colorName(c), 'data-color': c,
     onclick: () => {
       onPick(c);
-      sw.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('active', s.title === c));
+      sw.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('active', s.dataset.color === c));
     },
   })));
   return sw;

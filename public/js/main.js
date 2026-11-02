@@ -60,6 +60,8 @@ async function boot() {
   app.canComment = meta.role !== 'viewer';
   app.isFacilitator = meta.role === 'owner';
   app.guest = !!meta.guest;
+  app.contributor = meta.role === 'contributor';
+  app.notesOpen = app.contributor;
   app.features = meta.features || {};
   app.boardMeta = meta;
   app.name = meta.name;

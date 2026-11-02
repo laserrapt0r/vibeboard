@@ -32,4 +32,25 @@ const server = (action) => {
   execSync(cmd.replace('{action}', action), { stdio: 'ignore' });
 };
 
-module.exports = { BASE, TMP, FIXTURES, launch, login, server };
+// Klickt im offenen Menü nacheinander die Einträge, deren Text passt (Untermenüs öffnen sich dabei)
+const pickMenu = async (page, ...labels) => {
+  for (const label of labels) {
+    await page.waitForSelector('.popover [role^=menuitem]');
+    await page.evaluate((l) => {
+      const it = [...document.querySelectorAll('.popover [role^=menuitem]')].find((b) => b.querySelector('.mi-label')?.textContent.includes(l));
+      if (!it) throw new Error('Kein Menüeintrag: ' + l);
+      it.click();
+    }, label);
+    await new Promise((r) => setTimeout(r, 120));
+  }
+};
+const boardMenu = async (page, ...labels) => {
+  await page.evaluate(() => document.getElementById('btn-board-menu').click());
+  await pickMenu(page, ...labels);
+};
+const ctxMore = async (page, ...labels) => {
+  await page.evaluate(() => document.querySelector('#ctxbar [data-more]').click());
+  await pickMenu(page, ...labels);
+};
+
+module.exports = { BASE, TMP, FIXTURES, launch, login, server, pickMenu, boardMenu, ctxMore };

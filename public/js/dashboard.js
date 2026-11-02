@@ -1,4 +1,5 @@
 // Board-Übersicht (Startseite)
+import { openFolderDialog } from './board-folder.js';
 import { T, LOCALE } from './i18n.js';
 import { h, api, ICONS, toast, modal, promptDialog, confirmDialog, initials, relTime, loadPref, savePref, readableOn, design, designReady } from './util.js';
 import { TEMPLATES } from './templates.js';
@@ -31,12 +32,14 @@ async function load(quiet) {
 const DONE_RE = /^(fertig|erledigt|done|geschlossen|closed|abgeschlossen|resolved|gelöst|übernommen|completed|finished|hecho|terminado|completado|cerrado|resuelto|transferido|terminé|fait|fermé|résolu|reporté|carried over|terminée|terminada|hecha|fermée|cerrada|completada|resuelta|résolue|reportée|transferida)$/i;
 const PRIO = { critical: ['⏫', T('Kritisch'), '#e03131'], high: ['▲', T('Hoch'), '#f08c00'], medium: ['■', T('Mittel'), '#1971c2'], low: ['▼', T('Niedrig'), '#868e96'] };
 let tasks = [];
+let reviews = []; // Prüfungen, die auf mich warten
 
 async function loadTasks(quiet) {
   try {
-    tasks = (await api('/api/tasks', { quiet })).tasks;
+    ({ tasks, reviews } = await api('/api/tasks', { quiet }));
   } catch {
     tasks = [];
+    reviews = [];
   }
   render();
 }
@@ -65,6 +68,18 @@ function taskItem(t) {
         t.points !== '' ? h('span', {}, T`${t.points} SP`) : null)));
 }
 
+function reviewItem(r) {
+  const overdue = r.due && r.due < todayStr();
+  return h('a', { class: 'my-task', href: `/board/${encodeURIComponent(r.boardId)}#review=${encodeURIComponent(r.elementId)}` },
+    h('span', { class: 'task-color', style: { background: '#f59f00' } }),
+    h('span', { class: 'task-main' },
+      h('span', { class: 'task-title' }, r.title || T('Ohne Titel')),
+      h('span', { class: 'task-meta' },
+        h('span', {}, '🗂 ' + r.boardName),
+        r.by ? h('span', {}, T`vorgelegt von ${r.by}`) : null,
+        r.due ? h('span', { class: overdue ? 'overdue' : '' }, '📅 ' + new Date(r.due + 'T00:00').toLocaleDateString(LOCALE)) : null)));
+}
+
 function renderTasks() {
   const open = openTasks(), overdue = overdueTasks();
   document.getElementById('dash-tasks-count').textContent = T`${open.length} offen${overdue.length ? T` · ${overdue.length} überfällig` : ''}`;
@@ -81,7 +96,10 @@ function renderTasks() {
   const list = [...pick].sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.title.localeCompare(b.title));
   const box = document.getElementById('dash-tasks');
   box.innerHTML = '';
-  if (!list.length) {
+  if (reviews.length) {
+    box.append(h('section', { id: 'dash-reviews', class: 'my-task-group' }, h('h3', {}, T('Zu prüfen')), reviews.map(reviewItem)));
+  }
+  if (!list.length && !(reviews.length && !tasks.length)) {
     box.append(h('div', { class: 'dash-empty' }, !tasks.length
       ? T('Dir ist noch nichts zugewiesen. Hier erscheinen Karten mit deinem Namen als Zuständigkeit und Kommentare, die dir zugewiesen wurden – aus allen Boards.')
       : taskFilter === 'open' ? T('Keine offenen Aufgaben – alles erledigt. 🎉') : T('Keine Aufgaben für diesen Filter.')));
@@ -426,7 +444,7 @@ function renderNav() {
   nav.append(
     add,
     item(T('Startseite'), { kind: 'start' }, null, 'home'),
-    item(T('Meine Aufgaben'), { kind: 'tasks' }, overdue || openTasks().length || null, 'tasks', overdue ? 'alert' : ''),
+    item(T('Meine Aufgaben'), { kind: 'tasks' }, overdue || openTasks().length + reviews.length || null, 'tasks', overdue ? 'alert' : ''),
     h('div', { class: 'dash-nav-head' }, h('span', {}, T('Boards'))),
     item(T('Alle Boards'), { kind: 'all' }, allBoards().length, 'template'),
     item(T('Meine Boards'), { kind: 'mine' }, data.owned.length, 'users'),
@@ -560,33 +578,7 @@ async function newTeam() {
   }
 }
 
-// Board in einen Ordner legen: eigene Ordner und (falls das Board einem Team gehört) die Ordner dieses Teams
-function moveToFolder(b) {
-  const options = data.folderList.filter((f) => !f.teamId || (b.team && f.teamId === b.team.id));
-  const body = h('div', { class: 'form' });
-  const m = modal(T`„${b.name}“ in Ordner verschieben`, body);
-  if (!options.length) body.append(h('p', { class: 'muted' }, T('Noch keine Ordner. Lege links unter „Ordner“ einen an.')));
-  const groups = [[null, T('Meine Ordner')], ...(b.team ? [[b.team.id, T`Team „${b.team.name}“`]] : [])];
-  for (const [tid, label] of groups) {
-    const fl = options.filter((f) => (f.teamId || null) === tid);
-    if (!fl.length) continue;
-    body.append(h('div', { class: 'label' }, label));
-    for (const f of fl) {
-      const inIt = b.folders.includes(f.id);
-      body.append(h('button', { class: 'folder-pick' + (inIt ? ' active' : ''), onclick: async () => {
-        try {
-          if (inIt) await api(`/api/folders/${f.id}/boards/${b.id}`, { method: 'DELETE' });
-          else await api(`/api/folders/${f.id}/boards/${b.id}`, { method: 'PUT' });
-          m.close();
-          toast(inIt ? T('Aus dem Ordner entfernt') : T`In „${f.name}“ verschoben`);
-          load();
-        } catch (e) {
-          toast(e.message);
-        }
-      } }, h('span', { html: ICONS.folder }), f.name, inIt ? h('span', { class: 'muted small' }, T(' – enthalten, Klick entfernt')) : null));
-    }
-  }
-}
+const moveToFolder = (b) => openFolderDialog(b, data.folderList, load);
 
 /* ---------------- Team verwalten ---------------- */
 

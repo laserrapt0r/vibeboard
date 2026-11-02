@@ -2,8 +2,7 @@
 
 **English** · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-A self-hosted, collaborative online whiteboard. Several people work at the same time on an infinite canvas: with sticky
-notes, shapes, connectors, mind maps, comments, votes and more than 75 templates for workshops, retrospectives, strategy
+A self-hosted, collaborative online whiteboard. Several people work at the same time on an infinite canvas: with notes, shapes, connectors, mind maps, comments, votes and more than 75 templates for workshops, retrospectives, strategy
 work, software development, project management and IT service management. For development teams there are code blocks,
 diagrams from text (Mermaid syntax), estimation rounds and a card import from Jira or Excel exports. For teamwork there
 are notifications for @mentions, an activity history, facilitation rights, teams and folders, time-limited guest links
@@ -73,7 +72,7 @@ All content in the screenshots is sample data.
 ### Content
 | Element | Options |
 |---------|---------|
-| **Sticky notes** | 16 colors, automatic font size, optionally with the author's name |
+| **Notes** | 16 colors, automatic font size, optionally with the author's name |
 | **Text** | Font size, color, bold, italic, alignment, background |
 | **Shapes** | More than 60 shapes in seven groups: basic shapes, flowchart (document, multiple documents, manual input, display, etc.), UML (class with compartments, actor, package, component, node, start/end, fork, signals), BPMN (events, gateways), network & data center (router, switch, firewall, load balancer, access point, internet, server, server rack, storage system, PC, smartphone), software & IT, container platform (pod, deployment, service, ingress, node, ConfigMap, secret, volume) – all custom drawings, with fill, border, line style and text |
 | **Connectors** | straight, angled or curved; attach at any point of the outline (or automatically); dragging the line curves it, bend points can be inserted, moved and removed; movable label; 9 line ends (arrow, diamond, circle, crow's foot, etc.), line style |
@@ -90,7 +89,7 @@ All content in the screenshots is sample data.
 | **Links** | Attach a URL to elements; a link icon opens it |
 | **Comments** | Threads anywhere or attached to an element (they follow it), @mentions with suggestion list and notification, “Done” status, assign as a task (with due date), comment overview with the “Assigned to me” filter |
 
-Pasting multi-line text into the board automatically creates one sticky note per line.
+Pasting multi-line text into the board automatically creates one note per line.
 
 ### Editing
 - Multi-select with a selection rectangle or Shift-click
@@ -109,7 +108,7 @@ Pasting multi-line text into the board automatically creates one sticky note per
     arrange as a grid.
   - Same width, height or size; copy and apply size; align to grid.
 - **Smart duplicate:** Ctrl+D repeats the most recently used offset.
-- Cluster sticky notes by color
+- Cluster notes by color
 - Working quickly: Tab while typing adds the next note or shape alongside, double-clicking a tool keeps it active, and the shape menu shows recently used shapes. In templates, labels can be edited directly while backgrounds stay locked; retro and brainstorming templates offer their matching flow or timer. Dragging a card into a Kanban column on the board sets its status, and a frame can be deleted together with its content.
 - Command palette (Ctrl+K) for commands, settings, frames, templates and board content; format painter (brush in the context bar, Ctrl+Alt+C/V).
 - Formulas in tables: `=SUM(B2:B5)`, `=B2*C2`, and more; click a cell to insert its reference, or use Σ on selected cells.
@@ -118,7 +117,12 @@ Pasting multi-line text into the board automatically creates one sticky note per
   element for editing
 - Copy and paste, also between boards
 - Undo and redo, context menu, search (Ctrl+F)
-- Extensive keyboard shortcuts (overview with `?`)
+- Extensive keyboard shortcuts (searchable overview with `?`, most common first)
+- **Help button** at the bottom left with first steps, a quick guide and shortcuts; also found in the command search
+- **Format while typing:** Ctrl+B, Ctrl+I and Ctrl+U apply to the whole element or cell, and the context bar stays usable without closing the editor
+- **Tidy header:** board menu next to the name (export, import, history, activity, element list, save as template, duplicate, move, delete), "Facilitate", labeled "Share" and "Present" buttons; whatever does not fit moves to "More"
+- **Compact context bar:** color, text, link, comment, lock, more, delete; the "More" menu and the right-click menu share one structure
+- **Toolbar by frequency** with custom tooltips (name and shortcut, also by keyboard); key B for table, D for code; color swatches show color names
 
 ### Real-time collaboration
 - Changes appear immediately for all participants
@@ -164,11 +168,12 @@ Pasting multi-line text into the board automatically creates one sticky note per
   After a confirmation prompt an invitation email is sent; after registering via the link, the board is shared or the
   person is in the team.
 - **Guest links:** People without an account view or comment on a single board – time-limited, can be blocked at any
-  time, switched off by default.
+  time, switched off by default. With the optional “Contributions” level, guests also add their own notes and change
+  only those.
 - **Record walkthroughs:** View, mouse pointer and laser pointer, with audio if desired; others play the walkthrough
   and can navigate on their own while doing so.
-- **Reactions:** Emojis directly on sticky notes, cards & co. – with count and names, also for viewers (right-click).
-- **Tags and filters:** Tag sticky notes, cards and shapes; the filter fades out everything else (by tag, color,
+- **Reactions:** Emojis directly on notes, cards & co. – with count and names, also for viewers (right-click).
+- **Tags and filters:** Tag notes, cards and shapes; the filter fades out everything else (by tag, color,
   person, reactions, action items) – only in your own view.
 - **File attachments:** Place PDF, Word, Excel, PowerPoint, OpenDocument, text, CSV and JSON files on the board; PDFs
   with a preview of the first page and a viewer (pdf.js), all with virus scan and as a download.
@@ -182,9 +187,10 @@ Pasting multi-line text into the board automatically creates one sticky note per
   added via the avatar menu. The server enforces all locks.
 - **Timer** for all participants, with pause, extension and signal tone
 - **Votes** with an adjustable number of votes per person; the votes stay hidden until the end, after which there is a results list
-- **Estimation round** with hidden cards for a card: Fibonacci, T-shirt or hours deck; the values stay hidden until
+- **Estimation round** with hidden cards for one card or a queue of several (progress visible to everyone, “Next card”): Fibonacci, T-shirt or hours deck; the values stay hidden until
   revealed. Afterwards average, median and range appear, and the result can be applied as story points.
 - **Presentation mode**: Frames become slides (full screen, arrow and space keys, surroundings hidden)
+- **Present to everyone:** participants follow the slides automatically in a reduced view, latecomers join in, and "Look around myself" and "Follow again" keep the choice with them; unfinished input is never interrupted
 - **Hidden areas:** Facilitators cover a frame; participants see only a cover until it is revealed. The server does
   not hand out the content beforehand.
 
@@ -219,8 +225,10 @@ Pasting multi-line text into the board automatically creates one sticky note per
 
 ### Reviews and work items
 - **Review documents on the board:** Put all pages of a PDF on the board as a frame, then comment and draw on them. Office files work with the optional converter.
-- **Approvals:** Submit frames and files to reviewers. Approving needs only the comment role, changes invalidate an approval, and the status shows on the element.
-- **Kanban and timeline:** Other views of the same cards, usable without a mouse.
+- **Reviews:** Submit frames and files to reviewers. Approving needs only the comment role, changes invalidate an approval, and the status shows on the element. Open reviews appear under “To review” in “My tasks”, and every round stays available with its reasons.
+- **Kanban and timeline:** Other views of the same cards, usable without a mouse. Each column has a “+” for quick entry and shows its story point total; “Blocked by” links cards, with arrows on the timeline.
+- **Quick entry for cards:** The card tool lets you type the title directly on the card, details are under “Edit card”.
+- **On phones:** “Select several” for multiple selection by touch; banners collapse for participants and messages appear at the top.
 - **Jira and Azure DevOps:** Cards and tickets stay in sync in both directions.
 - **Automatic layout and swimlanes:** Arrange connected elements or a mind map with one click.
 - **Charts from tables:** Bar, line and pie charts that follow the table.
@@ -230,9 +238,9 @@ More: [docs/integrations.md](docs/integrations.md).
 
 ### Export and import
 - PNG (whole board or selection) and SVG
-- PowerPoint: one slide per frame, with editable text and shapes
+- PowerPoint: one slide per frame, with editable text and shapes and the frame title in the slide's title field
 - Import from draw.io and PowerPoint
-- PDF with one frame per page (via the browser's print dialog)
+- PDF file with one image page per frame in frame order and size, frame titles as bookmarks, generated in the browser; “Print to PDF” keeps text selectable
 - JSON as a backup; import into the board or as a new board
 - Cards from CSV/tables, diagrams from text (see above)
 
@@ -414,6 +422,8 @@ Besides local accounts, vibeboard can use **Keycloak**, **SAML**, **LDAP/Active 
   effect immediately.
 - **Guests** see only the board of their link – no home page, no other boards, no profile or team features. When the
   link expires or is blocked, their accesses are deleted; their contributions are kept with their names.
+- **Guests with “Contributions”** (off by default) may also add notes and edit, move and delete their own notes, up to
+  a set number per guest. Everything else stays read-only for them. The server decides what belongs to a guest.
 - **Administrators** have access to all boards.
 
 ## Administration
@@ -444,7 +454,8 @@ At `/admin`, for administrators only:
 - **General:** Instance name, public address, registration mode
 - **Security:** Minimum password length, check against “Have I Been Pwned”, disposable addresses, blocked or
   allowed domains, mandatory two-factor for admins
-- **Collaboration:** Emails for mentions, guest access (off by default) and its maximum validity, who may create
+- **Collaboration:** Emails for mentions, guest access (off by default) and its maximum validity, the “Contributions”
+  guest level (off by default) and its note limit, who may create
   teams, allow recordings and their maximum duration, file attachments and maximum file size, retention in the trash,
   webhooks (off by default) and whether internal webhook targets are allowed
 - **Mail server:** SMTP host, port, encryption (STARTTLS, SSL/TLS, none), sign-in, sender,
@@ -466,7 +477,7 @@ At `/admin`, for administrators only:
 
   Placeholders are in [square brackets]. The templates are not a substitute for legal advice.
 - The pages `/impressum` and `/datenschutz` are reachable **without signing in**.
-- They are linked on the sign-in and registration page, in the board overview, in the settings menu of the boards
+- They are linked on the sign-in and registration page, in the board overview, in the account menu of the boards
   and in the administration.
 - Empty texts are not published; their links then disappear automatically.
 - The texts are displayed without HTML. Entered markup appears as plain text, links are allowed only with http(s),
@@ -650,6 +661,9 @@ All data is stored in your own PostgreSQL database:
 | `notifications` | Notifications (mention, reply, assignment), kept for 90 days |
 | `board_activity` | Activity history, summarized, 90 days or at most 2000 entries per board |
 | `guest_links` | Guest links (only as a hash) with role and expiry; guest accesses are accounts with the role `guest` |
+| `element_owners` | Which guest a note belongs to; deleted together with the guest access |
+| `server_secrets` | Server-generated secret used to verify element IDs; created on first start |
+| `reviews`, `review_people`, `review_rounds`, `review_round_people` | Reviews, reviewers and their decisions, earlier rounds with reasons |
 | `teams`, `team_members`, `folders`, `folder_boards` | Teams, memberships, folders |
 | `board_recordings` | Recorded walkthroughs with time track and optional audio track |
 | `team_invitations`, `pending_invites` | Open invitations to teams or to addresses without an account (address, role, inviting person; at most 30 days) |
@@ -719,7 +733,7 @@ public/
   guest.html           Beitritt per Gastlink                         → js/guest.js
   board.html           Board-Editor                                  → js/main.js (core, ui, collab, render, sync, …)
                        teamwork.js (privater Modus, Schätzrunde), planning.js (Aufgaben, Versionen, CSV-Import),
-                       moderation.js, activity.js, recording.js, notifications.js (Arbeiten im Team),
+                       moderation.js, activity.js, recording.js, notifications.js, banners.js (Arbeiten im Team),
                        diagram-parse.js / diagram-text.js (Diagramm aus Text), highlight.js (Code-Blöcke),
                        templates.js / templates-tech.js / templates-diagrams.js / template-kit.js (Vorlagen)
   admin.html           Administration                                → js/admin.js

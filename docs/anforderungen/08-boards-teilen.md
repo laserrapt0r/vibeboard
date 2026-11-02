@@ -10,6 +10,7 @@
   - Geändert in 3.7.2: Die Navigation steht als eigene Spalte links oben (beim Scrollen sichtbar), auf schmalen Bildschirmen als Leiste oben.
   - Geändert in 3.7.0: Navigation links mit „Alle Boards“, „Meine Boards“, „Mit mir geteilt“, eigenen Ordnern und Teams ([REQ-BOARD-007](#req-board-007-teams-und-ordner)); Board-Karten zeigen Team und Ordner; Glocke für Benachrichtigungen. Die zuletzt gewählte Ansicht bleibt erhalten.
   - Geändert in 3.2.0: Beim Duplizieren werden private Elemente anderer Personen nicht mitkopiert ([REQ-COLLAB-009](04-zusammenarbeit.md)). Die Übersicht zeigt zusätzlich „Meine Aufgaben“ ([REQ-PROJ-002](16-projektarbeit.md)).
+  - Geändert in 4.16.0: Duplizieren, In Ordner verschieben und Löschen gehen auch im geöffneten Board über das Boardmenü, mit denselben Rechten.
 
 ### REQ-BOARD-002 Besitz und Rollen
 - **Seit:** 2.0.0 · **Priorität:** Muss · **Status:** umgesetzt
@@ -41,6 +42,7 @@
   - Stufen: nur eingeladene Personen, alle angemeldeten Nutzer mit dem Link dürfen ansehen, … dürfen bearbeiten.
   - Geändert in 3.7.0: zusätzlich „… dürfen kommentieren“. Gäste ([REQ-BOARD-006](#req-board-006-gastzugang-per-link)) erhalten über die Link-Freigabe keinen Zugriff.
   - Über einen Link geöffnete Boards erscheinen unter „Mit mir geteilt“, solange die Freigabe besteht.
+  - Geändert in 4.16.0: Der Teilen-Dialog meldet „Zugriff geändert“. Die Administration zeigt dieselbe Einstellung in der Spalte „Zugriff“.
 
 ### REQ-BOARD-005 Speicherung
 - **Seit:** 1.0.0, geändert in 2.0.0 (PostgreSQL) · **Priorität:** Muss · **Status:** umgesetzt
@@ -62,6 +64,7 @@
   - Anmelden mit Benutzername/Kennwort ist für Gastzugänge nicht möglich; Benutzernamen „gast-…“ sind reserviert. Gäste erscheinen nicht in der Benutzerverwaltung.
   - Missbrauchsschutz: Ratenbegrenzung für Beitritt und Linkerstellung, höchstens 100 Gäste je Link. Abgelaufene Gastzugänge werden spätestens nach einer Minute entfernt und getrennt. Gastlink-Tokens erscheinen nicht im Protokoll.
   - Geändert in 4.11.5: Abgeschnittene Gastlinks und beendete Gastzugänge führen zur Seite „Link nicht gültig“, nicht zur Anmeldung. Gäste haben kein Profilmenü.
+  - Geändert in 4.16.0: Gastlinks gibt es zusätzlich mit der Stufe „Beiträge“, siehe [REQ-BOARD-011](#req-board-011-gaststufe-beiträge).
   - Geändert in 4.15.0: Der Beitritt ist auf 300 je Link in 10 Minuten begrenzt, je Adresse zählen nur Fehlversuche (20 in 10 Minuten). Die Beitrittsseite erlaubt 600 Abrufe je Adresse in 10 Minuten.
 
 ### REQ-BOARD-007 Teams und Ordner
@@ -109,3 +112,19 @@
   - Registriert sich die Person ohne den Link oder wird die Adresse später bestätigt (auch bei geänderter Adresse oder vom Admin angelegtem Konto, spätestens bei der Anmeldung), wird die Einladung ebenfalls eingelöst: Boards sind geteilt, Teams erscheinen als normale Einladung zum Annehmen.
   - Die Regeln der Registrierung gelten: Keine Einladung, wenn sie geschlossen ist oder der Mailversand fehlt; gesperrte und Wegwerf-Adressen werden abgelehnt; bei „mit Freigabe“ muss ein Admin das Konto danach freischalten.
   - Besitzer bzw. Team-Verwaltende sehen offene Einladungen und können sie zurückziehen. Erneutes Einladen erzeugt einen neuen Link. Grenzen: 20 Einladungen je Stunde und Person, 5 je Tag und Adresse.
+
+### REQ-BOARD-011 Gaststufe „Beiträge“
+- **Seit:** 4.16.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Gäste eines Workshops ergänzen eigene Notizen, ohne bearbeiten zu dürfen.
+- **Akzeptanzkriterien:**
+  - Die Stufe (`contributor`) gibt es nur für Gastlinks. Sie ist in der Administration abschaltbar, Standard ist aus ([REQ-ADMIN-010](10-administration.md)). Abschalten verlangt eine Bestätigung, sperrt die Links dieser Stufe und meldet ihre Gäste sofort ab; andere Gastlinks bleiben.
+  - Gäste dürfen kommentieren, antworten, eigene Kommentare löschen und abstimmen, dazu Notizen anlegen und eigene Notizen bearbeiten, verschieben und löschen. Mehr nicht: keine anderen Elementarten, keine Frames, keine Struktur, keine Sitzungsoperationen, keine Moderation (auch nicht, wenn sie eingetragen werden), kein Umbenennen, keine Mitglieder, keine Uploads und Aufzeichnungen, keine Vorlagen. Anders als mit „kommentieren“ erledigen und zuweisen sie keine Kommentare.
+  - Der Server prüft jede Operation. Was nicht ausdrücklich erlaubt ist, wird abgelehnt und zurückgenommen. An einer Notiz übernimmt er nur Lage, Größe, Text, Farbe und Textformat; eine Sperre gilt auch für die eigene Notiz.
+  - Was „eigen“ ist, steht nur auf dem Server (Tabelle `element_owners`), nie am Element und nie im Browser anderer. `author` ist kein Beweis. Kopien, Versionen, Exporte und Importe tragen kein Eigentum. Nach dem Wiederherstellen einer Version gehört einem Gast nichts mehr.
+  - Grenzen: höchstens so viele Notizen je Gast und Board wie eingestellt (Standard 50), höchstens 60 neue je Minute, 5000 Zeichen und 2000 Punkte Kantenlänge je Notiz.
+  - Der Gast sieht nur Werkzeuge, die gehen, und erfährt auf der Beitrittsseite, was er kann. Der Teilen-Dialog erklärt die Stufe in einem Satz.
+  - Endet der Zugang, bleiben die Notizen mit dem Namen erhalten wie Kommentare; das Eigentum wird gelöscht. Eine Notiz, die jemand löscht und wieder zurückholt, bleibt die des Gastes.
+  - Geändert in 4.16.0: Kennungen neuer Notizen und Kommentare trägt der Browser mit einem Kennzeichen ein, das nur diese Person auf diesem Board bilden kann. Der Server prüft es. Die Kennung einer gelöschten fremden Notiz lässt sich so nicht übernehmen, auch nicht nach einem Neustart, und Verbinder, Anker und Prüfungen bleiben unerreichbar. Das gilt auch für neue Kommentare der Rolle Kommentieren. Kennungen verraten nicht, von wem ein anonymer Beitrag stammt.
+  - Geändert in 4.16.0: Eine Ablehnung erreicht den Browser auch bei fremden privaten Notizen.
+  - Geändert in 4.16.0: Änderungen an eigenen Notizen sind auf 3000 je Minute und Gast begrenzt. Darüber nimmt der Server sie zurück, Eingaben sendet der Browser später erneut.
+  - Geändert in 4.16.0: Eingabeschritte (`tsync`) bekommt der Gast nur für eigene Notizen, sonst den sichtbaren Text.

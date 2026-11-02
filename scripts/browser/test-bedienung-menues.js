@@ -96,7 +96,7 @@ const palette = async (p, on) => {
   for (const p of [A, V, C]) await open(p, id);
 
   console.log('=== Präsentieren ohne Frames');
-  const present = (p) => p.evaluate(() => [...document.querySelectorAll('#topright button')].find((x) => x.title === 'Präsentieren').click());
+  const present = (p) => p.evaluate(() => document.getElementById('btn-present').click());
   await mk(A, 'sticky', 'n1', { x: 400, y: 300, text: 'Hallo' });
   await wait(400);
   await present(A);
@@ -104,6 +104,8 @@ const palette = async (p, on) => {
   const dlg = await A.evaluate(() => [...document.querySelectorAll('.modal-back .btn')].map((x) => x.textContent));
   ok(dlg.includes('Frame anlegen') && dlg.includes('Ganzes Board zeigen'), 'Dialog bietet beide Wege', dlg);
   await A.evaluate(() => [...document.querySelectorAll('.modal-back .btn')].find((x) => x.textContent === 'Ganzes Board zeigen').click());
+  await wait(250);
+  await A.evaluate(() => [...document.querySelectorAll('.modal-back .btn')].find((x) => x.textContent === 'Nur für mich').click());
   await wait(500);
   ok(await A.evaluate(() => document.body.classList.contains('presenting')), 'Präsentation läuft');
   ok((await A.evaluate(() => document.getElementById('present-bar').textContent)).includes('Ganzes Board'), 'Leiste nennt die Ansicht');
@@ -187,16 +189,16 @@ const palette = async (p, on) => {
 
   console.log('=== Befehlssuche bei 1280 px');
   await palette(A, true);
-  const want = { notiz: /Sticky Note/, einladen: /Personen einladen/, umfrage: /Schnellumfrage/, verbinden: /Verbindungslinie/, hilfe: /Tastenkürzel/, pdf: /PDF/, retro: /Retro/, filter: /Filter/, exportieren: /PNG/, 'png': /PNG/ };
+  const want = { notiz: /^Notiz/, einladen: /Personen einladen/, umfrage: /Umfrage/, verbinden: /Linie/, hilfe: /^Hilfe/, tastenkürzel: /Tastenkürzel/, pdf: /PDF/, retro: /Retro/, filter: /Filter/, exportieren: /PNG/, 'png': /PNG/ };
   for (const [q, re] of Object.entries(want)) {
     const list = await search(A, q);
     ok(list.some((x) => re.test(x)), `„${q}“ findet ${re}`, list.slice(0, 6));
   }
   const li = await search(A, 'notiz');
-  ok(/Sticky Note/.test(li[0]), 'Werkzeug steht vor Inhalten', li.slice(0, 4));
-  await search(A, 'retro');
+  ok(/^Notiz/.test(li[0]), 'Werkzeug steht vor Inhalten', li.slice(0, 4));
+  await search(A, 'moderation');
   await A.evaluate(() => {
-    const it = [...document.querySelectorAll('.palette-item')].find((x) => /Retro: Ablauf/.test(x.textContent));
+    const it = [...document.querySelectorAll('.palette-item')].find((x) => /^Moderation/.test(x.querySelector('.palette-label').textContent));
     it.click();
   });
   await wait(300);
@@ -211,9 +213,9 @@ const palette = async (p, on) => {
   await palette(V, true);
   for (const q of ['einladen', 'umfrage', 'notiz']) {
     const list = await search(V, q);
-    ok(!list.some((x) => /Personen einladen|Schnellumfrage|Sticky Note$/.test(x)), `Betrachter: „${q}“ bietet nichts an, was die Rolle nicht kann`, list.slice(0, 6));
+    ok(!list.some((x) => /Personen einladen|Umfrage …|^Notiz$/.test(x)), `Betrachter: „${q}“ bietet nichts an, was die Rolle nicht kann`, list.slice(0, 6));
   }
-  ok((await search(V, 'pdf')).some((x) => /Als PDF/.test(x)), 'Betrachter dürfen exportieren');
+  ok((await search(V, 'pdf')).some((x) => /PDF/.test(x)), 'Betrachter dürfen exportieren');
   ok(!(await search(V, 'importieren')).some((x) => /Datei importieren/.test(x)), 'Betrachter importieren nicht');
   await palette(V, false);
 

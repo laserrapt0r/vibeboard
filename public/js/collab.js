@@ -2,16 +2,17 @@
 import { T } from './i18n.js';
 import { applyPatch, equal, idOf } from './merge.js';
 import { textKey } from './text-sync.js';
-import { h, append, api, ICONS, esc, toast, modal, initials, FONT, onAuthLost, readableOn } from './util.js';
-import { followStruct, textCaretRects,
+import { h, append, api, ICONS, esc, toast, modal, initials, FONT, onAuthLost, readableOn, setIdKey } from './util.js';
+import { followStruct, textCaretRects, gestureActive,
   app, $, stage, getEl, isAnonymous, bounds, toScreen, visibleRect, viewFor, applyView, fitTo, fitAll, now, frames, setTool,
   loadElements, applyRemoteOp, applyRemoteTableOp, scheduleRender, rerenderAll, setSelection, finishEdit, abortEdit, initCore, lastPointer,
   BUSY_TTL, resendBusy, stageRect,
 } from './core.js';
 import { throttle, unionRect } from './util.js';
-import { elementLabel, menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel, openProfile } from './ui.js';
+import { elementLabel, menu, popover, closePop, toggleSidePanel, showSidePanel, currentSidePanel, renderSidePanel } from './ui.js';
 import { facilitatorItems, toolsReserved, leads } from './moderation.js';
 import * as bell from './notifications.js';
+import { foldable } from './banners.js';
 
 // Gesperrte Werkzeuge (Moderation): Hinweis statt Aktion
 const reservedHint = () => toolsReserved() && (toast(T('Das ist während der Moderation den Moderierenden vorbehalten')), true);
@@ -30,11 +31,9 @@ function renderAvatars() {
   const box = $('#avatars');
   if (!box) return;
   box.innerHTML = '';
-  const me = h('button', { class: 'avatar', disabled: !!app.guest, style: { background: app.user.color }, title: T`${app.user.name || T('Gast')} (du) – Profil bearbeiten`, onclick: () => openProfile() }, initials(app.user.name || T('Gast')));
-  box.append(me);
   const peers = [...app.peers.values()];
   for (const p of peers.slice(0, 6)) {
-    const b = h('button', { class: 'avatar' + (app.following === p.clientId ? ' following' : '') + (p.away ? ' away' : ''), style: { background: p.color }, title: p.name + (p.role === 'commenter' ? T(' (kommentieren)') : p.viewOnly ? T(' (ansehen)') : '') + (p.away ? T(' – abwesend') : '') }, initials(p.name));
+    const b = h('button', { class: 'avatar' + (app.following === p.clientId ? ' following' : '') + (p.away ? ' away' : ''), style: { background: p.color }, title: p.name + (p.role === 'contributor' ? T(' (Beiträge)') : p.role === 'commenter' ? T(' (kommentieren)') : p.viewOnly ? T(' (ansehen)') : '') + (p.away ? T(' – abwesend') : '') }, initials(p.name));
     b.onclick = () => menu(b, [
       { header: p.name },
       { label: app.following === p.clientId ? T('Nicht mehr folgen') : T('Folgen'), icon: 'users', onClick: () => follow(app.following === p.clientId ? null : p.clientId) },
@@ -45,7 +44,7 @@ function renderAvatars() {
   }
   if (peers.length > 6) box.append(h('span', { class: 'avatar more' }, '+' + (peers.length - 6)));
   if (peers.length && !app.viewOnly) {
-    const all = h('button', { class: 'icon-btn', title: T('Alle zu mir holen / Alle folgen mir'), html: ICONS.users });
+    const all = h('button', { class: 'icon-btn', 'aria-label': T('Alle zu mir holen / Alle folgen mir'), 'data-tip': T('Alle zu mir holen / Alle folgen mir'), html: ICONS.users });
     all.onclick = () => !reservedHint() && menu(all, [
       { header: T('Aufmerksamkeit lenken') },
       { label: T('Alle zu mir holen (einmalig)'), icon: 'fit', onClick: () => {
@@ -80,9 +79,9 @@ function follow(clientId) {
   renderAvatars();
 }
 
-function applyFollowView(rect) {
+function applyFollowView(rect, pad = 0) {
   app._applyingFollow = true;
-  app.view = viewFor(rect, 0, 8);
+  app.view = viewFor(rect, pad, 8);
   applyView(true);
   app._applyingFollow = false;
 }
@@ -420,7 +419,6 @@ function beep() {
 function renderTimer() {
   const t = app.session.timer;
   timerWidget.classList.toggle('hidden', !t);
-  $('#btn-timer')?.classList.toggle('active', !!t);
   if (!t) return;
   const rem = timerRemaining(t);
   if (!timerWidget.firstChild) {
@@ -515,7 +513,7 @@ function openVotingMenu(anchor) {
     m.close();
     toast(T('Abstimmung gestartet – klicke auf Elemente, um abzustimmen'));
   } },
-  h('p', { class: 'muted' }, T('Alle Teilnehmenden können Sticky Notes, Formen, Karten und Bilder anklicken, um Stimmen zu vergeben. Die Stimmen der anderen bleiben bis zum Ende verborgen.')),
+  h('p', { class: 'muted' }, T('Alle Teilnehmenden können Notizen, Formen, Karten und Bilder anklicken, um Stimmen zu vergeben. Die Stimmen der anderen bleiben bis zum Ende verborgen.')),
   h('label', {}, T('Frage (optional)'), title),
   h('label', {}, T('Stimmen pro Person'), num),
   v && !v.active ? h('p', { class: 'muted small' }, T('Die Ergebnisse der letzten Abstimmung werden dabei verworfen.')) : null,
@@ -573,18 +571,18 @@ function renderVoting() {
   const v = app.session.voting;
   const active = v && v.active;
   banner.classList.toggle('hidden', !active);
-  $('#btn-vote')?.classList.toggle('active', !!active);
   stage.classList.toggle('voting', !!(active && app.voteMode));
   if (active) {
     const left = v.votesPerUser - myVotesUsed(v);
     banner.innerHTML = '';
     append(banner,
       h('span', { html: ICONS.vote }),
-      h('span', {}, h('b', {}, v.title || T('Abstimmung läuft')), ' · ', left > 0 ? T`Noch ${left} von ${v.votesPerUser} Stimmen` : T('Alle Stimmen vergeben'), h('span', { class: 'muted small' }, T('  (Klick = Stimme, Minus an der Stimme = zurücknehmen)'))),
+      h('span', {}, h('b', {}, v.title || T('Abstimmung läuft')), ' · ', left > 0 ? T`Noch ${left} von ${v.votesPerUser} Stimmen` : T('Alle Stimmen vergeben'), h('span', { class: 'muted small banner-detail' }, T('  (Klick = Stimme, Minus an der Stimme = zurücknehmen)'))),
       // Wirkt nur im eigenen Browser: Klicks wählen wieder aus, statt abzustimmen
-      h('button', { class: 'btn small', title: T('Gilt nur für dich: Klicks wählen wieder aus, statt abzustimmen'), onclick: () => { app.voteMode = !app.voteMode; renderVoting(); } }, app.voteMode ? T('Für mich pausieren') : T('Abstimmen')),
+      h('button', { class: 'btn small banner-detail', title: T('Gilt nur für dich: Klicks wählen wieder aus, statt abzustimmen'), onclick: () => { app.voteMode = !app.voteMode; renderVoting(); } }, app.voteMode ? T('Für mich pausieren') : T('Abstimmen')),
       mayEndVoting(v) ? h('button', { class: 'btn small primary', onclick: endVoting }, T('Beenden')) : null,
     );
+    foldable(banner, 'voting', !mayEndVoting(v));
   }
   renderVotes();
   if (currentSidePanel() === 'votes') renderSidePanel();
@@ -633,6 +631,9 @@ app.on('vote', (elId, delta) => {
 
 let present = null;
 const pbar = $('#present-bar');
+// Wer einer Präsentation für alle zusieht: { key, own: „Selbst umsehen“ gewählt, following: reduzierte Ansicht aktiv }
+let audience = null;
+let ownWay = null; // startedAt der Präsentation, bei der jemand „Selbst umsehen“ gewählt hat
 
 app.on('present', (startId) => startPresentation(startId));
 
@@ -657,11 +658,26 @@ function askWithoutFrames() {
 
 function startPresentation(startId, slides = frames()) {
   const list = slides;
+  if (audience?.following) return;
   if (!list.length) return askWithoutFrames();
+  // Dieselbe Regel wie „Alle folgen mir“. Läuft schon eine Präsentation für alle, bleibt nur die eigene.
+  if (app.viewOnly || toolsReserved() || audience) return beginPresentation(startId, list, false);
+  const pick = (shared) => {
+    m.close();
+    beginPresentation(startId, list, shared);
+  };
+  const m = modal(T('Für alle präsentieren?'), h('div', { class: 'form' },
+    h('p', {}, T('Bei „Für alle“ folgen alle Teilnehmenden automatisch deinen Folien. Sie können sich jederzeit selbst umsehen.')),
+    h('div', { class: 'form-actions' },
+      h('button', { type: 'button', class: 'btn', onclick: () => pick(false) }, T('Nur für mich')),
+      h('button', { type: 'button', class: 'btn primary', onclick: () => pick(true) }, T('Für alle')))));
+}
+
+function beginPresentation(startId, list, shared) {
   finishEdit();
   setSelection([]);
   setTool('select');
-  present = { list, i: Math.max(0, list.findIndex((f) => f.id === startId)) };
+  present = { list, i: Math.max(0, list.findIndex((f) => f.id === startId)), shared, live: false, sent: -1 };
   document.body.classList.add('presenting');
   document.documentElement.requestFullscreen?.().catch(() => {});
   showSlide();
@@ -669,9 +685,16 @@ function startPresentation(startId, slides = frames()) {
 
 const mask = $('#present-mask');
 
+const slideRect = () => {
+  if (present) return getEl(present.list[present.i].id) || present.list[present.i];
+  if (!audience?.following) return null;
+  const s = app.session.presentation?.slide;
+  return s ? (s.id && getEl(s.id)) || s : null;
+};
+
 function positionMask() {
-  if (!present) return;
-  const f = getEl(present.list[present.i].id) || present.list[present.i];
+  const f = slideRect();
+  if (!f) return;
   const p1 = toScreen(f.x, f.y), p2 = toScreen(f.x + f.w, f.y + f.h);
   Object.assign(mask.style, { left: p1.x + 'px', top: p1.y + 'px', width: p2.x - p1.x + 'px', height: p2.y - p1.y + 'px' });
 }
@@ -693,6 +716,11 @@ function showSlide() {
   );
   pbar.classList.remove('hidden');
   wakeBar();
+  // Beim Einpassen nach einer Größenänderung bleibt die Folie dieselbe: Das Publikum braucht dann nichts
+  if (present.shared && present.sent !== present.i) {
+    app.sync.op({ op: 'presentation', action: present.sent < 0 ? 'start' : 'slide', slide: { id: f.id || null, i: present.i, n: present.list.length, x: el.x, y: el.y, w: el.w, h: el.h } });
+    present.sent = present.i;
+  }
 }
 
 // Sichtbar beim Start und nach jeder Aktivität, erst danach tritt die Leiste zurück
@@ -712,19 +740,187 @@ function go(d) {
 
 function stopPresentation() {
   if (!present) return;
+  if (present.shared) app.sync.op({ op: 'presentation', action: 'stop' });
   present = null;
   document.body.classList.remove('presenting');
   pbar.classList.add('hidden');
   mask.classList.add('hidden');
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  syncAudience();
 }
+
+/* ---------------- Publikum einer Präsentation für alle ---------------- */
+
+const AUDIENCE_OFFLINE_MS = 8000;
+const PRESENTER_BEAT_MS = 20000;
+const abar = h('div', { id: 'audience-bar', class: 'panel hidden', role: 'status' });
+document.body.append(abar);
+let waitTimer = 0, offlineTimer = 0;
+
+const foreignPresentation = () => {
+  const p = app.session.presentation;
+  return p?.active && p.slide && p.clientId !== app.sync.clientId ? p : null;
+};
+const presenterName = (p) => app.peers.get(p.clientId)?.name || p.by || T('Jemand');
+
+// Niemandem etwas unter den Händen wegziehen: offene Eingaben, Dialoge und laufendes Ziehen gehen vor
+function occupied() {
+  const f = document.activeElement;
+  return !!present || !!app.editing || gestureActive() || !!chatBox || !!f?.matches?.('input, textarea, select, [contenteditable="true"]')
+    || !!document.querySelector('.modal-back, .popover, .comment-pop');
+}
+
+function leaveReduced() {
+  document.body.classList.remove('audience');
+  if (present) return;
+  document.body.classList.remove('presenting');
+  mask.classList.add('hidden');
+}
+
+function endAudience() {
+  clearTimeout(waitTimer);
+  waitTimer = 0;
+  if (!audience) return;
+  audience = null;
+  leaveReduced();
+  abar.classList.add('hidden');
+}
+
+function showAudienceSlide() {
+  mask.classList.remove('hidden');
+  const r = slideRect();
+  applyFollowView({ x: r.x, y: r.y, w: r.w, h: r.h }, 24);
+  positionMask();
+}
+
+function renderAudienceBar() {
+  const p = foreignPresentation();
+  if (!audience || !p) return;
+  const name = presenterName(p);
+  const s = p.slide;
+  const title = s.id ? getEl(s.id)?.title || T('Frame') : T('Ganzes Board');
+  const text = audience.following ? T`${name} präsentiert · ${s.i + 1} / ${s.n} · ${title}`
+    : audience.own ? T`${name} präsentiert` : T`${name} präsentiert. Du folgst, sobald du hier fertig bist.`;
+  const end = leads(p.byId) && !app.baseViewOnly ? h('button', { class: 'btn small', onclick: () => app.sync.op({ op: 'presentation', action: 'stop' }) }, T('Für alle beenden')) : null;
+  const toggle = audience.own
+    ? h('button', { class: 'btn small primary', onclick: followAgain }, T('Wieder folgen'))
+    : h('button', { class: 'btn small', onclick: lookAround }, T('Selbst umsehen'));
+  // Beim Warten kommt das alle 300 ms hier an: Ein ersetzter Knopf verlöre den Klick, der gerade läuft
+  const sig = JSON.stringify([text, audience.own, !!end]);
+  if (sig === abar.dataset.sig && !abar.classList.contains('hidden')) return;
+  abar.dataset.sig = sig;
+  abar.replaceChildren(h('span', {}, text), toggle, ...(end ? [end] : []));
+  abar.classList.remove('hidden');
+}
+
+function lookAround() {
+  if (!audience) return;
+  audience.own = true;
+  audience.following = false;
+  ownWay = audience.key;
+  clearTimeout(waitTimer);
+  waitTimer = 0;
+  leaveReduced();
+  renderAudienceBar();
+}
+
+function followAgain() {
+  if (!audience) return;
+  audience.own = false;
+  ownWay = null;
+  tryFollow();
+}
+
+function tryFollow() {
+  clearTimeout(waitTimer);
+  waitTimer = 0;
+  if (!audience || audience.own) return renderAudienceBar();
+  if (!audience.following && occupied()) {
+    waitTimer = setTimeout(tryFollow, 300);
+    return renderAudienceBar();
+  }
+  if (!audience.following) {
+    audience.following = true;
+    if (app.following) follow(null);
+    document.body.classList.add('presenting', 'audience');
+  }
+  showAudienceSlide();
+  renderAudienceBar();
+}
+
+function syncAudience() {
+  const p = foreignPresentation();
+  if (!p) {
+    if (audience) toast(T('Die Präsentation ist beendet'));
+    return endAudience();
+  }
+  if (audience?.key !== p.startedAt) {
+    endAudience();
+    audience = { key: p.startedAt, own: ownWay === p.startedAt, following: false };
+  }
+  tryFollow();
+}
+
+app.on('session', (kind) => {
+  if (kind !== 'all' && kind !== 'presentation') return;
+  const p = app.session.presentation;
+  if (present?.shared) {
+    if (p?.clientId === app.sync.clientId) present.live = true;
+    else if (present.live || p?.active) {
+      // Beendet, weil die Verbindung zu lange weg war oder die Leitung eingegriffen hat: Die Folien bleiben offen
+      present.shared = present.live = false;
+      toast(T('Die Präsentation läuft jetzt nur noch für dich.'), 5000);
+    }
+  }
+  syncAudience();
+});
+app.on('peers', renderAudienceBar);
+// Abgelehnt, bevor die Präsentation lief
+app.on('blocked', (why) => {
+  if (['reserved', 'presenting'].includes(why) && present?.shared && !present.live) present.shared = false;
+});
+// Ohne Verbindung kommt kein Ende an: Die Ansicht darf dann niemanden festhalten. Die Begrüßung nimmt wieder mit, falls es weitergeht.
+function watchConnection() {
+  if (!audience || (app.sync.connected && navigator.onLine)) {
+    clearTimeout(offlineTimer);
+    offlineTimer = 0;
+    return;
+  }
+  // Long-Polling meldet den Ausfall bei jedem Versuch: Die Frist läuft ab dem ersten
+  if (offlineTimer) return;
+  offlineTimer = setTimeout(() => {
+    offlineTimer = 0;
+    if ((app.sync.connected && navigator.onLine) || !audience) return;
+    endAudience();
+    toast(T('Die Verbindung ist unterbrochen. Du bist nicht mehr in der Präsentation.'), 6000);
+  }, AUDIENCE_OFFLINE_MS);
+}
+app.on('status', watchConnection);
+// Ein Stream kann noch offen wirken, wenn das Netz längst weg ist: Darum zählt auch, was der Browser meldet
+window.addEventListener('offline', watchConnection);
+window.addEventListener('online', () => {
+  watchConnection();
+  if (app.loaded) syncAudience();
+});
+setInterval(() => {
+  if (present?.live && app.sync.connected) app.sync.op({ op: 'presentation', action: 'beat' });
+}, PRESENTER_BEAT_MS);
+// Die Fläche nimmt in der reduzierten Ansicht nichts an; auch der Browser soll dabei nicht die Seite zoomen
+window.addEventListener('wheel', (e) => audience?.following && e.ctrlKey && e.preventDefault(), { passive: false });
 
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement && present) stopPresentation();
 });
-window.addEventListener('resize', () => present && setTimeout(showSlide, 50));
+window.addEventListener('resize', () => {
+  if (present) setTimeout(showSlide, 50);
+  else if (audience?.following) setTimeout(() => audience?.following && showAudienceSlide(), 50);
+});
 
 app.on('key', (e) => {
+  if (audience?.following && e.key === 'Escape') {
+    e.preventDefault();
+    lookAround();
+  }
   if (!present) return;
   if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) {
     e.preventDefault();
@@ -743,28 +939,32 @@ app.on('key', (e) => {
 /* ================================================================== */
 
 app.on('buildCollabTools', (box) => {
-  const timerBtn = h('button', { class: 'icon-btn', id: 'btn-timer', title: T('Timer'), html: ICONS.timer });
-  timerBtn.onclick = () => !reservedHint() && openTimerMenu(timerBtn);
-  const voteBtn = h('button', { class: 'icon-btn', id: 'btn-vote', title: T('Abstimmung'), html: ICONS.vote });
-  voteBtn.onclick = () => {
-    const v = app.session.voting;
-    if (toolsReserved()) return v ? openResults() : reservedHint();
-    if (v && !v.active && !app.viewOnly) {
-      menu(voteBtn, [
-        { label: T('Ergebnisse anzeigen'), icon: 'vote', onClick: () => { hideResults = false; renderVotes(); openResults(); } },
-        { label: T('Neue Abstimmung'), icon: 'plus', onClick: () => openVotingMenu(voteBtn) },
-      ]);
-    } else if (!app.viewOnly) openVotingMenu(voteBtn);
-    else openResults();
-  };
-  const reactBtn = h('button', { class: 'icon-btn', title: T('Reaktion senden'), html: ICONS.smile });
+  const reactBtn = h('button', { class: 'icon-btn', 'aria-label': T('Reaktion senden'), 'data-tip': T('Reaktion senden'), html: ICONS.smile });
   reactBtn.onclick = () => popover(reactBtn, h('div', { class: 'react-row' }, REACTIONS.map((r) => h('button', { class: 'emoji-btn', onclick: () => {
     showReaction(r, app.user.name);
     app.sync.signal('reaction', { emoji: r, name: app.user.name });
   } }, r))));
-  const presentBtn = h('button', { class: 'icon-btn', title: T('Präsentieren'), html: ICONS.present, onclick: () => startPresentation(null) });
-  if (!app.viewOnly) box.append(timerBtn, voteBtn);
-  box.append(reactBtn, presentBtn);
+  box.append(reactBtn);
+});
+
+function openVote(anchor) {
+  const v = app.session.voting;
+  if (toolsReserved()) return v ? openResults() : reservedHint();
+  if (v && !v.active && !app.viewOnly) {
+    menu(anchor, [
+      { label: T('Ergebnisse anzeigen'), icon: 'vote', onClick: () => { hideResults = false; renderVotes(); openResults(); } },
+      { label: T('Neue Abstimmung'), icon: 'plus', onClick: () => openVotingMenu(anchor) },
+    ]);
+  } else if (!app.viewOnly) openVotingMenu(anchor);
+  else openResults();
+}
+
+app.on('moderateItems', (list) => {
+  const free = !app.viewOnly && !toolsReserved();
+  const v = app.session.voting;
+  if (free) list.push({ key: 'timer', order: 10, label: T('Timer'), icon: 'timer', active: !!app.session.timer, onClick: openTimerMenu });
+  // Wer nicht selbst abstimmen lassen darf, sieht nur vorhandene Ergebnisse
+  if (free || v) list.push({ key: 'vote', order: 20, label: T('Abstimmung'), icon: 'vote', active: !!v?.active, onClick: openVote });
 });
 
 /* ================================================================== */
@@ -782,6 +982,11 @@ function showUpdateBanner(version) {
 export function openNotification(n) {
   bell.markRead({ ids: [n.id] });
   if (n.teamId) return bell.openTeamInvite();
+  if (n.kind.startsWith('review') && n.elementId) {
+    if (n.boardId === app.boardId) app.emit('openReview', n.elementId);
+    else location.href = `/board/${encodeURIComponent(n.boardId)}#review=${encodeURIComponent(n.elementId)}`;
+    return;
+  }
   if (n.boardId === app.boardId && n.elementId) {
     if (location.hash === '#el=' + n.elementId) window.dispatchEvent(new HashChangeEvent('hashchange'));
     else location.hash = 'el=' + n.elementId;
@@ -802,6 +1007,8 @@ export function initCollab() {
       return location.reload();
     }
     app.serverOffset = msg.serverTime - Date.now();
+    for (const id of msg.mine || []) app.mine.add(id);
+    setIdKey(msg.idKey);
     if (first) app.lastVisit = msg.lastVisit || null;
     // Nach einem Update des Servers: Hinweis zum Neuladen (neue Oberfläche, evtl. geänderte Schnittstellen)
     if (msg.version) {
@@ -864,7 +1071,7 @@ export function initCollab() {
     renderVoting();
     if (first) {
       first = false;
-      if (!hadView) requestAnimationFrame(() => fitAll(false));
+      if (!hadView && !audience?.following) requestAnimationFrame(() => fitAll(false));
       if (app.session.voting && !app.session.voting.active && Object.keys(app.session.voting.votes || {}).length) hideResults = true;
     }
     rerenderAll();
@@ -923,7 +1130,7 @@ export function initCollab() {
           toast(T`${op.voting.by || T('Jemand')} hat eine Abstimmung gestartet`);
         }
         renderVoting();
-      } else if (['privateMode', 'estimation', 'moderation', 'retro', 'discussion', 'poll', 'picker'].includes(op.op)) {
+      } else if (['privateMode', 'estimation', 'moderation', 'retro', 'discussion', 'poll', 'picker', 'presentation'].includes(op.op)) {
         app.session[op.op] = op[op.op];
         app.emit('session', op.op);
       }
@@ -985,11 +1192,13 @@ export function initCollab() {
         if (d && typeof d.emoji === 'string') showReaction(d.emoji.slice(0, 8), p.name);
         break;
       case 'summon':
+        if (audience?.following) break;
         fitTo(d.rect, { pad: 0, maxZ: 8 });
         toast(T`${p.name} hat alle zu sich geholt`);
         break;
       case 'lead':
         p.view = d.rect;
+        if (audience?.following) break;
         follow(msg.from);
         toast(T`${p.name} moderiert – du folgst der Ansicht. Eigenes Verschieben beendet das Folgen.`, 4000);
         break;
@@ -1051,6 +1260,8 @@ export function initCollab() {
     }
   });
   s.on('deleted', () => {
+    // Wer selbst löscht, braucht die Nachricht nicht: Das Boardmenü führt gleich zur Startseite
+    if (app.deleting) return;
     alert(T('Dieses Board wurde gelöscht.'));
     location.href = '/';
   });
@@ -1106,7 +1317,8 @@ export function initCollab() {
     try {
       await api(`/api/boards/${app.boardId}`);
     } catch (e) {
-      if (e.status === 403 || e.status === 404) location.reload();
+      // Wer selbst löscht, ist schon auf dem Weg zur Startseite: Neuladen bräche das ab
+      if ((e.status === 403 || e.status === 404) && !app.deleting) location.reload();
     } finally {
       setTimeout(() => (checking = false), 5000);
     }

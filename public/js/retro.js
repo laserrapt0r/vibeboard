@@ -2,9 +2,10 @@
 // Zusammenfassung und Zufallsauswahl. Den Zustand verwaltet der Server (Sitzung des Boards).
 import { T, LOCALE, DEC } from './i18n.js';
 import { h, append, api, ICONS, toast, modal, promptDialog, esc, throttle } from './util.js';
-import { app, getEl, bounds, fitTo, act, updateEl, addElements, makeElement, frameChildren, now, markDirty, viewCenter } from './core.js';
-import { menu, showSidePanel, currentSidePanel, renderSidePanel, boardPeople } from './ui.js';
+import { app, getEl, bounds, fitTo, act, updateEl, addElements, makeElement, frameChildren, now, markDirty, viewCenter, setTouchPick } from './core.js';
+import { showSidePanel, currentSidePanel, renderSidePanel, boardPeople } from './ui.js';
 import { isFacilitator, leads } from './moderation.js';
+import { foldable } from './banners.js';
 import { setTimer, setVoting } from './collab.js';
 import { download, safeName } from './exporter.js';
 
@@ -23,7 +24,7 @@ export function canSteer() {
 export const STEPS = {
   checkin: { label: T('Check-in'), icon: '👋', hint: T('Wie geht es allen? Beantwortet die Stimmungsabfrage.') },
   review: { label: T('Rückblick'), icon: '🔁', hint: T('Was ist aus den Maßnahmen der letzten Retro geworden? Hakt Erledigtes ab.') },
-  collect: { label: T('Sammeln'), icon: '✍️', hint: T('Schreibt eure Beiträge auf Sticky Notes – sie bleiben verdeckt, bis aufgedeckt wird.') },
+  collect: { label: T('Sammeln'), icon: '✍️', hint: T('Schreibt eure Beiträge auf Notizen – sie bleiben verdeckt, bis aufgedeckt wird.') },
   reveal: { label: T('Aufdecken'), icon: '👀', hint: T('Alle Beiträge sind sichtbar. Stellt sie reihum kurz vor.') },
   group: { label: T('Gruppieren'), icon: '🗂', hint: T('Schiebt Ähnliches zusammen: Beiträge auswählen und „Themengruppe bilden“.') },
   vote: { label: T('Abstimmen'), icon: '🗳', hint: T('Vergebt eure Stimmen auf die Themen, die ihr besprechen wollt.') },
@@ -142,20 +143,24 @@ function renderBar() {
   const chips = h('ol', { class: 'retro-steps' }, r.steps.map((s, i) => h('li', { class: 'retro-step' + (i === r.step ? ' current' : i < r.step ? ' done' : '') },
     steer ? h('button', { type: 'button', title: T`Zu „${STEPS[s].label}“ springen`, onclick: () => goStep(i) }, `${STEPS[s].icon} ${STEPS[s].label}`) : h('span', {}, `${STEPS[s].icon} ${STEPS[s].label}`))));
   append(bar,
-    h('div', { class: 'retro-head' }, h('b', {}, T('Retro')), h('span', { class: 'muted small' }, T` · Schritt ${r.step + 1} von ${r.steps.length}`, steer || !r.by ? '' : T` · geleitet von ${r.by}`), chips),
-    h('div', { class: 'retro-hint' }, h('span', {}, STEPS[cur].hint),
+    h('div', { class: 'retro-head' }, h('b', {}, T('Retro')), h('span', { class: 'muted small' }, T` · Schritt ${r.step + 1} von ${r.steps.length}`, steer || !r.by ? '' : h('span', { class: 'banner-detail' }, T` · geleitet von ${r.by}`)), chips),
+    h('div', { class: 'retro-hint' }, h('span', { class: 'banner-detail' }, STEPS[cur].hint),
+      cur === 'group' && !app.viewOnly && matchMedia('(pointer: coarse)').matches ? h('button', { class: 'btn small' + (app.touchPick ? ' active' : ''), 'aria-pressed': String(!!app.touchPick), onclick: () => setTouchPick(!app.touchPick) }, T('Mehrere auswählen')) : null,
       cur === 'review' || cur === 'actions' ? h('button', { class: 'btn small', onclick: () => showSidePanel('actions') }, T('Maßnahmen anzeigen')) : null,
       cur === 'close' ? h('button', { class: 'btn small', onclick: openSummary }, T('Zusammenfassung')) : null,
       h('span', { class: 'spacer' }),
       steer ? h('button', { class: 'btn small', disabled: r.step === 0, onclick: () => goStep(r.step - 1) }, T('◀ Zurück')) : null,
       steer && r.step < r.steps.length - 1 ? h('button', { class: 'btn small primary', onclick: () => goStep(r.step + 1) }, T`Weiter: ${STEPS[r.steps[r.step + 1]].label} ▶`) : null,
       steer && r.step === r.steps.length - 1 ? h('button', { class: 'btn small primary', onclick: () => op({ op: 'retro', action: 'stop' }) }, T('Retro beenden')) : null));
+  foldable(bar, 'retro', !steer, bar.querySelector('.retro-head'));
   if (lastStep !== null && lastStep !== cur) {
     toast(T`Retro: ${STEPS[cur].icon} ${STEPS[cur].label}`, 3000);
     if ((cur === 'review' || cur === 'actions') && currentSidePanel() !== 'actions') showSidePanel('actions');
   }
   lastStep = cur;
 }
+
+app.on('touchPick', () => app.session.retro?.active && renderBar());
 
 function openStart() {
   const hasPrev = !!app.prevRetroId;
@@ -566,12 +571,9 @@ export function retroItems() {
   const steer = canSteer();
   return [
     { header: T('Retro') },
-    r && r.active
-      ? { label: T('Retro-Ablauf beenden'), icon: 'stop', disabled: !steer, onClick: () => op({ op: 'retro', action: 'stop' }) }
-      : { label: T('Retro-Ablauf starten …'), icon: 'play', disabled: !steer, onClick: openStart },
-    { label: T('Schnellumfrage …'), icon: 'vote', disabled: !steer, onClick: () => app.emit('openPollDialog') },
-    { label: T('Zufallsauswahl …'), icon: 'users', disabled: !steer, onClick: () => openPicker('wheel') },
-    { label: T('Redereihenfolge …'), icon: 'users', disabled: !steer, onClick: () => openPicker('order') },
+    !steer ? null : r && r.active
+      ? { label: T('Retro-Ablauf beenden'), icon: 'stop', onClick: () => op({ op: 'retro', action: 'stop' }) }
+      : { label: T('Retro-Ablauf starten …'), icon: 'play', onClick: openStart },
     '-',
     { label: T('Maßnahmen'), icon: 'tasks', onClick: () => showSidePanel('actions') },
     { label: T('Zusammenfassung'), icon: 'download', onClick: openSummary },
@@ -580,11 +582,14 @@ export function retroItems() {
   ].filter(Boolean);
 }
 
-function retroMenu(anchor) {
-  menu(anchor, retroItems());
-}
-
-app.on('retroMenu', retroMenu);
+app.on('moderateItems', (list) => {
+  const steer = canSteer();
+  list.push({ key: 'retro', order: 30, label: T('Retro'), icon: 'retro', active: !!app.session.retro?.active, items: retroItems });
+  if (!steer) return;
+  list.push({ key: 'poll', order: 70, label: T('Umfrage …'), icon: 'vote', onClick: () => app.emit('openPollDialog') });
+  list.push({ key: 'picker', order: 80, label: T('Zufallsauswahl …'), icon: 'users', onClick: () => openPicker('wheel') });
+  list.push({ key: 'order', order: 81, label: T('Redereihenfolge …'), icon: 'users', onClick: () => openPicker('order') });
+});
 
 // Zur Vorlage passender Ablauf: nur ein Angebot für die, die steuern dürfen. Eine laufende Sitzung bleibt unberührt.
 function offerFlow(offer) {
@@ -619,20 +624,16 @@ app.on('loaded', () => {
   }
 });
 
-app.on('buildCollabTools', (box) => {
-  const b = h('button', { class: 'icon-btn', id: 'btn-retro', title: T('Retro: Ablauf, Umfragen, Maßnahmen'), html: '<span class="emoji-icon">🔁</span>' });
-  b.onclick = () => retroMenu(b);
-  box.prepend(b);
-});
-
-app.on('ctxItems', (items, sel, { locked, one, actBtn }) => {
+// Im Hauptblick nur bei laufender Retro: Sonst stören die Knöpfe und bleiben im „Mehr“-Menü erreichbar
+app.on('ctxItems', (items, sel, { locked, one }) => {
   if (locked || app.viewOnly) return;
+  const primary = !!app.session.retro?.active;
   const contributions = sel.filter((e) => !['frame', 'connector', 'comment'].includes(e.type));
-  if (contributions.length && contributions.length === sel.length) items.push(actBtn('<span class="emoji-icon">🗂</span>', T('Themengruppe bilden'), () => makeTopic(sel)));
+  if (contributions.length && contributions.length === sel.length) items.push({ label: T('Themengruppe bilden'), icon: 'topicGroup', primary, onClick: () => makeTopic(sel) });
   if (one && (one.type === 'sticky' || one.type === 'text' || (one.type === 'frame' && one.kind === 'topic'))) {
-    items.push(actBtn('<span class="emoji-icon">✅</span>', T('Als Maßnahme festhalten'), () => openActionDialog({ title: textOf(one).slice(0, 200), near: one })));
+    items.push({ label: T('Als Maßnahme festhalten'), icon: 'action', primary, onClick: () => openActionDialog({ title: textOf(one).slice(0, 200), near: one }) });
   }
-  if (one && one.type === 'card' && one.action) items.push(actBtn('<span class="emoji-icon">✅</span>', T('Maßnahme bearbeiten'), () => openActionDialog({ el: one, title: one.title })));
+  if (one && one.type === 'card' && one.action) items.push({ label: T('Maßnahme bearbeiten'), icon: 'action', primary, onClick: () => openActionDialog({ el: one, title: one.title }) });
 });
 
 app.on('session', (kind) => {

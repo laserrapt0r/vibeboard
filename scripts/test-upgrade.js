@@ -87,6 +87,19 @@ const SEEDS = {
   11: async (c) => {
     await c.query(`INSERT INTO notifications (user_id, board_id, kind, actor_id, actor_name, excerpt) VALUES (1, 'b1', 'board_shared', 1, 'alt', 'Altes Board')`);
   },
+  12: async (c) => {
+    await c.query(`INSERT INTO guest_links (board_id, token_hash, role, expires_at) VALUES ('b1', 'beitrag', 'contributor', now() + interval '1 day')`);
+    await c.query(`INSERT INTO element_owners (board_id, element_id, user_id) VALUES ('b1', 'e1', 1)`);
+  },
+  13: async (c) => {
+    await c.query(`INSERT INTO review_rounds (review_id, round, note, closed_by) VALUES (1, 1, 'Erste Runde', 1)`);
+    await c.query(`INSERT INTO review_round_people (round_id, user_id, decision, comment, decided_at) VALUES (1, 1, 'rejected', 'Bitte ändern', now())`);
+    await c.query(`UPDATE reviews SET round = 2 WHERE id = 1`);
+    await c.query(`INSERT INTO notifications (user_id, board_id, kind, actor_id, actor_name, excerpt) VALUES (1, 'b1', 'review_rejected', 1, 'alt', 'Frame')`);
+  },
+  14: async (c) => {
+    await c.query(`INSERT INTO server_secrets (name, value) VALUES ('element_ids', 'beispiel')`);
+  },
 };
 
 async function structure(c, schema) {

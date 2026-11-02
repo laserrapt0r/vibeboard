@@ -61,9 +61,13 @@ const api = (p, m, u, b) =>
   await new Promise((r) => setTimeout(r, 1500));
   const n = await B.$$eval('#layer-els g[data-id]', (x) => x.length);
   ok(n >= 1, 'Änderung kommt im Rückfall-Transport bei der zweiten Person an', n);
-  const lbl = await B.evaluate(() =>
-    [...document.querySelectorAll('#topbar button')].find((x) => x.innerHTML.includes('M8 6h13')).getAttribute('aria-label'),
-  );
+  await B.evaluate(() => document.getElementById('btn-board-menu').click());
+  await new Promise((r) => setTimeout(r, 200));
+  const lbl = await B.evaluate(() => {
+    const m = [...document.querySelectorAll('.popover .menu-item')].find((x) => x.innerHTML.includes('M8 6h13'));
+    return m.querySelector('.mi-label').textContent;
+  });
+  await B.keyboard.press('Escape');
   ok(lbl === 'Liste des éléments', 'Elementliste übersetzt', lbl);
   ok(!errs.length, 'keine Skriptfehler', errs);
   await b.close();

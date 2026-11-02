@@ -1,16 +1,34 @@
 import { T, LOCALE } from './i18n.js';
+import { sha256 } from './sha256.js';
 // Allgemeine Hilfsfunktionen
 
 export const SVGNS = 'http://www.w3.org/2000/svg';
 export const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
+// Schlüssel vom Server für alle ohne Bearbeitungsrecht: Sie dürfen nur Kennungen vergeben, die sonst niemand bilden kann (siehe ownId in lib/boards.js)
+let idKey = null;
+export const setIdKey = (key) => {
+  idKey = key || null;
+};
+
 export function uid() {
   const a = new Uint8Array(9);
   crypto.getRandomValues(a);
-  return btoa(String.fromCharCode(...a)).replace(/\+/g, '-').replace(/\//g, '_');
+  const id = btoa(String.fromCharCode(...a)).replace(/\+/g, '-').replace(/\//g, '_');
+  // Alle Kennungen haben dieselbe Form: Sonst verriete sie im anonymen Modus, ob ein Beitrag von einem Gast stammt
+  const tail = idKey ? sha256(`${idKey}:${id}`).slice(0, 16)
+    : [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `g${id}${tail}`;
 }
 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// Schriftgröße in Pixeln. Ältere Boards können größere Werte enthalten, der Server lässt keine mehr durch (MAX_FONT_SIZE in lib/sanitize.js).
+export const MAX_FONT_SIZE = 128;
+export function fontPx(v, fallback = 16) {
+  const n = Number(v);
+  return Number.isFinite(n) && n ? clamp(n, 1, MAX_FONT_SIZE) : fallback;
+}
 
 export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -102,6 +120,36 @@ export const PALETTE = [
   '#8b5cf6', '#a6ccf5', '#4262ff', '#2d9bf0', '#67c6c0', '#12b886',
   '#93d275', '#2f9e44', '#ffcee0', '#e64980', '#d4a373', '#7c4a1e',
 ];
+
+// Bezugsfarben für Namen: Auch Farben aus dem Design bekommen so den Namen der nächstliegenden Farbe
+const COLOR_NAMES = () => [
+  ['#ffffff', T('Weiß')], ['#e6e6e6', T('Hellgrau')], ['#9e9e9e', T('Grau')], ['#4d4d4d', T('Dunkelgrau')], ['#1a1a1a', T('Schwarz')],
+  ['#fff9b1', T('Hellgelb')], ['#f5d128', T('Gelb')], ['#f59f00', T('Goldgelb')], ['#ff9d48', T('Orange')], ['#f08c00', T('Dunkelorange')],
+  ['#ffcee0', T('Hellrosa')], ['#f99fb1', T('Rosa')], ['#f16c7f', T('Korallenrot')], ['#ef4444', T('Rot')], ['#c92a2a', T('Dunkelrot')], ['#e64980', T('Pink')],
+  ['#c9b2e8', T('Flieder')], ['#8b5cf6', T('Violett')], ['#5f3dc4', T('Dunkelviolett')],
+  ['#a6ccf5', T('Hellblau')], ['#6cd8fa', T('Himmelblau')], ['#2d9bf0', T('Azurblau')], ['#4262ff', T('Blau')], ['#364fc7', T('Dunkelblau')],
+  ['#67c6c0', T('Türkis')], ['#1098ad', T('Petrol')], ['#12b886', T('Smaragdgrün')],
+  ['#d5f692', T('Limettengrün')], ['#c9df56', T('Gelbgrün')], ['#93d275', T('Hellgrün')], ['#2f9e44', T('Grün')], ['#5c940d', T('Olivgrün')],
+  ['#d4a373', T('Sandbraun')], ['#7c4a1e', T('Braun')],
+];
+const rgbOf = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+
+export function colorName(c) {
+  if (!c || c === 'transparent') return T('Keine Füllung');
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const [r, g, b] = rgbOf(c);
+  let best = null, dist = Infinity;
+  for (const [hex, name] of COLOR_NAMES()) {
+    const [x, y, z] = rgbOf(hex);
+    // Das Auge trennt Grün am feinsten, Blau am gröbsten
+    const d = 2 * (r - x) ** 2 + 4 * (g - y) ** 2 + 3 * (b - z) ** 2;
+    if (d < dist) {
+      dist = d;
+      best = name;
+    }
+  }
+  return best;
+}
 
 export const USER_COLORS = ['#e64980', '#4262ff', '#12b886', '#f59f00', '#7048e8', '#f03e3e', '#1098ad', '#5c940d', '#d6336c', '#364fc7'];
 
@@ -431,7 +479,8 @@ export function toast(msg, ms = 2200, action) {
   // Das Abstimmungsbanner bleibt lesbar. Seine Höhe hängt am Umbruch, deshalb messen
   const banner = document.getElementById('voting-banner');
   const top = banner && !banner.classList.contains('hidden') && banner.getClientRects()[0]?.top;
-  t.style.bottom = top ? `${innerHeight - top + 10}px` : '';
+  // Auf dem Handy stehen Meldungen oben (siehe banners.js)
+  t.style.bottom = top && innerWidth > 760 ? `${innerHeight - top + 10}px` : '';
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show', 'with-action'), ms);
@@ -455,6 +504,8 @@ export function modal(title, content, { wide = false, onClose } = {}) {
     // Bei gestapelten Dialogen reagiert nur der oberste
     if ([...document.querySelectorAll('.modal-back')].pop() !== back) return;
     if (e.key === 'Escape') {
+      // Felder mit eigener Bedeutung für Esc schließen nur sich selbst
+      if (e.target.closest?.('[data-own-esc]')) return;
       e.stopPropagation();
       close();
     } else if (e.key === 'Tab') {
@@ -532,6 +583,7 @@ const I = (d, extra = '') =>
 
 export const ICONS = {
   select: I('<path d="M4 3l7 17 2.5-7.5L21 10z"/>'),
+  touchPick: I('<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/><path d="M15 7h6M18 4v6M3 15h8M3 19h8"/>'),
   brush: I('<path d="M14 4l6 6-8 8H6v-6z"/><path d="M12 6l6 6"/><path d="M6 18c-1 2-2 3-3 3"/>'),
   command: I('<path d="M4 5h16v14H4z"/><path d="M8 10l3 2-3 2M13 15h4"/>'),
   sigma: I('<path d="M18 5H6l6 7-6 7h12"/>'),
@@ -612,6 +664,7 @@ export const ICONS = {
   moon: I('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'),
   keyboard: I('<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>'),
   smile: I('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>'),
+  help: I('<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>'),
   dash: I('<path d="M3 12h4M10 12h4M17 12h4"/>'),
   arrowEnd: I('<path d="M3 12h16M14 7l5 5-5 5"/>'),
   arrowStart: I('<path d="M21 12H5M10 7l-5 5 5 5"/>'),
@@ -635,5 +688,11 @@ export const ICONS = {
   filter: I('<path d="M3 5h18l-7 8v6l-4 2v-8z"/>'),
   tag: I('<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/>'),
   install: I('<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>'),
+  palette: I('<path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5A3.5 3.5 0 0 0 21 11c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15.5" cy="7.5" r="1"/>'),
+  retro: I('<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>'),
+  topicGroup: I('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 13h8M8 16h5"/>'),
+  action: I('<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'),
+  cut: I('<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/>'),
+  paste: I('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>'),
   restore: I('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>'),
 };

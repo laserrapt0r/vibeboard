@@ -2,6 +2,7 @@
 // Prüft die Zugriffsrechte der laufenden Anwendung: Alle Routen werden aus dem Router gelesen und mit jeder Rolle aufgerufen.
 // Neue Routen sind dadurch automatisch erfasst. Aufruf: DATABASE_URL=postgres://… npm run test:access
 const { spawn } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { Client } = require('pg');
@@ -35,6 +36,8 @@ const READ_ROLE_WRITES = new Map(Object.entries({
 }));
 // Zusätzlich für die Rolle Kommentieren: bewusst erlaubt
 const COMMENTER_WRITES = new Set(['POST /api/boards/:id/recordings', 'POST /api/boards/:id/reviews/:rid/decision', 'POST /api/boards/:id/ops', 'POST /api/boards/:id/signal']);
+// Gaststufe „Beiträge“: Nur diese Änderungen kommen überhaupt an, was sie bewirken dürfen, prüft contributions()
+const CONTRIBUTOR_WRITES = new Set(['POST /api/boards/:id/ops', 'POST /api/boards/:id/signal']);
 // Nur der Besitzer, auch nicht die Rolle Bearbeiten
 const OWNER_ONLY = [
   ['DELETE', '/api/boards/:id'], ['POST', '/api/boards/:id/members', { email: 'stranger@example.org', role: 'viewer' }], ['PATCH', '/api/boards/:id/members/:uid', { role: 'owner' }],
@@ -174,6 +177,14 @@ async function seed(people) {
   const guest = new Person('gast');
   await guest.json('POST', '/api/guest/join', { token, name: 'Gast', consent: true });
   people.guest = guest;
+  // Die Gaststufe „Beiträge“ ist von Haus aus aus
+  const off = await owner.call('POST', `/api/boards/${id}/guest-links`, { role: 'contributor', days: 7 });
+  check(off.status === 403, `Stufe „Beiträge“ ohne Einschalten → ${off.status}`);
+  await admin.json('PUT', '/api/admin/settings', { collab: { guestContributions: true, guestNoteLimit: 3 } });
+  const { token: notes } = await owner.json('POST', `/api/boards/${id}/guest-links`, { role: 'contributor', days: 7 });
+  const contributor = new Person('gast-beitraege');
+  await contributor.json('POST', '/api/guest/join', { token: notes, name: 'Beitrag', consent: true });
+  people.contributor = contributor;
   // Eine Datei in einem verborgenen Bereich
   const up = await fetch(`${BASE}/api/boards/${id}/files`, { method: 'POST', body: '%PDF-1.4 probe', headers: { 'X-Vibeboard': '1', 'Content-Type': 'application/octet-stream', 'X-File-Name': `${SECRET.file}.pdf`, Cookie: owner.cookie } });
   const file = await up.json();
@@ -227,7 +238,7 @@ const leaks = (text) => Object.values(SECRET).filter((v) => text.includes(v));
 const hasParam = (r) => r.pattern.includes('/:') && !r.pattern.startsWith('/api/admin') && !r.pattern.startsWith('/api/auth');
 
 async function sweep(list, people, ids) {
-  const { anon, stranger, viewer, commenter, editor, owner, guest } = people;
+  const { anon, stranger, viewer, commenter, editor, owner, guest, contributor } = people;
   const rejected = (p, r, s, what) => {
     check(s.status !== 0, `${p.name}: ${r.key} → keine Antwort (${s.error})`);
     check(allowed(s.status), `${what}: ${p.name} ${r.key} → ${s.status}`);
@@ -253,10 +264,16 @@ async function sweep(list, people, ids) {
       }
     }
     if (!write) {
-      for (const p of [viewer, commenter, editor, guest, stranger]) {
+      for (const p of [viewer, commenter, editor, guest, contributor, stranger]) {
         const s = await p.call('GET', fill(r, ids));
         const found = leaks(s.text);
         check(!found.length, `${p.name} sieht Geheimes über ${r.key}: ${found.join(', ')}`);
+      }
+      // Gegenprobe: Lesen darf die Stufe nicht mehr als ein Gast mit Kommentieren
+      if (hasParam(r)) {
+        const asGuest = await guest.call('GET', fill(r, ids));
+        const asContributor = await contributor.call('GET', fill(r, ids));
+        check(asGuest.status < 400 || asContributor.status >= 400, `Beiträge liest mehr als ein Gast: ${r.key} → ${asContributor.status}`);
       }
       continue;
     }
@@ -265,6 +282,8 @@ async function sweep(list, people, ids) {
       rejected(viewer, r, await viewer.call(r.method, url, body), 'darf ändern');
       // Der Gastlink des Tests erlaubt Kommentieren
       if (!COMMENTER_WRITES.has(r.key)) for (const p of [commenter, guest]) rejected(p, r, await p.call(r.method, url, body), 'darf ändern');
+      // Auch was Kommentieren darf (Aufzeichnungen), bleibt der Stufe „Beiträge“ verwehrt
+      if (!CONTRIBUTOR_WRITES.has(r.key)) rejected(contributor, r, await contributor.call(r.method, url, body), 'darf ändern');
     }
   }
   for (const [method, pattern, body] of OWNER_ONLY) {
@@ -292,7 +311,7 @@ async function duplicates(people, ids) {
 
 // Der Live-Stand der Board-Verbindung: das, was der Browser tatsächlich bekommt
 async function liveState(people, ids) {
-  for (const name of ['viewer', 'commenter', 'editor', 'guest']) {
+  for (const name of ['viewer', 'commenter', 'editor', 'guest', 'contributor']) {
     const p = people[name];
     const s = await p.call('GET', `/api/boards/${ids.id}/events?client=probe${name}0000000&transport=poll`);
     check(s.status === 200, `${name} kann das Board nicht öffnen → ${s.status}`);
@@ -343,6 +362,91 @@ async function operations(people, ids) {
   check(!/"id":"fakeNote"[^}]*"author":"Jemand Anderes"/.test(full), 'Fremder Name an einem Element');
 }
 
+// Gaststufe „Beiträge“: Die Gegenprobe führt alles aus, was Bearbeitende dürfen. Dieselben Operationen dürfen von diesem Gast nichts bewirken.
+async function contributions(people, ids) {
+  const url = `/api/boards/${ids.id}`;
+  const join = async (p) => {
+    const client = `bei${Math.random().toString(36).slice(2, 14)}`;
+    const hello = (await p.json('GET', `${url}/events?client=${client}&transport=poll`)).messages[0];
+    return { hello, send: (ops) => p.json('POST', `${url}/ops`, { clientId: client, ops }) };
+  };
+  const board = async () => (await join(people.owner)).hello.board;
+  const guest = await join(people.contributor);
+  const editorOps = (n) => [
+    { op: 'upsert', el: { id: 'note1', type: 'sticky', x: 50, y: 50, w: 100, h: 100, text: `geändert ${n}`, z: 2 } },
+    { op: 'patch', id: 'card1', set: { title: `geändert ${n}` } },
+    { op: 'ttext', id: 'note1', field: 'text', ops: [{ p: 0, i: 'x' }], base: guest.hello.seq, opId: `bei${n}1` },
+    { op: 'tpatch', id: 'table1', cells: [[0, 0, `geändert ${n}`]] },
+    { op: 'tstruct', id: 'table1', action: 'insertRows', at: 0, count: 1 },
+    { op: 'upsert', el: { id: `neuFrame${n}`, type: 'frame', x: 0, y: 2000, w: 100, h: 100, title: 'x', z: 20 } },
+    { op: 'upsert', el: { id: `neuForm${n}`, type: 'shape', shape: 'rect', x: 0, y: 2000, w: 100, h: 100, z: 21 } },
+    { op: 'upsert', el: { id: `neuKarte${n}`, type: 'card', x: 0, y: 2000, w: 100, h: 100, title: 'x', z: 22 } },
+    { op: 'rename', name: `Umbenannt ${n}` },
+    { op: 'timer', timer: { running: true, endAt: 1 } },
+    { op: 'voting', voting: { active: true, startedAt: n, votesPerUser: 3 } },
+    { op: 'estimation', action: 'start', elId: 'card1' },
+    { op: 'retro', action: 'start' },
+    { op: 'presentation', action: 'start', slide: { id: null, i: 0, n: 1, x: 0, y: 0, w: 10, h: 10 } },
+    { op: 'delete', id: `opfer${n}` },
+  ];
+  // Vorbereitung und Gegenprobe: Bearbeiten darf das alles wirklich
+  const editor = await join(people.editor);
+  await editor.send([{ op: 'upsert', el: { id: 'opfer1', type: 'sticky', x: 0, y: 2100, w: 100, h: 100, text: 'bleibt', z: 30 } }, { op: 'upsert', el: { id: 'opfer2', type: 'sticky', x: 0, y: 2100, w: 100, h: 100, text: 'weg', z: 31 } }]);
+  const start = await board();
+  for (const op of editorOps(1)) {
+    const reply = await guest.send([op]);
+    check(reply.blocked, `Beiträge: ${op.op} ohne Ablehnung`);
+  }
+  const after = await board();
+  check(JSON.stringify(after.elements) === JSON.stringify(start.elements), 'Beiträge ändert fremde Elemente oder legt andere Arten an');
+  check(after.name === start.name && JSON.stringify(after.session) === JSON.stringify(start.session), 'Beiträge ändert Name oder Sitzung');
+  await editor.send(editorOps(2));
+  const edited = await board();
+  check(!edited.elements.opfer2 && edited.elements.neuFrame2 && edited.elements.neuForm2 && edited.elements.neuKarte2 && edited.elements.note1.text !== start.elements.note1.text, 'Gegenprobe: Bearbeiten darf diese Operationen nicht, der Test beweist nichts');
+  // Eigene Notizen: anlegen, ändern, löschen, höchstens drei, ohne Eigentum im Element
+  // Kennung wie im Browser: Eine gelöschte Kennung lässt sich nicht übernehmen, eine selbst gewählte auch nicht
+  const ownId = (key = guest.hello.idKey) => {
+    const r = crypto.randomBytes(9).toString('base64url');
+    return `g${r}${crypto.createHash('sha256').update(`${key}:${r}`).digest('hex').slice(0, 16)}`;
+  };
+  const own = (id) => ({ op: 'upsert', el: { id, type: 'sticky', x: 0, y: 2300, w: 100, h: 100, text: id, z: 40, ownerId: '1', author: 'Besitzer' } });
+  check((await guest.send([own('opfer2')])).blocked === 'contributor', 'Beiträge: gelöschte fremde Kennung übernommen');
+  check((await guest.send([own('selbstgewaehlt1')])).blocked === 'contributor', 'Beiträge: frei gewählte Kennung angenommen');
+  check((await guest.send([own(ownId('0'.repeat(64)))])).blocked === 'contributor', 'Beiträge: Kennung mit fremdem Schlüssel angenommen');
+  const [eig1, eig2, eig3] = [ownId(), ownId(), ownId()];
+  for (const id of [eig1, eig2, eig3]) await guest.send([own(id)]);
+  check((await guest.send([own(ownId())])).blocked === 'noteLimit', 'Beiträge: Grenze je Gast greift nicht');
+  await guest.send([{ op: 'patch', id: eig1, set: { text: 'neu' } }, { op: 'delete', id: eig2 }]);
+  // Der private Modus läuft noch: Den Text sieht nur der Gast selbst
+  const again = (await join(people.contributor)).hello;
+  check(again.board.elements[eig1]?.text === 'neu' && !again.board.elements[eig2] && again.board.elements[eig3], 'Beiträge: eigene Notizen gehen nicht');
+  check(!JSON.stringify(await board()).includes('ownerId') && again.board.elements[eig1]?.author !== 'Besitzer', 'Beiträge: Eigentum oder fremder Name am Element');
+  check(again.mine.length === 2, 'Beiträge: Der Server kennt die eigenen Notizen nicht');
+  // Eine Kommentar-Gegenprobe: Das darf die Stufe
+  const beikommentar = ownId();
+  const comment = await guest.send([{ op: 'comment', action: 'add', id: beikommentar, x: 0, y: 2500, text: 'Hallo' }]);
+  check(!comment.error && (await board()).elements[beikommentar], 'Beiträge: Kommentieren geht nicht');
+  check((await guest.send([{ op: 'comment', action: 'add', id: 'opfer2', x: 0, y: 2500, text: 'Hallo' }])).error && !(await board()).elements.opfer2, 'Beiträge: Kommentar unter gelöschter Kennung');
+  // Dieselbe Regel für Kommentieren: Sonst wäre ein gelöschter Frame samt Prüfung über einen Kommentar erreichbar
+  const commenter = await join(people.commenter);
+  const commenterComment = ownId(commenter.hello.idKey);
+  check((await commenter.send([{ op: 'comment', action: 'add', id: 'opfer2', x: 0, y: 2500, text: 'Hallo' }])).error && !(await board()).elements.opfer2, 'Kommentieren: Kommentar unter gelöschter Kennung');
+  check(!(await commenter.send([{ op: 'comment', action: 'add', id: commenterComment, x: 0, y: 2500, text: 'Hallo' }])).error && (await board()).elements[commenterComment], 'Kommentieren: Eigene Kommentare gehen nicht');
+  await editor.send([{ op: 'comment', action: 'add', id: 'teamkommentar', x: 0, y: 2600, text: 'Vom Team' }]);
+  for (const action of ['resolve', 'task', 'delete']) {
+    const reply = await guest.send([{ op: 'comment', action, id: 'teamkommentar', resolved: true, assigneeId: people.ids.editor }]);
+    check(reply.error, `Beiträge: Fremder Kommentar, ${action} ohne Ablehnung`);
+  }
+  // Abschalten sperrt die Stufe, nicht aber andere Gastlinks
+  await people.admin.json('PUT', '/api/admin/settings', { collab: { guestContributions: false } });
+  check((await people.contributor.call('GET', url)).status === 401, 'Beiträge: Gast bleibt nach dem Abschalten angemeldet');
+  check((await people.guest.call('GET', url)).status === 200, 'Beiträge: Abschalten trifft auch andere Gastlinks');
+  await people.admin.json('PUT', '/api/admin/settings', { collab: { guestContributions: true } });
+  const { token } = await people.owner.json('POST', `${url}/guest-links`, { role: 'contributor', days: 7 });
+  people.contributor = new Person('gast-beitraege');
+  await people.contributor.json('POST', '/api/guest/join', { token, name: 'Beitrag', consent: true });
+}
+
 async function main() {
   staticChecks();
   const proc = await start();
@@ -362,6 +466,7 @@ async function main() {
     await liveState(people, ids);
     await duplicates(people, ids);
     await operations(people, ids);
+    await contributions(people, ids);
     await sweep(list, people, ids);
     const survived = await people.owner.call('GET', `/api/boards/${ids.id}/members`);
     check(survived.status === 200, 'Das Board hat den Test nicht überstanden');

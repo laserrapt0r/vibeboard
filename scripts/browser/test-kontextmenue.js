@@ -51,14 +51,14 @@ const els = (p) =>
     await p.mouse.click(x, y, { button: 'right' });
     await wait(300);
     console.log('    Menü', JSON.stringify((await menuItems(p)).slice(0, 12)).slice(0, 300));
-    const [fc] = await Promise.all([p.waitForFileChooser({ timeout: 5000 }), clickItem(p, 'Foto oder Datei hier einfügen')]);
+    const [fc] = await Promise.all([p.waitForFileChooser({ timeout: 5000 }), clickItem(p, 'Bild oder Datei hier einfügen')]);
     await fc.accept([U + file]);
     await wait(1200);
   };
   await p.mouse.click(1000, 620, { button: 'right' });
   await wait(200);
   ok(
-    (await menuItems(p)).some((x) => /Foto oder Datei hier/.test(x)),
+    (await menuItems(p)).some((x) => /Bild oder Datei hier/.test(x)),
     'leeres Board: Eintrag im Kontextmenü',
     await menuItems(p),
   );
@@ -115,7 +115,7 @@ const els = (p) =>
   await p.mouse.click(s.x, s.y, { button: 'right' });
   await wait(250);
   ok(
-    (await menuItems(p)).some((x) => /Foto oder Datei hier/.test(x)),
+    (await menuItems(p)).some((x) => /Bild oder Datei hier/.test(x)),
     'im Frame: Eintrag vorhanden',
     await menuItems(p),
   );

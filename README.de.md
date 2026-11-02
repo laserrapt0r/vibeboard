@@ -3,7 +3,7 @@
 [English](README.md) · **Deutsch** · [Español](README.es.md) · [Français](README.fr.md)
 
 Ein selbst gehostetes, kollaboratives Online-Whiteboard. Mehrere Personen arbeiten gleichzeitig auf einer
-unendlichen Leinwand: mit Sticky Notes, Formen, Verbindungen, Mindmaps, Kommentaren, Abstimmungen und über 75
+unendlichen Leinwand: mit Notizen, Formen, Verbindungen, Mindmaps, Kommentaren, Abstimmungen und über 75
 Vorlagen für Workshops, Retrospektiven, Strategiearbeit, Softwareentwicklung, Projektmanagement und
 IT-Service-Management. Für Entwicklungsteams gibt es Code-Blöcke, Diagramme aus Text (Mermaid-Schreibweise),
 Schätzrunden und einen Kartenimport aus Jira- oder Excel-Exporten. Für die Arbeit im Team gibt es Benachrichtigungen
@@ -74,12 +74,12 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 ### Inhalte
 | Element | Möglichkeiten |
 |---------|---------------|
-| **Sticky Notes** | 16 Farben, automatische Schriftgröße, optional mit Name der Autorin bzw. des Autors |
+| **Notizen** | 16 Farben, automatische Schriftgröße, optional mit Name der Autorin bzw. des Autors |
 | **Text** | Schriftgröße, Farbe, fett, kursiv, Ausrichtung, Hintergrund |
 | **Formen** | Über 60 Formen in sieben Gruppen: Grundformen, Flussdiagramm (Dokument, mehrere Dokumente, manuelle Eingabe, Anzeige u. a.), UML (Klasse mit Abschnitten, Akteur, Paket, Komponente, Knoten, Start/Ende, Gabelung, Signale), BPMN (Ereignisse, Gateways), Netzwerk & Rechenzentrum (Router, Switch, Firewall, Load Balancer, Access Point, Internet, Server, Serverschrank, Speichersystem, PC, Smartphone), Software & IT, Container-Plattform (Pod, Deployment, Service, Ingress, Node, ConfigMap, Secret, Volume) – alles eigene Zeichnungen, mit Füllung, Rahmen, Strichart und Text |
 | **Verbindungen** | gerade, gewinkelt oder als Kurve; docken an jeder Stelle des Umrisses an (oder automatisch); Linie ziehen biegt sie, Knickpunkte einfügen, verschieben und entfernen; verschiebbare Beschriftung; 9 Linienenden (Pfeil, Raute, Kreis, Krähenfuß u. a.), Strichart |
 | **Quick Connect** | Punkte an einem ausgewählten Element anklicken oder ziehen, um verbundene Elemente zu erzeugen |
-| **Freihand** | Stift, Textmarker, Radierer |
+| **Freihand** | Stift, Marker, Radierer |
 | **Frames** | Bereiche bzw. Folien mit Formaten (16:9, 4:3, A4, Quadrat, Smartphone); der Inhalt wandert beim Verschieben mit |
 | **Karten** | Aufgaben mit Beschreibung, Zuständigkeit, Fälligkeitsdatum, Status, Priorität, Story Points, Ticketnummer, Labels und Farbe |
 | **Code-Blöcke** | Quelltext mit Syntaxhervorhebung für 13 Sprachen, Zeilennummern, hellem oder dunklem Schema, Kopieren-Knopf |
@@ -91,7 +91,7 @@ Alle Inhalte in den Screenshots sind Beispieldaten.
 | **Links** | URL an Elemente hängen; ein Link-Symbol öffnet sie |
 | **Kommentare** | Threads an beliebiger Stelle oder am Element (sie folgen ihm), @Erwähnungen mit Vorschlagsliste und Benachrichtigung, „Erledigt“-Status, als Aufgabe zuweisen (mit Fälligkeit), Kommentarübersicht mit Filter „Mir zugewiesen“ |
 
-Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pro Zeile.
+Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Notiz pro Zeile.
 
 ### Bearbeiten
 - Mehrfachauswahl per Auswahlrahmen oder Umschalt-Klick
@@ -110,16 +110,21 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
     aneinanderreihen, als Raster anordnen.
   - Gleiche Breite, Höhe oder Größe; Größe kopieren und übernehmen; am Raster ausrichten.
 - **Intelligentes Duplizieren:** Strg+D wiederholt den zuletzt verwendeten Versatz.
-- Sticky Notes nach Farbe clustern
+- Notizen nach Farbe clustern
 - Schnell arbeiten: Tab beim Tippen legt die nächste Notiz oder Form daneben an, ein Doppelklick hält ein Werkzeug aktiv, und das Formen-Menü zeigt die zuletzt verwendeten Formen. In Vorlagen lassen sich Beschriftungen direkt ändern, Hintergründe bleiben gesperrt; Retro- und Brainstorming-Vorlagen bieten den passenden Ablauf oder Timer an. Eine Karte in eine Kanban-Spalte zu ziehen setzt ihren Status, und ein Frame lässt sich samt Inhalt löschen.
-- Befehlspalette (Strg+K) für Befehle, Einstellungen, Frames, Vorlagen und Board-Inhalte; Format übertragen (Pinsel in der Kontextleiste, Strg+Alt+C/V).
+- Befehlspalette (Strg+K) für Befehle, Einstellungen, Frames, Vorlagen und Board-Inhalte; Format übertragen (Menü „Mehr“ der Kontextleiste, Strg+Alt+C/V).
 - Formeln in Tabellen: `=SUMME(B2:B5)`, `=B2*C2` und mehr; ein Klick auf eine Zelle fügt den Bezug ein, Σ rechnet die Zellauswahl zusammen.
 - Orientierung: Ein leeres Board schlägt den Einstieg vor, das Frames-Panel zeigt Überschriften und gemerkte Ansichten (Alt+1–9), der Filter kennt auch den Status von Karten. Große Boards zeichnen nur, was nah an der Ansicht liegt.
 - Gruppieren, Sperren, Ebenen (Vorder- und Hintergrund), Duplizieren (auch per Alt-Ziehen); ein zweiter Klick in eine
   Gruppe wählt ein einzelnes Element zum Bearbeiten
 - Kopieren und Einfügen, auch zwischen Boards
 - Rückgängig und Wiederholen, Kontextmenü, Suche (Strg+F)
-- Umfangreiche Tastenkürzel (Übersicht mit `?`)
+- Umfangreiche Tastenkürzel (durchsuchbare Übersicht mit `?`, Häufiges zuerst)
+- **Hilfe-Knopf** unten links mit ersten Schritten, Kurzanleitung und Tastenkürzeln; auch über die Befehlssuche
+- **Formatieren beim Tippen:** Strg+B, Strg+I und Strg+U gelten für das ganze Element oder die Zelle, die Kontextleiste bleibt bedienbar, ohne den Editor zu schließen
+- **Aufgeräumte Kopfzeile:** Boardmenü neben dem Namen (Exportieren, Importieren, Verlauf, Aktivität, Elementliste, Als Vorlage speichern, Duplizieren, Verschieben, Löschen), „Moderieren“, beschriftete Knöpfe „Teilen“ und „Präsentieren“; was keinen Platz hat, steht unter „Mehr“
+- **Knappe Kontextleiste:** Farbe, Text, Link, Kommentar, Sperren, Mehr, Löschen; das Menü „Mehr“ und der Rechtsklick sind gleich gegliedert
+- **Werkzeugleiste nach Häufigkeit** mit eigenen Tooltips (Name und Kürzel, auch per Tastatur); Taste B für Tabelle, D für Code; Farbfelder nennen Farbnamen
 
 ### Zusammenarbeit in Echtzeit
 - Änderungen erscheinen sofort bei allen Teilnehmenden
@@ -165,11 +170,11 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   Nach einer Rückfrage geht eine Einladungsmail hinaus; nach der Registrierung über den Link ist das Board geteilt
   bzw. die Person im Team.
 - **Gastlinks:** Personen ohne Konto sehen oder kommentieren ein einzelnes Board – befristet, jederzeit sperrbar,
-  standardmäßig abgeschaltet.
+  standardmäßig abgeschaltet. Mit der optionalen Stufe „Beiträge“ legen Gäste auch eigene Notizen an und ändern nur diese.
 - **Rundgänge aufzeichnen:** Ansicht, Mauszeiger und Laserpointer, auf Wunsch mit Ton; andere spielen den Rundgang ab
   und können dabei selbst navigieren.
-- **Reaktionen:** Emojis direkt an Sticky Notes, Karten & Co. – mit Anzahl und Namen, auch für Betrachter (Rechtsklick).
-- **Schlagwörter und Filter:** Sticky Notes, Karten und Formen verschlagworten; der Filter blendet alles andere ab
+- **Reaktionen:** Emojis direkt an Notizen, Karten & Co. – mit Anzahl und Namen, auch für Betrachter (Rechtsklick).
+- **Schlagwörter und Filter:** Notizen, Karten und Formen verschlagworten; der Filter blendet alles andere ab
   (nach Schlagwort, Farbe, Person, Reaktionen, Maßnahmen) – nur in der eigenen Ansicht.
 - **Dateianhänge:** PDF, Word, Excel, PowerPoint, OpenDocument, Text, CSV und JSON auf das Board legen; PDFs mit
   Vorschau der ersten Seite und Betrachter (pdf.js), alles mit Virenscan und als Download.
@@ -183,10 +188,11 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
   Moderierende lassen sich über das Avatar-Menü hinzufügen. Der Server setzt alle Sperren durch.
 - **Timer** für alle Teilnehmenden, mit Pause, Verlängerung und Signalton
 - **Abstimmungen** mit einstellbarer Stimmenzahl pro Person; die Stimmen bleiben bis zum Ende verdeckt, danach gibt es eine Ergebnisliste
-- **Schätzrunde** mit verdeckten Karten für eine Karte: Fibonacci-, T-Shirt- oder Stunden-Deck; die Werte bleiben verdeckt,
+- **Schätzrunde** mit verdeckten Karten für eine Karte oder eine Warteschlange aus mehreren (Fortschritt für alle sichtbar, „Nächste Karte“): Fibonacci-, T-Shirt- oder Stunden-Deck; die Werte bleiben verdeckt,
   bis aufgedeckt wird. Danach erscheinen Durchschnitt, Median und Spanne, und das Ergebnis lässt sich als Story Points
   übernehmen.
 - **Präsentationsmodus**: Frames werden zu Folien (Vollbild, Pfeil- und Leertaste, Umgebung ausgeblendet)
+- **Für alle präsentieren:** Teilnehmende folgen den Folien automatisch in einer reduzierten Ansicht, wer später kommt, wird mitgenommen, „Selbst umsehen“ und „Wieder folgen“ lassen die Wahl; offene Eingaben werden nicht unterbrochen
 - **Verborgene Bereiche:** Moderierende verdecken einen Frame; Teilnehmende sehen nur eine Abdeckung, bis aufgedeckt
   wird. Der Server gibt den Inhalt vorher nicht heraus.
 
@@ -221,8 +227,10 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Sticky Note pr
 
 ### Prüfen und Aufgaben
 - **Dokumente auf dem Board prüfen:** Alle Seiten eines PDFs als Frame auf das Board legen, darauf kommentieren und zeichnen. Office-Dateien gehen mit dem optionalen Umwandlungsdienst.
-- **Freigaben:** Frames und Dateien Prüfenden vorlegen. Zum Freigeben reicht die Rolle „Kommentieren“, Änderungen entwerten eine Freigabe, der Status steht am Element.
-- **Kanban und Zeitleiste:** Andere Ansichten derselben Karten, auch ohne Maus bedienbar.
+- **Prüfungen:** Frames und Dateien Prüfenden vorlegen. Zum Genehmigen reicht die Rolle „Kommentieren“, Änderungen entwerten eine Genehmigung, der Status steht am Element. Offene Prüfungen stehen unter „Zu prüfen“ in „Meine Aufgaben“, jede Runde bleibt mit Begründungen erhalten.
+- **Kanban und Zeitleiste:** Andere Ansichten derselben Karten, auch ohne Maus bedienbar. Jede Spalte hat ein „+“ für die Schnelleingabe und zeigt ihre Summe der Story Points; „Blockiert durch“ verbindet Karten, in der Zeitleiste mit Pfeilen.
+- **Schnelleingabe für Karten:** Mit dem Karten-Werkzeug tippst du den Titel direkt auf die Karte, Details stehen unter „Karte bearbeiten“.
+- **Auf dem Handy:** „Mehrere auswählen“ für die Mehrfachauswahl per Touch; Banner lassen sich für Teilnehmende einklappen, Meldungen stehen oben.
 - **Jira und Azure DevOps:** Karten und Tickets bleiben in beide Richtungen abgeglichen.
 - **Automatisches Layout und Swimlanes:** Verbundene Elemente oder Mindmaps mit einem Klick anordnen.
 - **Diagramme aus Tabellen:** Balken, Linien und Torte, die der Tabelle folgen.
@@ -232,7 +240,8 @@ Mehr dazu: [docs/integrations.md](docs/integrations.md) (Englisch).
 
 ### Export und Import
 - PNG (ganzes Board oder Auswahl) und SVG
-- PDF mit einem Frame pro Seite (über den Druckdialog des Browsers)
+- PowerPoint: eine Folie je Frame mit bearbeitbarem Text und Formen, der Frame-Titel steht im Titelfeld
+- PDF-Datei mit einer Bildseite je Frame in Reihenfolge und Größe des Frames, Frame-Titel als Lesezeichen, im Browser erzeugt; „PDF drucken“ lässt den Text markierbar
 - JSON als Backup; Import ins Board oder als neues Board
 - Karten aus CSV/Tabellen, Diagramme aus Text (siehe oben)
 
@@ -256,8 +265,8 @@ Mehr dazu: [docs/integrations.md](docs/integrations.md) (Englisch).
 | Kategorie | Vorlagen |
 |-----------|----------|
 | Brainstorming | Brainstorming, Mindmap, Sechs Perspektiven, Crazy 8s, Pro & Contra |
-| Meetings & Retros | Start · Stop · Continue, Mad · Sad · Glad, 4L, Segelboot, Seestern, DAKI, Zeitstrahl-Retro, Heißluftballon, Speedcar, Offene Themenrunde, Team-Radar, Daily Stand-up, Check-in / Icebreaker |
-| Agile & Projekte | Kanban, Eisenhower-Matrix, Impact/Aufwand-Matrix, Projekt-Canvas, Produkt-Roadmap, Zeitstrahl, Gantt-Diagramm, User Story Map, Wochenplaner |
+| Meetings & Retros | Start · Stop · Continue, Mad · Sad · Glad, 4L, Segelboot, Seestern, DAKI, Zeitleiste-Retro, Heißluftballon, Speedcar, Offene Themenrunde, Team-Radar, Daily Stand-up, Check-in / Icebreaker |
+| Agile & Projekte | Kanban, Eisenhower-Matrix, Impact/Aufwand-Matrix, Projekt-Canvas, Produkt-Roadmap, Zeitleiste, Gantt-Diagramm, User Story Map, Wochenplaner |
 | Strategie | SWOT-Analyse, Stakeholder-Map, Business Model Canvas¹, Lean Canvas¹, OKR-Planung, Entscheidungsmatrix |
 | Design & UX | Customer Journey Map, Empathy Map, User Persona, Moodboard, Wireframe |
 | Softwareentwicklung | Sprint-Planung, Entwicklungs-Kanban mit WIP-Limits, Definition of Ready & Done, Architektur (C4-Kontext), ER-Diagramm, Event Storming, Bug-Triage, Tech-Debt-Matrix, Release-Planung, API-Design, Architekturentscheidung (ADR) |
@@ -413,6 +422,8 @@ Neben lokalen Konten kann vibeboard **Keycloak**, **SAML**, **LDAP/Active Direct
 - Gilt eine Rolle aus mehreren Quellen (Mitgliedschaft, Team, Link), zählt die höchste. Rechteänderungen wirken sofort.
 - **Gäste** sehen ausschließlich das Board ihres Links – keine Startseite, keine anderen Boards, keine Profil- oder
   Teamfunktionen. Mit Ablauf oder Sperre des Links werden ihre Zugänge gelöscht; ihre Beiträge bleiben mit Namen
+- **Gäste mit „Beiträge“** (standardmäßig aus) dürfen zusätzlich Notizen anlegen und eigene Notizen bearbeiten, verschieben
+  und löschen, bis zu einer festgelegten Zahl je Gast. Alles andere bleibt für sie unveränderlich. Was einem Gast gehört, entscheidet der Server.
   erhalten.
 - **Administratoren** haben Zugriff auf alle Boards.
 
@@ -444,7 +455,7 @@ Unter `/admin`, nur für Administratoren:
 - **Allgemein:** Name der Instanz, öffentliche Adresse, Registrierungsmodus
 - **Sicherheit:** Kennwort-Mindestlänge, Abgleich mit „Have I Been Pwned“, Wegwerf-Adressen, gesperrte bzw.
   erlaubte Domains, Zwei-Faktor-Pflicht für Admins
-- **Zusammenarbeit:** E-Mails bei Erwähnungen, Gastzugang (standardmäßig aus) und seine längste Gültigkeit, wer
+- **Zusammenarbeit:** E-Mails bei Erwähnungen, Gastzugang (standardmäßig aus) und seine längste Gültigkeit, die Gaststufe „Beiträge“ (standardmäßig aus) und ihre Grenze, wer
   Teams anlegen darf, Aufzeichnungen erlauben und ihre Höchstdauer, Dateianhänge und größte Datei, Aufbewahrung im
   Papierkorb, Webhooks (standardmäßig aus) und ob interne Webhook-Ziele erlaubt sind
 - **Mailserver:** SMTP-Host, Port, Verschlüsselung (STARTTLS, SSL/TLS, keine), Anmeldung, Absender,
@@ -466,7 +477,7 @@ Unter `/admin`, nur für Administratoren:
 
   Platzhalter stehen in [eckigen Klammern]. Die Vorlagen ersetzen keine Rechtsberatung.
 - Die Seiten `/impressum` und `/datenschutz` sind **ohne Anmeldung** erreichbar.
-- Verlinkt sind sie auf der Anmelde- und Registrierungsseite, in der Board-Übersicht, im Einstellungsmenü der Boards
+- Verlinkt sind sie auf der Anmelde- und Registrierungsseite, in der Board-Übersicht, im Kontomenü der Boards
   und in der Administration.
 - Leere Texte werden nicht veröffentlicht; ihre Links verschwinden dann automatisch.
 - Die Texte werden ohne HTML dargestellt. Eingegebenes Markup erscheint als reiner Text, Links sind nur mit http(s),
@@ -651,6 +662,9 @@ Alle Daten liegen in der eigenen PostgreSQL-Datenbank:
 | `notifications` | Benachrichtigungen (Erwähnung, Antwort, Zuweisung), 90 Tage aufbewahrt |
 | `board_activity` | Aktivitätsverlauf, zusammengefasst, 90 Tage bzw. höchstens 2000 Einträge je Board |
 | `guest_links` | Gastlinks (nur als Hash) mit Rolle und Ablauf; Gastzugänge sind Konten mit der Rolle `guest` |
+| `element_owners` | Welchem Gast eine Notiz gehört; wird mit dem Gastzugang gelöscht |
+| `server_secrets` | Vom Server erzeugtes Geheimnis zum Prüfen von Element-Kennungen; entsteht beim ersten Start |
+| `reviews`, `review_people`, `review_rounds`, `review_round_people` | Prüfungen, Prüfende und ihre Entscheidungen, frühere Runden mit Begründungen |
 | `teams`, `team_members`, `folders`, `folder_boards` | Teams, Mitgliedschaften, Ordner |
 | `board_recordings` | Aufgezeichnete Rundgänge mit Zeitspur und optionaler Tonspur |
 | `team_invitations`, `pending_invites` | Offene Einladungen in Teams bzw. an Adressen ohne Konto (Adresse, Rolle, einladende Person; höchstens 30 Tage) |
@@ -720,7 +734,7 @@ public/
   guest.html           Beitritt per Gastlink                         → js/guest.js
   board.html           Board-Editor                                  → js/main.js (core, ui, collab, render, sync, …)
                        teamwork.js (privater Modus, Schätzrunde), planning.js (Aufgaben, Versionen, CSV-Import),
-                       moderation.js, activity.js, recording.js, notifications.js (Arbeiten im Team),
+                       moderation.js, activity.js, recording.js, notifications.js, banners.js (Arbeiten im Team),
                        diagram-parse.js / diagram-text.js (Diagramm aus Text), highlight.js (Code-Blöcke),
                        templates.js / templates-tech.js / templates-diagrams.js / template-kit.js (Vorlagen)
   admin.html           Administration                                → js/admin.js

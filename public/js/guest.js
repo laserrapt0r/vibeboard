@@ -5,7 +5,7 @@ import { legalFooter, legalLinks } from './footer.js';
 
 const card = document.getElementById('guest');
 const token = location.pathname.split('/').pop();
-const ROLE = { viewer: T('anzusehen'), commenter: T('anzusehen und zu kommentieren') };
+const ROLE = { viewer: T('anzusehen'), commenter: T('anzusehen und zu kommentieren'), contributor: T('anzusehen und eigene Beiträge zu ergänzen') };
 if (loadPref('settings', {}).dark) document.body.classList.add('dark');
 
 function brand() {
@@ -43,6 +43,7 @@ async function main() {
   card.append(
     h('h1', {}, info.boardName),
     h('p', { class: 'muted' }, T`Du wurdest eingeladen, dieses Board als Gast ${ROLE[info.role] || 'anzusehen'}. Der Zugang gilt bis ${until}.`),
+    info.role === 'contributor' ? h('p', {}, T`Du kannst bis zu ${info.noteLimit} eigene Notizen anlegen, bearbeiten, verschieben und löschen, kommentieren und abstimmen. Andere Inhalte bleiben unverändert. Deine Beiträge bleiben auf dem Board, auch wenn dein Zugang endet.`) : null,
     h('form', { class: 'form', onsubmit: async (e) => {
       e.preventDefault();
       err.classList.add('hidden');

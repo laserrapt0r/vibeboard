@@ -1,5 +1,5 @@
 // Befehlspalette, Format übertragen, Formeln
-const { launch, BASE, TMP } = require('./lib');
+const { launch, BASE, TMP, ctxMore } = require('./lib');
 let f = 0;
 const ok = (c, m, x) => {
   console.log((c ? 'ok  ' : 'FAIL') + ' ' + m + (c || x === undefined ? '' : ' → ' + JSON.stringify(x).slice(0, 260)));
@@ -264,10 +264,9 @@ const items = (p) => p.evaluate(() => [...document.querySelectorAll('.palette-it
         const e = c.getEl(id);
         return c.toScreen(e.x + e.w / 2, e.y + e.h / 2);
       }, id);
-    const brush = await A.$('#ctxbar [title^="Format übertragen"]');
-    ok(!!brush, 'Pinsel in der Kontextleiste');
-    await brush.click();
+    await ctxMore(A, 'Format übertragen');
     await wait(200);
+    ok(!!(await A.$('#ctxbar [title^="Format übertragen beenden"]')), 'Pinsel zeigt sich in der Kontextleiste, solange er läuft');
     ok(await A.evaluate(() => document.getElementById('stage').dataset.brush === '1'), 'Pinsel aktiv');
     let p = await sc('n1');
     await A.mouse.click(p.x, p.y);
@@ -312,10 +311,7 @@ const items = (p) => p.evaluate(() => [...document.querySelectorAll('.palette-it
       c.setSelection(['s1']);
     });
     await wait(250);
-    const bb2 = await (await A.$('#ctxbar [title^="Format übertragen"]')).boundingBox();
-    await A.mouse.click(bb2.x + bb2.width / 2, bb2.y + bb2.height / 2);
-    await wait(90);
-    await A.mouse.click(bb2.x + bb2.width / 2, bb2.y + bb2.height / 2);
+    await ctxMore(A, 'Format mehrfach übertragen');
     await wait(150);
     ok(
       await A.evaluate(async () => {
@@ -409,7 +405,7 @@ const items = (p) => p.evaluate(() => [...document.querySelectorAll('.palette-it
     await wait(250);
     let it = await items(A);
     ok(
-      it.some((x) => /Sticky/.test(x)),
+      it.some((x) => /^Notiz/.test(x)),
       'Suche findet Werkzeug',
       it.slice(0, 4),
     );
@@ -460,7 +456,7 @@ const items = (p) => p.evaluate(() => [...document.querySelectorAll('.palette-it
     await wait(200);
     ok(!(await paletteOpen(A)), 'Esc schließt');
     await A.evaluate(() => {
-      const b = [...document.querySelectorAll('#topbar button')].find((x) => /Befehle/.test(x.title));
+      const b = [...document.querySelectorAll('#topbar button')].find((x) => /Befehle/.test(x.getAttribute('aria-label')));
       b.click();
     });
     await wait(250);
@@ -494,7 +490,7 @@ const items = (p) => p.evaluate(() => [...document.querySelectorAll('.palette-it
     });
     await wait(250);
     ok(
-      !(await items(B)).some((x) => /Sticky Note/.test(x) && /\(N\)|Werkzeug/.test(x)),
+      !(await items(B)).some((x) => /Notiz/.test(x) && /\(N\)|Werkzeug/.test(x)),
       'Betrachter: keine Bearbeitungswerkzeuge',
       (await items(B)).slice(0, 4),
     );

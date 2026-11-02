@@ -92,14 +92,14 @@ const act = (p) =>
   });
   await p.goto(BASE + '/board/' + id, { waitUntil: 'load' });
   await new Promise((r) => setTimeout(r, 2500));
-  const btn = await p.$(
-    'button[aria-label="' +
-      (await p.evaluate(() =>
-        [...document.querySelectorAll('#topbar button')].find((b) => b.innerHTML.includes('M8 6h13')).getAttribute('aria-label'),
-      )) +
-      '"]',
-  );
-  await btn.focus();
+  // Nur mit der Tastatur: Boardmenü öffnen, per Pfeil bis zur Elementliste
+  await (await p.$('#btn-board-menu')).focus();
+  await p.keyboard.press('Enter');
+  await new Promise((r) => setTimeout(r, 200));
+  for (let i = 0; i < 12; i++) {
+    if (await p.evaluate(() => /Elementliste/.test(document.activeElement.textContent))) break;
+    await p.keyboard.press('ArrowDown');
+  }
   await p.keyboard.press('Enter');
   await new Promise((r) => setTimeout(r, 300));
   const items = await p.$$eval('.element-list button', (x) => x.map((e) => e.textContent));

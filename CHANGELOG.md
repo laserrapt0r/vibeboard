@@ -4,6 +4,70 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.16.0] – 2026-11-01
+
+Überarbeitete Bedienung nach der Prüfung von Abläufen und Auffindbarkeit.
+
+### Geändert
+- Die Kontextleiste bleibt beim Tippen sichtbar und verdeckt den Editor nicht. Format, Farbe, Größe, Ausrichtung und Link lassen sich ändern, ohne die Eingabe zu beenden; Fokus und Einfügestelle bleiben. Kommentar, Sperren, Mehr und Löschen beenden die Eingabe zuerst.
+- Die Tastenkürzel-Übersicht liegt jetzt in der Hilfe, hat ein Suchfeld und zeigt Häufiges zuerst.
+- Kopfzeile neu geordnet: Boardmenü neben dem Namen (Exportieren, Importieren, Als Vorlage speichern, Verlauf, Aktivität, Elementliste, Board duplizieren, In Ordner verschieben, Board löschen), Knopf „Moderieren“ für Timer, Abstimmung, Retro, Privater Modus, Moderation, Schätzrunde, Umfrage, Zufallsauswahl, Redereihenfolge und Aufzeichnung, beschriftete Knöpfe „Teilen“ und „Präsentieren“. „Vorlagen“ steht nur noch in der Werkzeugleiste.
+- Was in Kopfzeile oder Werkzeugleiste nicht passt, wandert ins Menü „Mehr“. Keine Leiste scrollt mehr oder blendet Funktionen ersatzlos aus, Retro und Filter sind nicht mehr im Zahnrad versteckt.
+- Der eigene Avatar ist überall das Kontomenü, auch für Gäste. Das Zahnrad enthält nur noch Ansicht und Bearbeitung; Tastenkürzel, Impressum und Datenschutz stehen im Kontomenü.
+- Was eine Rolle nicht kann, erscheint nicht mehr, auch nicht ausgegraut.
+- Einheitliche Begriffe in allen vier Sprachen: „Prüfung“ statt „Freigabe“ im Sinn von Genehmigung (mit „Genehmigen“ und „Genehmigt“), „Notiz“ statt Sticky Note und Haftnotiz, „Zeitleiste“ statt Zeitstrahl, „Bild oder Datei einfügen“, Taste H „Ansicht verschieben“, „Linie“, „Marker“, „Laser“. Der Teilen-Dialog meldet „Zugriff geändert“, die Administration zeigt die Spalte „Zugriff“.
+- Kontextleiste verschlankt: sichtbar sind nur Farbe, Text, Link, Kommentar, Sperren, Mehr und Löschen. Mehrere Regler öffnen eine Zusatzzeile, Retro-Knöpfe stehen nur bei laufender Retro in der Leiste, „B×H“ heißt „Position und Größe“ und steht im Menü „Mehr“. Farb-Emojis sind durch Symbole ersetzt.
+- „Mehr“ und Rechtsklickmenü sind gleich gegliedert: Bearbeiten, Aktionen, Anordnen, Format, Größe, Sperren, Zusammenarbeit, Exportieren. Menüs können jetzt Untermenüs haben.
+- Werkzeugleiste nach Häufigkeit geordnet, Vorlagen ganz oben.
+- Exportieren und Importieren sind getrennt. „Als PDF“ heißt „PDF drucken (Text markierbar)“, „Datei importieren“ heißt „Inhalte aus Datei importieren“, „Datei anhängen“ heißt „Datei als Anhang einfügen“.
+- Wer ein Board selbst löscht, landet ohne zusätzliche Meldung auf der Startseite.
+
+### Hinzugefügt
+- Auswahlmodus für Touch: „Mehrere auswählen“ neben den Auswahlwerkzeugen, Tippen nimmt Elemente auf oder heraus, Ziehen auf leerer Fläche zieht einen Rahmen auf. Der Retro-Schritt „Gruppieren“ lässt sich damit am Handy erledigen. Auf Geräten mit Maus gibt es den Schalter nicht.
+- Handy: Retro-Leiste, Abstimmung, privater Modus und Moderationsbanner lassen sich einklappen und sind für Teilnehmende zunächst eingeklappt. Sie stapeln sich ohne Überlappung, Meldungen stehen oben statt über den Leisten.
+- PDF-Datei ohne Druckdialog: je Frame eine Seite in Reihenfolge und Größe des Frames, Folientitel als Lesezeichen, ohne Frames das ganze Board auf einer Seite. Die Seiten sind Bilder, deshalb bleibt „PDF drucken (Text markierbar)“ als zweiter Eintrag.
+- Schätzrunde mit Warteschlange: mehrere Karten oder „Alle ohne Schätzung“, Fortschritt für alle, „Nächste Karte“, und nach dem Übernehmen geht es von selbst weiter.
+- „Blockiert durch“ im Kartendialog, angezeigt in Kanban und Zeitleiste, dort mit Pfeilen. Der Server verhindert Selbstbezüge und Kreise.
+- Schnelleingabe für Karten: Der Titel entsteht direkt auf der Karte, auch beim gemeinsamen Tippen. In der Kanban-Ansicht hat jede Spalte ein „+“ mit Titelfeld und im Kopf die Summe der Story Points.
+- Gaststufe „Beiträge“ für Gastlinks: Gäste legen eigene Notizen an, ändern und löschen nur diese, kommentieren und stimmen ab. Abschaltbar, Standard aus, mit einer Höchstzahl je Gast (Standard 50). Der Server prüft jede Operation und führt das Eigentum selbst.
+- „Meine Aufgaben“ zeigt im Bereich „Zu prüfen“ offene Prüfungen mit Direktsprung ins Panel.
+- Jede Runde einer Prüfung bleibt mit Begründungen erhalten. „Erneut vorlegen“ nimmt einen Hinweis an, das Panel zeigt die früheren Runden.
+- Präsentieren für alle: Beim Start fragt ein Dialog, ob alle mitkommen sollen. Das Publikum folgt den Folien automatisch in einer reduzierten Ansicht, wer später kommt, wird mitgenommen, und „Selbst umsehen“ und „Wieder folgen“ geben die Wahl. Offene Eingaben, Dialoge und laufendes Ziehen gehen vor. Die Präsentation endet für alle, wenn sie beendet wird oder die präsentierende Person geht.
+- Strg+B, Strg+I und Strg+U: beim Tippen für das ganze Element oder die Zelle, sonst für die Auswahl. Einzelne Wörter lassen sich weiterhin nicht formatieren.
+- Hilfe-Knopf unten links mit „Erste Schritte“, Kurzanleitung und Tastenkürzeln, auch über die Befehlssuche. Ein einmaliger Tipp erklärt beim ersten Zoomen oder Ziehen auf leerer Fläche das Bewegen.
+- Strg+Umschalt+Pfeil hoch und runter für ganz nach vorn und ganz nach hinten, das geht auch auf deutscher Tastatur.
+- Taste B für die Tabelle und Taste D für den Code-Block, beide in der Kürzelübersicht.
+- Eigene Tooltips mit Name und Kürzel in Kopfzeile und Werkzeugleiste, nach kurzer Verzögerung und auch bei Tastaturfokus.
+- Farbfelder nennen Farbnamen statt Hexwerten.
+- „Als Vorlage speichern“ auch im Vorlagen-Dialog. „Format mehrfach übertragen“ im Menü „Mehr“.
+- Schätzrunde ohne ausgewählte Karte: Das Menü fragt nach der Karte.
+- Die Befehlssuche findet auch, was in Menüs oder hinter „Mehr“ liegt.
+
+### Behoben
+- PowerPoint: Der Frame-Titel steht als echtes Titelfeld auf der Folie.
+- „PDF drucken“ erzeugte Bilder der Seiten, jetzt bleibt der Text markierbar.
+- Wer ein Board selbst löscht, landete manchmal wieder auf der gelöschten Seite, weil die abgebrochene Verbindung ein Neuladen auslöste.
+- SVG- und JSON-Export melden das Ergebnis, ein leeres Board meldet „Nichts zu exportieren“. PNG meldet auch den Abschluss.
+- Benachrichtigungen zu Prüfungen öffnen das Panel beim richtigen Element und nennen Ergebnis und Name. Die leere Glocke erwähnt Prüfungen.
+- Meldungen zu Prüfungen erscheinen nicht mehr, wenn das Board im Papierkorb liegt oder das Element nicht mehr sichtbar ist.
+- Ein Kartentitel aus dem Dialog erreicht den Server auch bei offener Schnelleingabe.
+- Rückgängig von „Karte und Blockierer gelöscht“ verliert den Bezug nicht mehr, wenn die Karte zuerst ankommt.
+- „PDF drucken“ schreibt je Seite nur deren Bilder ins Dokument und wartet wirklich, bis sie geladen sind.
+- Die Glocke lädt für Meldungen zu Prüfungen nur noch Boards mit verborgenem Bereich.
+- Die Leiste des Publikums wird nur noch bei einer Änderung neu gebaut, ein Klick auf „Selbst umsehen“ geht beim Warten nicht verloren.
+- Tooltips bleiben nicht mehr stehen, wenn der Knopf ersetzt wird oder der Zeiger das Fenster verlässt.
+- Esc im Titelfeld der Kanban-Spalte schließt nur das Feld.
+- Keine Meldung „Schätzrunde gestartet“ mehr, wenn die erste Karte einer Warteschlange gelöscht wird.
+- Das Menü der Schätzrunde und „Alle ohne Schätzung“ ordnen Karten in Leserichtung, statt in der Folge, die die Datenbank liefert.
+- Gast der Stufe „Beiträge“ ist nicht mehr als zuständig für Kommentare wählbar, weil er sie nicht erledigen darf.
+
+### Sicherheit
+- Schriftgröße für alle Elemente auf 1 bis 128 begrenzt, die Darstellung fängt Ausreißer aus älteren Daten ab. Text wächst beim Ziehen an der Ecke höchstens bis 128.
+- Wer nicht bearbeiten darf, kann neue Notizen und Kommentare nur unter eigenen, vom Server geprüften Kennungen anlegen. Gelöschte Kennungen anderer samt Verbindern, Ankern und Prüfungen lassen sich so nicht übernehmen, auch nicht nach einem Neustart. Neue Tabelle `server_secrets`.
+- Prüfungen eines nachträglich verborgenen Frames sind für Teilnehmende nicht mehr sichtbar, entscheidbar oder neu vorlegbar.
+- Gäste bekommen Eingabeschritte nur noch für eigene Notizen, Änderungen an eigenen Notizen sind gedrosselt.
+- Ablehnungen fremder privater Notizen erreichen den Browser des Gastes.
+
 ## [4.15.0] – 2026-11-01
 
 Korrekturen aus der Prüfung des Zusammenspiels, der Bedienung und der Lesbarkeit, dazu ein Lasttest.

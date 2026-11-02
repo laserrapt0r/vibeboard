@@ -5,12 +5,15 @@
 - **Akzeptanzkriterien:**
   - PNG des ganzen Boards (doppelte Auflösung, max. 8000 px) oder der Auswahl; SVG des ganzen Boards.
   - Der Export enthält keine Kommentare und keine verwaisten Verbindungen.
+  - Geändert in 4.16.0: SVG und JSON melden das Ergebnis wie PNG. Ein leeres Board meldet „Nichts zu exportieren“.
 
 ### REQ-IO-002 PDF-Export
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Jeder Frame wird zu einer Seite im Querformat; ohne Frames wird das ganze Board eine Seite.
   - Die Erzeugung läuft über den Druckdialog des Browsers und verletzt die Content-Security-Policy nicht.
+  - Geändert in 4.16.0: Der Menüpunkt heißt „PDF drucken (Text markierbar)“. Die Seiten gehen als Vektorgrafik in den Druck, so bleibt der Text im Ergebnis markierbar. Die PDF-Datei ohne Druckdialog beschreibt [REQ-IO-009](#req-io-009-pdf-datei).
+  - Geändert in 4.16.0: Eine Druckseite enthält nur die Bilder, die auf ihr liegen. Der Druckdialog öffnet sich, wenn die Bilder geladen sind, spätestens nach 30 Sekunden.
 
 ### REQ-IO-003 JSON-Backup und Import
 - **Seit:** 1.0.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -19,6 +22,7 @@
   - Import in ein bestehendes Board (an der Ansichtsmitte) oder als neues Board über die Übersicht; Dateien früherer Versionen (`*.dlzboard.json`) werden akzeptiert.
   - Importierte Inhalte werden geprüft wie alle anderen Eingaben ([REQ-SEC-010](11-sicherheit.md), [REQ-UPL-001](12-uploads-virenschutz.md)).
   - Betrachter können nicht importieren.
+  - Geändert in 4.16.0: Exportieren und Importieren sind im Boardmenü getrennt. „Inhalte aus Datei importieren“ erzeugt bearbeitbare Elemente, „Datei als Anhang einfügen“ legt die Datei selbst ab. Betrachter sehen „Importieren“ nicht.
 
 ### REQ-IO-004 Vorschaubilder
 - **Seit:** 1.0.0 · **Priorität:** Kann · **Status:** umgesetzt
@@ -51,3 +55,15 @@
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Jeder Frame wird eine Folie (16:9), ohne Frames das ganze Board. Notizen, Text, Formen, Linien, Bilder und Tabellen bleiben bearbeitbar, alles andere kommt als Bild. Private Inhalte und verborgene Bereiche fehlen.
+  - Geändert in 4.16.0: Der Frame-Titel steht im Titelfeld der Folie (Platzhalter `title`, sichtbar in der Gliederung von PowerPoint), die Inhalte rücken darunter. Folien ohne Titel und der Export ohne Frames nutzen die ganze Fläche.
+
+### REQ-IO-009 PDF-Datei
+- **Seit:** 4.16.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Das Board als PDF-Datei laden, ohne Druckdialog und ohne nachgeladene Bibliothek.
+- **Akzeptanzkriterien:**
+  - „Als PDF-Datei“ lädt eine Datei mit einer Seite je Frame, in der Reihenfolge der Frames und in der Größe des Frames. Ohne Frames steht das ganze Board auf einer Seite.
+  - Frame-Titel sind Lesezeichen der Datei, Titel ohne Namen heißen „Folie n“. Der Boardname ist der Dokumenttitel.
+  - Jede Seite ist ein Bild der vorhandenen Darstellung (JPEG). Text lässt sich darin nicht markieren, dafür gibt es „PDF drucken (Text markierbar)“.
+  - Die Datei entsteht im Browser. Es kommt keine Abhängigkeit hinzu, die Content-Security-Policy bleibt unverändert.
+  - Große Boards: Höchstens 2400 Pixel je Seite, ab 31 Seiten 1600. Die Seiten werden nacheinander gerendert. Über 300 MB bricht der Export mit einem Hinweis ab.
+  - Private Inhalte, verborgene Bereiche und Kommentare fehlen wie beim Export nach PowerPoint.

@@ -124,7 +124,7 @@ const toast = (p) =>
   await wait(500);
   ok(cOf(await all(B))?.anchor?.id === 'n1', 'Bezug kommt beim Server und den anderen an');
   const n1a = await get(A, 'n1');
-  await ev(A, () => document.querySelector('.comment-pop .icon-btn[title="Schließen"]')?.click());
+  await ev(A, () => document.querySelector('.comment-pop .icon-btn[aria-label="Schließen"]')?.click());
   await wait(150);
   await ev(A, async () => {
     const c = await import('/js/core.js');
@@ -220,7 +220,7 @@ const toast = (p) =>
   ok(!cOf(await all(A)).anchor, 'freigezogen: hängt nicht mehr', cOf(await all(A)));
   const b4 = await box(A, 'n1');
   await ev(A, async () => {
-    document.querySelector('.comment-pop .icon-btn[title="Schließen"]')?.click();
+    document.querySelector('.comment-pop .icon-btn[aria-label="Schließen"]')?.click();
   });
   const cb2 = await ev(
     A,
@@ -563,7 +563,7 @@ const toast = (p) =>
   const uc = (await all(A)).find((e) => e.type === 'comment' && e.anchor?.id === 'u1');
   ok(uc && !uc.draft, 'Kommentar nach der Bewegung angehängt', uc);
   await ev(A, async () => {
-    document.querySelector('.comment-pop .icon-btn[title="Schließen"]')?.click();
+    document.querySelector('.comment-pop .icon-btn[aria-label="Schließen"]')?.click();
     const c = await import('/js/core.js');
     c.undo();
   });
@@ -659,14 +659,14 @@ const toast = (p) =>
     return l;
   });
   ok(
-    ctxLabels.some((x) => /Foto hier/.test(x)) && !ctxLabels.some((x) => /oder Datei/.test(x)),
-    'Kontextmenü bietet nur Fotos an',
+    ctxLabels.some((x) => /Bild hier/.test(x)) && !ctxLabels.some((x) => /oder Datei/.test(x)),
+    'Kontextmenü bietet nur Bilder an',
     ctxLabels.slice(0, 14),
   );
   ok(
     await ev(B, () => {
       const b = document.querySelector('[data-tool="image"]');
-      return !b || /Bild hochladen/.test(b.title || b.getAttribute('aria-label') || '');
+      return !b || /^Bild einfügen/.test(b.getAttribute('aria-label') || '');
     }),
     'Werkzeug nennt keine Dateien',
   );

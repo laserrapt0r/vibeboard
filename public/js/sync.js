@@ -55,11 +55,12 @@ function applyTableOp(el, op) {
 }
 
 export class Sync {
-  constructor(boardId, user, { viewOnly = false, canComment = false } = {}) {
+  constructor(boardId, user, { viewOnly = false, canComment = false, notes = false } = {}) {
     this.boardId = boardId;
     this.user = user;
     this.viewOnly = viewOnly;
     this.canComment = canComment;
+    this.notes = notes; // Gaststufe „Beiträge“: eigene Notizen trotz viewOnly, der Server prüft jede Operation
     this.clientId = uid();
     this.queue = new Map(); // je Element eine Operation: upsert (neu), patch (geänderte Felder) oder delete
     this.merge = new Reconciler({ applyOther: applyTableOp });
@@ -274,7 +275,7 @@ export class Sync {
   }
 
   upsert(el, prev) {
-    if (this.viewOnly) return;
+    if (this.viewOnly && !this.notes) return;
     // Der Text in Bearbeitung läuft über die Eingabeschritte, in diesem Weg zählt nur der Rest
     el = this.texts.mask(el);
     prev = this.texts.mask(prev);
@@ -283,7 +284,7 @@ export class Sync {
   }
 
   remove(id, prev) {
-    if (this.viewOnly) return;
+    if (this.viewOnly && !this.notes) return;
     this.merge.touch(id, prev);
     enqueueDelete(this.queue, id);
     this.schedule();
@@ -339,9 +340,10 @@ export class Sync {
   op(o) {
     // Abstimmen und Schätzen dürfen auch Betrachter, Kommentieren ab der Rolle „Kommentieren“
     // „Moderation beenden“ gibt es gerade für die, die eine verwaiste Sperre aussperrt; der Server prüft das Recht
+    // Eine Bearbeitungssperre hält keine laufende Präsentation an; auch hier prüft der Server
     // Die Rolle hat sich beim Tippen geändert: Offenes kann nicht mehr ankommen
-    if (this.viewOnly && (o.op === 'ttext' || o.op === 'tsync')) return this.texts.abandon();
-    if (this.viewOnly && !['vote', 'estimate', 'pollVote', 'romanVote', 'react', 'moderation'].includes(o.op) && !(o.op === 'comment' && this.canComment)) return;
+    if (this.viewOnly && !this.notes && (o.op === 'ttext' || o.op === 'tsync')) return this.texts.abandon();
+    if (this.viewOnly && !(this.notes && (o.op === 'ttext' || o.op === 'tsync')) && !['vote', 'estimate', 'pollVote', 'romanVote', 'react', 'moderation', 'presentation'].includes(o.op) && !(o.op === 'comment' && this.canComment)) return;
     if (o.op === 'vote') delete o.userId;
     if (tracked(o) && o.prev !== undefined) {
       this.merge.touch(o.id, o.prev);

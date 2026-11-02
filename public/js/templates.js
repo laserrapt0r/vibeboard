@@ -24,7 +24,7 @@ export const TEMPLATES = [
       b.heading(60, 40, T('Brainstorming'), T('Ideen sammeln · clustern · bewerten'), 1000);
       b.shape(650, 190, 500, 120, { shape: 'pill', fill: '#4262ff', stroke: 'none', strokeWidth: 0, text: T('Wie können wir …?'), fontSize: 28, bold: true });
       b.shape(1260, 40, 480, 270, { shape: 'roundrect', fill: '#f4f4f5', stroke: 'none', strokeWidth: 0, locked: true, align: 'left', valign: 'top', fontSize: 16,
-        text: T('So geht\'s\n\n1. Jede:r notiert Ideen auf Sticky Notes (10 Min.)\n2. Ideen kurz vorstellen\n3. Ähnliche Ideen in Cluster ziehen\n4. Abstimmen – 3 Stimmen pro Person\n5. Nächste Schritte festlegen') });
+        text: T('So geht\'s\n\n1. Jede:r notiert Ideen auf Notizen (10 Min.)\n2. Ideen kurz vorstellen\n3. Ähnliche Ideen in Cluster ziehen\n4. Abstimmen – 3 Stimmen pro Person\n5. Nächste Schritte festlegen') });
       const zones = [[60, 360, T('Cluster A'), C.yellow], [940, 360, T('Cluster B'), C.blue], [60, 740, T('Cluster C'), C.green], [940, 740, T('Cluster D'), C.pink]];
       for (const [x, y, t, col] of zones) {
         b.shape(x, y, 800, 340, { shape: 'roundrect', fill: 'transparent', stroke: '#b5b5b5', strokeWidth: 2, dash: true, locked: true, text: t, fontSize: 18, bold: true, align: 'left', valign: 'top', textColor: '#8a8a8a' });
@@ -166,12 +166,12 @@ export const TEMPLATES = [
     ], { colW: 340 }),
   },
   {
-    id: 'retro-timeline', name: T('Retro: Zeitstrahl'), category: 'Meetings & Retros', icon: '📈',
+    id: 'retro-timeline', name: T('Retro: Zeitleiste'), category: 'Meetings & Retros', icon: '📈',
     description: T('Hochs und Tiefs des Sprints entlang der Zeit – gut nach längeren Phasen.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 2000, 1100, T('Retrospektive: Zeitstrahl'));
-      b.heading(60, 40, T('Retrospektive: Zeitstrahl'), T('Was ist wann passiert? Hochs oberhalb, Tiefs unterhalb der Linie.'), 1300);
+      b.frame(0, 0, 2000, 1100, T('Retrospektive: Zeitleiste'));
+      b.heading(60, 40, T('Retrospektive: Zeitleiste'), T('Was ist wann passiert? Hochs oberhalb, Tiefs unterhalb der Linie.'), 1300);
       b.zone(60, 190, 1880, 380, LIGHT.green, { text: T('😄 Hochs'), fontSize: 20, bold: true, align: 'left', valign: 'top', textColor: '#2f9e44' });
       b.zone(60, 610, 1880, 380, LIGHT.red, { text: T('😞 Tiefs'), fontSize: 20, bold: true, align: 'left', valign: 'bottom', textColor: '#e03131' });
       b.line(60, 590, 1940, 590, { arrowEnd: true, strokeWidth: 4 });
@@ -240,7 +240,7 @@ export const TEMPLATES = [
     description: T('Themen sammeln, abstimmen, im Zeitfenster besprechen – mit Daumen-Abfrage zum Weitermachen.'),
     build: () => {
       const els = columnsTemplate(T('Offene Themenrunde'), T('Themen sammeln · abstimmen · im Zeitfenster besprechen'), [
-        { title: T('Zu besprechen'), emoji: '📝', color: C.blue, light: LIGHT.blue, hint: T('Ein Thema pro Sticky Note. Danach: Abstimmung mit 2–3 Stimmen pro Person.'), sticky: C.yellow },
+        { title: T('Zu besprechen'), emoji: '📝', color: C.blue, light: LIGHT.blue, hint: T('Ein Thema pro Notiz. Danach: Abstimmung mit 2–3 Stimmen pro Person.'), sticky: C.yellow },
         { title: T('Im Gespräch'), emoji: '💬', color: C.orange, light: LIGHT.orange, hint: T('Das Thema mit den meisten Stimmen. Timer z. B. 5 Minuten, danach Daumen: weiter oder nächstes Thema?') },
         { title: T('Besprochen'), emoji: '✅', color: C.green, light: LIGHT.green, hint: T('Erkenntnisse und Maßnahmen notieren.') },
       ], { colH: 700 });
@@ -449,12 +449,12 @@ export const TEMPLATES = [
     },
   },
   {
-    id: 'timeline', name: T('Zeitstrahl'), category: 'Agile & Projekte', icon: '📍',
+    id: 'timeline', name: T('Zeitleiste'), category: 'Agile & Projekte', icon: '📍',
     description: T('Meilensteine auf einer Zeitachse darstellen. Die Karten erscheinen auch in der Zeitleiste.'),
     build: () => {
       const b = new B();
-      b.frame(0, 0, 1800, 760, T('Zeitstrahl'));
-      b.heading(60, 40, T('Zeitstrahl'), T('Projektverlauf und Meilensteine'), 1200);
+      b.frame(0, 0, 1800, 760, T('Zeitleiste'));
+      b.heading(60, 40, T('Zeitleiste'), T('Projektverlauf und Meilensteine'), 1200);
       b.line(80, 420, 1720, 420, { strokeWidth: 6, stroke: '#4d4d4d', arrowEnd: true });
       const ms = [T('Kick-off'), T('Konzept'), T('Design'), T('Entwicklung'), T('Test'), T('Go-live')];
       const cols = ['#4262ff', '#7048e8', '#e64980', '#f59f00', '#12b886', '#1098ad'];

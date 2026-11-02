@@ -68,14 +68,14 @@ app.on('openTracker', async () => {
   const m = modal(T('Jira / Azure DevOps'), form);
 });
 
-app.on('ctxItems', (items, sel, { one, actBtn }) => {
+app.on('ctxItems', (items, sel, { one }) => {
   if (!one || one.type !== 'card' || one.ext || app.guest || app.viewOnly) return;
-  items.push(actBtn('upload', T('Als Ticket anlegen'), async () => {
+  items.push({ label: T('Als Ticket anlegen'), icon: 'upload', onClick: async () => {
     try {
       const r = await api(`${base()}/issue`, { method: 'POST', body: { elementId: one.id } });
       toast(T`Ticket ${r.id} angelegt`);
     } catch (e) {
       toast(e.message, 6000);
     }
-  }));
+  } });
 });

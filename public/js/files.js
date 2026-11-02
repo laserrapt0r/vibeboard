@@ -108,7 +108,7 @@ async function pdfBytes(el) {
   return new Uint8Array(await r.arrayBuffer());
 }
 
-// Jede Seite wird ein gesperrtes Bild in einem Frame: Darauf lässt sich kommentieren, zeichnen und der Frame kann zur Freigabe
+// Jede Seite wird ein gesperrtes Bild in einem Frame: Darauf lässt sich kommentieren, zeichnen und der Frame kann zur Prüfung
 async function placePages(el) {
   toast(T`„${el.name}“ wird vorbereitet …`, 3000);
   let doc;
@@ -206,18 +206,18 @@ app.on('openFile', async (id) => {
 });
 
 // Kontextleiste: Öffnen und Herunterladen
-app.on('ctxItems', (items, sel, { one, actBtn }) => {
+app.on('ctxItems', (items, sel, { one }) => {
   if (!one || one.type !== 'file') return;
-  items.push(actBtn('search', T('Öffnen / Vorschau (Doppelklick)'), () => app.emit('openFile', one.id)));
+  items.push({ label: T('Öffnen / Vorschau (Doppelklick)'), icon: 'search', onClick: () => app.emit('openFile', one.id) });
   if (one.fileId && !app.viewOnly && (/\.pdf$/i.test(one.name || '') || (converter && OFFICE.test(one.name || '')))) {
-    items.push(actBtn('layers', T('Seiten auf das Board legen'), () => placePages(one)));
+    items.push({ label: T('Seiten auf das Board legen'), icon: 'layers', onClick: () => placePages(one) });
   }
   if (one.fileId) {
-    items.push(actBtn('download', T('Herunterladen'), () => {
+    items.push({ label: T('Herunterladen'), icon: 'download', onClick: () => {
       const a = h('a', { href: fileUrl(one), download: one.name || 'datei' });
       document.body.append(a);
       a.click();
       a.remove();
-    }));
+    } });
   }
 });

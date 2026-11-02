@@ -1,30 +1,34 @@
 // Benutzeroberfläche des Board-Editors
 import { T, LOCALE, guestName } from './i18n.js';
 import {
-  h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect,
-  initials, relTime, rectsIntersect, throttle, uid, api, contrastText } from './util.js';
-import { REACT_TYPES, shownCells, sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
+  h, append, ICONS, esc, toast, modal, promptDialog, confirmDialog, STICKY_COLORS, PALETTE, USER_COLORS, unionRect, colorName,
+  initials, relTime, rectsIntersect, throttle, uid, api, contrastText, readableOn } from './util.js';
+import { shownCells, sortForRender, SHAPES, SHAPE_GROUPS, shapeGeom, shapeDecor, renderSvgDocument, elBounds, safeLink, PRIORITIES, cardTags, ARROW_HEADS, headType, waypointsOf, cellStyle } from './render.js';
 import { LANGUAGES } from './highlight.js';
 import { templateGallery, markTemplateUsed } from './gallery.js';
-import { popover, closePop, menu, menuAt } from './menu.js';
+import { popover, closePop, menu, menuAt, tidyMenu } from './menu.js';
+import './tooltip.js';
+import { openFolderDialog } from './board-folder.js';
 import { openShareDialog } from './share.js';
-import { openProfileDialog, accountMenuItems } from './account.js';
+import { accountMenuItems } from './account.js';
 import { legalLinks } from './footer.js';
+import { openHelp } from './help.js';
 import { bellButton, refresh as refreshBell } from './notifications.js';
 
 export { popover, closePop, menu };
 import { dropGesture,
+  finishEdit, typeIntoEdit, layoutEditor,
   app, $, stage, getEl, bounds, setTool, saveToolOpts, selectedEls, selectionBounds, act, setEl, updateEl, deleteEls,
   canEdit, undo, redo, canUndo, canRedo, zoomBy, zoomAt, fitAll, fitTo, toScreen, visibleRect, viewCenter, applyView, startEdit,
   duplicateEls, collectForCopy, bringToFront, sendToBack, groupSel, ungroupSel, toggleLock, alignSel, distributeSel, spotForNewFrame,
   arrangeGrid, clusterByColor, frames, makeElement, addElements, nextZ, insertImageFile, setSelection, pasteElements,
   saveSettings, toWorld, scheduleRender, autoHeight, animateView, lastPointer, frameChildren,
   matchSize, packSel, snapSelToGrid, copySize, pasteSize, hasCopiedSize, setGeometry, gridSize,
-  tableRange, formatCells, tableAction, applyRemoteOp, isLocked, toggleModLock, newComment, togglePin, deleteFramesWithContent, holdTool,
+  tableRange, formatCells, tableAction, applyRemoteOp, isLocked, ownNote, toggleModLock, newComment, togglePin, deleteFramesWithContent, holdTool,
   deleteSelection, pasteFromClipboard, canCopyFormat, copyFormat, pasteFormat, hasCopiedFormat, startBrush, stopBrush, tableAggregate,
-  setBusy, clearBusy, stageRect, boardColumns, cardToColumn, discardCreated, freeCenter,
+  setBusy, clearBusy, stageRect, boardColumns, cardToColumn, freeCenter, cardBlockers, closesCycle, setTouchPick,
 } from './core.js';
-import { download, safeName, svgString, pngDataUrl, printFrames } from './exporter.js';
+import { download, safeName, svgString, pngDataUrl, printFrames, pdfFile } from './exporter.js';
 
 /* ================================================================== */
 /* Allgemeine Popover / Menüs                                          */
@@ -34,23 +38,35 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !sidePanel || document.querySelector('.modal-back') || app.editing) return;
   const kind = sidePanel;
   toggleSidePanel(kind);
-  document.querySelector(`[data-panel="${kind}"]`)?.focus();
+  (document.querySelector(`[data-panel="${kind}"]:not(.folded)`) || $('#btn-board-menu'))?.focus();
 });
 
-const iconBtn = (icon, title, onclick, extra = {}) => h('button', { class: 'icon-btn ' + (extra.class || ''), title, 'aria-label': title, onclick, html: ICONS[icon] || icon, ...extra, class: 'icon-btn ' + (extra.class || '') });
+// „Suchen (Strg+F)“ → Name und Kürzel. Nicht jede Klammer ist ein Kürzel („… (Mermaid-Syntax)“)
+const splitKey = (title) => {
+  const m = /^(.*?)\s*\(([^()]{1,24})\)$/.exec(title);
+  return m && /[+−]|^\S{1,6}$/.test(m[2]) ? [m[1], m[2]] : [title, ''];
+};
+const tipAttrs = (title) => {
+  const [tip, key] = splitKey(title);
+  return { 'aria-label': title, 'data-tip': tip, 'data-key': key || null };
+};
+const iconBtn = (icon, title, onclick, extra = {}) => h('button', { ...tipAttrs(title), onclick, html: ICONS[icon] || icon, ...extra, class: 'icon-btn ' + (extra.class || '') });
 
 /* ================================================================== */
 /* Werkzeugleiste links                                                */
 /* ================================================================== */
 
+// Reihenfolge nach Häufigkeit: [Kennung, Name, Kürzel]
 const TOOLS = [
-  ['select', T('Auswählen (V)')], ['hand', T('Verschieben (H / Leertaste)')], '|',
-  ['sticky', T('Sticky Note (N)')], ['text', T('Text (T)')], ['shape', T('Formen (S, R, O)')], ['connector', T('Verbindungslinie (L)')],
-  ['pen', T('Stift (P)')], ['highlighter', T('Textmarker')], ['eraser', T('Radierer (E)')], '|',
-  ['frame', T('Frame (F)')], ['card', T('Karte / Aufgabe (K)')], ['table', T('Tabelle')], ['code', T('Code-Block')], ['mindmap', T('Mindmap (M)')],
-  ['comment', T('Kommentar (C)')], ['emoji', T('Sticker & Emojis')], ['image', T('Bild oder Datei hochladen (Bilder, PDF, Office, Text)')], ['laser', T('Laserpointer (X)')], '|',
-  ['template', T('Vorlagen')], ['diagram', T('Diagramm aus Text (Mermaid-Syntax)')],
+  ['template', T('Vorlagen')], '|',
+  ['select', T('Auswählen'), 'V'], ['hand', T('Ansicht verschieben'), T('H / Leertaste')], '|',
+  ['sticky', T('Notiz'), 'N'], ['text', T('Text'), 'T'], ['shape', T('Form'), 'S, R, O'], ['connector', T('Linie'), 'L'], ['image', T('Bild oder Datei einfügen')], '|',
+  ['pen', T('Stift'), 'P'], ['highlighter', T('Marker')], ['eraser', T('Radierer'), 'E'], '|',
+  ['frame', T('Frame'), 'F'], ['card', T('Karte'), 'K'], ['table', T('Tabelle'), 'B'], ['mindmap', T('Mindmap'), 'M'], ['code', T('Code'), 'D'], ['diagram', T('Diagramm')], ['emoji', T('Sticker')], '|',
+  ['comment', T('Kommentar'), 'C'], ['laser', T('Laser'), 'X'],
 ];
+// Reicht der Platz nicht, wandert zuerst das Seltenste hinter „Mehr“
+const TOOL_FOLD = ['diagram', 'code', 'emoji', 'mindmap', 'table', 'highlighter', 'laser', 'card', 'eraser', 'frame', 'comment', 'connector', 'image', 'pen', 'template'];
 
 const EMOJIS = ['👍', '👎', '❤️', '⭐', '✅', '❌', '❓', '❗', '💡', '🔥', '🎉', '🚀', '😀', '😂', '😍', '🤔', '😢', '😡', '👏', '🙌', '💪', '👀', '🎯', '📌', '⚠️', '🏆', '💰', '📅', '🔒', '🧩', '☕', '🍕'];
 const PEN_COLORS = ['#1a1a1a', '#e03131', '#f08c00', '#2f9e44', '#1971c2', '#7048e8', '#e64980', '#ffffff'];
@@ -93,23 +109,86 @@ function buildTools() {
   nav.innerHTML = '';
   for (const t of TOOLS) {
     if (t === '|') {
-      nav.append(h('div', { class: 'tool-sep' }));
+      if (nav.lastChild && !nav.lastChild.classList.contains('tool-sep')) nav.append(h('div', { class: 'tool-sep' }));
       continue;
     }
-    const [id, rawTitle] = t;
-    const title = id === 'image' && !filesAllowed() ? T('Bild hochladen') : rawTitle;
-    if (app.viewOnly && !['select', 'hand', 'laser'].includes(id) && !(id === 'comment' && app.canComment)) continue;
-    const b = iconBtn(id === 'template' ? 'template' : id, title, () => {
+    const [id, rawTitle, key] = t;
+    const title = id === 'image' && !filesAllowed() ? T('Bild einfügen') : rawTitle;
+    if (app.viewOnly && !['select', 'hand', 'laser'].includes(id) && !(id === 'comment' && app.canComment) && !(id === 'sticky' && app.notesOpen)) continue;
+    const b = iconBtn(id, key ? `${title} (${key})` : title, () => {
       if (id === 'image') return pickFile();
       if (id === 'template') return openTemplates();
       if (id === 'diagram') return app.emit('openDiagramText');
-      if (app.tool === id && hasFlyout(id)) return showFlyout(id, b);
+      if (app.tool === id && hasFlyout(id)) return showFlyout(id, toolAnchor(b));
       setTool(id);
     });
     b.dataset.tool = id;
+    b.dataset.tip = title;
+    if (key) b.dataset.key = key;
     b.addEventListener('dblclick', () => holdTool(id));
     nav.append(b);
+    if (id === 'hand' && !app.viewOnly && matchMedia('(pointer: coarse)').matches) nav.append(touchPickButton());
   }
+  if (nav.lastChild?.classList.contains('tool-sep')) nav.lastChild.remove();
+  nav.append(iconBtn('more', T('Weitere Werkzeuge'), (e) => {
+    const folded = [...nav.querySelectorAll('[data-tool].folded')];
+    menu(e.currentTarget, folded.map((b) => ({ label: b.dataset.tip, icon: b.innerHTML, hint: b.dataset.key, onClick: () => b.click() })), { placement: innerWidth > 760 ? 'right' : 'top' });
+  }, { id: 'tools-more' }));
+  fitTools();
+}
+
+// Nur auf Touch-Geräten: Mit Maus und Tastatur gibt es dafür Umschalt-Klick und den Auswahlrahmen
+function touchPickButton() {
+  const b = iconBtn('touchPick', T('Mehrere auswählen'), () => {
+    setTouchPick(!app.touchPick);
+    if (app.touchPick) toast(T('Tippen wählt Elemente aus und wieder ab, Ziehen auf leerer Fläche zieht einen Rahmen auf.'), 4000);
+  }, { id: 'btn-touch-pick' });
+  b.setAttribute('aria-pressed', String(!!app.touchPick));
+  b.classList.toggle('active', !!app.touchPick);
+  return b;
+}
+
+app.on('touchPick', (on) => {
+  const b = $('#btn-touch-pick');
+  b?.classList.toggle('active', on);
+  b?.setAttribute('aria-pressed', String(on));
+});
+
+const toolAnchor = (b) => (b.classList.contains('folded') ? $('#tools-more') : b);
+
+// Trennlinien nur zwischen sichtbaren Gruppen
+function tidyToolSeps(nav) {
+  let before = false;
+  for (const c of nav.children) {
+    if (!c.classList.contains('tool-sep')) {
+      before = before || !c.classList.contains('folded');
+      continue;
+    }
+    let after = c.nextElementSibling;
+    while (after && (after.classList.contains('folded') || after.classList.contains('tool-sep'))) after = after.nextElementSibling;
+    c.classList.toggle('folded', !before || !after || after.id === 'tools-more');
+    if (!c.classList.contains('folded')) before = false;
+  }
+}
+
+function fitTools() {
+  const nav = $('#tools');
+  const more = $('#tools-more');
+  if (!more) return;
+  nav.querySelectorAll('.folded').forEach((x) => x.classList.remove('folded'));
+  more.classList.add('folded');
+  const wide = getComputedStyle(nav).flexDirection === 'row';
+  const tooBig = () => (wide ? nav.scrollWidth > nav.clientWidth + 1 : nav.scrollHeight > nav.clientHeight + 1);
+  tidyToolSeps(nav);
+  if (tooBig()) {
+    more.classList.remove('folded');
+    for (const id of TOOL_FOLD) {
+      if (!tooBig()) break;
+      nav.querySelector(`[data-tool="${id}"]`)?.classList.add('folded');
+      tidyToolSeps(nav);
+    }
+  }
+  syncToolButtons();
 }
 
 function hasFlyout(id) {
@@ -120,7 +199,7 @@ function swatchGrid(colors, current, onPick, cls = '') {
   return h('div', { class: 'swatches ' + cls }, colors.map((c) => h('button', {
     class: 'swatch' + (c === current ? ' active' : '') + (c === 'transparent' ? ' transparent' : ''),
     style: { background: c === 'transparent' ? '' : c },
-    title: c === 'transparent' ? T('Keine Füllung') : c,
+    title: colorName(c), 'aria-label': colorName(c), 'data-color': c,
     onclick: () => onPick(c),
   })));
 }
@@ -135,7 +214,7 @@ function showFlyout(id, anchor) {
   let content;
   switch (id) {
     case 'sticky':
-      content = h('div', {}, h('div', { class: 'pop-title' }, T('Farbe der Sticky Note')), swatchGrid(STICKY_COLORS, o.stickyColor, (c) => { o.stickyColor = c; done(); }));
+      content = h('div', {}, h('div', { class: 'pop-title' }, T('Farbe der Notiz')), swatchGrid(STICKY_COLORS, o.stickyColor, (c) => { o.stickyColor = c; done(); }));
       break;
     case 'shape':
       content = h('div', { class: 'shape-pop' }, [[T('Zuletzt verwendet'), (o.recentShapes || []).filter((k) => SHAPES.some((x) => x[0] === k))], ...SHAPE_GROUPS].filter(([, keys]) => keys.length).flatMap(([group, keys]) => [
@@ -158,7 +237,7 @@ function showFlyout(id, anchor) {
     case 'pen':
     case 'highlighter': {
       const hl = id === 'highlighter';
-      content = h('div', {}, h('div', { class: 'pop-title' }, hl ? T('Textmarker') : T('Stift')),
+      content = h('div', {}, h('div', { class: 'pop-title' }, hl ? T('Marker') : T('Stift')),
         swatchGrid(hl ? HL_COLORS : PEN_COLORS, hl ? o.hlColor : o.penColor, (c) => { if (hl) o.hlColor = c; else o.penColor = c; done(); }),
         hl ? null : h('div', { class: 'row', style: { marginTop: '8px' } }, [2, 3, 5, 8, 12].map((wd) => h('button', {
           class: 'width-btn' + (o.penWidth === wd ? ' active' : ''), title: wd + T(' px'),
@@ -182,12 +261,13 @@ function syncToolButtons() {
     if (id === 'sticky') b.style.setProperty('--tool-accent', app.toolOpts.stickyColor);
     if (id === 'pen') b.style.setProperty('--tool-accent', app.toolOpts.penColor);
   }
+  $('#tools-more')?.classList.toggle('active', !!document.querySelector('#tools [data-tool].folded.active'));
 }
 
 app.on('tool', (t) => {
   syncToolButtons();
   const b = document.querySelector(`#tools [data-tool="${t}"]`);
-  if (b && hasFlyout(t) && !app.viewOnly) showFlyout(t, b);
+  if (b && hasFlyout(t) && !app.viewOnly) showFlyout(t, toolAnchor(b));
   else closePop();
 });
 
@@ -198,6 +278,8 @@ app.on('tool', (t) => {
 const ctxbar = $('#ctxbar');
 let lastBrushClick = 0;
 let ctxHidden = false;
+// Geöffnete Zusatzzeile der Kontextleiste (Farbe oder Text) und die Elementart, für die sie gilt
+let ctxSub = null, ctxSubFor = null;
 
 function applySel(patch, filter) {
   act(() => {
@@ -209,8 +291,20 @@ function applySel(patch, filter) {
       if (p) setEl(autoHeight({ ...el, ...p }));
     }
   });
+  if (app.editing) layoutEditor();
   buildCtx();
 }
+
+// Beim Tippen bleibt der Fokus im Editor, die Einfügestelle also, wo sie ist. Eingabefelder (eigene Farbe) brauchen ihn selbst.
+document.addEventListener('mousedown', (e) => {
+  if (app.editing && e.target.closest?.('#ctxbar, .popover') && !e.target.closest('input, select, textarea')) e.preventDefault();
+}, true);
+
+// Was nicht den Text betrifft, beendet zuerst die Eingabe
+const leavingEdit = (fn) => (...args) => {
+  finishEdit();
+  return fn(...args);
+};
 
 function colorBtn(color, title, palette, onPick, { ring = false } = {}) {
   const b = h('button', { class: 'ctx-btn color-btn', title });
@@ -247,12 +341,264 @@ const sep = () => h('span', { class: 'ctx-sep' });
 const FONT_SIZES = [[10, '10'], [12, '12'], [14, '14'], [16, '16'], [18, '18'], [20, '20'], [24, '24'], [28, '28'], [32, '32'], [40, '40'], [48, '48'], [64, '64'], [80, '80'], [96, '96'], [128, '128']];
 const STROKE_W = [[0, T('Ohne')], [1, T('1 px')], [2, T('2 px')], [3, T('3 px')], [4, T('4 px')], [6, T('6 px')], [8, T('8 px')], [12, T('12 px')]];
 
+// Stets sichtbare Einstellungen je Elementart: Farbe und Text; bei mehreren Reglern öffnen sie eine Zusatzzeile
+function styleControls(sel) {
+  const types = new Set(sel.map((e) => e.type));
+  const one = sel.length === 1 ? sel[0] : null;
+  const only = types.size === 1 ? [...types][0] : null;
+  const f = sel[0];
+  const color = [], text = [], lead = [];
+  const dashes = [[false, T('──── Durchgezogen')], [true, T('- - - Gestrichelt')], ['dotted', T('····· Gepunktet')]];
+  if (only === 'sticky') {
+    color.push(colorBtn(f.fill, T('Farbe'), STICKY_COLORS, (c) => applySel({ fill: c })));
+    text.push(colorBtn(f.textColor || contrastText(f.fill), T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
+    text.push(selectBtn(f.fontSize ?? 'auto', [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
+    text.push(...textStyleBtns(f), alignBtn(f.align || 'center'), valignBtn(f.valign || 'middle'));
+  } else if (only === 'shape') {
+    color.push(colorBtn(f.fill, T('Füllfarbe'), PALETTE, (c) => applySel({ fill: c })));
+    color.push(colorBtn(f.stroke === 'none' ? 'transparent' : f.stroke, T('Rahmenfarbe'), PALETTE, (c) => applySel({ stroke: c === 'transparent' ? 'none' : c, strokeWidth: c === 'transparent' ? 0 : f.strokeWidth || 2 }), { ring: true }));
+    color.push(selectBtn(f.strokeWidth ?? 2, STROKE_W, T('Rahmenstärke'), (v) => applySel({ strokeWidth: v, stroke: v && f.stroke === 'none' ? '#1a1a1a' : f.stroke }), 60));
+    color.push(selectBtn(f.dash || false, dashes, T('Linienstil'), (v) => applySel({ dash: v }), 46));
+    text.push(colorBtn(f.textColor || '#1a1a1a', T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
+    text.push(selectBtn(f.fontSize ?? 18, [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
+    text.push(...textStyleBtns(f), alignBtn(f.align || 'center'), valignBtn(f.valign || 'middle'));
+  } else if (only === 'text') {
+    color.push(colorBtn(f.fill || 'transparent', T('Hintergrund'), PALETTE, (c) => applySel({ fill: c })));
+    text.push(selectBtn(f.fontSize ?? 24, FONT_SIZES, T('Schriftgröße'), (v) => applySel({ fontSize: v })));
+    text.push(colorBtn(f.color || '#1a1a1a', T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ color: c })));
+    text.push(...textStyleBtns(f), alignBtn(f.align || 'left'));
+  } else if (only === 'connector') {
+    color.push(colorBtn(f.stroke, T('Linienfarbe'), PALETTE.slice(1), (c) => applySel({ stroke: c })));
+    color.push(selectBtn(f.strokeWidth || 2, STROKE_W.slice(1), T('Linienstärke'), (v) => applySel({ strokeWidth: v }), 60));
+    color.push(selectBtn(f.dash || false, dashes, T('Linienstil'), (v) => applySel({ dash: v }), 46));
+    if (one) text.push(actBtn('text', T('Beschriftung (Doppelklick auf die Linie)'), () => startEdit(one.id)));
+  } else if (only === 'pen') {
+    color.push(colorBtn(f.stroke, T('Farbe'), PALETTE.slice(1), (c) => applySel({ stroke: c })));
+    color.push(selectBtn(f.strokeWidth, [[1, T('1 px')], [2, T('2 px')], [3, T('3 px')], [5, T('5 px')], [8, T('8 px')], [12, T('12 px')], [20, T('20 px')], [32, T('32 px')]], T('Stärke'), (v) => applySel({ strokeWidth: v }), 60));
+  } else if (only === 'frame') {
+    color.push(colorBtn(f.fill || '#ffffff', T('Hintergrund'), PALETTE, (c) => applySel({ fill: c })));
+    if (one) text.push(actBtn('text', T('Umbenennen'), () => startEdit(one.id)));
+  } else if (only === 'card') {
+    color.push(colorBtn(f.color || '#4262ff', T('Farbe'), PALETTE.slice(2), (c) => applySel({ color: c })));
+    if (one) text.push(actBtn('text', T('Karte bearbeiten'), () => app.emit('editCard', one.id)));
+  } else if (only === 'code') {
+    text.push(selectBtn(f.lang || 'plain', LANGUAGES, T('Sprache'), (v) => applySel({ lang: v }), 120));
+    text.push(toggleBtn('moon', f.theme !== 'light', T('Dunkles Farbschema'), () => applySel({ theme: f.theme === 'light' ? 'dark' : 'light' })));
+    text.push(selectBtn(f.fontSize || 14, FONT_SIZES.slice(1, 8), T('Schriftgröße'), (v) => applySel({ fontSize: v })));
+    text.push(toggleBtn('<b style="font-size:11px">1 2</b>', f.lineNumbers !== false, T('Zeilennummern'), () => applySel({ lineNumbers: f.lineNumbers === false })));
+    if (one) text.push(actBtn('edit', T('Code bearbeiten (Enter)'), () => startEdit(one.id, { selectAll: false })));
+  } else if (only === 'table' && one) {
+    // Formatierung gilt für die ausgewählten Zellen – ohne Zellauswahl für die ganze Tabelle
+    const rg = tableRange();
+    const st = cellStyle(one, rg.r0, rg.c0);
+    const colName = (c) => { let n = ''; c += 1; while (c > 0) { const m = (c - 1) % 26; n = String.fromCharCode(65 + m) + n; c = Math.floor((c - 1) / 26); } return n; };
+    const where = rg.whole ? T('Ganze Tabelle') : rg.r0 === rg.r1 && rg.c0 === rg.c1 ? T`Zelle ${colName(rg.c0)}${rg.r0 + 1}` : `${colName(rg.c0)}${rg.r0 + 1}:${colName(rg.c1)}${rg.r1 + 1}`;
+    color.push(colorBtn(st.bg || 'transparent', T('Zellenfarbe'), PALETTE, (c) => formatCells({ bg: c === 'transparent' ? undefined : c })));
+    text.push(h('span', { class: 'ctx-label', title: T('Klick in die ausgewählte Tabelle wählt eine Zelle, Umschalt-Klick oder Umschalt+Pfeil einen Bereich') }, where));
+    text.push(toggleBtn('bold', st.bold, T('Fett'), () => formatCells({ b: !st.bold })));
+    text.push(toggleBtn('italic', st.italic, T('Kursiv'), () => formatCells({ i: !st.italic })));
+    text.push(toggleBtn('underline', st.underline, T('Unterstrichen'), () => formatCells({ u: !st.underline })));
+    text.push(toggleBtn('strike', st.strike, T('Durchgestrichen'), () => formatCells({ s: !st.strike })));
+    text.push(selectBtn(st.align, [['left', T('⯇ Links')], ['center', T('≡ Mitte')], ['right', T('⯈ Rechts')]], T('Ausrichtung waagerecht'), (v) => formatCells({ al: v }), 74));
+    text.push(selectBtn(st.valign, [['top', T('⯅ Oben')], ['middle', T('≡ Mitte')], ['bottom', T('⯆ Unten')]], T('Ausrichtung senkrecht'), (v) => formatCells({ va: v }), 74));
+    text.push(selectBtn(st.size, FONT_SIZES.slice(0, 10), T('Schriftgröße'), (v) => formatCells({ fs: v })));
+    text.push(colorBtn(st.color, T('Textfarbe'), PALETTE.slice(1), (c) => formatCells({ c })));
+  } else if (only === 'emoji') {
+    lead.push(actBtn('<span style="font-size:18px">' + esc(f.char) + '</span>', T('Sticker ändern'), (e) => {
+      const b = e.currentTarget;
+      popover(b, h('div', { class: 'emoji-grid' }, EMOJIS.map((em) => h('button', { class: 'emoji-btn', onclick: () => { applySel({ char: em }); closePop(); } }, em))), { placement: 'top' });
+    }));
+  }
+  return { color, text, lead };
+}
+
+// Auswahl als Untermenü: Häkchen am aktuellen Wert
+const pickItem = (label, icon, value, options, onPick) => ({ label, icon, items: () => options.map(([v, l]) => ({ label: l, checked: v === value, onClick: () => onPick(v) })) });
+
+function formatItems(sel, one, only) {
+  const f = sel[0];
+  const out = [];
+  if (only === 'shape') out.push(pickItem(T('Form ändern'), 'shape', f.shape, SHAPES, (v) => applySel({ shape: v })));
+  if (only === 'connector') {
+    out.push(pickItem(T('Linienführung'), 'connector', f.routing || 'curve', [['curve', T('⤴ Kurve')], ['elbow', T('⌐ Gewinkelt')], ['straight', T('／ Gerade')]], (v) => applySel({ routing: v })));
+    out.push(pickItem(T('Linienende am Anfang'), 'arrowStart', headType(f.arrowStart, 'none'), ARROW_HEADS, (v) => applySel({ arrowStart: v })));
+    out.push(pickItem(T('Linienende am Ende'), 'arrowEnd', headType(f.arrowEnd, 'arrow'), ARROW_HEADS, (v) => applySel({ arrowEnd: v })));
+  }
+  if (only === 'frame' && one) {
+    out.push(pickItem(T('Format'), 'frame', '', [['16:9', T('Präsentation 16:9')], ['4:3', T('Präsentation 4:3')], ['a4', T('A4 Hochformat')], ['a4l', T('A4 Querformat')], ['1:1', T('Quadrat')], ['phone', T('Smartphone')]], (v) => {
+      const sizes = { '16:9': [1280, 720], '4:3': [1024, 768], a4: [794, 1123], a4l: [1123, 794], '1:1': [1000, 1000], phone: [390, 844] };
+      const [w, hh] = sizes[v];
+      applySel({ w, h: hh });
+    }));
+  }
+  if (only === 'card') out.push(pickItem(T('Priorität'), 'chevUp', f.priority || '', [['', T('Ohne Priorität')], ...Object.entries(PRIORITIES).map(([k, p]) => [k, p.label])], (v) => applySel({ priority: v || undefined })));
+  return out;
+}
+
+function tableItems(one, anchor) {
+  const rg = tableRange();
+  return [
+    { label: T('Berechnen'), icon: 'sigma', items: () => [
+      [T('SUMME'), T('Summe')], [T('MITTELWERT'), T('Mittelwert')], [T('ANZAHL'), T('Anzahl')], ['MIN', T('Kleinster Wert')], ['MAX', T('Größter Wert')],
+    ].map(([name, label]) => ({ label, onClick: () => tableAggregate(name) })).concat(['-', { label: T('Formeln: Zelle mit = beginnen, z. B. =B2*C2'), disabled: true }]) },
+    { label: T('Zeilen & Spalten'), icon: 'table', items: () => [
+      { header: rg.whole ? T('Am Ende der Tabelle') : T('An der Auswahl') },
+      rg.whole ? null : { label: T('Zeile oberhalb einfügen'), icon: 'plus', onClick: () => tableAction('rowAbove') },
+      { label: rg.whole ? T('Zeile anhängen') : T('Zeile unterhalb einfügen'), icon: 'plus', onClick: () => tableAction('rowBelow') },
+      rg.whole ? null : { label: T('Spalte links einfügen'), icon: 'plus', onClick: () => tableAction('colLeft') },
+      { label: rg.whole ? T('Spalte anhängen') : T('Spalte rechts einfügen'), icon: 'plus', onClick: () => tableAction('colRight') },
+      '-',
+      rg.whole ? null : { label: rg.r0 === rg.r1 ? T('Zeile löschen') : T`${rg.r1 - rg.r0 + 1} Zeilen löschen`, icon: 'trash', danger: true, onClick: () => tableAction('deleteRows') },
+      rg.whole ? null : { label: rg.c0 === rg.c1 ? T('Spalte löschen') : T`${rg.c1 - rg.c0 + 1} Spalten löschen`, icon: 'trash', danger: true, onClick: () => tableAction('deleteCols') },
+      { label: T('Inhalt leeren'), icon: 'close', onClick: () => tableAction('clear') },
+      { label: T('Formatierung entfernen'), icon: 'undo', onClick: () => tableAction('clearFormat') },
+      '-',
+      { label: T('Spaltenbreiten angleichen'), icon: 'distH', onClick: () => tableAction('equalCols') },
+      { label: T('Zeilenhöhen angleichen'), icon: 'distV', onClick: () => tableAction('equalRows') },
+      { label: one.header !== false ? T('Kopfzeile ausschalten') : T('Kopfzeile einschalten'), icon: 'table', onClick: () => applySel({ header: one.header === false }) },
+      { label: T('Farbe der Kopfzeile …'), icon: 'table', onClick: () => colorBtnMenu(anchor, one.headerFill || '#eef1ff', T('Kopfzeile'), (c) => applySel({ headerFill: c === 'transparent' ? '#ffffff' : c })) },
+      { label: T('Farbe der Linien …'), icon: 'table', onClick: () => colorBtnMenu(anchor, one.stroke || '#b9b9b9', T('Linien'), (c) => applySel({ stroke: c === 'transparent' ? '#ffffff' : c })) },
+    ] },
+  ];
+}
+
+function connectorItem(one) {
+  return { label: T('Verlauf & Andocken'), icon: 'more', items: () => [
+    { header: T('Verlauf') },
+    { label: T('Knickpunkte entfernen (Pfad zurücksetzen)'), icon: 'undo', disabled: !waypointsOf(one).length, onClick: () => applySel({ waypoints: [] }) },
+    { label: T('Beschriftung in die Mitte'), icon: 'text', disabled: one.labelPos == null || one.labelPos === 0.5, onClick: () => applySel({ labelPos: 0.5 }) },
+    { label: T('Richtung umkehren'), icon: 'arrowEnd', onClick: () => applySel((c) => ({ from: c.to, to: c.from, arrowStart: headType(c.arrowEnd, 'arrow'), arrowEnd: headType(c.arrowStart, 'none'), waypoints: waypointsOf(c).reverse(), labelPos: c.labelPos == null ? undefined : 1 - Number(c.labelPos) })) },
+    '-',
+    { header: T('Andocken') },
+    { label: T('Beide Enden automatisch andocken'), icon: 'fit', disabled: !(one.from.id || one.to.id), onClick: () => applySel((c) => ({ from: c.from.id ? { id: c.from.id } : c.from, to: c.to.id ? { id: c.to.id } : c.to })) },
+  ] };
+}
+
+function alignItem() {
+  return { label: T('Ausrichten & Verteilen'), icon: 'alignLeft', items: () => [
+    { label: T('Links ausrichten'), icon: 'alignLeft', onClick: () => alignSel('left') },
+    { label: T('Horizontal zentrieren'), icon: 'alignCenterH', onClick: () => alignSel('centerH') },
+    { label: T('Rechts ausrichten'), icon: 'alignRight', onClick: () => alignSel('right') },
+    { label: T('Oben ausrichten'), icon: 'alignTop', onClick: () => alignSel('top') },
+    { label: T('Vertikal zentrieren'), icon: 'alignMiddle', onClick: () => alignSel('middle') },
+    { label: T('Unten ausrichten'), icon: 'alignBottom', onClick: () => alignSel('bottom') },
+    '-',
+    { label: T('Horizontal verteilen (gleiche Abstände)'), icon: 'distH', onClick: () => distributeSel('h') },
+    { label: T('Vertikal verteilen (gleiche Abstände)'), icon: 'distV', onClick: () => distributeSel('v') },
+    { label: T('Lückenlos nebeneinander'), icon: 'distH', onClick: () => packSel('h', 0) },
+    { label: T('Lückenlos untereinander'), icon: 'distV', onClick: () => packSel('v', 0) },
+    { label: T('Mit festem Abstand anordnen …'), icon: 'distH', onClick: () => packWithGap() },
+    { label: T('Als Raster anordnen'), icon: 'grid', onClick: () => arrangeGrid() },
+    '-',
+    { header: T('Größe angleichen (an das zuerst ausgewählte Element)') },
+    { label: T('Gleiche Breite'), icon: 'alignCenterH', onClick: () => matchSize('w') },
+    { label: T('Gleiche Höhe'), icon: 'alignMiddle', onClick: () => matchSize('h') },
+    { label: T('Gleiche Größe'), icon: 'fit', onClick: () => matchSize('both') },
+    { label: T`Position & Größe am Raster (${gridSize()} px) ausrichten`, icon: 'grid', onClick: () => snapSelToGrid() },
+  ] };
+}
+
+// Erweiterungen anderer Module: { label, icon, group, primary, onClick(anker) }
+function selectionExtras(sel) {
+  const types = new Set(sel.map((e) => e.type));
+  const list = [];
+  app.emit('ctxItems', list, sel, { locked: sel.every((e) => isLocked(e)), one: sel.length === 1 ? sel[0] : null, only: types.size === 1 ? [...types][0] : null });
+  return list;
+}
+
+const cutSelection = () => document.execCommand('cut');
+const copySelection = () => document.execCommand('copy');
+
+// Gemeinsamer Aufbau von „Mehr“ in der Kontextleiste, Rechtsklickmenü und Befehlssuche.
+// bar: Was in der Leiste schon sichtbar ist, steht nicht noch einmal im Menü. at: Stelle des Rechtsklicks.
+function selectionMenu(anchor, { bar = false, at = null } = {}) {
+  const sel = selectedEls();
+  const types = new Set(sel.map((e) => e.type));
+  const one = sel.length === 1 ? sel[0] : null;
+  const only = types.size === 1 ? [...types][0] : null;
+  const locked = sel.every((e) => isLocked(e));
+  const free = !locked;
+  const extras = selectionExtras(sel).map((it) => ({ ...it, onClick: () => it.onClick(anchor) }));
+  const group = (name) => extras.filter((it) => (it.group || 'actions') === name);
+  const typed = [];
+  if (free && only === 'frame' && one) typed.push({ label: T('Ab hier präsentieren'), icon: 'present', onClick: () => app.emit('present', one.id) });
+  if (free && only === 'card') typed.push({ label: one ? T('Schätzrunde starten') : T`Schätzrunde für ${sel.length} Karten starten`, icon: 'poker', onClick: () => app.emit('startEstimation', sel.map((e) => e.id)) });
+  if (free && only === 'code' && one) typed.push({ label: T('Code kopieren'), icon: 'copy', onClick: () => navigator.clipboard.writeText(one.text || '').then(() => toast(T('Code kopiert')), () => toast(T('Kopieren nicht möglich'))) });
+  if (free && only === 'table' && one) typed.push(...tableItems(one, anchor));
+  if (free && only === 'connector' && one) typed.push(connectorItem(one));
+  if (free && only === 'image' && one) typed.push({ label: T('Bild herunterladen'), icon: 'download', onClick: () => download(one.name || T('bild') + '.png', one.src) });
+  const grouped = sel.some((e) => e.groupId);
+  const fmt = sel.some(canCopyFormat);
+  const sizeable = free && sel.some((e) => e.type !== 'connector' && e.type !== 'comment');
+  const canPaste = !!navigator.clipboard?.readText;
+  const allLocked = sel.every((x) => x.locked);
+  const modLocked = sel.every((e) => e.modLock);
+  return tidyMenu([
+    { header: T('Bearbeiten') },
+    !bar && one && ((one.type === 'card' && !isLocked(one)) || canEdit(one)) ? { label: T('Text bearbeiten'), icon: 'edit', hint: T('Enter'), onClick: () => startEdit(one.id, { selectAll: false }) } : null,
+    { label: T('Kopieren'), icon: 'copy', hint: T('Strg+C'), onClick: copySelection },
+    free ? { label: T('Ausschneiden'), icon: 'cut', hint: T('Strg+X'), onClick: cutSelection } : null,
+    at && canPaste ? { label: T('Einfügen'), icon: 'paste', hint: T('Strg+V'), onClick: () => pasteFromClipboard(at) } : null,
+    free ? { label: T('Duplizieren'), icon: 'copy', hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) } : null,
+    at ? { label: uploadLabel(), icon: 'image', onClick: () => pickFile(at) } : null,
+    { header: T('Aktionen') },
+    ...typed,
+    ...group('actions'),
+    { header: T('Anordnen') },
+    free ? { label: T('In den Vordergrund'), icon: 'front', hint: T('Strg+]'), onClick: bringToFront } : null,
+    free ? { label: T('In den Hintergrund'), icon: 'back', hint: T('Strg+['), onClick: sendToBack } : null,
+    free && sel.length > 1 && !grouped ? { label: T('Gruppieren'), icon: 'group', hint: T('Strg+G'), onClick: groupSel } : null,
+    free && grouped ? { label: T('Gruppierung aufheben'), icon: 'group', hint: T('Strg+Umschalt+G'), onClick: ungroupSel } : null,
+    free && sel.length > 1 ? alignItem() : null,
+    free && types.has('sticky') && sel.length > 1 ? { label: T('Nach Farbe clustern'), icon: 'cluster', onClick: clusterByColor } : null,
+    ...group('arrange'),
+    { label: T('Auswahl einpassen'), icon: 'fit', hint: T('Umschalt+2'), onClick: () => fitTo(selectionBounds(), { maxZ: 2 }) },
+    { header: T('Format') },
+    ...(free ? formatItems(sel, one, only) : []),
+    fmt ? { label: T('Format übertragen'), icon: 'brush', onClick: () => startBrush(false) } : null,
+    fmt ? { label: T('Format mehrfach übertragen'), icon: 'brush', onClick: () => startBrush(true) } : null,
+    fmt ? { label: T('Format kopieren'), icon: 'brush', hint: T('Strg+Alt+C'), onClick: () => copyFormat() && toast(T('Format kopiert')) } : null,
+    hasCopiedFormat() ? { label: T('Format einfügen'), icon: 'brush', hint: T('Strg+Alt+V'), onClick: pasteFormat } : null,
+    ...group('format'),
+    { header: T('Größe') },
+    sizeable ? { label: T('Position und Größe …'), icon: 'fit', onClick: () => openGeometry(anchor) } : null,
+    free ? { label: T('Größe kopieren'), icon: 'copy', onClick: copySize } : null,
+    free && hasCopiedSize() ? { label: T('Größe übernehmen'), icon: 'fit', items: () => [
+      { label: T('Breite und Höhe'), icon: 'fit', onClick: () => pasteSize('both') },
+      { label: T('Nur Breite'), icon: 'alignCenterH', onClick: () => pasteSize('w') },
+      { label: T('Nur Höhe'), icon: 'alignMiddle', onClick: () => pasteSize('h') },
+    ] } : null,
+    { header: T('Sperren') },
+    !bar ? { label: allLocked ? T('Entsperren') : T('Sperren'), icon: allLocked ? 'unlock' : 'lock', hint: T('Strg+L'), onClick: toggleLock } : null,
+    { label: sel.every((x) => x.locked === 'text') ? T('Fixierung lösen') : T('Position fixieren (Text bleibt bearbeitbar)'), icon: 'lock', onClick: togglePin },
+    app.isFacilitator && sel.some((e) => e.type !== 'comment') ? { label: modLocked ? T('Für Teilnehmende freigeben') : T('Für Teilnehmende sperren'), icon: 'shield', onClick: toggleModLock } : null,
+    { header: T('Zusammenarbeit') },
+    !bar && at ? { label: T('Kommentar hinzufügen'), icon: 'comment', onClick: () => newComment(at) } : null,
+    ...group('collab'),
+    one ? { label: T('Link zu diesem Element kopieren'), icon: 'link', onClick: copyElementLink } : null,
+    { header: T('Exportieren') },
+    { label: T('Als PNG exportieren'), icon: 'download', onClick: () => exportPng(true) },
+    app.guest ? null : { label: T('Als Vorlage speichern …'), icon: 'template', onClick: () => app.emit('saveTemplate', true) },
+    '-',
+    free ? { label: T('Löschen'), icon: 'trash', hint: T('Entf'), danger: true, onClick: deleteSelection } : null,
+    sel.some((x) => x.type === 'frame') ? { label: T('Frame samt Inhalt löschen'), icon: 'trash', danger: true, onClick: deleteFramesWithContent } : null,
+  ]);
+}
+
+// Für die Befehlssuche: Auch was nur in „Mehr“ steht, muss sich finden lassen
+export function selectionCommands() {
+  if (app.viewOnly || !app.sel.size) return [];
+  return selectionMenu(ctxbar.querySelector('[data-more]') || ctxbar);
+}
+
 export function buildCtx() {
   // Nach dem Neuaufbau bleibt der Tastaturfokus auf demselben Knopf
   const focused = ctxbar.contains(document.activeElement) ? document.activeElement.title : null;
   ctxbar.innerHTML = '';
   const sel = selectedEls();
-  if (!sel.length || app.viewOnly || app.tool !== 'select') {
+  // Beiträge: nur Farbe, Text und Löschen der eigenen Notizen
+  const notes = app.viewOnly && sel.length > 0 && sel.every(ownNote);
+  if (!sel.length || (app.viewOnly && !notes) || app.tool !== 'select') {
     ctxbar.classList.add('hidden');
     return;
   }
@@ -260,156 +606,26 @@ export function buildCtx() {
   const one = sel.length === 1 ? sel[0] : null;
   const only = types.size === 1 ? [...types][0] : null;
   const locked = sel.every((e) => isLocked(e));
-  const items = [];
-  const f = sel[0];
-
-  if (!locked) {
-    if (only === 'sticky') {
-      items.push(colorBtn(f.fill, T('Farbe'), STICKY_COLORS, (c) => applySel({ fill: c })));
-      items.push(colorBtn(f.textColor || contrastText(f.fill), T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
-      items.push(selectBtn(f.fontSize ?? 'auto', [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
-      items.push(...textStyleBtns(f));
-      items.push(alignBtn(f.align || 'center'));
-      items.push(valignBtn(f.valign || 'middle'));
-    } else if (only === 'shape') {
-      items.push(selectBtn(f.shape, SHAPES, T('Form'), (v) => applySel({ shape: v }), 110));
-      items.push(colorBtn(f.fill, T('Füllfarbe'), PALETTE, (c) => applySel({ fill: c })));
-      items.push(colorBtn(f.stroke === 'none' ? 'transparent' : f.stroke, T('Rahmenfarbe'), PALETTE, (c) => applySel({ stroke: c === 'transparent' ? 'none' : c, strokeWidth: c === 'transparent' ? 0 : f.strokeWidth || 2 }), { ring: true }));
-      items.push(selectBtn(f.strokeWidth ?? 2, STROKE_W, T('Rahmenstärke'), (v) => applySel({ strokeWidth: v, stroke: v && f.stroke === 'none' ? '#1a1a1a' : f.stroke }), 60));
-      items.push(selectBtn(f.dash || false, [[false, T('──── Durchgezogen')], [true, T('- - - Gestrichelt')], ['dotted', T('····· Gepunktet')]], T('Linienstil'), (v) => applySel({ dash: v }), 46));
-      items.push(sep());
-      items.push(colorBtn(f.textColor || '#1a1a1a', T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
-      items.push(selectBtn(f.fontSize ?? 18, [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
-      items.push(...textStyleBtns(f));
-      items.push(alignBtn(f.align || 'center'));
-      items.push(valignBtn(f.valign || 'middle'));
-    } else if (only === 'text') {
-      items.push(selectBtn(f.fontSize ?? 24, FONT_SIZES, T('Schriftgröße'), (v) => applySel({ fontSize: v })));
-      items.push(colorBtn(f.color || '#1a1a1a', T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ color: c })));
-      items.push(...textStyleBtns(f));
-      items.push(alignBtn(f.align || 'left'));
-      items.push(colorBtn(f.fill || 'transparent', T('Hintergrund'), PALETTE, (c) => applySel({ fill: c })));
-    } else if (only === 'connector') {
-      items.push(colorBtn(f.stroke, T('Linienfarbe'), PALETTE.slice(1), (c) => applySel({ stroke: c })));
-      items.push(selectBtn(f.strokeWidth || 2, STROKE_W.slice(1), T('Linienstärke'), (v) => applySel({ strokeWidth: v }), 60));
-      items.push(selectBtn(f.dash || false, [[false, T('──── Durchgezogen')], [true, T('- - - Gestrichelt')], ['dotted', T('····· Gepunktet')]], T('Linienstil'), (v) => applySel({ dash: v }), 46));
-      items.push(selectBtn(f.routing || 'curve', [['curve', T('⤴ Kurve')], ['elbow', T('⌐ Gewinkelt')], ['straight', T('／ Gerade')]], T('Linienführung'), (v) => applySel({ routing: v }), 100));
-      items.push(selectBtn(headType(f.arrowStart, 'none'), ARROW_HEADS, T('Linienende am Anfang'), (v) => applySel({ arrowStart: v }), 70));
-      items.push(selectBtn(headType(f.arrowEnd, 'arrow'), ARROW_HEADS, T('Linienende am Ende'), (v) => applySel({ arrowEnd: v }), 70));
-      if (one) items.push(actBtn('text', T('Beschriftung (Doppelklick auf die Linie)'), () => startEdit(one.id)));
-      if (one) {
-        const routeBtn = actBtn('more', T('Verlauf & Andocken'), () => menu(routeBtn, [
-          { header: T('Verlauf') },
-          { label: T('Knickpunkte entfernen (Pfad zurücksetzen)'), icon: 'undo', disabled: !waypointsOf(one).length, onClick: () => applySel({ waypoints: [] }) },
-          { label: T('Beschriftung in die Mitte'), icon: 'text', disabled: one.labelPos == null || one.labelPos === 0.5, onClick: () => applySel({ labelPos: 0.5 }) },
-          { label: T('Richtung umkehren'), icon: 'arrowEnd', onClick: () => applySel((c) => ({ from: c.to, to: c.from, arrowStart: headType(c.arrowEnd, 'arrow'), arrowEnd: headType(c.arrowStart, 'none'), waypoints: waypointsOf(c).reverse(), labelPos: c.labelPos == null ? undefined : 1 - Number(c.labelPos) })) },
-          '-',
-          { header: T('Andocken') },
-          { label: T('Beide Enden automatisch andocken'), icon: 'fit', disabled: !(one.from.id || one.to.id), onClick: () => applySel((c) => ({ from: c.from.id ? { id: c.from.id } : c.from, to: c.to.id ? { id: c.to.id } : c.to })) },
-        ], { placement: 'top' }));
-        items.push(routeBtn);
-      }
-    } else if (only === 'pen') {
-      items.push(colorBtn(f.stroke, T('Farbe'), PALETTE.slice(1), (c) => applySel({ stroke: c })));
-      items.push(selectBtn(f.strokeWidth, [[1, T('1 px')], [2, T('2 px')], [3, T('3 px')], [5, T('5 px')], [8, T('8 px')], [12, T('12 px')], [20, T('20 px')], [32, T('32 px')]], T('Stärke'), (v) => applySel({ strokeWidth: v }), 60));
-    } else if (only === 'frame') {
-      items.push(colorBtn(f.fill || '#ffffff', T('Hintergrund'), PALETTE, (c) => applySel({ fill: c })));
-      if (one) {
-        items.push(actBtn('edit', T('Umbenennen'), () => startEdit(one.id)));
-        items.push(selectBtn('', [['16:9', T('Präsentation 16:9')], ['4:3', T('Präsentation 4:3')], ['a4', T('A4 Hochformat')], ['a4l', T('A4 Querformat')], ['1:1', T('Quadrat')], ['phone', T('Smartphone')]], T('Format'), (v) => {
-          const sizes = { '16:9': [1280, 720], '4:3': [1024, 768], a4: [794, 1123], a4l: [1123, 794], '1:1': [1000, 1000], phone: [390, 844] };
-          const [w, hh] = sizes[v];
-          applySel({ w, h: hh });
-        }, 80));
-        items.push(actBtn('present', T('Ab hier präsentieren'), () => app.emit('present', one.id)));
-      }
-    } else if (only === 'card') {
-      items.push(colorBtn(f.color || '#4262ff', T('Farbe'), PALETTE.slice(2), (c) => applySel({ color: c })));
-      items.push(selectBtn(f.priority || '', [['', T('Ohne Priorität')], ...Object.entries(PRIORITIES).map(([k, p]) => [k, `${p.icon} ${p.label}`])], T('Priorität'), (v) => applySel({ priority: v || undefined }), 90));
-      if (one) items.push(actBtn('edit', T('Karte bearbeiten'), () => app.emit('editCard', one.id)));
-      if (one) items.push(actBtn('poker', T('Schätzrunde starten'), () => app.emit('startEstimation', one.id)));
-    } else if (only === 'code') {
-      items.push(selectBtn(f.lang || 'plain', LANGUAGES, T('Sprache'), (v) => applySel({ lang: v }), 120));
-      items.push(toggleBtn('moon', f.theme !== 'light', T('Dunkles Farbschema'), () => applySel({ theme: f.theme === 'light' ? 'dark' : 'light' })));
-      items.push(selectBtn(f.fontSize || 14, FONT_SIZES.slice(1, 8), T('Schriftgröße'), (v) => applySel({ fontSize: v })));
-      items.push(toggleBtn('<b style="font-size:11px">1 2</b>', f.lineNumbers !== false, T('Zeilennummern'), () => applySel({ lineNumbers: f.lineNumbers === false })));
-      if (one) items.push(actBtn('edit', T('Code bearbeiten (Enter)'), () => startEdit(one.id, { selectAll: false })));
-      if (one) items.push(actBtn('copy', T('Code kopieren'), () => navigator.clipboard.writeText(one.text || '').then(() => toast(T('Code kopiert')), () => toast(T('Kopieren nicht möglich')))));
-    } else if (only === 'table' && one) {
-      const sum = actBtn('sigma', T('Summe und mehr aus der Zellauswahl'), () => menu(sum, [
-        [T('SUMME'), T('Summe')], [T('MITTELWERT'), T('Mittelwert')], [T('ANZAHL'), T('Anzahl')], ['MIN', T('Kleinster Wert')], ['MAX', T('Größter Wert')],
-      ].map(([name, label]) => ({ label, onClick: () => tableAggregate(name) })).concat(['-', { label: T('Formeln: Zelle mit = beginnen, z. B. =B2*C2'), disabled: true }]), { placement: 'top' }));
-      items.push(sum);
-      // Formatierung gilt für die ausgewählten Zellen – ohne Zellauswahl für die ganze Tabelle
-      const rg = tableRange();
-      const st = cellStyle(one, rg.r0, rg.c0);
-      const colName = (c) => { let n = ''; c += 1; while (c > 0) { const m = (c - 1) % 26; n = String.fromCharCode(65 + m) + n; c = Math.floor((c - 1) / 26); } return n; };
-      const where = rg.whole ? T('Ganze Tabelle') : rg.r0 === rg.r1 && rg.c0 === rg.c1 ? T`Zelle ${colName(rg.c0)}${rg.r0 + 1}` : `${colName(rg.c0)}${rg.r0 + 1}:${colName(rg.c1)}${rg.r1 + 1}`;
-      items.push(h('span', { class: 'ctx-label', title: T('Klick in die ausgewählte Tabelle wählt eine Zelle, Umschalt-Klick oder Umschalt+Pfeil einen Bereich') }, where));
-      items.push(toggleBtn('bold', st.bold, T('Fett'), () => formatCells({ b: !st.bold })));
-      items.push(toggleBtn('italic', st.italic, T('Kursiv'), () => formatCells({ i: !st.italic })));
-      items.push(toggleBtn('underline', st.underline, T('Unterstrichen'), () => formatCells({ u: !st.underline })));
-      items.push(toggleBtn('strike', st.strike, T('Durchgestrichen'), () => formatCells({ s: !st.strike })));
-      items.push(selectBtn(st.align, [['left', T('⯇ Links')], ['center', T('≡ Mitte')], ['right', T('⯈ Rechts')]], T('Ausrichtung waagerecht'), (v) => formatCells({ al: v }), 74));
-      items.push(selectBtn(st.valign, [['top', T('⯅ Oben')], ['middle', T('≡ Mitte')], ['bottom', T('⯆ Unten')]], T('Ausrichtung senkrecht'), (v) => formatCells({ va: v }), 74));
-      items.push(selectBtn(st.size, FONT_SIZES.slice(0, 10), T('Schriftgröße'), (v) => formatCells({ fs: v })));
-      items.push(colorBtn(st.color, T('Textfarbe'), PALETTE.slice(1), (c) => formatCells({ c })));
-      items.push(colorBtn(st.bg || 'transparent', T('Zellenfarbe'), PALETTE, (c) => formatCells({ bg: c === 'transparent' ? undefined : c })));
-      const tb = actBtn('table', T('Zeilen & Spalten'), () => menu(tb, [
-        { header: rg.whole ? T('Am Ende der Tabelle') : T('An der Auswahl') },
-        { label: T('Zeile oberhalb einfügen'), icon: 'plus', disabled: rg.whole, onClick: () => tableAction('rowAbove') },
-        { label: rg.whole ? T('Zeile anhängen') : T('Zeile unterhalb einfügen'), icon: 'plus', onClick: () => tableAction('rowBelow') },
-        { label: T('Spalte links einfügen'), icon: 'plus', disabled: rg.whole, onClick: () => tableAction('colLeft') },
-        { label: rg.whole ? T('Spalte anhängen') : T('Spalte rechts einfügen'), icon: 'plus', onClick: () => tableAction('colRight') },
-        '-',
-        { label: rg.r0 === rg.r1 ? T('Zeile löschen') : T`${rg.r1 - rg.r0 + 1} Zeilen löschen`, icon: 'trash', danger: true, disabled: rg.whole, onClick: () => tableAction('deleteRows') },
-        { label: rg.c0 === rg.c1 ? T('Spalte löschen') : T`${rg.c1 - rg.c0 + 1} Spalten löschen`, icon: 'trash', danger: true, disabled: rg.whole, onClick: () => tableAction('deleteCols') },
-        { label: T('Inhalt leeren'), icon: 'close', onClick: () => tableAction('clear') },
-        { label: T('Formatierung entfernen'), icon: 'undo', onClick: () => tableAction('clearFormat') },
-        '-',
-        { label: T('Spaltenbreiten angleichen'), icon: 'distH', onClick: () => tableAction('equalCols') },
-        { label: T('Zeilenhöhen angleichen'), icon: 'distV', onClick: () => tableAction('equalRows') },
-        { label: one.header !== false ? T('Kopfzeile ausschalten') : T('Kopfzeile einschalten'), icon: 'table', onClick: () => applySel({ header: one.header === false }) },
-        { label: T('Farbe der Kopfzeile …'), icon: 'table', onClick: () => colorBtnMenu(tb, one.headerFill || '#eef1ff', T('Kopfzeile'), (c) => applySel({ headerFill: c === 'transparent' ? '#ffffff' : c })) },
-        { label: T('Farbe der Linien …'), icon: 'table', onClick: () => colorBtnMenu(tb, one.stroke || '#b9b9b9', T('Linien'), (c) => applySel({ stroke: c === 'transparent' ? '#ffffff' : c })) },
-      ], { placement: 'top' }));
-      items.push(tb);
-    } else if (only === 'emoji') {
-      items.push(actBtn('<span style="font-size:18px">' + esc(f.char) + '</span>', T('Sticker ändern'), (e) => {
-        const b = e.currentTarget;
-        popover(b, h('div', { class: 'emoji-grid' }, EMOJIS.map((em) => h('button', { class: 'emoji-btn', onclick: () => { applySel({ char: em }); closePop(); } }, em))), { placement: 'top' });
-      }));
-    } else if (only === 'image' && one) {
-      items.push(actBtn('download', T('Bild herunterladen'), () => download(one.name || T('bild') + '.png', one.src)));
-    }
-    if (types.has('sticky') && sel.length > 1) items.push(actBtn('cluster', T('Nach Farbe clustern'), clusterByColor));
-    if (sel.length > 1) {
-      const ab = actBtn('alignLeft', T('Ausrichten & Verteilen'), () => menu(ab, [
-        { label: T('Links ausrichten'), icon: 'alignLeft', onClick: () => alignSel('left') },
-        { label: T('Horizontal zentrieren'), icon: 'alignCenterH', onClick: () => alignSel('centerH') },
-        { label: T('Rechts ausrichten'), icon: 'alignRight', onClick: () => alignSel('right') },
-        { label: T('Oben ausrichten'), icon: 'alignTop', onClick: () => alignSel('top') },
-        { label: T('Vertikal zentrieren'), icon: 'alignMiddle', onClick: () => alignSel('middle') },
-        { label: T('Unten ausrichten'), icon: 'alignBottom', onClick: () => alignSel('bottom') },
-        '-',
-        { label: T('Horizontal verteilen (gleiche Abstände)'), icon: 'distH', onClick: () => distributeSel('h') },
-        { label: T('Vertikal verteilen (gleiche Abstände)'), icon: 'distV', onClick: () => distributeSel('v') },
-        { label: T('Lückenlos nebeneinander'), icon: 'distH', onClick: () => packSel('h', 0) },
-        { label: T('Lückenlos untereinander'), icon: 'distV', onClick: () => packSel('v', 0) },
-        { label: T('Mit festem Abstand anordnen …'), icon: 'distH', onClick: () => packWithGap() },
-        { label: T('Als Raster anordnen'), icon: 'grid', onClick: () => arrangeGrid() },
-        '-',
-        { header: T('Größe angleichen (an das zuerst ausgewählte Element)') },
-        { label: T('Gleiche Breite'), icon: 'alignCenterH', onClick: () => matchSize('w') },
-        { label: T('Gleiche Höhe'), icon: 'alignMiddle', onClick: () => matchSize('h') },
-        { label: T('Gleiche Größe'), icon: 'fit', onClick: () => matchSize('both') },
-        { label: T`Position & Größe am Raster (${gridSize()} px) ausrichten`, icon: 'grid', onClick: () => snapSelToGrid() },
-      ], { placement: 'top' }));
-      items.push(ab);
-    }
-    if (items.length) items.push(sep());
+  if (ctxSubFor !== only) {
+    ctxSubFor = only;
+    ctxSub = null;
   }
-  if (one && !locked && ['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame', 'code'].includes(one.type)) {
+  const items = [];
+  const groups = locked ? { color: [], text: [], lead: [] } : styleControls(sel);
+  // Ein einzelner Regler steht direkt in der Leiste, mehrere öffnen eine Zusatzzeile
+  const groupBtn = (kind, icon, title, list) => {
+    if (list.length < 2) return items.push(...list);
+    const b = toggleBtn(icon, ctxSub === kind, title, () => {
+      ctxSub = ctxSub === kind ? null : kind;
+      buildCtx();
+    });
+    b.setAttribute('aria-expanded', String(ctxSub === kind));
+    items.push(b);
+  };
+  items.push(...groups.lead);
+  groupBtn('color', 'palette', T('Farbe'), groups.color);
+  groupBtn('text', 'text', T('Text'), groups.text);
+  if (one && !locked && !notes && ['sticky', 'shape', 'text', 'card', 'image', 'emoji', 'frame', 'code'].includes(one.type)) {
     items.push(toggleBtn('link', !!one.link, one.link ? T('Link: ') + one.link : T('Link hinzufügen'), async () => {
       const v = await promptDialog(T('Link'), T('Adresse (leer lassen zum Entfernen)'), one.link || 'https://');
       if (v === null) return;
@@ -418,60 +634,34 @@ export function buildCtx() {
       applySel({ link: href || undefined });
     }));
   }
-  if (!locked && sel.some((e) => e.type !== 'connector' && e.type !== 'comment')) {
-    const gb = actBtn(`<b style="font-size:11px">${T('B×H')}</b>`, T('Position & Größe (exakte Werte)'), () => openGeometry(gb));
-    items.push(gb);
-  }
-  const grouped = sel.some((e) => e.groupId);
-  if (sel.length > 1 && !locked) items.push(actBtn('group', grouped ? T('Gruppierung aufheben (Strg+Umschalt+G)') : T('Gruppieren (Strg+G)'), grouped ? ungroupSel : groupSel));
-  const modLocked = sel.every((e) => e.modLock);
-  if (!(modLocked && !app.isFacilitator)) {
-    const own = sel.every((e) => e.locked);
-    items.push(toggleBtn(own ? 'lock' : 'unlock', own, own ? T('Entsperren (Strg+L)') : T('Sperren (Strg+L)'), toggleLock));
-  }
-  if (app.isFacilitator && sel.some((e) => e.type !== 'comment')) {
-    items.push(toggleBtn('shield', modLocked, modLocked ? T('Für Teilnehmende freigeben') : T('Für Teilnehmende sperren (nur Moderierende können ändern)'), toggleModLock));
-  }
-  // Erweiterungen anderer Module (Retro, Dateien, Schlagwörter, verborgene Bereiche)
-  app.emit('ctxItems', items, sel, { locked, one, only, actBtn, toggleBtn, sep });
-  if (sel.some(canCopyFormat)) {
-    // Doppelklick selbst erkennen: Die Leiste baut sich beim ersten Klick neu auf, ein dblclick träfe einen entfernten Knopf
-    const brush = actBtn('brush', T('Format übertragen (Doppelklick: mehrfach)'), () => {
-      const again = Date.now() - lastBrushClick < 400;
-      lastBrushClick = Date.now();
-      if (again) {
-        stopBrush();
-        startBrush(true);
-      } else if (app.brushing) stopBrush();
-      else startBrush(false);
-    }, app.brushing ? 'active' : '');
-    brush.setAttribute('aria-pressed', String(!!app.brushing));
+  if (items.length) items.push(sep());
+  if (!notes) for (const it of selectionExtras(sel).filter((x) => x.primary)) items.push(actBtn(it.icon, it.label, leavingEdit((e) => it.onClick(e.currentTarget))));
+  // Läuft die Formatübertragung, muss sie sich auch wieder beenden lassen
+  if (app.brushing) {
+    const brush = actBtn('brush', T('Format übertragen beenden (Esc)'), leavingEdit(stopBrush), 'active');
+    brush.setAttribute('aria-pressed', 'true');
     items.push(brush);
   }
   if (!locked) {
-    items.push(actBtn('comment', T('Kommentieren'), () => {
+    items.push(actBtn('comment', T('Kommentieren'), leavingEdit(() => {
       const b = selectionBounds();
       newComment({ x: b.x + b.w, y: b.y }, app.sel.size === 1 ? [...app.sel][0] : null);
-    }));
-    const more = actBtn('more', T('Mehr'), () => menu(more, [
-      { label: T('Duplizieren'), icon: 'copy', hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) },
-      { label: T('In den Vordergrund'), icon: 'front', hint: T('Strg+]'), onClick: bringToFront },
-      { label: T('In den Hintergrund'), icon: 'back', hint: T('Strg+['), onClick: sendToBack },
-      { label: T('Auswahl einpassen'), icon: 'fit', hint: T('Umschalt+2'), onClick: () => fitTo(selectionBounds(), { maxZ: 2 }) },
-      { label: T('Format kopieren'), icon: 'brush', hint: T('Strg+Alt+C'), disabled: !sel.some(canCopyFormat), onClick: () => copyFormat() && toast(T('Format kopiert')) },
-      { label: T('Format einfügen'), icon: 'brush', hint: T('Strg+Alt+V'), disabled: !hasCopiedFormat(), onClick: pasteFormat },
-      { label: T('Größe kopieren'), icon: 'copy', onClick: copySize },
-      { label: T('Größe übernehmen'), icon: 'fit', disabled: !hasCopiedSize(), onClick: () => pasteSize('both') },
-      { label: T('Nur Breite übernehmen'), icon: 'alignCenterH', disabled: !hasCopiedSize(), onClick: () => pasteSize('w') },
-      { label: T('Nur Höhe übernehmen'), icon: 'alignMiddle', disabled: !hasCopiedSize(), onClick: () => pasteSize('h') },
-      { label: T('Als PNG exportieren'), icon: 'download', onClick: () => exportPng(true) },
-      '-',
-      { label: T('Löschen'), icon: 'trash', danger: true, hint: T('Entf'), onClick: deleteSelection },
-    ], { placement: 'top' }));
-    items.push(more);
-    items.push(actBtn('trash', T('Löschen (Entf)'), deleteSelection));
+    })));
   }
-  ctxbar.append(...items);
+  const modLocked = sel.every((e) => e.modLock);
+  if (!(modLocked && !app.isFacilitator) && !notes) {
+    const own = sel.every((e) => e.locked);
+    items.push(toggleBtn(own ? 'lock' : 'unlock', own, own ? T('Entsperren (Strg+L)') : T('Sperren (Strg+L)'), leavingEdit(toggleLock)));
+  }
+  if (!notes) {
+    const more = actBtn('more', T('Mehr'), leavingEdit(() => menu(more, selectionMenu(more, { bar: true }), { placement: 'top' })));
+    more.dataset.more = '1';
+    items.push(more);
+  }
+  if (!locked) items.push(actBtn('trash', T('Löschen (Entf)'), leavingEdit(deleteSelection)));
+  ctxbar.append(h('div', { class: 'ctx-row' }, items));
+  const sub = ctxSub === 'color' ? groups.color : ctxSub === 'text' ? groups.text : [];
+  if (sub.length > 1) ctxbar.append(h('div', { class: 'ctx-row ctx-sub' }, sub));
   ctxbar.classList.remove('hidden');
   if (focused) [...ctxbar.querySelectorAll('button')].find((b) => b.title === focused)?.focus();
   positionCtx();
@@ -507,7 +697,7 @@ function openGeometry(anchor) {
     return true;
   };
   const form = h('form', { class: 'geo-form', onsubmit: (e) => { e.preventDefault(); if (apply()) closePop(); } },
-    h('div', { class: 'pop-title' }, multi ? T`Position & Größe (${sel.length} Elemente)` : T('Position & Größe')),
+    h('div', { class: 'pop-title' }, multi ? T`Position und Größe (${sel.length} Elemente)` : T('Position und Größe')),
     h('div', { class: 'geo-grid' }, h('label', {}, 'X', ix), h('label', {}, 'Y', iy), h('label', {}, T('Breite'), iw), h('label', {}, T('Höhe'), ih)),
     h('label', { class: 'check' }, ratio, T('Seitenverhältnis beibehalten')),
     multi ? h('p', { class: 'muted small' }, T('X/Y verschieben die ganze Auswahl; Breite/Höhe gelten für jedes Element.')) : null,
@@ -560,8 +750,17 @@ function positionCtx() {
   const cw = ctxbar.offsetWidth, ch = ctxbar.offsetHeight;
   let x = sr.left + (p1.x + p2.x) / 2 - cw / 2;
   let y = sr.top + p1.y - ch - 40;
-  if (y < 64) y = sr.top + p2.y + 40;
-  if (y + ch > innerHeight - 8) y = Math.max(64, sr.top + p1.y + 8);
+  if (app.editing) {
+    // Der Editor kann höher sein als das Element. Passt die Leiste nirgends daneben, liegt sie am Rand gegenüber dem Text.
+    const ed = $('#editor').getBoundingClientRect();
+    const top = Math.min(sr.top + p1.y, ed.top), bottom = Math.max(sr.top + p2.y, ed.bottom);
+    y = top - ch - 12;
+    if (y < 64) y = bottom + 12;
+    if (y + ch > innerHeight - 8) y = (ed.top + ed.bottom) / 2 > innerHeight / 2 ? 64 : innerHeight - ch - 8;
+  } else {
+    if (y < 64) y = sr.top + p2.y + 40;
+    if (y + ch > innerHeight - 8) y = Math.max(64, sr.top + p1.y + 8);
+  }
   // nicht über die Werkzeugleiste links legen (auf schmalen Bildschirmen liegt sie unten)
   x = Math.max(innerWidth > 760 ? 72 : 8, Math.min(innerWidth - cw - 8, x));
   // Nie aus dem Fenster laufen; die Leiste scrollt selbst, wenn sie breiter ist
@@ -577,9 +776,9 @@ app.on('dragging', (d) => {
   positionCtx();
 });
 app.on('editing', (on) => {
-  // Beim Bearbeiten einer Tabellenzelle bleibt die Leiste sichtbar (Formatierung der Zelle)
-  ctxHidden = on && !(app.editing && app.editing.cell);
-  if (on && app.editing && app.editing.cell) buildCtx();
+  // Die Leiste bleibt beim Tippen sichtbar: Das Format lässt sich ändern, ohne die Eingabe zu beenden
+  ctxHidden = false;
+  if (on) buildCtx();
   positionCtx();
 });
 app.on('history', () => {
@@ -603,7 +802,7 @@ function statusChoices() {
   });
 }
 
-app.on('editCard', (id, { isNew = false } = {}) => {
+app.on('editCard', (id) => {
   const el = getEl(id);
   if (!el || el.hidden) return;
   let color = el.color || '#4262ff';
@@ -633,10 +832,30 @@ app.on('editCard', (id, { isNew = false } = {}) => {
   const prio = h('select', { 'aria-label': T('Priorität') }, h('option', { value: '' }, T('Ohne')), Object.entries(PRIORITIES).map(([k, p]) => h('option', { value: k, selected: el.priority === k }, `${p.icon} ${p.label}`)));
   const points = h('input', { type: 'text', value: el.points ?? '', placeholder: T('z. B. 5'), maxlength: 5 });
   const tags = h('input', { type: 'text', value: cardTags(el).join(', '), placeholder: T('z. B. Backend, Bug') });
+  // Unsichtbare Einträge (fremde private Karten, gerade Gelöschtes) bleiben erhalten, sie stehen nur nicht in der Liste
+  const blockers = [...(el.blockedBy || [])];
+  const blockerChips = h('div', { class: 'blocker-list' });
+  const blockerPick = h('select', { 'aria-label': T('Karte hinzufügen'), onchange: () => {
+    if (blockerPick.value) blockers.push(blockerPick.value);
+    showBlockers();
+  } });
+  const showBlockers = () => {
+    blockerChips.replaceChildren(...cardBlockers({ blockedBy: blockers }).map((c) => h('span', { class: 'blocker' }, c.title || T('Neue Karte'),
+      h('button', { type: 'button', class: 'icon-btn small', title: T`„${c.title || T('Neue Karte')}“ entfernen`, html: ICONS.close, onclick: () => {
+        blockers.splice(blockers.indexOf(c.id), 1);
+        showBlockers();
+      } }))));
+    // Die Karte selbst und was schon von ihr abhängt scheidet aus: Das ergäbe einen Kreis
+    const free = [...app.els.values()].filter((c) => c.type === 'card' && !c.hidden && c.id !== id && !blockers.includes(c.id) && !closesCycle(el, c));
+    blockerPick.replaceChildren(h('option', { value: '' }, T('Karte hinzufügen …')), ...free.map((c) => h('option', { value: c.id }, c.title || T('Neue Karte'))));
+    blockerPick.value = '';
+    blockerPick.disabled = !free.length;
+  };
+  showBlockers();
   const names = [...new Set([app.user.name, ...[...app.peers.values()].map((p) => p.name), ...[...app.els.values()].filter((e) => e.assignee).map((e) => e.assignee)].filter(Boolean))];
   const sw = swatchGrid(PALETTE.slice(6), color, (c) => {
     color = c;
-    sw.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('active', s.title === c));
+    sw.querySelectorAll('.swatch').forEach((s) => s.classList.toggle('active', s.dataset.color === c));
   });
   // Was im Dialog anders steht als in base
   const changes = (base) => {
@@ -644,8 +863,9 @@ app.on('editCard', (id, { isNew = false } = {}) => {
       title: title.value, description: desc.value, assignee: assignee.value.trim(), assigneeId: assigneeId || undefined, due: due.value, start: start.value || undefined, status: knownStatus(status.value), color,
       key: key.value.trim() || undefined, priority: prio.value || undefined, points: points.value.trim() || undefined,
       tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 8),
+      blockedBy: blockers,
     };
-    return Object.fromEntries(Object.entries(next).filter(([k, v]) => JSON.stringify(v ?? '') !== JSON.stringify((k === 'tags' ? base.tags || [] : base[k]) ?? '')));
+    return Object.fromEntries(Object.entries(next).filter(([k, v]) => JSON.stringify(v ?? '') !== JSON.stringify((k === 'tags' || k === 'blockedBy' ? base[k] || [] : base[k]) ?? '')));
   };
   let saved = false;
   const form = h('form', { class: 'form', onsubmit: (e) => {
@@ -658,6 +878,9 @@ app.on('editCard', (id, { isNew = false } = {}) => {
     for (const k of ['title', 'description']) {
       if (now && k in patch && (now[k] ?? '') !== (el[k] ?? '')) patch[k] = globalThis.TextOps.merge3(el[k] ?? '', patch[k] ?? '', now[k] ?? '');
     }
+    // Neue Karte mit offener Schnelleingabe: Der Titel gehört dem Editor
+    const typing = 'title' in patch ? typeIntoEdit(id, 'title', patch.title ?? '') : app.editing?.id === id;
+    if (typing) delete patch.title;
     if (Object.keys(patch).length) {
       act(() => {
         updateEl(id, patch);
@@ -666,6 +889,7 @@ app.on('editCard', (id, { isNew = false } = {}) => {
     }
     saved = true;
     m.close();
+    if (typing) finishEdit();
     buildCtx();
   } },
   h('label', {}, T('Titel'), title),
@@ -674,6 +898,7 @@ app.on('editCard', (id, { isNew = false } = {}) => {
   h('div', { class: 'form-row' }, h('label', {}, T('Status'), status), h('label', {}, T('Priorität'), prio)),
   h('div', { class: 'form-row' }, h('label', {}, T('Schlüssel / Ticket'), key), h('label', {}, T('Story Points'), points)),
   h('label', {}, T('Labels (durch Komma getrennt)'), tags),
+  h('div', { class: 'blocker-field' }, h('div', { class: 'label' }, T('Blockiert durch')), blockerChips, blockerPick),
   h('datalist', { id: 'assignee-list' }, names.map((n) => h('option', { value: n }))),
   h('datalist', { id: 'status-list' }, choices.map((n) => h('option', { value: n }))),
   h('div', {}, h('div', { class: 'label' }, T('Farbe')), sw),
@@ -698,16 +923,9 @@ app.on('editCard', (id, { isNew = false } = {}) => {
       app.off('busy', showOthers);
       app.off('render', gone);
       clearBusy('card');
-      // Angelegt und ohne Eingabe abgebrochen: Es soll keine Karte „Neue Karte“ liegen bleiben
-      const now = getEl(id);
-      if (isNew && !saved && now && !Object.keys(changes(now)).length) discardCreated(id);
     },
   });
-  setTimeout(() => {
-    title.focus();
-    // Neue Karte: Tippen ersetzt den Vorschlag
-    if (isNew) title.select();
-  }, 0);
+  setTimeout(() => title.focus(), 0);
 });
 
 /* ================================================================== */
@@ -888,7 +1106,7 @@ function renderCommentPop() {
     h('div', { class: 'comment-head' },
       h('strong', {}, el.resolved ? T('Erledigt') : T('Kommentar')),
       h('span', { class: 'spacer' }),
-      app.canComment && !el.draft ? iconBtn(el.resolved ? 'undo' : 'check', el.resolved ? T('Wieder öffnen') : T('Als erledigt markieren'), () => {
+      app.canComment && !app.contributor && !el.draft ? iconBtn(el.resolved ? 'undo' : 'check', el.resolved ? T('Wieder öffnen') : T('Als erledigt markieren'), () => {
         setLocal({ resolved: !el.resolved });
         commentOp('resolve', el.id, { resolved: !el.resolved });
         renderCommentPop();
@@ -919,13 +1137,13 @@ function taskRow(el) {
   if (el.draft) return null;
   const t = el.task;
   if (!commentPop.taskForm) {
-    if (!t) return app.canComment && (el.thread || []).length ? h('div', { class: 'comment-task-row' }, h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, h('span', { html: ICONS.tasks }), T('Als Aufgabe zuweisen'))) : null;
+    if (!t) return app.canComment && !app.contributor && (el.thread || []).length ? h('div', { class: 'comment-task-row' }, h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, h('span', { html: ICONS.tasks }), T('Als Aufgabe zuweisen'))) : null;
     const overdue = t.due && !el.resolved && t.due < new Date().toISOString().slice(0, 10);
     return h('div', { class: 'comment-task' + (el.resolved ? ' done' : '') },
       h('span', { html: ICONS.tasks }),
       h('span', {}, h('b', {}, t.assignee), t.due ? h('span', { class: overdue ? 'overdue' : 'muted' }, T` · fällig ${fmtDate(t.due)}`) : null, el.resolved ? h('span', { class: 'muted' }, T(' · erledigt')) : null),
       h('span', { class: 'spacer' }),
-      app.canComment ? h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, T('Ändern')) : null);
+      app.canComment && !app.contributor ? h('button', { class: 'btn small', onclick: () => { commentPop.taskForm = true; renderCommentPop(); } }, T('Ändern')) : null);
   }
   const who = h('select', { 'aria-label': T('Zuständige Person') }, h('option', { value: '' }, T('Person wählen …')));
   const due = h('input', { 'aria-label': T('Fällig am'), type: 'date', value: t?.due || '' });
@@ -1119,10 +1337,18 @@ function moveFrame(list, i, d) {
 
 export function openTemplates() {
   if (app.viewOnly) return toast(T('Das Bearbeiten ist gerade gesperrt'));
-  const m = modal(T('Vorlage einfügen'), templateGallery((t) => {
+  const save = (selection) => {
+    m.close();
+    app.emit('saveTemplate', selection);
+  };
+  const gallery = templateGallery((t) => {
     m.close();
     insertTemplate(t);
-  }, { showBlank: false }), { wide: true });
+  }, { showBlank: false });
+  const actions = app.guest ? null : h('div', { class: 'tpl-save row wrap' },
+    h('button', { class: 'btn small', onclick: () => save(false) }, h('span', { html: ICONS.template }), T('Board als Vorlage speichern …')),
+    app.sel.size ? h('button', { class: 'btn small', onclick: () => save(true) }, T('Auswahl als Vorlage speichern …')) : null);
+  const m = modal(T('Vorlage einfügen'), h('div', {}, actions, gallery), { wide: true });
 }
 
 export function insertTemplate(t) {
@@ -1146,6 +1372,7 @@ function withNewIds(els) {
     }
     if (n.type === 'connector') Object.assign(n, { from: end(n.from), to: end(n.to) });
     if (n.type === 'chart' && ids.has(n.sourceId)) n.sourceId = ids.get(n.sourceId);
+    if (n.blockedBy) n.blockedBy = n.blockedBy.filter((id) => ids.has(id)).map((id) => ids.get(id));
     return n;
   });
 }
@@ -1187,25 +1414,74 @@ async function exportPng(selection = false) {
     toast(T('PNG wird erstellt …'));
     const url = await pngDataUrl(els, { scale: 2, background: '#ffffff' });
     download(safeName(app.name) + '.png', url);
+    toast(T('PNG exportiert'));
   } catch (e) {
     toast(T('Export fehlgeschlagen: ') + e.message);
   }
 }
 
 function exportSvg() {
-  const els = [...app.els.values()];
-  if (!els.length) return toast(T('Nichts zu exportieren'));
-  download(safeName(app.name) + '.svg', new Blob([svgString(els)], { type: 'image/svg+xml' }));
+  try {
+    const els = [...app.els.values()];
+    if (!els.length) return toast(T('Nichts zu exportieren'));
+    download(safeName(app.name) + '.svg', new Blob([svgString(els)], { type: 'image/svg+xml' }));
+    toast(T('SVG exportiert'));
+  } catch (e) {
+    toast(T('Export fehlgeschlagen: ') + e.message);
+  }
 }
 
 function exportJson() {
-  const data = { format: 'vibeboard', version: 1, name: app.name, exportedAt: new Date().toISOString(), elements: [...app.els.values()].filter((e) => !e.hidden) };
-  download(safeName(app.name) + '.vibeboard.json', new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
+  try {
+    const elements = [...app.els.values()].filter((e) => !e.hidden);
+    if (!elements.length) return toast(T('Nichts zu exportieren'));
+    const data = { format: 'vibeboard', version: 1, name: app.name, exportedAt: new Date().toISOString(), elements };
+    download(safeName(app.name) + '.vibeboard.json', new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
+    toast(T('JSON-Datei exportiert'));
+  } catch (e) {
+    toast(T('Export fehlgeschlagen: ') + e.message);
+  }
+}
+
+// Dateien verlassen die Anwendung: Privates und verborgene Bereiche bleiben außen vor
+function exportable() {
+  const hidden = globalThis.ConcealOps ? globalThis.ConcealOps.concealedIds([...app.els.values()]) : new Set();
+  const open = (e) => !e.hidden && !e.priv && !hidden.has(e.id);
+  // Ein Diagramm trägt die Werte seiner Tabelle
+  const usable = (e) => open(e) && e.type !== 'comment' && !(e.type === 'chart' && getEl(e.sourceId) && !open(getEl(e.sourceId)));
+  return { usable, all: [...app.els.values()].filter(usable), slides: frames().filter((f) => usable(f) && !f.concealed) };
+}
+
+// Je Frame eine Seite, ohne Frames das ganze Board. Bilder außerhalb der Seite kosten nur Speicher. Alles andere bleibt, Verbindungen brauchen ihre Ziele.
+function pdfPages({ all, slides }) {
+  const onPage = (b) => all.filter((e) => e.type !== 'image' || rectsIntersect(bounds(e), b));
+  return slides.length
+    ? slides.map((f, i) => {
+      const b = { x: f.x, y: f.y, w: f.w, h: f.h };
+      return { bounds: b, padding: 0, elements: onPage(b), title: f.title || T`Folie ${i + 1}` };
+    })
+    : [{ padding: 40, elements: all, title: app.name }];
 }
 
 async function exportPdf() {
   try {
-    await printFrames([...app.els.values()], frames(), app.name);
+    const open = exportable();
+    if (!open.all.length) return toast(T('Nichts zu exportieren'));
+    const pages = pdfPages(open);
+    const file = await pdfFile(pages, app.name, (n, total) => toast(T`PDF wird erstellt: Seite ${n} von ${total}`, 60000));
+    download(safeName(app.name) + '.pdf', file);
+    toast(pages.length === 1 ? T('PDF mit 1 Seite exportiert') : T`PDF mit ${pages.length} Seiten exportiert`);
+  } catch (e) {
+    toast(T('Export fehlgeschlagen: ') + e.message);
+  }
+}
+
+async function printPdf() {
+  try {
+    // Dieselbe Auswahl wie die PDF-Datei: nichts Privates oder Verborgenes
+    const open = exportable();
+    if (!open.all.length) return toast(T('Nichts zu exportieren'));
+    await printFrames(pdfPages(open), app.name);
   } catch (e) {
     toast(e.message);
   }
@@ -1231,19 +1507,13 @@ async function exportPptx() {
   toast(T('PowerPoint-Datei wird erstellt …'));
   try {
     const { buildPptx } = await import('./pptx-export.js');
-    // Die Datei verlässt die Anwendung: Privates und verborgene Bereiche bleiben außen vor
-    const hidden = globalThis.ConcealOps ? globalThis.ConcealOps.concealedIds([...app.els.values()]) : new Set();
-    const open = (e) => !e.hidden && !e.priv && !hidden.has(e.id);
-    // Ein Diagramm trägt die Werte seiner Tabelle
-    const usable = (e) => open(e) && e.type !== 'comment' && !(e.type === 'chart' && getEl(e.sourceId) && !open(getEl(e.sourceId)));
-    const all = [...app.els.values()].filter(usable);
-    const list = frames().filter((f) => usable(f) && !f.concealed);
+    const { usable, all, slides: list } = exportable();
     const withLines = (els) => {
       const ids = new Set(els.map((e) => e.id));
       return sortForRender([...els.filter(usable), ...all.filter((e) => e.type === 'connector' && e.from.id && e.to.id && ids.has(e.from.id) && ids.has(e.to.id) && !ids.has(e.id))]);
     };
     const slides = list.length
-      ? list.map((f) => ({ bounds: { x: f.x, y: f.y, w: f.w, h: f.h }, elements: withLines(frameChildren(f)) }))
+      ? list.map((f) => ({ bounds: { x: f.x, y: f.y, w: f.w, h: f.h }, elements: withLines(frameChildren(f)), title: f.title }))
       : [{ bounds: unionRect(all.map(bounds)), elements: sortForRender(all) }];
     if (!all.length) return toast(T('Nichts zu exportieren'));
     download(safeName(app.name) + '.pptx', await buildPptx(slides, getEl));
@@ -1279,32 +1549,91 @@ async function importFile(file) {
 }
 app.on('importFile', importFile);
 
+const uploadLabel = () => (filesAllowed() ? T('Bild oder Datei hier einfügen …') : T('Bild hier einfügen …'));
+
 // Auch die Befehlssuche bietet diese Einträge an
 export const exportItems = () => [
-    { header: T('Exportieren') },
-    { label: T('Als PNG-Bild'), icon: 'image', onClick: () => exportPng(false) },
-    { label: T('Auswahl als PNG'), icon: 'image', disabled: !app.sel.size, onClick: () => exportPng(true) },
-    { label: T('Als SVG-Vektorgrafik'), icon: 'shape', onClick: exportSvg },
-    { label: T('Als PDF (Frames als Seiten)'), icon: 'present', onClick: exportPdf },
-    { label: T('Als PowerPoint-Datei'), icon: 'present', onClick: exportPptx },
-    { label: T('Als JSON-Datei (Backup)'), icon: 'download', onClick: exportJson },
-    '-',
-    { header: T('Importieren') },
-    { label: T('Datei importieren (JSON, draw.io, PowerPoint)'), icon: 'upload', disabled: app.viewOnly, onClick: () => importInput.click() },
-    { label: T('Karten aus CSV / Jira-Export …'), icon: 'card', disabled: app.viewOnly, onClick: () => app.emit('openCsvImport') },
-    { label: T('Jira / Azure DevOps verbinden …'), icon: 'link', disabled: app.viewOnly || app.guest, onClick: () => app.emit('openTracker') },
-    { label: T('Diagramm aus Text (Mermaid) …'), icon: 'diagram', disabled: app.viewOnly, onClick: () => app.emit('openDiagramText') },
-    { label: T('Bild hochladen'), icon: 'image', disabled: app.viewOnly, onClick: () => pickFile() },
-    filesAllowed() ? { label: T('Datei anhängen (PDF, Office, Text)'), icon: 'file', disabled: app.viewOnly, onClick: () => app.emit('pickFile') } : null,
-    '-',
-    { header: T('Vorlagen') },
-    { label: T('Board als Vorlage speichern …'), icon: 'template', disabled: app.guest, onClick: () => app.emit('saveTemplate', false) },
-    { label: T('Auswahl als Vorlage speichern …'), icon: 'template', disabled: app.guest || !app.sel.size, onClick: () => app.emit('saveTemplate', true) },
+  { header: T('Exportieren') },
+  { label: T('Als PNG-Bild'), icon: 'image', onClick: () => exportPng(false) },
+  app.sel.size ? { label: T('Auswahl als PNG'), icon: 'image', onClick: () => exportPng(true) } : null,
+  { label: T('Als SVG-Vektorgrafik'), icon: 'shape', onClick: exportSvg },
+  { label: T('Als PDF-Datei'), icon: 'present', onClick: exportPdf },
+  { label: T('PDF drucken (Text markierbar)'), icon: 'present', onClick: printPdf },
+  { label: T('Als PowerPoint-Datei'), icon: 'present', onClick: exportPptx },
+  { label: T('Als JSON-Datei (Backup)'), icon: 'download', onClick: exportJson },
 ];
 
-function openExportMenu(anchor) {
-  menu(anchor, exportItems());
+export const importItems = () => (app.viewOnly ? [] : [
+  { header: T('Importieren') },
+  { label: T('Inhalte aus Datei importieren (JSON, draw.io, PowerPoint) …'), icon: 'upload', onClick: () => importInput.click() },
+  { label: T('Karten aus CSV / Jira-Export …'), icon: 'card', onClick: () => app.emit('openCsvImport') },
+  app.guest ? null : { label: T('Jira / Azure DevOps verbinden …'), icon: 'link', onClick: () => app.emit('openTracker') },
+  { label: T('Diagramm aus Text (Mermaid) …'), icon: 'diagram', onClick: () => app.emit('openDiagramText') },
+  '-',
+  { header: T('Auf das Board legen') },
+  { label: filesAllowed() ? T('Bild oder Datei einfügen') : T('Bild einfügen'), icon: 'image', onClick: () => pickFile() },
+  filesAllowed() ? { label: T('Datei als Anhang einfügen (PDF, Office, Text) …'), icon: 'file', onClick: () => app.emit('pickFile') } : null,
+]);
+
+const templateItems = () => (app.guest ? [] : [
+  { label: T('Board als Vorlage speichern …'), icon: 'template', onClick: () => app.emit('saveTemplate', false) },
+  app.sel.size ? { label: T('Auswahl als Vorlage speichern …'), icon: 'template', onClick: () => app.emit('saveTemplate', true) } : null,
+]);
+
+// Für Bildschirmleser und Tastatur: Der Fokus landet im geöffneten Panel
+function openPanel(kind) {
+  showSidePanel(kind);
+  side.querySelector('button')?.focus();
 }
+
+async function duplicateBoard() {
+  try {
+    const r = await api(`/api/boards/${encodeURIComponent(app.boardId)}/duplicate`, { method: 'POST' });
+    toast(T('Board dupliziert – die Kopie gehört dir'), 6000, { label: T('Öffnen'), onClick: () => (location.href = '/board/' + r.id) });
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function moveBoard() {
+  try {
+    const d = await api('/api/boards');
+    const b = [...d.owned, ...d.shared].find((x) => String(x.id) === String(app.boardId)) || { id: app.boardId, team: app.boardMeta?.team || null, folders: [] };
+    openFolderDialog({ ...b, name: app.name }, d.folderList);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function deleteBoard() {
+  if (!(await confirmDialog(T('Board löschen'), T`„${app.name}“ kommt in den Papierkorb und ist für alle Mitglieder nicht mehr erreichbar. Du kannst es dort wiederherstellen, bis es nach Ablauf der Frist endgültig gelöscht wird.`, T('In den Papierkorb'), true))) return;
+  app.deleting = true;
+  try {
+    await api('/api/boards/' + encodeURIComponent(app.boardId), { method: 'DELETE' });
+    location.href = '/';
+  } catch (e) {
+    app.deleting = false;
+    toast(e.message);
+  }
+}
+
+// Boardmenü neben dem Namen. Die Rechte prüft der Server; hier erscheint nur, was die Rolle überhaupt kann.
+export const boardMenuItems = () => {
+  const imports = importItems();
+  return [
+    { label: T('Exportieren'), icon: 'download', items: exportItems },
+    imports.length ? { label: T('Importieren'), icon: 'upload', items: importItems } : null,
+    ...templateItems(),
+    '-',
+    app.viewOnly ? null : { label: T('Verlauf'), icon: 'history', key: 'versions', onClick: () => openPanel('versions') },
+    { label: T('Aktivität'), icon: 'activity', key: 'activity', onClick: () => openPanel('activity') },
+    { label: T('Elementliste'), icon: 'list', onClick: openElementList },
+    '-',
+    app.guest ? null : { label: T('Board duplizieren'), icon: 'copy', onClick: duplicateBoard },
+    app.guest ? null : { label: T('In Ordner verschieben …'), icon: 'folder', onClick: moveBoard },
+    app.role === 'owner' ? { label: T('Board löschen …'), icon: 'trash', danger: true, onClick: deleteBoard } : null,
+  ];
+};
 
 /* ================================================================== */
 /* Teilen, Profil, Einstellungen, Hilfe                                */
@@ -1323,29 +1652,24 @@ function profileSaved(user) {
   app.emit('peers');
 }
 
-export function openProfile() {
-  openProfileDialog(app.me, profileSaved);
-}
-
 let legal = {};
 legalLinks().then((l) => (legal = l));
 
-function openSettings(anchor) {
+// Zahnrad: nur Ansicht und Bearbeitung. Konto, Hilfe und Rechtliches stehen im Kontomenü.
+function settingsItems(reopen) {
   const s = app.settings;
   const t = (key, label) => ({ label, checked: !!s[key], keep: true, onClick: () => {
     s[key] = !s[key];
     saveSettings();
-    openSettings(anchor);
+    reopen();
   } });
-  menu(anchor, [
+  return [
     { header: T('Ansicht') },
     t('grid', T('Raster anzeigen')),
     t('dark', T('Dunkles Design')),
-    t('showAuthor', T('Autor auf Sticky Notes')),
+    t('showAuthor', T('Autor auf Notizen')),
     t('hideResolved', T('Erledigte Kommentare ausblenden')),
     t('hideCursors', T('Mauszeiger anderer ausblenden')),
-    { label: T('Filter …'), icon: 'filter', onClick: () => showSidePanel('filter') },
-    { label: T('Retro & Umfragen …'), icon: 'vote', onClick: () => app.emit('retroMenu', anchor) },
     { header: T('Bearbeitung') },
     t('snap', T('Am Raster einrasten')),
     { label: T`Rastergröße: ${gridSize()} px`, icon: 'grid', keep: true, onClick: () => {
@@ -1353,14 +1677,22 @@ function openSettings(anchor) {
       s.gridSize = sizes[(sizes.indexOf(gridSize()) + 1) % sizes.length];
       saveSettings();
       applyView(true);
-      openSettings(anchor);
+      reopen();
     } },
     t('smartGuides', T('Intelligente Hilfslinien')),
     t('wheelZoom', T('Mausrad zoomt (statt verschieben)')),
-    { label: T('Tastenkürzel'), icon: 'keyboard', onClick: openShortcuts },
-    '-',
+  ];
+}
+
+function openSettings(anchor) {
+  menu(anchor, settingsItems(() => openSettings(anchor)), { placement: 'bottom' });
+}
+
+function openAccount(anchor) {
+  menu(anchor, [
     ...accountMenuItems(app.me, profileSaved),
-    ...(legal.imprint || legal.privacy ? ['-'] : []),
+    '-',
+    { label: T('Tastenkürzel'), icon: 'keyboard', onClick: openShortcuts },
     legal.imprint ? { label: T('Impressum'), icon: 'link', onClick: () => window.open('/impressum', '_blank', 'noopener') } : null,
     legal.privacy ? { label: T('Datenschutz'), icon: 'link', onClick: () => window.open('/datenschutz', '_blank', 'noopener') } : null,
   ], { placement: 'bottom' });
@@ -1377,20 +1709,7 @@ async function copyElementLink() {
   }
 }
 
-export function openShortcuts() {
-  const groups = [
-    [T('Werkzeuge'), [['V', T('Auswählen')], [T('H / Leertaste'), T('Verschieben')], ['N', T('Sticky Note')], ['T', T('Text')], ['S', T('Form')], ['R / O', T('Rechteck / Ellipse')], ['L', T('Verbindungslinie')], ['P', T('Stift')], ['E', T('Radierer')], ['F', T('Frame')], ['K', T('Karte')], ['M', T('Mindmap')], ['C', T('Kommentar')], ['X', T('Laserpointer')]]],
-    [T('Bearbeiten'), [[T('Strg+Z / Strg+Y'), T('Rückgängig / Wiederholen')], [T('Strg+C / X / V'), T('Kopieren / Ausschneiden / Einfügen')], [T('Strg+D'), T('Duplizieren')], [T('Strg+] / [ oder Strg+Bild↑ / Bild↓'), T('Ganz nach vorn / ganz nach hinten')], ['?', T('Diese Übersicht')], [T('Strg+Alt+C / V'), T('Format kopieren / einfügen')], [T('Strg+K'), T('Befehle suchen')], ['Alt+1 … 9', T('Gemerkte Ansichten')], [T('Tab (beim Tippen)'), T('Nächste Notiz oder Form daneben')], [T('Enter mit gewähltem Werkzeug'), T('Element in der Mitte der Ansicht anlegen')], [T('Doppelklick aufs Werkzeug / Umschalt+Taste'), T('Werkzeug bleibt aktiv')], [T('Alt + Ziehen'), T('Kopie ziehen')], [T('Entf'), T('Löschen')], [T('Strg+A'), T('Alles auswählen')], [T('Strg+G'), T('Gruppieren')], [T('Strg+Umschalt+G'), T('Gruppe auflösen')], [T('Strg+L'), T('Sperren')], [T('Pfeiltasten'), T('Verschieben (Umschalt: 10 px)')], [T('Enter / Doppelklick'), T('Text bearbeiten')], [T('Menütaste / Umschalt+F10'), T('Kontextmenü')], [T('Esc / Strg+Enter'), T('Bearbeitung beenden')]]],
-    [T('Tabellen'), [[T('Klick in ausgewählte Tabelle'), T('Zelle wählen')], [T('Umschalt + Klick / Pfeil'), T('Bereich wählen')], [T('Pfeiltasten'), T('Zellauswahl bewegen')], [T('Enter / F2'), T('Zelle bearbeiten')], [T('Tippen'), T('Zelle überschreiben')], [T('Entf'), T('Inhalt leeren')], ['Tab', T('Nächste Zelle (beim Bearbeiten)')], [T('Linie ziehen'), T('Spaltenbreite / Zeilenhöhe')]]],
-    [T('Verbinder'), [[T('Linie ziehen'), T('Biegen (Knickpunkt)')], [T('◦ auf der Linie ziehen'), T('Knickpunkt einfügen')], [T('Doppelklick auf ▪'), T('Knickpunkt entfernen')], [T('Beschriftung ziehen'), T('Entlang der Linie verschieben')], [T('Ende an Rand ziehen'), T('Fester Andockpunkt')], [T('Ende in Formmitte'), T('Automatisch andocken')]]],
-    [T('Mindmap'), [['Tab', T('Unterknoten hinzufügen')], [T('Enter (beim Tippen)'), T('Geschwisterknoten')], [T('Umschalt+Enter'), T('Geschwisterknoten')]]],
-    [T('Zusammenarbeit'), [['/', T('Cursor-Chat: Nachricht am Mauszeiger')], [T('Esc'), T('Cursor-Chat schließen')]]],
-    [T('Verschieben & Größe'), [[T('Umschalt + Ziehen'), T('Nur waagerecht/senkrecht verschieben')], [T('Strg + Ziehen'), T('Ohne Einrasten')], [T('Seitengriff'), T('Nur Breite bzw. Höhe ändern')], [T('Umschalt + Griff'), T('Seitenverhältnis beibehalten')], [T('Alt + Griff'), T('Größe von der Mitte aus')], [T('Strg+D (wiederholt)'), T('Kopie mit zuletzt verwendetem Versatz')], [T('Klick in ausgewählte Gruppe'), T('Einzelnes Element der Gruppe wählen')], [T('Pfeiltasten'), T('Um 1 px (Umschalt: 10 px, mit Raster: eine Rasterweite) verschieben')], [T('Umschalt-/Strg-Klick'), T('Zur Auswahl hinzufügen bzw. entfernen (Ziehen verschiebt)')]]],
-    [T('Präsentation'), [[T('→ / Leertaste'), T('Nächste Folie')], [T('← / Rücktaste'), T('Vorherige Folie')], ['Esc', T('Beenden')]]],
-    [T('Ansicht'), [[T('Strg + Mausrad'), T('Zoomen')], [T('Strg + / −'), T('Zoomen')], [T('Strg+0'), T('Auf 100 %')], [T('Umschalt+1'), T('Alles anzeigen')], [T('Umschalt+2'), T('Auswahl anzeigen')], [T('Strg+F'), T('Suchen')]]],
-  ];
-  modal(T('Tastenkürzel'), h('div', { class: 'shortcuts' }, groups.map(([t, list]) => h('div', {}, h('h4', {}, t), h('table', {}, list.map(([k, d]) => h('tr', {}, h('td', {}, h('kbd', {}, k)), h('td', {}, d))))))), { wide: true });
-}
+export const openShortcuts = () => openHelp('keys');
 
 /* ================================================================== */
 /* Suche                                                               */
@@ -1413,7 +1732,7 @@ function textOf(el) {
 /* ================================================================== */
 
 const TYPE_NAMES = {
-  chart: T('Diagramm'), sticky: T('Haftnotiz'), text: T('Text'), shape: T('Form'), connector: T('Verbindung'), image: T('Bild'), pen: T('Zeichnung'), highlighter: T('Markierung'),
+  chart: T('Diagramm'), sticky: T('Notiz'), text: T('Text'), shape: T('Form'), connector: T('Verbindung'), image: T('Bild'), pen: T('Zeichnung'), highlighter: T('Markierung'),
   frame: T('Frame'), comment: T('Kommentar'), card: T('Karte'), table: T('Tabelle'), code: T('Code'), emoji: T('Emoji'), file: T('Datei'), mindmap: T('Mindmap-Knoten'),
 };
 export const elementLabel = (el) => TYPE_NAMES[el.type] || T('Element');
@@ -1568,50 +1887,11 @@ stage.addEventListener('contextmenu', (e) => {
   // Rechtsklick ins Leere meint die freie Fläche, nicht die alte Auswahl
   if (!el && app.sel.size) setSelection([]);
   const has = app.sel.size > 0;
-  const free = !selectedEls().every(isLocked);
   const canPaste = !!navigator.clipboard?.readText;
-  // Erweiterungen anderer Module (Freigaben)
-  const extra = [];
-  if (has) app.emit('contextItems', extra, selectedEls());
-  const one = app.sel.size === 1 ? selectedEls()[0] : null;
-  const formats = selectedEls().some(canCopyFormat);
-  const place = filesAllowed() ? T('Foto oder Datei hier einfügen …') : T('Foto hier einfügen …');
-  const items = has ? [
-    // Bearbeiten
-    one && ((one.type === 'card' && !isLocked(one)) || canEdit(one)) ? { label: T('Text bearbeiten'), icon: 'edit', hint: T('Enter'), onClick: () => startEdit(one.id, { selectAll: false }) } : null,
-    formats ? { label: T('Format übertragen'), icon: 'brush', onClick: () => startBrush(false) } : null,
-    '-',
-    // Zwischenablage
-    { label: T('Kopieren'), icon: 'copy', hint: T('Strg+C'), onClick: () => document.execCommand('copy') },
-    free ? { label: T('Ausschneiden'), hint: T('Strg+X'), onClick: () => document.execCommand('cut') } : null,
-    canPaste ? { label: T('Einfügen'), hint: T('Strg+V'), onClick: () => pasteFromClipboard(w) } : null,
-    free ? { label: T('Duplizieren'), icon: 'copy', hint: T('Strg+D'), onClick: () => duplicateEls(collectForCopy([...app.sel])) } : null,
-    formats ? { label: T('Format kopieren'), hint: T('Strg+Alt+C'), onClick: () => copyFormat() && toast(T('Format kopiert')) } : null,
-    hasCopiedFormat() ? { label: T('Format einfügen'), hint: T('Strg+Alt+V'), onClick: pasteFormat } : null,
-    { label: place, icon: 'image', onClick: () => pickFile(w) },
-    '-',
-    // Anordnen
-    free ? { label: T('In den Vordergrund'), icon: 'front', hint: T('Strg+]'), onClick: bringToFront } : null,
-    free ? { label: T('In den Hintergrund'), icon: 'back', hint: T('Strg+['), onClick: sendToBack } : null,
-    app.sel.size > 1 ? { label: T('Gruppieren'), icon: 'group', hint: T('Strg+G'), onClick: groupSel } : null,
-    selectedEls().some((x) => x.groupId) ? { label: T('Gruppierung aufheben'), onClick: ungroupSel } : null,
-    '-',
-    // Sperren
-    { label: selectedEls().every((x) => x.locked) ? T('Entsperren') : T('Sperren'), icon: selectedEls().every((x) => x.locked) ? 'unlock' : 'lock', hint: T('Strg+L'), onClick: toggleLock },
-    { label: selectedEls().every((x) => x.locked === 'text') ? T('Fixierung lösen') : T('Position fixieren (Text bleibt bearbeitbar)'), onClick: togglePin },
-    app.isFacilitator ? { label: selectedEls().every((x) => x.modLock) ? T('Für Teilnehmende freigeben') : T('Für Teilnehmende sperren'), icon: 'shield', onClick: toggleModLock } : null,
-    '-',
-    // Zusammenarbeit
-    { label: T('Kommentar hinzufügen'), icon: 'comment', onClick: () => newComment(w) },
-    el && one && REACT_TYPES.has(el.type) ? { label: T('Reagieren …'), icon: 'smile', onClick: () => app.emit('reactMenu', el, e) } : null,
-    ...extra,
-    one ? { label: T('Link zu diesem Element kopieren'), icon: 'link', onClick: copyElementLink } : null,
-    '-',
-    // Löschen
-    free ? { label: T('Löschen'), icon: 'trash', hint: T('Entf'), danger: true, onClick: deleteSelection } : null,
-    selectedEls().some((x) => x.type === 'frame') ? { label: T('Frame samt Inhalt löschen'), icon: 'trash', danger: true, onClick: deleteFramesWithContent } : null,
-  ] : [
-    { label: T('Sticky Note hier'), icon: 'sticky', onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
+  const place = uploadLabel();
+  const anchor = { getBoundingClientRect: () => ({ left: e.clientX, right: e.clientX, top: e.clientY, bottom: e.clientY, width: 0, height: 0 }), contains: () => false };
+  const items = has ? selectionMenu(anchor, { at: w }) : tidyMenu([
+    { label: T('Notiz hier'), icon: 'sticky', onClick: () => { const s = makeElement('sticky', w.x, w.y); addElements([s]); startEdit(s.id, { isNew: true }); } },
     { label: T('Text hier'), icon: 'text', onClick: () => { const s = makeElement('text', w.x, w.y); act(() => setEl(s)); startEdit(s.id, { isNew: true }); } },
     { label: T('Kommentar hier'), icon: 'comment', onClick: () => newComment(w) },
     { label: place, icon: 'image', onClick: () => pickFile(w) },
@@ -1620,17 +1900,9 @@ stage.addEventListener('contextmenu', (e) => {
     '-',
     { label: T('Alles auswählen'), hint: T('Strg+A'), onClick: () => setSelection([...app.els.keys()]) },
     { label: T('Alles anzeigen'), icon: 'fit', hint: T('Umschalt+1'), onClick: () => fitAll() },
-  ];
-  menuAt(e.clientX, e.clientY, tidySeparators(items), 'context-menu');
+  ]);
+  menuAt(e.clientX, e.clientY, items, 'context-menu');
 });
-
-// Leere Gruppen sollen keine Trennlinien hinterlassen
-function tidySeparators(items) {
-  const out = [];
-  for (const it of items.filter(Boolean)) if (it !== '-' || (out.length && out.at(-1) !== '-')) out.push(it);
-  if (out.at(-1) === '-') out.pop();
-  return out;
-}
 
 // Menütaste oder Umschalt+F10: dasselbe Menü an der Auswahl, sonst in der Mitte der Fläche
 window.addEventListener('keydown', (e) => {
@@ -1775,43 +2047,128 @@ function buildTopbar() {
     document.title = app.name + T(' – vibeboard');
   });
   const status = saveIndicator();
-  append(top,
-    h('a', { href: '/', class: 'icon-btn brand', title: T('Alle Boards'), html: '<svg viewBox="0 0 32 32" width="26" height="26"><rect x="2" y="2" width="28" height="28" rx="7" fill="#4262ff"/><rect x="8" y="8" width="9" height="9" rx="1.5" fill="#fff9b1"/><rect x="15" y="15" width="9" height="9" rx="1.5" fill="#ffcee0"/></svg>' }),
-    nameInput, status,
-    app.guest ? h('span', { class: 'badge guest', title: T('Du bist als Gast auf diesem Board') }, T('Gast')) : null,
-    app.role === 'viewer' ? h('span', { class: 'badge' }, T('Nur ansehen')) : app.role === 'commenter' ? h('span', { class: 'badge', title: T('Du kannst ansehen und kommentieren') }, T('Kommentieren')) : null,
-    h('span', { class: 'top-sep' }),
-    app.viewOnly ? null : iconBtn('template', T('Vorlagen'), openTemplates),
-    iconBtn('frame', T('Frames & Präsentation'), () => toggleSidePanel('frames'), { 'data-panel': 'frames' }),
-    iconBtn('comment', T('Kommentare'), () => toggleSidePanel('comments'), { 'data-panel': 'comments' }),
-    iconBtn('tasks', T('Aufgaben auf diesem Board'), () => toggleSidePanel('tasks'), { 'data-panel': 'tasks' }),
-    iconBtn('kanban', T('Kanban und Zeitleiste'), () => app.emit('openCardViews')),
-    app.guest ? null : iconBtn('check', T('Freigaben'), () => toggleSidePanel('reviews'), { 'data-panel': 'reviews' }),
-    iconBtn('activity', T('Aktivität – wer hat was geändert?'), () => toggleSidePanel('activity'), { 'data-panel': 'activity' }),
-    app.viewOnly ? null : iconBtn('history', T('Versionsverlauf'), () => toggleSidePanel('versions'), { 'data-panel': 'versions' }),
+  const strip = h('div', { class: 'top-strip' },
     iconBtn('search', T('Suchen (Strg+F)'), openSearch),
     iconBtn('command', T('Befehle (Strg+K)'), () => app.emit('openPalette')),
-    iconBtn('list', T('Elementliste'), openElementList),
-    iconBtn('download', T('Exportieren & Importieren'), (e) => openExportMenu(e.currentTarget)),
+    iconBtn('comment', T('Kommentare'), () => toggleSidePanel('comments'), { 'data-panel': 'comments' }),
+    iconBtn('frame', T('Frames'), () => toggleSidePanel('frames'), { 'data-panel': 'frames' }),
+    iconBtn('tasks', T('Aufgaben auf diesem Board'), () => toggleSidePanel('tasks'), { 'data-panel': 'tasks' }),
+    iconBtn('kanban', T('Kanban und Zeitleiste'), () => app.emit('openCardViews')),
+    app.guest ? null : iconBtn('check', T('Prüfungen'), () => toggleSidePanel('reviews'), { 'data-panel': 'reviews' }));
+  const moreBtn = iconBtn('more', T('Mehr'), (e) => menu(e.currentTarget, topMoreItems(), { placement: 'bottom' }), { id: 'btn-top-more', class: 'folded' });
+  append(top,
+    h('a', { href: '/', class: 'icon-btn brand', 'aria-label': T('Alle Boards'), 'data-tip': T('Alle Boards'), html: '<svg viewBox="0 0 32 32" width="26" height="26"><rect x="2" y="2" width="28" height="28" rx="7" fill="#4262ff"/><rect x="8" y="8" width="9" height="9" rx="1.5" fill="#fff9b1"/><rect x="15" y="15" width="9" height="9" rx="1.5" fill="#ffcee0"/></svg>' }),
+    nameInput,
+    iconBtn('chevDown', T('Boardmenü'), (e) => menu(e.currentTarget, boardMenuItems(), { placement: 'bottom' }), { id: 'btn-board-menu', 'aria-haspopup': 'menu' }),
+    status,
+    app.guest ? h('span', { class: 'badge guest', title: T('Du bist als Gast auf diesem Board') }, T('Gast')) : null,
+    app.role === 'contributor' ? h('span', { class: 'badge', title: T('Du kannst eigene Notizen anlegen und ändern, kommentieren und abstimmen') }, T('Beiträge')) : app.role === 'viewer' ? h('span', { class: 'badge' }, T('Nur ansehen')) : app.role === 'commenter' ? h('span', { class: 'badge', title: T('Du kannst ansehen und kommentieren') }, T('Kommentieren')) : null,
+    h('span', { class: 'top-sep' }),
+    strip, moreBtn,
   );
   const right = $('#topright');
-  // Die Leiste links darf rechts nichts verdecken: Passt nicht alles hinein, lässt sie sich waagerecht scrollen
-  const fitTop = () => {
-    const stacked = getComputedStyle(right).top !== getComputedStyle(top).top;
-    top.style.maxWidth = stacked ? '' : `calc(100vw - ${right.offsetWidth + 44}px)`;
+  const moderateBtn = h('button', { class: 'btn small top-label', id: 'btn-moderate', 'aria-haspopup': 'menu', onclick: () => menu(moderateBtn, moderateItems(moderateBtn), { placement: 'bottom' }) }, h('span', { html: ICONS.shield }), T('Moderieren'));
+  const account = h('button', { class: 'avatar', id: 'btn-account', 'aria-haspopup': 'menu', onclick: () => openAccount(account) });
+  const showAccount = () => {
+    const name = app.user.name || T('Gast');
+    account.textContent = initials(name);
+    account.style.background = app.user.color;
+    account.style.color = readableOn(app.user.color);
+    account.dataset.tip = T`${name} – Konto`;
+    account.setAttribute('aria-label', account.dataset.tip);
   };
-  new ResizeObserver(fitTop).observe(right);
-  addEventListener('resize', fitTop);
-  const tools = h('div', { class: 'collab-tools' });
-  append(right, tools, h('div', { id: 'avatars' }),
-    app.guest ? null : bellButton({ open: (n) => app.emit('openNotification', n) }),
-    app.guest ? null : h('button', { class: 'btn primary small share-btn', onclick: openShare }, h('span', { html: ICONS.share }), T('Teilen')),
-    iconBtn('settings', T('Einstellungen'), (e) => openSettings(e.currentTarget)));
+  showAccount();
+  app.on('peers', showAccount);
+  const bell = app.guest ? null : bellButton({ open: (n) => app.emit('openNotification', n) });
+  if (bell) {
+    bell.removeAttribute('title');
+    bell.dataset.tip = T('Benachrichtigungen');
+  }
+  append(right, moderateBtn, h('div', { id: 'avatars' }), bell,
+    iconBtn('settings', T('Einstellungen'), (e) => openSettings(e.currentTarget), { id: 'btn-settings' }),
+    account,
+    h('button', { class: 'btn small top-label', id: 'btn-present', onclick: () => app.emit('present', null) }, h('span', { html: ICONS.present }), T('Präsentieren')),
+    app.guest ? null : h('button', { class: 'btn primary small share-btn', onclick: openShare }, h('span', { html: ICONS.share }), T('Teilen')));
   if (!app.guest) {
     refreshBell();
     setInterval(refreshBell, 60000);
   }
-  app.emit('buildCollabTools', tools);
+  app.emit('buildCollabTools', strip);
+  refreshModerate();
+  // Was nicht passt, wandert hinter „Mehr“: Nichts verschwindet und nichts muss gescrollt werden
+  new ResizeObserver(fitHeader).observe(right);
+  addEventListener('resize', fitHeader);
+  fitHeader();
+}
+
+// Moderieren: Die Module tragen ihre Einträge selbst bei und entscheiden nach Rolle und Stand, ob es sie gibt
+export function moderateItems(anchor) {
+  const list = [];
+  app.emit('moderateItems', list);
+  return list.sort((a, b) => a.order - b.order).map((it) => ({ ...it, checked: undefined, onClick: it.onClick && (() => it.onClick(anchor)) }));
+}
+
+const moderateAnchor = () => {
+  const b = $('#btn-moderate');
+  return b && !b.classList.contains('folded') ? b : $('#btn-top-more');
+};
+
+// Für die Befehlssuche: Die Einträge öffnen ihre Menüs am gerade sichtbaren Knopf
+export const headerCommands = () => [{ header: T('Board') }, ...boardMenuItems(), { header: T('Moderieren') }, ...moderateItems(moderateAnchor())];
+
+function refreshModerate() {
+  const b = $('#btn-moderate');
+  if (!b) return;
+  const list = [];
+  app.emit('moderateItems', list);
+  b.classList.toggle('none', !list.length);
+  b.classList.toggle('active', list.some((it) => it.active));
+  b.setAttribute('aria-label', list.some((it) => it.active) ? T('Moderieren (läuft gerade)') : T('Moderieren'));
+}
+app.on('session', refreshModerate);
+app.on('moderation', refreshModerate);
+app.on('render', throttle(refreshModerate, 1000));
+
+function topMoreItems() {
+  const folded = [...document.querySelectorAll('#topbar .top-strip .folded')];
+  const set = $('#btn-settings');
+  const mod = $('#btn-moderate');
+  return [
+    ...folded.map((b) => ({ label: b.dataset.tip, icon: b.querySelector('svg')?.outerHTML, hint: b.dataset.key, onClick: () => b.click() })),
+    mod.classList.contains('folded') && !mod.classList.contains('none') ? { label: T('Moderieren'), icon: 'shield', items: () => moderateItems($('#btn-top-more')) } : null,
+    set.classList.contains('folded') ? { label: T('Einstellungen'), icon: 'settings', items: () => settingsItems(() => openSettings($('#btn-top-more'))) } : null,
+  ];
+}
+
+let fitting = false;
+function fitHeader() {
+  if (fitting) return;
+  fitting = true;
+  const top = $('#topbar'), right = $('#topright'), more = $('#btn-top-more');
+  const strip = [...top.querySelectorAll('.top-strip > *')].reverse();
+  const side = [$('#btn-settings'), $('#btn-moderate')].filter((b) => !b.classList.contains('none'));
+  [...strip, ...side, more].forEach((b) => b.classList.remove('folded'));
+  const stacked = getComputedStyle(right).top !== getComputedStyle(top).top;
+  const tooWide = () => {
+    top.style.maxWidth = stacked ? '' : `${innerWidth - right.offsetWidth - 36}px`;
+    return top.scrollWidth > top.clientWidth + 1;
+  };
+  const fold = (b) => b.classList.add('folded');
+  // Zwei Zeilen: Jede Leiste räumt für sich; eine Zeile: Erst die Symbole, dann die rechte Seite
+  if (stacked) while (side.length && right.scrollWidth > right.clientWidth + 1) fold(side.shift());
+  const queue = stacked ? strip : [...strip, ...side];
+  let any = stacked && [$('#btn-settings'), $('#btn-moderate')].some((b) => b.classList.contains('folded'));
+  if (!tooWide() && !any) more.classList.add('folded');
+  else {
+    for (const b of queue) {
+      if (!tooWide()) break;
+      fold(b);
+      any = true;
+    }
+    tooWide();
+  }
+  top.querySelector('.top-sep')?.classList.toggle('folded', strip.every((b) => b.classList.contains('folded')));
+  fitting = false;
 }
 
 // Speicherstatus: zeigt, ob alle eigenen Änderungen auf dem Server gespeichert sind.
@@ -1866,9 +2223,9 @@ function buildBottomLeft() {
     iconBtn('undo', T('Rückgängig (Strg+Z)'), undo, { id: 'btn-undo', disabled: true }),
     iconBtn('redo', T('Wiederholen (Strg+Y)'), redo, { id: 'btn-redo', disabled: true }),
     h('span', { class: 'top-sep' }),
-    iconBtn('keyboard', T('Tastenkürzel (?)'), openShortcuts),
+    iconBtn('help', T('Hilfe (?)'), () => openHelp(), { id: 'btn-help' }),
   );
-  if (app.viewOnly) bl.querySelectorAll('#btn-undo,#btn-redo').forEach((b) => b.remove());
+  if (app.viewOnly && !app.contributor) bl.querySelectorAll('#btn-undo,#btn-redo').forEach((b) => b.remove());
 }
 
 app.on('key', (e) => {
@@ -1877,7 +2234,7 @@ app.on('key', (e) => {
     openSearch();
   } else if (e.key === '?') {
     e.preventDefault();
-    openShortcuts();
+    openHelp('keys');
   }
 });
 
@@ -1890,6 +2247,7 @@ export function initUI() {
   window.addEventListener('resize', () => {
     positionCtx();
     drawMinimap();
+    fitTools();
   });
 }
 

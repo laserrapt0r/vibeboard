@@ -317,6 +317,8 @@ const clickBtn = (p, rx) =>
     c.setSelection([]);
     c.app.emit('present', null);
   });
+  await wait(250);
+  await A.evaluate(() => [...document.querySelectorAll('.modal-back .btn')].find((x) => x.textContent === 'Nur für mich').click());
   await wait(400);
   const bar = () =>
     A.evaluate(() => {
@@ -411,6 +413,8 @@ const clickBtn = (p, rx) =>
     const c = await import('/js/core.js');
     c.app.emit('present', null);
   });
+  await wait(250);
+  await P.evaluate(() => [...document.querySelectorAll('.modal-back .btn')].find((x) => x.textContent === 'Nur für mich').click());
   await wait(3600);
   const touch = await P.evaluate(() => {
     const p = document.getElementById('present-bar');
@@ -498,7 +502,7 @@ const clickBtn = (p, rx) =>
     const li = document.querySelector('.palette-item');
     return { label: li?.querySelector('.palette-label').textContent, hint: li?.querySelector('.small').textContent };
   });
-  ok(/Mermaid-Syntax/.test(row.label) && row.hint !== 'Mermaid-Syntax', 'Klammern ohne Kürzel bleiben im Namen', row);
+  ok(/\(Mermaid\)/.test(row.label) && row.hint !== 'Mermaid', 'Klammern ohne Kürzel bleiben im Namen', row);
   await A.keyboard.press('Escape');
   await wait(200);
   await A.keyboard.down('Control');

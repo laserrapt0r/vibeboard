@@ -587,7 +587,7 @@ const toastText = (p) =>
     'WIP-Zusatz nicht im Status, nur Kanban hat Status-Spalten',
     st2,
   );
-  // Gantt/Zeitstrahl
+  // Gantt/Zeitleiste
   await nb('G');
   await insert(p, 'gantt');
   await wait(500);
@@ -607,7 +607,7 @@ const toastText = (p) =>
   await wait(500);
   await p.screenshot({ path: S + 'timeline.png' });
   const zc = (await els(p)).filter((e) => e.type === 'card');
-  ok(zc.length === 6 && zc.every((c) => c.due), 'Zeitstrahl: Karten mit Termin', zc.length);
+  ok(zc.length === 6 && zc.every((c) => c.due), 'Zeitleiste: Karten mit Termin', zc.length);
   ok(errs.length === 0, 'keine Browserfehler', errs.slice(0, 5));
   await b.close();
   console.log('Fehlschläge:', f);

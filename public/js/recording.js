@@ -3,7 +3,7 @@
 import { T } from './i18n.js';
 import { h, api, ICONS, toast, modal, relTime, confirmDialog, throttle } from './util.js';
 import { app, $, stage, toWorld, toScreen, visibleRect, viewFor, applyView } from './core.js';
-import { menu, currentSidePanel, renderSidePanel, showSidePanel } from './ui.js';
+import { currentSidePanel, renderSidePanel, showSidePanel } from './ui.js';
 import { addLaser } from './collab.js';
 
 const fmt = (ms) => {
@@ -11,7 +11,7 @@ const fmt = (ms) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 const enabled = () => app.features && app.features.recordings !== false;
-const canRecord = () => enabled() && app.canComment;
+const canRecord = () => enabled() && app.canComment && !app.contributor;
 
 /* ================================================================== */
 /* Aufnehmen                                                           */
@@ -315,13 +315,11 @@ app.on('key', (e) => {
 /* Schaltfläche in der Kopfzeile                                        */
 /* ================================================================== */
 
-app.on('buildCollabTools', (box) => {
+app.on('moderateItems', (list) => {
   if (!enabled()) return;
-  const b = h('button', { class: 'icon-btn', id: 'btn-recordings', title: T('Aufzeichnungen (Rundgänge)'), html: ICONS.record });
-  b.onclick = () => menu(b, [
+  list.push({ key: 'recording', order: 90, label: T('Aufzeichnung'), icon: 'record', items: () => [
     { header: T('Rundgänge') },
     canRecord() ? { label: T('Neuen Rundgang aufzeichnen …'), icon: 'record', onClick: openRecordDialog } : null,
     { label: T('Aufzeichnungen ansehen'), icon: 'play', onClick: () => showSidePanel('recordings') },
-  ]);
-  box.append(b);
+  ] });
 });

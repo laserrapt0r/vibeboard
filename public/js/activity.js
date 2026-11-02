@@ -6,7 +6,7 @@ import { app, getEl, bounds, fitTo, setSelection, scheduleRender, $ } from './co
 import { currentSidePanel, renderSidePanel, toggleSidePanel, showSidePanel } from './ui.js';
 
 const TYPE = {
-  sticky: T('Sticky Note'), text: T('Text'), shape: T('Form'), connector: T('Verbindung'), pen: T('Freihandlinie'), frame: T('Frame'), card: T('Karte'),
+  sticky: T('Notiz'), text: T('Text'), shape: T('Form'), connector: T('Verbindung'), pen: T('Freihandlinie'), frame: T('Frame'), card: T('Karte'),
   table: T('Tabelle'), code: T('Code-Block'), image: T('Bild'), emoji: T('Sticker'), comment: T('Kommentar'),
 };
 const VERB = {

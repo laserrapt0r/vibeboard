@@ -79,6 +79,7 @@
 - **Akzeptanzkriterien:**
   - Standardfarben von Text, Linien und Stift folgen dem Untergrund: auf dem dunklen Board hell, im Frame passend zu dessen Farbe. Bewusst gewählte Farben bleiben. Exporte zeigen Schwarz auf Weiß.
   - Alle Werkzeuge bleiben ab einer Fensterhöhe von rund 500 px erreichbar, die Kontextleiste bleibt im Fenster.
+  - Geändert in 4.16.0: Was in Kopfzeile oder Werkzeugleiste keinen Platz findet, wandert hinter „Mehr“. Keine Leiste scrollt oder blendet Funktionen ersatzlos aus, auch nicht auf dem Handy.
   - Auf dem Handy sind Timer, Abstimmung und Moderation in der oberen Leiste erreichbar.
   - Mit Enter lässt sich mit gewähltem Werkzeug ohne Maus ein Element anlegen. Panels schließen mit Esc.
 
@@ -91,3 +92,13 @@
   - Die Offline-Seite bemerkt selbst, wenn der Server zurück ist, und führt an die ursprüngliche Adresse zurück.
   - Sind Dateianhänge abgeschaltet, bietet die Oberfläche sie nicht an (seit 4.12.0).
   - Langes Drücken öffnet auf Touch-Geräten das Kontextmenü, auch auf iOS (seit 4.12.0).
+
+### REQ-NFR-013 Teilnehmeransicht auf dem Handy
+- **Seit:** 4.16.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Auf schmalen Bildschirmen bleibt das Board sichtbar, auch wenn Retro und Abstimmung laufen.
+- **Akzeptanzkriterien:**
+  - Bis 760 px Breite lassen sich Retro-Leiste, Abstimmung, privater Modus und Moderationsbanner einklappen. Wer nur teilnimmt, sieht sie zunächst eingeklappt, wer leitet, aufgeklappt. Die Wahl gilt für die Sitzung.
+  - Eingeklappt bleiben Schritt, Stimmen und Knöpfe mit Aufgabe in diesem Schritt sichtbar.
+  - Banner stapeln sich ohne Überlappung unter der Kopfzeile und über der Werkzeugleiste. Rückgängig und Hilfe rücken darüber.
+  - Meldungen stehen auf dem Handy oben unter den Bannern und verdecken keine Leiste und kein „Weiter“.
+  - Am Rechner ändert sich nichts.

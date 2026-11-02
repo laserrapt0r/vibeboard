@@ -94,6 +94,7 @@
   - Bereich „Zusammenarbeit“: E-Mails bei Erwähnungen/Antworten/Zuweisungen (Standard: an), Gastzugang (Standard: aus) mit längster Gültigkeit (Standard 30 Tage), wer Teams anlegen darf (Standard: alle), Aufzeichnungen erlauben (Standard: an) mit Höchstdauer (Standard 10 Minuten, höchstens 30).
   - Geändert in 4.1.0: zusätzlich Dateianhänge erlauben (Standard: an) mit größter Datei (Standard 20 MB, höchstens 100), Aufbewahrung im Papierkorb (Standard 30 Tage), Webhooks erlauben (Standard: aus) und interne Webhook-Ziele zulassen (Standard: aus).
   - Abschalten des Gastzugangs erfordert eine Bestätigung und beendet sofort alle Gastzugänge.
+  - Geändert in 4.16.0: Dazu kommen die Gaststufe „Beiträge“ (Standard: aus) und die Höchstzahl eigener Notizen je Gast (Standard 50, höchstens 500), siehe [REQ-BOARD-011](08-boards-teilen.md).
   - Die Übersicht zeigt die Zahl der Teams und aktiven Gastzugänge; Gäste zählen nicht als Benutzer.
 
 ### REQ-ADMIN-011 Anmeldung
@@ -107,7 +108,7 @@
 ### REQ-ADMIN-012 Designvorgaben
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
-  - Akzentfarbe sowie die Farben für Formen, Text und Haftnotizen sind einstellbar; die Auswahl zeigt dann nur diese Farben. Bestehende Elemente bleiben unverändert.
+  - Akzentfarbe sowie die Farben für Formen, Text und Notizen sind einstellbar; die Auswahl zeigt dann nur diese Farben. Bestehende Elemente bleiben unverändert.
   - Schrift auf der Akzentfarbe und Links passen sich an, damit der Kontrast nach REQ-NFR-009 erhalten bleibt.
 
 ### REQ-ADMIN-013 Anbindungen

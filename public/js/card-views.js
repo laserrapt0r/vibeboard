@@ -1,7 +1,7 @@
 // Kanban und Zeitleiste: andere Ansichten derselben Karten. Jede Änderung landet direkt am Element auf dem Board.
 import { T, LOCALE } from './i18n.js';
-import { h, modal, toast, initials, readableOn, throttle, columnName } from './util.js';
-import { app, getEl, act, updateEl, bounds, fitTo, setSelection, isLocked, boardColumns, cardToColumn, addBoardColumn } from './core.js';
+import { h, modal, toast, initials, readableOn, throttle, columnName, SVGNS } from './util.js';
+import { app, getEl, act, updateEl, bounds, fitTo, setSelection, isLocked, boardColumns, cardToColumn, addBoardColumn, addCardToColumn, cardBlockers } from './core.js';
 import { DONE_RE } from './planning.js';
 
 const DAY = 86400000;
@@ -10,7 +10,7 @@ let view = 'kanban';
 
 const cards = () => [...app.els.values()].filter((e) => e.type === 'card' && !e.hidden);
 const statusOf = (c) => String(c.status || '').trim();
-const signature = () => JSON.stringify([boardColumns(), cards().map((c) => [c.id, c.title, c.status, c.assignee, c.start, c.due, c.color, c.key])]);
+const signature = () => JSON.stringify([boardColumns(), cards().map((c) => [c.id, c.title, c.status, c.assignee, c.start, c.due, c.color, c.key, c.points, c.blockedBy])]);
 
 // Spalten des Boards in dessen Reihenfolge, dahinter alles andere: offen vor erledigt
 function columns(list, onBoard, extra) {
@@ -34,22 +34,33 @@ const setStatus = (id, status) => act(() => {
   if (status) cardToColumn(id, status);
 });
 
-function kanban(close, added, rerender) {
+// Nur Zahlen zählen: T-Shirt-Größen und „?“ lassen sich nicht addieren. Ohne Zahlen gibt es keine Summe.
+function pointsSum(list) {
+  const nums = list.map((c) => Number(String(c.points ?? '').trim().replace(',', '.'))).filter((n, i) => String(list[i].points ?? '').trim() && Number.isFinite(n));
+  return nums.length ? Math.round(nums.reduce((s, n) => s + n, 0) * 100) / 100 : null;
+}
+
+const blockedText = (list) => T`Blockiert durch: ${list.map((c) => c.title || T('Neue Karte')).join(', ')}`;
+const stillBlocked = (list) => list.some((c) => !DONE_RE.test(statusOf(c)));
+
+function kanban(close, added, rerender, adding) {
   const list = cards();
   // Spalten des Boards bleiben auch leer erhalten, sonst ließe sich eine Karte nicht zurückschieben
   const onBoard = boardColumns();
   const cols = columns(list, onBoard, added);
   if (!cols.length) cols.push(NO_STATUS);
   const board = h('div', { class: 'kanban' });
-  for (const col of cols) {
+  cols.forEach((col, index) => {
     const inCol = list.filter((c) => statusOf(c) === col);
     const body = h('div', { class: 'kanban-body' });
     for (const c of inCol) {
+      const by = cardBlockers(c);
       const move = h('select', { 'data-focus': c.id + ':status', 'aria-label': T`Status von „${c.title || T('Neue Karte')}“`, disabled: readOnly(c), onchange: (e) => setStatus(c.id, e.target.value) },
         cols.map((s) => h('option', { value: s, selected: s === col }, s || T('Ohne Status'))));
       const card = h('article', { class: 'kanban-card', draggable: readOnly(c) ? null : 'true', style: { borderTopColor: c.color || '#4262ff' } },
         c.key ? h('div', { class: 'muted small' }, c.key) : null,
         h('button', { 'data-focus': c.id + ':title', class: 'kanban-title', title: T('Auf dem Board zeigen'), onclick: () => jump(c.id, close) }, c.title || T('Neue Karte')),
+        by.length ? h('div', { class: 'kanban-blocked' + (stillBlocked(by) ? ' open' : '') }, blockedText(by)) : null,
         h('div', { class: 'kanban-meta' },
           c.assignee ? h('span', { class: 'avatar xs', title: c.assignee }, initials(c.assignee)) : null,
           c.due ? h('span', { class: 'muted small' }, new Date(c.due + 'T00:00').toLocaleDateString(LOCALE)) : null,
@@ -62,9 +73,33 @@ function kanban(close, added, rerender) {
       });
       body.append(card);
     }
-    const column = h('section', { class: 'kanban-col', 'aria-label': col || T('Ohne Status') },
-      h('h3', {}, col || T('Ohne Status'), ' ', h('span', { class: 'muted small' }, inCol.length)),
-      !inCol.length && added.includes(col) ? h('p', { class: 'muted small' }, T('Vorläufig: Die Spalte bleibt nur, wenn eine Karte in ihr liegt.')) : null, body);
+    const name = col || T('Ohne Status');
+    const sum = pointsSum(inCol);
+    const newCard = () => {
+      adding.add(col);
+      rerender();
+      document.querySelector(`[data-focus="new:${index}"]`)?.focus();
+    };
+    const input = h('input', { type: 'text', 'data-focus': 'new:' + index, 'data-own-esc': '1', maxlength: 200, placeholder: T('Titel der Karte'), 'aria-label': T`Titel der neuen Karte in „${name}“`, onkeydown: (e) => {
+      if (e.key !== 'Escape') return;
+      adding.delete(col);
+      rerender();
+      document.querySelector(`[data-focus="plus:${index}"]`)?.focus();
+    } });
+    const quick = adding.has(col) && !app.viewOnly ? h('form', { class: 'kanban-new', onsubmit: (e) => {
+      e.preventDefault();
+      const title = input.value.trim();
+      if (title) addCardToColumn(title, col);
+      else adding.delete(col);
+      // Der Fokus bleibt im Feld, so entstehen mehrere Karten hintereinander
+      rerender();
+    } }, input, h('button', { class: 'btn small', type: 'submit' }, T('Anlegen'))) : null;
+    const column = h('section', { class: 'kanban-col', 'aria-label': name },
+      h('div', { class: 'kanban-head' }, h('h3', {}, name, ' ', h('span', { class: 'muted small' }, inCol.length)),
+        sum === null ? null : h('span', { class: 'kanban-points', title: T`Summe der Story Points: ${sum.toLocaleString(LOCALE)}` }, `Σ ${sum.toLocaleString(LOCALE)}`),
+        h('span', { class: 'spacer' }),
+        app.viewOnly ? null : h('button', { class: 'icon-btn small kanban-plus', 'data-focus': 'plus:' + index, title: T`Karte in „${name}“ anlegen`, onclick: newCard }, '+')),
+      !inCol.length && added.includes(col) ? h('p', { class: 'muted small' }, T('Vorläufig: Die Spalte bleibt nur, wenn eine Karte in ihr liegt.')) : null, body, quick);
     if (!app.viewOnly) {
       column.addEventListener('dragenter', (e) => e.preventDefault());
       column.addEventListener('dragover', (e) => {
@@ -83,7 +118,7 @@ function kanban(close, added, rerender) {
       });
     }
     board.append(column);
-  }
+  });
   if (!app.viewOnly) {
     const input = h('input', { type: 'text', placeholder: T('Neue Spalte'), 'aria-label': T('Neue Spalte'), maxlength: 40 });
     board.append(h('form', { class: 'kanban-add', onsubmit: (e) => {
@@ -120,6 +155,7 @@ function timeline(close) {
     }
   }
   const rows = h('div', { class: 'tl-rows' });
+  const bars = new Map();
   for (const c of list) {
     const dates = (patch, input) => {
       const s = 'start' in patch ? patch.start : c.start, d = 'due' in patch ? patch.due : c.due;
@@ -164,17 +200,63 @@ function timeline(close) {
         });
       }
       track.append(bar);
+      bars.set(c.id, bar);
     }
+    const by = cardBlockers(c);
     rows.append(h('div', { class: 'tl-row' },
-      h('button', { class: 'tl-name', title: T('Auf dem Board zeigen'), onclick: () => jump(c.id, close) }, c.title || T('Neue Karte')), start, due, track));
+      h('button', { class: 'tl-name', title: T('Auf dem Board zeigen'), onclick: () => jump(c.id, close) },
+        by.length ? h('span', { class: 'tl-blocked', role: 'img', title: blockedText(by), 'aria-label': blockedText(by) }, stillBlocked(by) ? '⛔ ' : '☑ ') : null, c.title || T('Neue Karte')), start, due, track));
   }
+  // Die Lage der Balken steht erst fest, wenn die Zeilen im Dialog liegen
+  requestAnimationFrame(() => drawLinks(rows, list, bars));
   return h('div', { class: 'timeline' }, list.length ? null : h('p', { class: 'muted pad' }, T('Auf diesem Board gibt es noch keine Karten.')),
     h('div', { class: 'tl-scroll' }, h('div', { class: 'tl-head' }, h('span', {}, T('Karte')), h('span', {}, T('Beginn')), h('span', {}, T('Fällig am')), head), rows));
+}
+
+// Pfeile vom Ende der blockierenden Karte zum Beginn der blockierten. Startet sie zu früh, wird der Pfeil rot.
+function drawLinks(rows, list, bars) {
+  if (!rows.isConnected) return;
+  const box = rows.getBoundingClientRect();
+  const svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('class', 'tl-links');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('width', rows.scrollWidth);
+  svg.setAttribute('height', rows.scrollHeight);
+  const tip = (id) => {
+    const m = document.createElementNS(SVGNS, 'marker');
+    for (const [k, v] of Object.entries({ id, viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 7, markerHeight: 7, orient: 'auto' })) m.setAttribute(k, v);
+    const p = document.createElementNS(SVGNS, 'path');
+    p.setAttribute('d', 'M0,0 L8,4 L0,8 Z');
+    m.append(p);
+    return m;
+  };
+  svg.append(tip('tl-tip'), tip('tl-tip-late'));
+  for (const c of list) {
+    const to = bars.get(c.id);
+    for (const b of cardBlockers(c)) {
+      const from = bars.get(b.id);
+      if (!from || !to) continue;
+      const r1 = from.getBoundingClientRect(), r2 = to.getBoundingClientRect();
+      const x1 = r1.right - box.left, y1 = r1.top + r1.height / 2 - box.top;
+      const x2 = r2.left - box.left, y2 = r2.top + r2.height / 2 - box.top;
+      const late = x2 < x1 + 16;
+      const d = late ? `M${x1},${y1} h8 V${(y1 + y2) / 2} H${x2 - 8} V${y2} H${x2}` : `M${x1},${y1} H${x2 - 8} V${y2} H${x2}`;
+      const path = document.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('class', 'tl-link' + (late ? ' late' : ''));
+      path.setAttribute('marker-end', `url(#${late ? 'tl-tip-late' : 'tl-tip'})`);
+      path.dataset.from = b.id;
+      path.dataset.to = c.id;
+      svg.append(path);
+    }
+  }
+  rows.append(svg);
 }
 
 app.on('openCardViews', () => {
   const body = h('div', { class: 'card-views' });
   const added = [];
+  const adding = new Set();
   let sig = '';
   const show = (id) => {
     view = id;
@@ -196,7 +278,7 @@ app.on('openCardViews', () => {
     const key = ae && body.contains(ae) ? ae.dataset.focus || (ae.getAttribute('role') === 'tab' ? 'tab' : 'other') : null;
     body.innerHTML = '';
     body.append(h('div', { class: 'row', role: 'tablist', 'aria-label': T('Ansicht') }, tab('kanban', T('Kanban')), tab('timeline', T('Zeitleiste'))),
-      h('div', { id: 'view-panel', role: 'tabpanel', 'aria-labelledby': 'view-tab-' + view, class: 'view-panel' }, view === 'kanban' ? kanban(() => m.close(), added, render) : timeline(() => m.close())));
+      h('div', { id: 'view-panel', role: 'tabpanel', 'aria-labelledby': 'view-tab-' + view, class: 'view-panel' }, view === 'kanban' ? kanban(() => m.close(), added, render, adding) : timeline(() => m.close())));
     const next = body.querySelector('.kanban, .tl-scroll');
     if (next && pos) [next.scrollLeft, next.scrollTop] = pos;
     if (key) (body.querySelector(`[data-focus="${key}"]`) || body.querySelector('[aria-selected=true]'))?.focus();

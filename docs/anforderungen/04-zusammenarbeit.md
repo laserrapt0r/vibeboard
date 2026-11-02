@@ -57,6 +57,7 @@
   - „Folgen“ übernimmt fortlaufend die Ansicht einer anderen Person; eigenes Verschieben oder Zoomen beendet das Folgen.
   - „Alle zu mir holen“ setzt die Ansicht aller Teilnehmenden einmalig auf die eigene.
   - Geändert in 3.2.0: „Alle folgen mir“ lässt alle Teilnehmenden fortlaufend der eigenen Ansicht folgen (z. B. für Moderation), bis sie selbst verschieben oder zoomen.
+  - Geändert in 4.16.0: Eine Präsentation für alle ([REQ-MOD-012](05-moderation.md#req-mod-012-präsentieren-für-alle)) hat Vorrang: Wer ihr zusieht, wird von „Alle zu mir holen“ und „Alle folgen mir“ nicht weggeholt.
 
 ### REQ-COLLAB-006 Reaktionen und Laserpointer
 - **Seit:** 1.0.0 · **Priorität:** Kann · **Status:** umgesetzt
@@ -154,7 +155,7 @@
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Beschreibung:** Leichtgewichtige Rückmeldung zu einzelnen Beiträgen, ohne eine formelle Abstimmung zu starten.
 - **Akzeptanzkriterien:**
-  - Auf Sticky Notes, Karten, Formen, Texten, Bildern, Dateien, Code-Blöcken und Tabellen lassen sich Emojis vergeben (👍 ❤️ 😂 🎉 👏 🤔 🔥 😮 ➕ ✅): über die Kontextleiste, per Rechtsklick (auch als Betrachter) oder durch Klick auf eine vorhandene Reaktion (an/aus).
+  - Auf Notizen, Karten, Formen, Texten, Bildern, Dateien, Code-Blöcken und Tabellen lassen sich Emojis vergeben (👍 ❤️ 😂 🎉 👏 🤔 🔥 😮 ➕ ✅): über die Kontextleiste, per Rechtsklick (auch als Betrachter) oder durch Klick auf eine vorhandene Reaktion (an/aus).
   - Unter dem Element erscheint je Emoji die Anzahl; der Tooltip nennt die Namen; eigene Reaktionen sind hervorgehoben.
   - Reaktionen ändert nur die eigene Reaktions-Operation auf dem Server (keine Änderung per Element-Update, keine fremden Namen); nur bekannte Emojis, höchstens 200 Personen je Emoji, Ratenbegrenzung.
   - Kopien, Vorlagen und die nächste Retro übernehmen keine Reaktionen.
@@ -162,7 +163,7 @@
 ### REQ-COLLAB-016 Schlagwörter und Filteransicht
 - **Seit:** 4.1.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
-  - Sticky Notes, Karten und Formen erhalten bis zu acht Schlagwörter (Kontextleiste, Etikett-Symbol; Vorschläge aus dem Board). Auf Sticky Notes erscheinen sie oben links.
+  - Notizen, Karten und Formen erhalten bis zu acht Schlagwörter (Kontextleiste → Mehr → Schlagwörter; Vorschläge aus dem Board). Auf Notizen erscheinen sie oben links.
   - Der Filter (Trichter-Symbol) blendet nicht passende Elemente ab – nur in der eigenen Ansicht: nach Schlagwort, Farbe, Person (nicht bei anonymen Beiträgen), „nur mit Reaktionen“, „nur Maßnahmen“. Innerhalb einer Gruppe genügt ein Treffer, zwischen Gruppen müssen alle passen.
   - Ein Hinweis zeigt, wie viele Elemente passen, und hebt den Filter mit einem Klick auf.
   - Geändert in 4.10.0: Der Filter kennt auch den Status von Karten.
@@ -177,16 +178,21 @@
   - Sicherheit: [REQ-SEC-012](11-sicherheit.md).
   - Geändert in 4.3.1: Sind Webhooks abgeschaltet, sind die Menüpunkte für Person und Team deaktiviert.
 
-### REQ-COLLAB-018 Freigaben
+### REQ-COLLAB-018 Prüfungen
 - **Seit:** 4.4.0 · **Priorität:** Muss · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Frames und Dateien lassen sich ausgewählten Personen mit Zugriff auf das Board vorlegen, mit Hinweis und Termin. Gäste, private Inhalte und verborgene Bereiche sind ausgeschlossen.
   - Prüfende brauchen mindestens das Recht zu kommentieren, die Rolle Ansehen reicht nicht; eine Ablehnung braucht eine Begründung. Der Server prüft, wer entscheiden darf.
-  - Status: in Prüfung, freigegeben, abgelehnt, geändert nach Freigabe. Eine Freigabe gilt für den geprüften Stand: Ändert sich der Inhalt, auch an Verbindungen, verfällt sie. Kommentare und das Verschieben des Frames ändern den Stand nicht.
-  - Prüfende und Anfordernde werden benachrichtigt; Status erscheint live am Element und im Panel „Freigaben“; das Protokoll hält die Entscheidungen fest.
+  - Status: in Prüfung, genehmigt, abgelehnt, geändert nach Prüfung. Eine Genehmigung gilt für den geprüften Stand: Ändert sich der Inhalt, auch an Verbindungen, verfällt sie. Kommentare und das Verschieben des Frames ändern den Stand nicht.
+  - Prüfende und Anfordernde werden benachrichtigt; Status erscheint live am Element und im Panel „Prüfungen“; das Protokoll hält die Entscheidungen fest.
   - Wer angefordert hat und der Besitzer können erneut vorlegen oder entfernen.
-  - Geändert in 4.11.2: Freigaben lassen sich auch im Kontextmenü anfordern und anzeigen.
+  - Geändert in 4.11.2: Prüfungen lassen sich auch im Kontextmenü anfordern und anzeigen.
   - Geändert in 4.15.0: Der Dialog zeigt die Rolle jeder Person. Wer nur ansehen darf, ist nicht wählbar; die Fehlermeldung des Servers nennt den Namen.
+  - Geändert in 4.16.0: Die Genehmigung von Inhalten heißt überall „Prüfung“: Panel, Kontextmenü, Benachrichtigungen, E-Mails, Protokoll und Doku. Die Entscheidung heißt „Genehmigen“. Die Freigabe von Konten durch die Administration bleibt davon unberührt.
+  - Geändert in 4.16.0: Offene Prüfungen stehen in „Meine Aufgaben“ ([REQ-PROJ-002](16-projektarbeit.md)). Benachrichtigungen öffnen das Panel beim richtigen Element (Direktlink `/board/<id>#review=<elementId>`), die Meldung über eine Entscheidung nennt Ergebnis und Name. Meldungen zu Prüfungen erscheinen nur, solange die Person Board und Element sehen darf.
+  - Geändert in 4.16.0: „Erneut vorlegen“ löscht keine Entscheidungen mehr. Jede Runde bleibt mit Begründungen erhalten, das Panel zeigt die früheren Runden, beim Vorlegen lässt sich ein Hinweis mitgeben. Das Protokoll nennt die Runde.
+  - Geändert in 4.16.0: Wird ein Frame nach dem Vorlegen verborgen, gibt es die Prüfung für Teilnehmende nicht mehr: Liste, Entscheiden und „Erneut vorlegen“ antworten wie bei einer unbekannten Prüfung. Moderierende sehen sie weiter.
+  - Geändert in 4.16.0: Die Glocke lädt für Meldungen zu Prüfungen nur Boards mit verborgenem Bereich.
 
 ### REQ-COLLAB-019 Gleichzeitige Änderungen am selben Element
 - **Seit:** 4.6.0 · **Priorität:** Muss · **Status:** umgesetzt
