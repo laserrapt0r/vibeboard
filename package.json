@@ -25,7 +25,7 @@
   "private": true,
   "dependencies": {
     "@node-saml/node-saml": "5.2.0",
-    "@xmldom/xmldom": "0.8.15",
+    "@xmldom/xmldom": "0.9.12",
     "ldapts": "9.2.0",
     "nodemailer": "^10.2.1",
     "pdfjs-dist": "^6.4.299",
