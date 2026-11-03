@@ -1,6 +1,7 @@
 // Administrationsoberfläche
 import { T, LOCALE, DEC } from './i18n.js';
 import { SHAPE_PACKS } from './shape-catalog.js';
+import { customPacksSection } from './admin-shapes.js';
 import { h, append, api, ICONS, toast, modal, confirmDialog, initials, relTime, fmtDate, loadPref, readableOn } from './util.js';
 import { menu } from './menu.js';
 import { accountMenuItems, openSecurityDialog } from './account.js';
@@ -828,7 +829,8 @@ async function brand() {
   h('div', { class: 'form-actions start' }, h('button', { type: 'submit', class: 'btn primary' }, T('Speichern'))));
   const { templates } = await api('/api/templates');
   const org = templates.filter((t) => t.scope === 'org');
-  section(T('Design & Vorlagen'), form, h('h2', {}, T('Zentrale Vorlagen')),
+  const packs = await customPacksSection();
+  section(T('Design & Vorlagen'), form, h('h2', {}, T('Eigene Formenpakete')), packs, h('h2', {}, T('Zentrale Vorlagen')),
     org.length ? h('table', { class: 'admin-table' }, h('tbody', {}, org.map((t) => h('tr', {}, h('td', {}, `${t.icon} ${t.name}`), h('td', { class: 'muted' }, t.description), h('td', { class: 'actions' },
       h('button', { class: 'btn small danger', onclick: async () => {
         if (!(await confirmDialog(T('Vorlage löschen'), T`Die Vorlage „${t.name}“ wird gelöscht. Boards, die daraus entstanden sind, bleiben erhalten.`, T('Löschen'), true))) return;

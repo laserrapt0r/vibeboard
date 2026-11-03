@@ -113,6 +113,8 @@ Mehrzeiligen Text in das Board einfügen erzeugt automatisch eine Notiz pro Zeil
 - Notizen nach Farbe clustern
 - **Panel „Alle Formen“:** Formen nach Name oder Synonym suchen, auch mit Tippfehler, aufs Board ziehen und unter „Formen verwalten“ die eigenen Pakete wählen. Die Administration legt fest, welche Pakete verfügbar sind.
 - **Allgemeine Symbole:** Rund 4.800 Liniensymbole aus [Tabler Icons](https://tabler.io/icons) (MIT) als Paket im Panel, gegliedert etwa in Pfeile und Navigation, Kommunikation, Personen, Dateien und Wetter. Die Suche findet Formen und Symbole zusammen, auf Deutsch und Englisch, häufige Motive auch auf Spanisch und Französisch. Symbole haben Linienfarbe, Linienstärke und Beschriftung, Linien docken an ihnen an. Die Daten kommen erst bei Bedarf, normale Boards starten dadurch nicht langsamer.
+- **Symbole für IT und Technik:** Kubernetes (der offizielle Symbolsatz, Apache-2.0), rund 1.700 IT-Symbole aus IBM Carbon (Apache-2.0) für KI und maschinelles Lernen, Cloud, Daten, Sicherheit, Entwicklung, Geräte, Dateien, Finanzen und Bedienelemente, dazu selbst gezeichnete Schaltzeichen nach IEC 60617 und Symbole der Verfahrenstechnik nach ISO 10628 (Pumpen, Behälter, Wärmeübertrager, Armaturen, PLT-Stellen). Elektro- und Verfahrenssymbole behalten ihre gezeichnete Größe, Verbinder docken an ihren Anschlüssen an.
+- **Eigene Formenpakete:** Die Administration importiert SVG-Dateien oder ein ZIP-Archiv, zum Beispiel die offiziellen Symbol-Downloads von AWS, Azure oder Google Cloud. vibeboard erkennt deren Aufbau, übernimmt Gruppen und Namen, bereinigt jede Datei auf dem Server und stellt das Paket allen bereit. vibeboard liefert diese Herstellersymbole nicht mit; für ihre Nutzung gelten die Bedingungen des Herstellers.
 - Schnell arbeiten: Tab beim Tippen legt die nächste Notiz oder Form daneben an, ein Doppelklick hält ein Werkzeug aktiv, und das Formen-Menü zeigt die zuletzt verwendeten Formen. In Vorlagen lassen sich Beschriftungen direkt ändern, Hintergründe bleiben gesperrt; Retro- und Brainstorming-Vorlagen bieten den passenden Ablauf oder Timer an. Eine Karte in eine Kanban-Spalte zu ziehen setzt ihren Status, und ein Frame lässt sich samt Inhalt löschen.
 - Befehlspalette (Strg+K) für Befehle, Einstellungen, Frames, Vorlagen und Board-Inhalte; Format übertragen (Menü „Mehr“ der Kontextleiste, Strg+Alt+C/V).
 - Formeln in Tabellen: `=SUMME(B2:B5)`, `=B2*C2` und mehr; ein Klick auf eine Zelle fügt den Bezug ein, Σ rechnet die Zellauswahl zusammen.
@@ -462,6 +464,7 @@ Unter `/admin`, nur für Administratoren:
   Papierkorb, Webhooks (standardmäßig aus) und ob interne Webhook-Ziele erlaubt sind
 - **Mailserver:** SMTP-Host, Port, Verschlüsselung (STARTTLS, SSL/TLS, keine), Anmeldung, Absender,
   Zertifikatsprüfung; Testmail auch vor dem Speichern
+- **Design & Vorlagen:** Akzent- und Palettenfarben, zentrale Vorlagen, verfügbare Formenpakete und eigene Formenpakete (SVG oder ZIP importieren, umbenennen, ergänzen, löschen)
 - **Rechtliches:** Impressum und Datenschutzerklärung bearbeiten und veröffentlichen (siehe unten)
 - **Protokoll:** Sicherheitsprotokoll der letzten 12 Monate mit Suche und Filter. Es enthält
   - Anmeldungen und fehlgeschlagene Versuche,
@@ -667,6 +670,7 @@ Alle Daten liegen in der eigenen PostgreSQL-Datenbank:
 | `element_owners` | Welchem Gast eine Notiz gehört; wird mit dem Gastzugang gelöscht |
 | `anon_deleted` | Gelöschte anonyme Notizen, damit Rückgängig sie auch nach einem Neustart anonym lässt |
 | `server_secrets` | Vom Server erzeugtes Geheimnis zum Prüfen von Element-Kennungen; entsteht beim ersten Start |
+| `shape_packs`, `shape_pack_icons` | Eigene Formenpakete: Name, Herkunft und Lizenzhinweis, bereinigte Zeichnungen (nie die hochgeladene Datei) |
 | `reviews`, `review_people`, `review_rounds`, `review_round_people` | Prüfungen, Prüfende und ihre Entscheidungen, frühere Runden mit Begründungen |
 | `teams`, `team_members`, `folders`, `folder_boards` | Teams, Mitgliedschaften, Ordner |
 | `board_recordings` | Aufgezeichnete Rundgänge mit Zeitspur und optionaler Tonspur |
@@ -764,6 +768,9 @@ Ausnahmen und Inhalte Dritter, Details in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_N
 - **Business Model Canvas**: Adaption des „Business Model Canvas“ von Strategyzer AG (strategyzer.com), lizenziert unter
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Allgemeine Symbole**: [Tabler Icons](https://tabler.io/icons) von Paweł Kuna, npm-Paket `@tabler/icons` 3.50.0, [MIT-Lizenz](public/vendor/icons/LICENSE). Marken-Logos aus dem Satz sind nicht enthalten.
+- **Kubernetes-Symbole**: [Kubernetes Icons Set](https://github.com/kubernetes/community/tree/main/icons) von The Kubernetes Authors, [Apache License 2.0](public/vendor/symbols/LICENSE-APACHE-2.0). Das Kubernetes-Logo ist nicht enthalten.
+- **IT und Technik**: [IBM Carbon Icons](https://github.com/carbon-design-system/carbon/tree/main/packages/icons), npm-Paket `@carbon/icons` 11.91.0, [Apache License 2.0](public/vendor/symbols/LICENSE-APACHE-2.0). IBM-Produkte und Logos Dritter sind nicht enthalten.
+- **Elektro- und Verfahrenstechnik**: für vibeboard gezeichnet nach IEC 60617 und ISO 10628-2, MIT wie vibeboard.
 - **Lean Canvas**: Adaption des „Lean Canvas“ von Ash Maurya (leanstack.com), basierend auf dem Business Model Canvas,
   lizenziert unter [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Icons**: teilweise aus bzw. nach [Lucide](https://lucide.dev) (ISC) und [Feather](https://feathericons.com) (MIT).

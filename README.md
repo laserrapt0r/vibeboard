@@ -111,6 +111,8 @@ Pasting multi-line text into the board automatically creates one note per line.
 - Cluster notes by color
 - **All shapes panel:** Search shapes by name or synonym, even with a typo, drag them onto the board, and choose your packs under "Manage shapes". Admins set which packs are available.
 - **General icons:** About 4,800 line icons from [Tabler Icons](https://tabler.io/icons) (MIT) as a pack in the panel, sorted into groups such as arrows and navigation, communication, people, files and weather. Search finds shapes and icons together, in German and English, and for common motifs also in Spanish and French. Icons have a line color, a line width and a label, and connectors dock to them. The data loads only when needed, so normal boards do not start slower.
+- **IT and engineering symbols:** Kubernetes (the official icon set, Apache-2.0), about 1,700 IT symbols from IBM Carbon (Apache-2.0) for AI and machine learning, cloud, data, security, development, devices, files, finance and UI controls, plus self-drawn electrical symbols after IEC 60617 and process engineering symbols after ISO 10628 (pumps, vessels, heat exchangers, valves, instruments). Electrical and process symbols keep their drawn size and connectors dock at their terminals.
+- **Custom shape packs:** Admins import SVG files or a ZIP archive, for example the official icon downloads from AWS, Azure or Google Cloud. vibeboard recognises their layout, keeps groups and names, cleans every file on the server and offers the pack to everyone. vibeboard does not ship these vendor icons; their use is subject to the vendor's terms.
 - Working quickly: Tab while typing adds the next note or shape alongside, double-clicking a tool keeps it active, and the shape menu shows recently used shapes. In templates, labels can be edited directly while backgrounds stay locked; retro and brainstorming templates offer their matching flow or timer. Dragging a card into a Kanban column on the board sets its status, and a frame can be deleted together with its content.
 - Command palette (Ctrl+K) for commands, settings, frames, templates and board content; format painter (brush in the context bar, Ctrl+Alt+C/V).
 - Formulas in tables: `=SUM(B2:B5)`, `=B2*C2`, and more; click a cell to insert its reference, or use Σ on selected cells.
@@ -462,6 +464,7 @@ At `/admin`, for administrators only:
   webhooks (off by default) and whether internal webhook targets are allowed
 - **Mail server:** SMTP host, port, encryption (STARTTLS, SSL/TLS, none), sign-in, sender,
   certificate check; test email also before saving
+- **Design & templates:** accent and palette colors, central templates, available shape packs, and custom shape packs (import SVG or ZIP, rename, add, delete)
 - **Legal:** Edit and publish the legal notice and privacy policy (see below)
 - **Log:** Security log of the last 12 months with search and filter. It contains
   - sign-ins and failed attempts,
@@ -666,6 +669,7 @@ All data is stored in your own PostgreSQL database:
 | `element_owners` | Which guest a note belongs to; deleted together with the guest access |
 | `anon_deleted` | Deleted anonymous notes, so that undo keeps them anonymous after a restart |
 | `server_secrets` | Server-generated secret used to verify element IDs; created on first start |
+| `shape_packs`, `shape_pack_icons` | Custom shape packs: name, source and licence note, cleaned drawings (never the uploaded file) |
 | `reviews`, `review_people`, `review_rounds`, `review_round_people` | Reviews, reviewers and their decisions, earlier rounds with reasons |
 | `teams`, `team_members`, `folders`, `folder_boards` | Teams, memberships, folders |
 | `board_recordings` | Recorded walkthroughs with time track and optional audio track |
@@ -763,6 +767,9 @@ Exceptions and third-party content, details in [THIRD_PARTY_NOTICES.md](THIRD_PA
 - **Business Model Canvas**: Adaptation of the “Business Model Canvas” by Strategyzer AG (strategyzer.com), licensed under
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **General icons**: [Tabler Icons](https://tabler.io/icons) by Paweł Kuna, npm package `@tabler/icons` 3.50.0, [MIT License](public/vendor/icons/LICENSE). Brand logos from the set are not included.
+- **Kubernetes icons**: [Kubernetes Icons Set](https://github.com/kubernetes/community/tree/main/icons) by The Kubernetes Authors, [Apache License 2.0](public/vendor/symbols/LICENSE-APACHE-2.0). The Kubernetes logo is not included.
+- **IT and engineering**: [IBM Carbon icons](https://github.com/carbon-design-system/carbon/tree/main/packages/icons), npm package `@carbon/icons` 11.91.0, [Apache License 2.0](public/vendor/symbols/LICENSE-APACHE-2.0). IBM products and third-party logos are not included.
+- **Electrical and process engineering symbols**: drawn for vibeboard after IEC 60617 and ISO 10628-2, MIT like vibeboard.
 - **Lean Canvas**: Adaptation of the “Lean Canvas” by Ash Maurya (leanstack.com), based on the Business Model Canvas,
   licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Icons**: partly from or after [Lucide](https://lucide.dev) (ISC) and [Feather](https://feathericons.com) (MIT).

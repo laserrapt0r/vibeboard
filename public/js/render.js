@@ -4,7 +4,7 @@ import { esc, FONT, wrap, fitText, measure, contrastText, initials, unionRect, f
 import { tokenize, THEMES, MAX_LINES } from './highlight.js';
 import { CATALOG_SHAPES, CATALOG_DRAW, CATALOG_DEFAULTS, CATALOG_BELOW, CATALOG_ROUND, CATALOG_HIT, CATALOG_COLUMNS, CATALOG_VERTICAL, CATALOG_OUTLINES, CATALOG_OUTLINE_OF, catalogTextBox,
   circleD, ellipseD, rectD, rrectD, lineD, diamondD } from './shape-catalog.js';
-import { isIconKey, iconReady, iconBody, iconsLoaded, loadIcons } from './icons.js';
+import { isIconKey, iconReady, iconBody, iconMissing, iconBox as iconViewBox, iconMode, loadFor } from './icons.js';
 
 const own = (map, key) => (Object.hasOwn(map, key) ? map[key] : undefined);
 
@@ -1022,7 +1022,7 @@ export function shapeTextColor(el, env) {
   return el.textColor || contrastText(el.fill);
 }
 
-/* ---------------- Allgemeine Symbole ---------------- */
+/* ---------------- Symbole aus Symbolsätzen ---------------- */
 
 const ICON_GRID = 24;
 const AUTO_LINE = new Set(['#1a1a1a', '#f1f1f1', '#e6e6e6']);
@@ -1030,9 +1030,10 @@ const AUTO_LINE = new Set(['#1a1a1a', '#f1f1f1', '#e6e6e6']);
 // Solange die Daten fehlen, zeigt der Rahmen an, wo das Symbol hinkommt. Kennt der Satz den Namen nicht, steht er im Rahmen.
 function iconPlaceholder(el, x, y, w, h, color) {
   const frame = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w, h) * 0.1}" fill="none" stroke="#868e96" stroke-width="1.5" stroke-dasharray="5 4"/>`;
-  if (!iconsLoaded()) return frame;
+  if (!iconMissing(el.shape)) return frame;
   const size = Math.max(8, Math.min(13, w / 8));
-  const name = String(el.shape).slice(3);
+  // Eigene Pakete haben nur Nummern als Namen: Dort steht ein Hinweis
+  const name = String(el.shape).startsWith('cu-') ? T('Symbol fehlt') : String(el.shape).replace(/^[a-z]{2}-/, '');
   return frame + `<text x="${r1(x + w / 2)}" y="${r1(y + h / 2 + size / 3)}" font-family="${esc(FONT)}" font-size="${size}" text-anchor="middle" fill="${color}">${esc(name.length * size * 0.55 > w ? name.slice(0, Math.floor(w / (size * 0.55))) + '…' : name)}</text><title>${esc(name)}</title>`;
 }
 
@@ -1044,11 +1045,18 @@ function iconSvg(el, env, x, y, w, h) {
   const box = shapeTextBox(el.shape, x, y, w, h);
   const color = shapeTextColor(el, env);
   const label = textSvg(box, textLayout(el, box), { color, align: el.align || 'center', valign: 'top', underline: el.underline, strike: el.strike });
-  if (!iconsLoaded()) loadIcons().catch(() => {});
-  if (!iconReady(el.shape)) return hit + iconPlaceholder(el, x, y, w, h, color) + label;
-  const s = Math.min(w, h) / ICON_GRID;
-  const tx = r1(x + (w - ICON_GRID * s) / 2), ty = r1(y + (h - ICON_GRID * s) / 2);
-  return `${hit}<g transform="translate(${tx} ${ty}) scale(${Math.round(s * 1000) / 1000})" color="${stroke}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${iconBody(el.shape)}</g>${label}`;
+  if (!iconReady(el.shape)) {
+    loadFor(el.shape).catch(() => {});
+    return hit + iconPlaceholder(el, x, y, w, h, color) + label;
+  }
+  const mode = iconMode(el.shape);
+  const [vx, vy, vw, vh] = mode === 'tabler' ? [0, 0, ICON_GRID, ICON_GRID] : iconViewBox(el.shape);
+  const s = Math.min(w / vw, h / vh);
+  const tx = r1(x + (w - vw * s) / 2 - vx * s), ty = r1(y + (h - vh * s) / 2 - vy * s);
+  const at = `transform="translate(${tx} ${ty}) scale(${Math.round(s * 10000) / 10000})" color="${stroke}"`;
+  // Linien (Tabler, Elektro, Verfahrenstechnik) und Flächen (Carbon) nehmen die Linienfarbe, farbige Symbole behalten ihre Farben
+  const paint = mode === 'fill' ? ` fill="${stroke}" stroke="none"` : mode === 'color' ? '' : ` fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"`;
+  return `${hit}<g ${at}${paint}>${iconBody(el.shape)}</g>${label}`;
 }
 
 // Exporte kennen die Farbe des Untergrunds nicht. Für Symbole wird sie hier bestimmt: list steht in der Zeichenreihenfolge.

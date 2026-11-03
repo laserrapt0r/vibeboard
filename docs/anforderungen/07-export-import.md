@@ -58,6 +58,7 @@
   - Jeder Frame wird eine Folie (16:9), ohne Frames das ganze Board. Notizen, Text, Formen, Linien, Bilder und Tabellen bleiben bearbeitbar, alles andere kommt als Bild. Private Inhalte und verborgene Bereiche fehlen.
   - Geändert in 4.18.0: Formen mit passender PowerPoint-Vorlage bleiben als Form bearbeitbar, die übrigen kommen als Bild. Eine Beschriftung unter der Form gehört mit ins Bild.
   - Geändert in 4.18.0: Allgemeine Symbole kommen in SVG als Vektor, in PNG, PDF und PPTX als Bild. Alle Exporte warten auf die Symboldatei (REQ-ELEM-023).
+  - Geändert in 4.19.0: Gleiches gilt für Fachsymbole und eigene Formenpakete (REQ-ELEM-024, REQ-ADMIN-014). Fehlt ein gelöschtes eigenes Paket, zeigt der Export den Platzhalter.
   - Geändert in 4.16.0: Der Frame-Titel steht im Titelfeld der Folie (Platzhalter `title`, sichtbar in der Gliederung von PowerPoint), die Inhalte rücken darunter. Folien ohne Titel und der Export ohne Frames nutzen die ganze Fläche.
 
 ### REQ-IO-009 PDF-Datei

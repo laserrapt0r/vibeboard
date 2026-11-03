@@ -87,7 +87,8 @@ const screenOf = (p, id) => ev(p, (id) => {
   await wait(800);
   ok(fetched.length === 0, 'Eine Boardseite lädt die Symboldatei nicht', fetched);
   const startSize = await ev(A, () => performance.getEntriesByType('resource').filter((r) => /icons\.js/.test(r.name)).map((r) => r.decodedBodySize));
-  ok(startSize.length === 1 && startSize[0] < 6000, 'Im Start bleibt nur das kleine Modul', startSize);
+  // Seit 4.19.0 kennt das Modul mehrere Symbolsätze, Daten bringt es weiter keine mit
+  ok(startSize.length === 1 && startSize[0] < 10000, 'Im Start bleibt nur das kleine Modul', startSize);
 
   console.log('=== Panel');
   const first = await openPanel(A);

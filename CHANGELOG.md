@@ -4,6 +4,34 @@ Alle nennenswerten Änderungen an vibeboard. Das Format folgt [Keep a Changelog]
 die Versionsnummern folgen [Semantic Versioning](https://semver.org/lang/de/) (siehe
 [REQ-OPS-001](docs/anforderungen/14-betrieb-versionierung.md)).
 
+## [4.19.0] – 2026-11-03
+
+### Hinzugefügt
+- Fachsymbole als neue Pakete im Panel „Alle Formen“:
+  - **Kubernetes:** die 39 Symbole des offiziellen Kubernetes Icons Set (Apache-2.0), farbig, ohne das Kubernetes-Logo.
+  - **IT und Technik:** 1696 Symbole aus IBM Carbon (Apache-2.0) in elf Gruppen, darunter KI und maschinelles Lernen, Cloud und Infrastruktur, Daten, Sicherheit, Entwicklung, Geräte, Dateien, Finanzen und Bedienelemente. Ohne IBM-Produkte und fremde Marken.
+  - **Elektrotechnik:** 81 Schaltzeichen nach IEC 60617, für vibeboard gezeichnet. Dazu gehören Leitungen, passive Bauelemente, Halbleiter, Quellen, Schalter und Schutzgeräte, Maschinen, Messgeräte und Logikgatter.
+  - **Verfahrenstechnik:** 76 Symbole nach DIN EN ISO 10628-2, für vibeboard gezeichnet. Dazu gehören Pumpen und Verdichter, Behälter und Kolonnen, Wärmeübertrager, Trenn- und Fördertechnik, Armaturen, Rohrleitungsteile und PLT-Stellen.
+- Eigene Formenpakete (Migration 17): Die Administration importiert unter „Design & Vorlagen“ SVG-Dateien oder ein ZIP-Archiv.
+  - Die Symbol-Downloads von AWS, Azure und Google Cloud werden erkannt, mit Gruppen, lesbaren Namen und einer Größe je Symbol. Getestet mit den aktuellen Archiven: AWS 810 Symbole, Azure 712, Google Cloud 45.
+  - Pakete lassen sich umbenennen, ergänzen und löschen. Sie erscheinen bei allen im Panel und lassen sich persönlich abwählen.
+- `lib/svg-clean.js` bereinigt jede hochgeladene SVG-Datei streng auf dem Server. Gespeichert wird nur eine geprüfte Baumstruktur; der Browser baut daraus mit derselben Liste erlaubter Elemente das Bild. `npm run test:svg` prüft das mit Angriffsmustern, mit der Archiv-Erkennung und mit allen mitgelieferten Sätzen und läuft in der CI.
+- `npm run build:symbols` erzeugt die Fachsymboldateien aus den Quellen. Im Betrieb läuft dieser Schritt nicht.
+- „Formen verwalten“ nennt bei jedem Symbolpaket Herkunft und Lizenz.
+
+### Geändert
+- Symbolpakete außer den Allgemeinen Symbolen starten im Panel zugeklappt und laden erst beim Aufklappen oder Suchen. Kleine Sätze zeigen ihre Untergruppen gleich offen.
+- Symbole bieten nur die passenden Regler:
+  - Liniensymbole: Linienfarbe und Linienstärke.
+  - Flächensymbole: die Symbolfarbe.
+  - Farbige Symbole: keine Farbwahl.
+- Der Server erkennt Symbolnamen aller Sätze (`ti-`, `cb-`, `kc-`, `el-`, `pi-`, `cu-`) und entfernt mitgeschickte Zeichnungen auch unter den Feldern `nodes`, `body` und `vb`.
+- Der ZIP-Leser im Browser kann für den Import größere Archive öffnen und liest nur die benötigten Dateien.
+
+### Sicherheit
+- `@xmldom/xmldom` 0.9.12 (Dependabot): Die SVG-Bereinigung nutzt dessen neue Fehlerschnittstelle, die SAML-Auswertung bleibt unverändert.
+- Hochgeladene Symbole kommen nie als Datei aufs Board. Entfernt werden Skripte, Ereignisse, Links, Bilder, eingebettetes HTML, Animationen, externe Verweise und Stilregeln mit `url()`. Dateien mit XML-Entitäten werden abgelehnt.
+
 ## [4.18.0] – 2026-11-02
 
 ### Hinzugefügt

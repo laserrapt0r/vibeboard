@@ -42,6 +42,7 @@ require('./lib/routes/boards').register(router);
 require('./lib/routes/collab').register(router);
 require('./lib/routes/files').register(router);
 require('./lib/routes/admin').register(router);
+require('./lib/routes/shape-packs').register(router);
 require('./lib/routes/legal').register(router);
 
 // Netzwerkadressen für den Teilen-Dialog – nur für angemeldete Nutzer
@@ -117,6 +118,7 @@ async function handlePage(req, res, url) {
   if (p === '/vendor/pdfjs/pdf.min.mjs' || p === '/vendor/pdfjs/pdf.worker.min.mjs') {
     return serveFile(res, path.join(__dirname, 'node_modules', 'pdfjs-dist', 'build', path.basename(p)));
   }
+  if (/^\/vendor\/symbols\/[a-z]+-[0-9a-f]{8}\.json$/.test(p)) return serveVersioned(req, res, path.join(PUBLIC_DIR, p));
   if (/^\/vendor\/icons\/tabler-outline-\d+\.\d+\.\d+\.json$/.test(p)) return serveVersioned(req, res, path.join(PUBLIC_DIR, p));
   // Service Worker der installierbaren App: muss vom Wurzelpfad kommen und immer frisch geprüft werden
   if (p === '/sw.js') return serveFile(res, page('sw.js'), { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' });

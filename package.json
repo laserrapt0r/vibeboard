@@ -1,6 +1,6 @@
 {
   "name": "vibeboard",
-  "version": "4.18.0",
+  "version": "4.19.0",
   "description": "Kollaboratives Online-Whiteboard mit Echtzeit-Zusammenarbeit, Vorlagen, Benutzerverwaltung und PostgreSQL",
   "main": "server.js",
   "scripts": {
@@ -12,16 +12,18 @@
     "test:formula": "node scripts/test-formula.js",
     "test:text": "node scripts/test-text.js",
     "test:robust": "node scripts/test-robust.js",
+    "test:svg": "node scripts/test-svg.js",
     "test:browser": "node scripts/browser/run.js",
     "test:load": "node scripts/load-test.js",
     "check:i18n": "node scripts/check-i18n.js",
     "check:dom": "node scripts/check-dom.js",
-    "build:icons": "node scripts/build-icons.js"
+    "build:icons": "node scripts/build-icons.js",
+    "build:symbols": "node scripts/build-symbols.js"
   },
   "engines": {
     "node": ">=20"
   },
-  "license": "(MIT AND CC-BY-SA-3.0)",
+  "license": "(MIT AND CC-BY-SA-3.0 AND Apache-2.0)",
   "private": true,
   "dependencies": {
     "@node-saml/node-saml": "5.2.0",

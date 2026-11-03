@@ -4,7 +4,7 @@ import { h, api, toast, design, ICONS } from './util.js';
 import { app, placeShape, setTool, saveToolOpts, toWorld } from './core.js';
 import { SHAPES, SHAPE_DEFAULTS, shapeGeom, shapeDecor } from './render.js';
 import { SHAPE_PACKS, ICON_GROUPS, visiblePacks, shapeSynonyms } from './shape-catalog.js';
-import { isIconKey, iconReady, iconBody, iconLabel, iconList, iconMotives, iconsLoaded, loadIcons, onIconsLoaded } from './icons.js';
+import { isIconKey, iconReady, iconBody, iconBox, iconMode, iconLabel, iconMotives, setOf, setLoaded, setItems, setGroups, loadSet, forgetSet, onIconsLoaded } from './icons.js';
 import { closePop, showSidePanel, toggleSidePanel, currentSidePanel } from './ui.js';
 
 const SHAPE_NAMES = new Map(SHAPES);
@@ -22,7 +22,15 @@ function previewBox(k) {
 
 // Die Vorschauen sind reine Zeichenketten und ändern sich nie: Einmal berechnet, gelten sie für alle Knöpfe
 export function shapePreview(k) {
-  if (isIconKey(k)) return `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${iconReady(k) ? iconBody(k) : ''}</svg>`;
+  if (isIconKey(k)) {
+    const mode = iconMode(k);
+    if (mode === 'tabler') return `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${iconReady(k) ? iconBody(k) : ''}</svg>`;
+    const [x, y, w, hh] = iconBox(k);
+    // Lange Formen (Widerstand, Leitung) bekommen eine dünnere Linie, damit sie in der Vorschau nicht verschwimmen
+    const sw = mode === 'stroke' ? Math.max(w, hh) / 28 * 1.6 : 0;
+    const paint = mode === 'fill' ? 'fill="currentColor"' : mode === 'stroke' ? `fill="none" stroke="currentColor" stroke-width="${Math.round(sw * 100) / 100}" stroke-linecap="round" stroke-linejoin="round"` : '';
+    return `<svg viewBox="${x} ${y} ${w} ${hh}" width="30" height="30" ${paint}>${iconReady(k) ? iconBody(k) : ''}</svg>`;
+  }
   let svg = previews.get(k);
   if (!svg) {
     const [x, y, w, h] = previewBox(k);
@@ -35,10 +43,29 @@ export function shapePreview(k) {
 
 const adminOff = () => design().shapePacksOff || [];
 const userOff = () => app.me?.shapePacksOff || [];
-export const availablePacks = () => visiblePacks(adminOff(), userOff());
+
+// Eigene Formenpakete der Administration: Die Liste kommt beim Öffnen des Panels frisch vom Server
+let customPacks = [];
+const customAsPacks = () => customPacks.map((p) => ({ id: 'cu-' + p.id, name: p.name, keys: [], set: 'cu-' + p.id, source: p.source, count: p.count, custom: true }));
+async function fetchCustomPacks() {
+  try {
+    const list = await api('/api/shape-packs');
+    const before = new Map(customPacks.map((p) => [p.id, p.version]));
+    customPacks = Array.isArray(list) ? list : [];
+    // Geänderte Pakete neu laden, sobald sie gebraucht werden
+    for (const p of customPacks) if (before.has(p.id) && before.get(p.id) !== p.version) forgetSet('cu-' + p.id);
+    return customPacks.some((p) => before.get(p.id) !== p.version) || before.size !== customPacks.length;
+  } catch {
+    return false;
+  }
+}
+
+export const allPacks = () => [...SHAPE_PACKS, ...customAsPacks()];
+export const availablePacks = () => visiblePacks(adminOff(), userOff(), customAsPacks());
 export const availableShapes = () => new Set(availablePacks().flatMap((p) => p.keys));
-const iconsOn = () => availablePacks().some((p) => p.id === 'icons');
-export const shapeUsable = (k) => (isIconKey(k) ? iconsOn() && iconReady(k) : availableShapes().has(k));
+const setPacks = () => availablePacks().filter((p) => p.set);
+const setOn = (set) => setPacks().some((p) => p.set === set);
+export const shapeUsable = (k) => (isIconKey(k) ? setOn(setOf(k)) && iconReady(k) : availableShapes().has(k));
 export const shapeName = (k) => (isIconKey(k) ? iconLabel(k, LANG === 'de') : SHAPE_NAMES.get(k) || k);
 const open = () => currentSidePanel() === 'shapes';
 
@@ -120,19 +147,26 @@ export function searchShapes(query, allowed = availableShapes()) {
   return hits.sort((a, b) => b[0] - a[0]).map(([, k]) => k);
 }
 
-let iconIndex = null;
-function iconSearchIndex() {
+const iconIndex = new Map();
+function iconSearchIndex(set) {
   const split = (s) => [...new Set(plain(s).split(/[^\p{L}\p{N}]+/u).filter(Boolean))];
-  iconIndex ||= iconList().map((it) => ({ k: it.k, size: it.name.length, nameWords: split(`${it.name} ${iconMotives(it)}`), tagWords: split(it.tags) }));
-  return iconIndex;
+  if (!iconIndex.has(set)) {
+    const groups = new Map(setGroups(set));
+    const label = (it) => (typeof it.label === 'string' ? it.label : '');
+    // Eigene Pakete heißen nach Nummern: Dort zählt nur die Bezeichnung
+    const named = (it) => (set.startsWith('cu-') ? '' : it.name);
+    iconIndex.set(set, setItems(set).map((it) => ({ k: it.k, size: (label(it) || it.name).length, nameWords: split(`${named(it)} ${label(it)} ${iconMotives(it)}`), tagWords: split(`${it.tags} ${groups.get(it.group) || ''}`) })));
+  }
+  return iconIndex.get(set);
 }
 
-// Bei gleicher Wertung zuerst der kürzeste Name: „bell“ vor „bell-school-off“
-export function searchIcons(query) {
+// Bei gleicher Wertung zuerst der kürzeste Name: „bell“ vor „bell-school-off“. Ohne set: alle eingeschalteten und geladenen Sätze.
+export function searchIcons(query, set = null) {
   const words = plain(query).split(/\s+/).filter(Boolean);
-  if (!words.length || !iconsLoaded()) return [];
+  const list = (set ? [set] : setPacks().map((p) => p.set)).filter(setLoaded);
+  if (!words.length || !list.length) return [];
   const hits = [];
-  for (const it of iconSearchIndex()) {
+  for (const it of list.flatMap(iconSearchIndex)) {
     let total = 0;
     for (const w of words) {
       const s = Math.max(wordScore(w, it.nameWords) * 2, wordScore(w, it.tagWords, false));
@@ -274,13 +308,18 @@ function gridKey(e) {
 let panel = null, body = null, searchInput = null, builtFor = '', manage = false;
 
 const closedGroups = () => new Set(app.toolOpts.shapeGroupsClosed || []);
+const openedGroups = () => new Set(app.toolOpts.shapeGroupsOpen || []);
+// Symbolsätze außer den Allgemeinen Symbolen sind anfangs zu: Sonst lädt das erste Öffnen des Panels alle Dateien auf einmal
+const startsClosed = (pack) => !!pack.set && pack.id !== 'icons';
+const isClosed = (pack) => (startsClosed(pack) ? !openedGroups().has(pack.id) : closedGroups().has(pack.id));
 
-function toggleGroup(id, head, grid, fill) {
-  const closed = closedGroups();
-  const nowClosed = !closed.has(id);
-  if (nowClosed) closed.add(id);
-  else closed.delete(id);
-  app.toolOpts.shapeGroupsClosed = [...closed];
+function toggleGroup(pack, head, grid, fill) {
+  const nowClosed = !isClosed(pack);
+  const key = startsClosed(pack) ? 'shapeGroupsOpen' : 'shapeGroupsClosed';
+  const list = startsClosed(pack) ? openedGroups() : closedGroups();
+  if (nowClosed === !startsClosed(pack)) list.add(pack.id);
+  else list.delete(pack.id);
+  app.toolOpts[key] = [...list].slice(-100);
   saveToolOpts();
   head.setAttribute('aria-expanded', String(!nowClosed));
   grid.hidden = nowClosed;
@@ -289,26 +328,26 @@ function toggleGroup(id, head, grid, fill) {
 
 function group(pack) {
   const labels = pack.labels?.() || {};
-  const grid = h('div', { class: pack.lazy ? 'shape-subs' : 'shape-grid', role: 'group', 'aria-label': pack.name });
+  const grid = h('div', { class: pack.set ? 'shape-subs' : 'shape-grid', role: 'group', 'aria-label': pack.name });
   // Zugeklappte Gruppen bekommen ihre Knöpfe erst beim Aufklappen
   const fill = () => {
-    if (pack.lazy) return fillIcons(grid);
+    if (pack.set) return fillSet(grid, pack.set);
     if (grid.firstChild) return;
     grid.append(...pack.keys.map((k) => shapeButton(k, labels[k])));
     if (grid.firstChild) grid.firstChild.tabIndex = 0;
   };
-  const closed = closedGroups().has(pack.id);
-  const head = h('button', { class: 'shape-group-head', type: 'button', 'aria-expanded': String(!closed), onclick: () => toggleGroup(pack.id, head, grid, fill) },
+  const closed = isClosed(pack);
+  const head = h('button', { class: 'shape-group-head', type: 'button', 'aria-expanded': String(!closed), onclick: () => toggleGroup(pack, head, grid, fill) },
     h('span', { class: 'shape-chev', html: ICONS.chevDown || '' }), h('span', { class: 'shape-group-name' }, pack.name), h('span', { class: 'muted small' }, packCount(pack)));
   grid.hidden = closed;
   if (!closed) fill();
   return h('section', { class: 'shape-group' }, head, grid);
 }
 
-/* ---------------- Allgemeine Symbole ---------------- */
+/* ---------------- Symbolsätze und eigene Pakete ---------------- */
 
 const PAGE = 60; // Knöpfe je Schritt: Das Panel baut nie alle rund 5000 auf einmal
-let iconsFailed = false;
+const failed = new Set(); // Sätze, deren Laden zuletzt fehlschlug
 
 // Knöpfe entstehen seitenweise, sobald das Ende der Liste in Sicht kommt. „Mehr anzeigen“ bleibt für die Tastatur erreichbar.
 const moreWatch = 'IntersectionObserver' in globalThis ? new IntersectionObserver((seen) => {
@@ -331,17 +370,23 @@ function pagedGrid(keys, label) {
   return h('div', {}, grid, more);
 }
 
-const iconKeysByGroup = () => {
+const keysByGroup = (set) => {
   const by = new Map();
-  for (const it of iconList()) by.set(it.group, [...(by.get(it.group) || []), it.k]);
+  for (const it of setItems(set)) by.set(it.group, [...(by.get(it.group) || []), it.k]);
   return by;
 };
 const openIconGroups = () => new Set(app.toolOpts.shapeIconGroupsOpen || []);
+const shutIconGroups = () => new Set(app.toolOpts.shapeIconGroupsShut || []);
+// Kleine Sätze (Kubernetes, Elektro, Verfahrenstechnik) zeigen ihre Untergruppen gleich offen, große erst auf Klick
+const SMALL_SET = 200;
 
-function iconSubgroup(id, name, keys) {
+// Die Untergruppen der Allgemeinen Symbole behalten ihre bisherigen Kennungen, damit gespeicherte Auswahl gilt
+const subId = (set, id) => (set === 'ti' ? id : `${set}:${id}`);
+
+function iconSubgroup(id, name, keys, startOpen = false) {
   let content = null;
   const box = h('div', { class: 'shape-sub-body' });
-  const opened = openIconGroups().has(id);
+  const opened = startOpen ? !shutIconGroups().has(id) : openIconGroups().has(id);
   const show = (on) => {
     box.hidden = !on;
     if (on && !content) {
@@ -350,10 +395,12 @@ function iconSubgroup(id, name, keys) {
     }
   };
   const head = h('button', { class: 'shape-group-head shape-sub-head', type: 'button', 'aria-expanded': String(opened), onclick: () => {
-    const on = head.getAttribute('aria-expanded') !== 'true', list = openIconGroups();
-    if (on) list.add(id);
+    const on = head.getAttribute('aria-expanded') !== 'true';
+    const key = startOpen ? 'shapeIconGroupsShut' : 'shapeIconGroupsOpen';
+    const list = startOpen ? shutIconGroups() : openIconGroups();
+    if (on !== startOpen) list.add(id);
     else list.delete(id);
-    app.toolOpts.shapeIconGroupsOpen = [...list];
+    app.toolOpts[key] = [...list].slice(-200);
     saveToolOpts();
     head.setAttribute('aria-expanded', String(on));
     show(on);
@@ -362,32 +409,38 @@ function iconSubgroup(id, name, keys) {
   return h('section', { class: 'shape-sub' }, head, box);
 }
 
-function iconStatus() {
-  if (!iconsFailed) return h('p', { class: 'muted small shape-status' }, T('Symbole werden geladen …'));
-  return h('p', { class: 'muted small shape-status' }, T('Die Symbole konnten nicht geladen werden.'), ' ', h('button', { class: 'btn small', type: 'button', onclick: () => fetchIcons(true) }, T('Erneut versuchen')));
+function iconStatus(sets) {
+  const bad = sets.filter((s) => failed.has(s));
+  if (!bad.length) return h('p', { class: 'muted small shape-status' }, T('Symbole werden geladen …'));
+  return h('p', { class: 'muted small shape-status' }, T('Die Symbole konnten nicht geladen werden.'), ' ', h('button', { class: 'btn small', type: 'button', onclick: () => bad.forEach((s) => fetchSet(s, true)) }, T('Erneut versuchen')));
 }
 
-function fetchIcons(force) {
-  if (iconsLoaded() || !iconsOn()) return;
-  iconsFailed = false;
-  loadIcons(force).catch(() => {
-    iconsFailed = true;
+function fetchSet(set, force) {
+  if (setLoaded(set) || !setOn(set)) return;
+  failed.delete(set);
+  loadSet(set, force).catch(() => {
+    failed.add(set);
     if (panel && !manage) refreshBody();
   });
 }
 
-function fillIcons(box) {
-  if (!iconsLoaded()) {
+function fillSet(box, set) {
+  if (!setLoaded(set)) {
     // Erst nach dem Öffnen angehakt: Dann hat noch niemand geladen
-    if (!iconsFailed) fetchIcons(false);
-    return box.replaceChildren(iconStatus());
+    if (!failed.has(set)) fetchSet(set, false);
+    return box.replaceChildren(iconStatus([set]));
   }
-  const by = iconKeysByGroup();
-  box.replaceChildren(...ICON_GROUPS.filter(([id]) => by.has(id)).map(([id, name]) => iconSubgroup(id, name, by.get(id))));
+  const by = keysByGroup(set);
+  const groups = set === 'ti' ? ICON_GROUPS : setGroups(set);
+  const used = groups.filter(([id]) => by.has(id));
+  // Ein Paket ohne Unterteilung zeigt seine Symbole direkt
+  if (used.length <= 1) return box.replaceChildren(pagedGrid([...by.values()].flat(), set));
+  const small = set !== 'ti' && setItems(set).length <= SMALL_SET;
+  box.replaceChildren(...used.map(([id, name]) => iconSubgroup(subId(set, id), name || T('Ohne Gruppe'), by.get(id), small)));
   return undefined;
 }
 
-const packCount = (p) => (p.lazy ? (iconsLoaded() ? String(iconList().length) : '') : String(p.keys.length));
+const packCount = (p) => (p.set ? (setLoaded(p.set) ? String(setItems(p.set).length) : p.count != null ? String(p.count) : '') : String(p.keys.length));
 
 function recentSection() {
   const keys = (app.toolOpts.recentShapes || []).filter(shapeUsable);
@@ -397,21 +450,25 @@ function recentSection() {
   return h('section', { class: 'shape-group shape-recent' }, h('div', { class: 'pop-title' }, T('Zuletzt verwendet')), grid);
 }
 
+const stampNow = () => JSON.stringify([adminOff(), userOff(), customPacks.map((p) => [p.id, p.version, p.name])]);
+
 function fillGroups() {
-  const stamp = JSON.stringify([adminOff(), userOff()]);
-  builtFor = stamp;
+  builtFor = stampNow();
   body.replaceChildren(...[recentSection(), ...availablePacks().map(group)].filter(Boolean));
 }
 
 // Formen und Symbole stehen untereinander in einer Trefferliste. Die Symbole folgen, sobald ihre Daten da sind.
 function showResults(q) {
   const keys = searchShapes(q);
-  const icons = iconsOn() ? searchIcons(q) : [];
-  const waiting = iconsOn() && !iconsLoaded();
+  const sets = setPacks().map((p) => p.set);
+  // Eine Suche braucht alle eingeschalteten Sätze
+  for (const s of sets) if (!failed.has(s)) fetchSet(s, false);
+  const icons = searchIcons(q);
+  const waiting = sets.filter((s) => !setLoaded(s));
   const parts = [];
   if (keys.length) parts.push(h('div', { class: 'shape-grid', role: 'group', 'aria-label': T('Suchergebnis') }, keys.map((k) => shapeButton(k))));
   if (icons.length) parts.push(h('div', { class: 'pop-title shape-hits' }, T('Symbole')), pagedGrid(icons, T('Symbole')));
-  if (waiting) parts.push(iconStatus());
+  if (waiting.length) parts.push(iconStatus(waiting));
   if (!parts.length) parts.push(h('p', { class: 'muted pad' }, T('Keine passende Form gefunden.')));
   body.replaceChildren(...parts);
   const first = body.querySelector('.shape-btn');
@@ -441,10 +498,12 @@ function manageView() {
   const off = adminOff();
   return h('div', { class: 'shape-manage' },
     h('p', { class: 'muted small' }, T('Wähle, welche Pakete im Panel erscheinen. Vorhandene Elemente bleiben davon unberührt. Die Grundformen sind immer dabei.')),
-    SHAPE_PACKS.filter((p) => p.id !== 'basic' && !off.includes(p.id)).map((p) => {
+    allPacks().filter((p) => p.id !== 'basic' && !off.includes(p.id)).map((p) => {
       const box = h('input', { type: 'checkbox', checked: !userOff().includes(p.id), onchange: () => setPack(p.id, box.checked, box) });
       box.dataset.pack = p.id;
-      return h('label', { class: 'check' }, box, h('span', { class: 'shape-group-name' }, p.name), h('span', { class: 'muted small' }, packCount(p)));
+      // Herkunft und Lizenz stehen unter dem Namen (Namensnennung der Symbolsätze)
+      const source = p.source ? h('span', { class: 'muted small shape-source' }, p.source) : null;
+      return h('label', { class: 'check shape-pack-row' }, box, h('span', { class: 'shape-pack-text' }, h('span', { class: 'shape-group-name' }, p.name), source), h('span', { class: 'muted small' }, packCount(p)));
     }));
 }
 
@@ -504,11 +563,17 @@ function build(closeButton) {
 // Aufruf aus renderSidePanel. Der Aufbau bleibt erhalten, damit das erneute Öffnen und Neuzeichnen nichts kostet.
 export function mountShapesPanel(side, closeButton) {
   if (!panel) build(closeButton());
-  else if (!manage && !searchInput.value && builtFor !== JSON.stringify([adminOff(), userOff()])) fillGroups();
+  else if (!manage && !searchInput.value && builtFor !== stampNow()) fillGroups();
   if (!side.contains(panel)) side.replaceChildren(panel);
   markActive();
-  // Erst nach dem Aufbau: Die Formen stehen sofort, die Symbole kommen dazu
-  if (!iconsFailed) fetchIcons(false);
+  // Erst nach dem Aufbau: Die Formen stehen sofort, die Allgemeinen Symbole und eigene Pakete kommen dazu
+  if (!failed.has('ti')) fetchSet('ti', false);
+  fetchCustomPacks().then((changed) => {
+    if (!changed || !panel) return;
+    iconIndex.clear();
+    if (manage) body.replaceChildren(manageView());
+    else refreshBody();
+  });
 }
 
 // Nach einer Änderung an „Zuletzt verwendet“ steht die Liste beim nächsten Öffnen neu oben
@@ -531,9 +596,9 @@ export function openShapesPanel() {
 
 app.on('tool', () => open() && markActive());
 app.on('shapeUsed', () => open() && refreshRecent());
-onIconsLoaded(() => {
-  iconIndex = null;
-  iconsFailed = false;
+onIconsLoaded((set) => {
+  iconIndex.delete(set);
+  failed.delete(set);
   if (panel && !manage) refreshBody();
   else if (panel) body.replaceChildren(manageView());
 });

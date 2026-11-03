@@ -416,8 +416,9 @@ export function catalogTextBox(kind, x, y, w, h, pad) {
 // Die Kennungen stehen auch in lib/settings.js (SHAPE_PACK_IDS). „basic“ lässt sich nicht abschalten: Die Tasten S, R und O brauchen eine Form.
 export const SHAPE_PACKS = [
   { id: 'basic', name: T('Grundformen'), keys: ['rect', 'roundrect', 'ellipse', 'diamond', 'triangle', 'pentagon', 'hexagon', 'octagon', 'parallelogram', 'trapezoid', 'star', 'pill', 'arrow', 'leftarrow', 'doublearrow', 'chevron', 'arrowflag', 'callout', 'bubble', 'cross', 'cloud', 'cloudround', 'cloudwide', 'cloudthought', 'braceleft', 'braceright', 'barprocess', 'snipcorner'] },
-  // Die Symbole kommen erst mit der Symboldatei (public/js/icons.js), darum hat das Paket keine festen Einträge
-  { id: 'icons', name: T('Allgemeine Symbole'), keys: [], lazy: true },
+  // Pakete mit „set“ kommen erst mit ihrer Symboldatei (public/js/icons.js), darum haben sie keine festen Einträge.
+  // „source“ nennt Herkunft und Lizenz, die Verwaltung im Panel zeigt sie an (siehe THIRD_PARTY_NOTICES.md).
+  { id: 'icons', name: T('Allgemeine Symbole'), keys: [], set: 'ti', source: 'Tabler Icons · MIT' },
   {
     id: 'flow', name: T('Flussdiagramm'),
     keys: ['pill', 'rect', 'diamond', 'parallelogram', 'document', 'multidoc', 'subprocess', 'preparation', 'manualinput', 'manualop', 'cylinder', 'directstorage', 'internalstorage', 'delay', 'display', 'punchcard', 'punchtape', 'fcor', 'fcsum', 'fcsort', 'fcmerge', 'fcextract', 'collate', 'fcloop', 'storeddata', 'fcconnector', 'offpage', 'annotleft', 'annotright', 'seqaccess'],
@@ -440,6 +441,10 @@ export const SHAPE_PACKS = [
   { id: 'net', name: T('Netzwerk & Rechenzentrum'), keys: ['router', 'switch', 'firewall', 'loadbalancer', 'accesspoint', 'internet', 'cloud', 'server', 'rack', 'storage', 'desktop', 'laptop', 'mobile', 'users'] },
   { id: 'it', name: T('Software & IT'), keys: ['server', 'cylinder', 'queue', 'container', 'browser', 'laptop', 'firewall', 'cloud', 'actor', 'component', 'gear', 'lock'] },
   { id: 'k8s', name: T('Container-Plattform'), keys: ['pod', 'deployment', 'k8sservice', 'ingress', 'k8snode', 'configmap', 'secret', 'volume'] },
+  { id: 'kubernetes', name: T('Kubernetes'), keys: [], set: 'kc', source: 'Kubernetes Icons Set · The Kubernetes Authors · Apache-2.0' },
+  { id: 'carbon', name: T('IT und Technik'), keys: [], set: 'cb', source: 'IBM Carbon Design System · Apache-2.0' },
+  { id: 'electrical', name: T('Elektrotechnik'), keys: [], set: 'el', source: T('Eigene Zeichnung nach IEC 60617') },
+  { id: 'process', name: T('Verfahrenstechnik'), keys: [], set: 'pi', source: T('Eigene Zeichnung nach DIN EN ISO 10628-2') },
 ];
 
 // Untergruppen des Pakets „Allgemeine Symbole“. Kennungen und Zuordnung: scripts/build-icons.js
@@ -449,8 +454,9 @@ export const ICON_GROUPS = [
 ];
 
 // Pakete, die eine Person gerade sehen soll. Die Grundformen sind immer dabei, Abgewähltes ändert nichts an vorhandenen Elementen.
-export function visiblePacks(adminOff = [], userOff = []) {
-  return SHAPE_PACKS.filter((p) => p.id === 'basic' || (!adminOff.includes(p.id) && !userOff.includes(p.id)));
+// custom: eigene Pakete der Administration, sie folgen auf die eingebauten.
+export function visiblePacks(adminOff = [], userOff = [], custom = []) {
+  return [...SHAPE_PACKS, ...custom].filter((p) => p.id === 'basic' || (!adminOff.includes(p.id) && !userOff.includes(p.id)));
 }
 
 // Weitere Suchwörter. Der Name selbst und das Paket sind ohnehin durchsuchbar.

@@ -29,6 +29,10 @@ const PUBLIC = new Map(Object.entries({
   'GET /api/auth/oidc/start': 'Anmeldung', 'GET /api/auth/oidc/callback': 'Anmeldung', 'GET /api/auth/kerberos': 'Anmeldung',
   'GET /api/auth/saml/start': 'Anmeldung', 'POST /api/auth/saml/acs': 'Anmeldung', 'GET /api/auth/saml/metadata': 'Anmeldung',
 }));
+// Für alle Angemeldeten lesbar, auch für Fremde: gilt für die ganze Instanz, nicht für ein Board
+const INSTANCE_READ = new Map(Object.entries({
+  'GET /api/shape-packs/:pid': 'Eigene Formenpakete sind wie die mitgelieferten Symbole für alle da, Boards zeigen sie jedem, der sie sehen darf',
+}));
 // Änderungen, die auch mit Ansehen- oder Gast-Rolle erlaubt sind, weil sie das Board nicht ändern
 const READ_ROLE_WRITES = new Map(Object.entries({
   'POST /api/boards/:id/duplicate': 'legt eine eigene Kopie an, siehe duplicates()',
@@ -226,7 +230,7 @@ function fill(r, ids) {
     if (k === 'tid') return p.includes('trackers') ? ids.tracker : p.includes('templates') ? ids.template : ids.team;
     if (k === 'fid') return p.startsWith('/api/folders') ? ids.folder : ids.fid;
     if (k === 'rid') return p.includes('recordings') ? ids.recording : ids.rid;
-    return { vid: ids.vid, eid: 'noteX', kind: 'privacy', uid: ids.uid, sid: '0123456789abcdef', token: 'x'.repeat(32) }[k] ?? '1';
+    return { vid: ids.vid, eid: 'noteX', kind: 'privacy', uid: ids.uid, pid: ids.pack, n: '0', sid: '0123456789abcdef', token: 'x'.repeat(32) }[k] ?? '1';
   };
   const url = p.replace(/:(\w+)/g, (m, k) => encodeURIComponent(value(k)));
   return /\/(events|poll)$/.test(p) ? `${url}?client=sweep${Math.random().toString(36).slice(2, 14)}` : url;
@@ -256,7 +260,7 @@ async function sweep(list, people, ids) {
     }
     if (!PUBLIC.has(r.key)) rejected(anon, r, await anon.call(r.method, url, body), 'ohne Anmeldung offen');
     // Fremde: nichts an Objekten anderer
-    if (hasParam(r) && !PUBLIC.has(r.key)) rejected(stranger, r, await stranger.call(r.method, url, body), 'fremde Person kommt durch');
+    if (hasParam(r) && !PUBLIC.has(r.key) && !INSTANCE_READ.has(r.key)) rejected(stranger, r, await stranger.call(r.method, url, body), 'fremde Person kommt durch');
     if (r.pattern.startsWith('/api/admin')) {
       for (const p of [stranger, editor]) {
         const s = await p.call(r.method, url, body);
@@ -463,6 +467,9 @@ async function main() {
     }
     const ids = await seed(people);
     ids.uid = people.ids.owner;
+    // Ein eigenes Formenpaket mit einem Symbol, damit die Routen einen echten Gegenstand haben
+    ids.pack = (await people.admin.json('POST', '/api/admin/shape-packs', { name: 'Paket' })).id;
+    await people.admin.json('POST', `/api/admin/shape-packs/${ids.pack}/icons`, { icons: [{ name: 'Kreis', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>' }] });
     await liveState(people, ids);
     await duplicates(people, ids);
     await operations(people, ids);
