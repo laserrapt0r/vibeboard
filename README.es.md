@@ -112,6 +112,8 @@ Al pegar texto de varias líneas en el tablero se crea automáticamente una nota
 - **Duplicado inteligente:** Ctrl+D repite el último desplazamiento utilizado.
 - **Panel «Todas las formas»:** busca formas por nombre o sinónimo, incluso con una errata, arrástralas al tablero y elige tus paquetes en «Gestionar formas». La administración decide qué paquetes están disponibles.
 - **Iconos generales:** unos 4800 iconos de línea de [Tabler Icons](https://tabler.io/icons) (MIT) como paquete en el panel, ordenados en grupos como flechas y navegación, comunicación, personas, archivos y tiempo atmosférico. La búsqueda encuentra formas e iconos a la vez, en alemán e inglés, y los motivos más habituales también en español y francés. Los iconos tienen color y grosor de línea y una etiqueta, y las líneas se acoplan a ellos. Los datos se cargan solo cuando hacen falta, así que los tableros normales no tardan más en abrirse.
+- **Símbolos de TI e ingeniería:** Kubernetes (el conjunto oficial, Apache-2.0), unos 1700 símbolos de TI de IBM Carbon (Apache-2.0) para IA y aprendizaje automático, nube, datos, seguridad, desarrollo, dispositivos, archivos, finanzas y controles de interfaz, además de símbolos eléctricos según IEC 60617 y de ingeniería de procesos según ISO 10628 dibujados para vibeboard (bombas, recipientes, intercambiadores de calor, válvulas, instrumentos). Los símbolos eléctricos y de procesos conservan su tamaño y los conectores se acoplan a sus terminales.
+- **Paquetes de formas propios:** la administración importa archivos SVG o un archivo ZIP, por ejemplo las descargas oficiales de iconos de AWS, Azure o Google Cloud. vibeboard reconoce su estructura, conserva grupos y nombres, limpia cada archivo en el servidor y ofrece el paquete a todos. vibeboard no incluye estos iconos de fabricantes; su uso se rige por las condiciones del fabricante.
 - Trabajo rápido: Tab al escribir añade la siguiente nota o forma al lado, un doble clic mantiene activa una herramienta y el menú de formas muestra las usadas recientemente. En las plantillas, las etiquetas se editan directamente y los fondos siguen bloqueados; las plantillas de retro y brainstorming ofrecen su flujo o temporizador. Arrastrar una tarjeta a una columna Kanban fija su estado, y un marco se puede eliminar con su contenido.
 - Paleta de comandos (Ctrl+K) para comandos, ajustes, marcos, plantillas y contenido del tablero; copiar formato (menú «Más» de la barra contextual, Ctrl+Alt+C/V).
 - Fórmulas en tablas: `=SUMA(B2:B5)`, `=B2*C2` y más; un clic en una celda inserta su referencia, y Σ calcula sobre las celdas seleccionadas.
@@ -469,6 +471,7 @@ En `/admin`, solo para administradores:
   papelera, webhooks (desactivados por defecto) y si se permiten destinos internos de webhooks
 - **Servidor de correo:** Host SMTP, puerto, cifrado (STARTTLS, SSL/TLS, ninguno), inicio de sesión, remitente,
   comprobación del certificado; correo de prueba también antes de guardar
+- **Diseño y plantillas:** colores de acento y de paleta, plantillas centrales, paquetes de formas disponibles y paquetes de formas propios (importar SVG o ZIP, renombrar, ampliar, eliminar)
 - **Aviso legal:** Editar y publicar el aviso legal y la política de privacidad (véase más abajo)
 - **Registro:** Registro de seguridad de los últimos 12 meses con búsqueda y filtro. Contiene
   - inicios de sesión e intentos fallidos,
@@ -673,6 +676,7 @@ Todos los datos están en tu propia base de datos PostgreSQL:
 | `element_owners` | A qué invitado pertenece una nota; se elimina con el acceso de invitado |
 | `anon_deleted` | Notas anónimas eliminadas, para que deshacer las mantenga anónimas tras un reinicio |
 | `server_secrets` | Secreto generado por el servidor para comprobar los identificadores de elementos; se crea en el primer inicio |
+| `shape_packs`, `shape_pack_icons` | Paquetes de formas propios: nombre, origen y nota de licencia, dibujos limpiados (nunca el archivo subido) |
 | `reviews`, `review_people`, `review_rounds`, `review_round_people` | Revisiones, personas revisoras y sus decisiones, rondas anteriores con motivos |
 | `teams`, `team_members`, `folders`, `folder_boards` | Equipos, pertenencias, carpetas |
 | `board_recordings` | Recorridos grabados con pista de tiempo y pista de audio opcional |
@@ -770,6 +774,9 @@ Excepciones y contenido de terceros, detalles en [THIRD_PARTY_NOTICES.md](THIRD_
 - **Business Model Canvas**: adaptación del «Business Model Canvas» de Strategyzer AG (strategyzer.com), con licencia
   [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Iconos generales**: [Tabler Icons](https://tabler.io/icons) de Paweł Kuna, paquete npm `@tabler/icons` 3.50.0, [licencia MIT](public/vendor/icons/LICENSE). Los logotipos de marcas del conjunto no están incluidos.
+- **Iconos de Kubernetes**: [Kubernetes Icons Set](https://github.com/kubernetes/community/tree/main/icons) de The Kubernetes Authors, [licencia Apache 2.0](public/vendor/symbols/LICENSE-APACHE-2.0). El logotipo de Kubernetes no está incluido.
+- **TI y tecnología**: [iconos de IBM Carbon](https://github.com/carbon-design-system/carbon/tree/main/packages/icons), paquete npm `@carbon/icons` 11.91.0, [licencia Apache 2.0](public/vendor/symbols/LICENSE-APACHE-2.0). Los productos de IBM y los logotipos de terceros no están incluidos.
+- **Símbolos eléctricos y de procesos**: dibujados para vibeboard según IEC 60617 e ISO 10628-2, MIT como vibeboard.
 - **Lean Canvas**: adaptación del «Lean Canvas» de Ash Maurya (leanstack.com), basado en el Business Model Canvas,
   con licencia [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 - **Iconos**: en parte procedentes de o basados en [Lucide](https://lucide.dev) (ISC) y [Feather](https://feathericons.com) (MIT).

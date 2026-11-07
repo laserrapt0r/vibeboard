@@ -106,6 +106,10 @@ const SEEDS = {
   16: async (c) => {
     await c.query(`UPDATE users SET shape_packs_off = '["vsm", "dfd"]' WHERE id = 1`);
   },
+  17: async (c) => {
+    await c.query(`INSERT INTO shape_packs (id, name, source, groups, created_by) VALUES ('abc123', 'Testpaket', 'eigene Zeichnung', '["Gruppe"]', 1)`);
+    await c.query(`INSERT INTO shape_pack_icons (pack_id, n, name, drawing, bytes) VALUES ('abc123', 0, 'Kreis', '{"vb":[0,0,10,10],"nodes":[["circle",{"cx":"5","cy":"5","r":"4"}]]}', 60)`);
+  },
 };
 
 async function structure(c, schema) {

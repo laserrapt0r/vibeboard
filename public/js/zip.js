@@ -32,7 +32,8 @@ async function inflateLimited(data, budget) {
   return out;
 }
 
-export async function readZip(buffer) {
+// maxFiles: Symbol-Archive der Hersteller haben mehrere Tausend Einträge (Bilder in allen Größen), gelesen werden davon nur die SVG-Dateien
+export async function readZip(buffer, { maxFiles = MAX_FILES } = {}) {
   const bytes = new Uint8Array(buffer);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let eocd = -1;
@@ -44,7 +45,7 @@ export async function readZip(buffer) {
   }
   if (eocd < 0) throw new Error('kein ZIP-Archiv');
   const count = view.getUint16(eocd + 10, true);
-  if (count > MAX_FILES) throw new Error('zu viele Einträge');
+  if (count > maxFiles) throw new Error('zu viele Einträge');
   let at = view.getUint32(eocd + 16, true);
   const decoder = new TextDecoder();
   const entries = new Map();

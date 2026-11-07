@@ -111,8 +111,23 @@
   - Akzentfarbe sowie die Farben für Formen, Text und Notizen sind einstellbar; die Auswahl zeigt dann nur diese Farben. Bestehende Elemente bleiben unverändert.
   - Schrift auf der Akzentfarbe und Links passen sich an, damit der Kontrast nach REQ-NFR-009 erhalten bleibt.
   - Geändert in 4.18.0: Unter „Formenpakete“ legt die Administration fest, welche Pakete verfügbar sind. Standard: alle eingebauten. Die Grundformen lassen sich nicht abschalten. Abgeschaltete Pakete verschwinden aus Menü, Panel und persönlicher Verwaltung, vorhandene Elemente bleiben unverändert. Das gilt auch für das Paket „Allgemeine Symbole“.
+  - Geändert in 4.19.0: Die Liste umfasst auch Kubernetes, IT und Technik, Elektrotechnik und Verfahrenstechnik (REQ-ELEM-024). Eigene Pakete verwaltet REQ-ADMIN-014.
 
 ### REQ-ADMIN-013 Anbindungen
 - **Seit:** 4.4.0 · **Priorität:** Soll · **Status:** umgesetzt
 - **Akzeptanzkriterien:**
   - Die Administration verwaltet Verbindungen zu Jira und Azure DevOps mit Test. Tokens werden nie ausgeliefert.
+
+### REQ-ADMIN-014 Eigene Formenpakete
+- **Seit:** 4.19.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Die Administration legt eigene Symbolpakete für alle an, etwa aus den offiziellen Symbol-Downloads von AWS, Azure oder Google Cloud. vibeboard liefert diese Symbole nicht mit, ihre Nutzung richtet sich nach den Bedingungen des Herstellers.
+- **Akzeptanzkriterien:**
+  - Unter „Design & Vorlagen“ → „Eigene Formenpakete“ lassen sich ein ZIP-Archiv oder beliebig viele SVG-Dateien importieren. Das Archiv wird im Browser gelesen, auch mit mehreren Tausend Einträgen. Nur SVG-Dateien gehen weiter.
+  - Der Import erkennt den Aufbau der Archive von AWS, Azure und Google Cloud, übernimmt Gruppen und lesbare Namen und nimmt je Symbol eine Größe (bevorzugt 64, helle statt dunkle Fassung). Andere Archive gruppieren nach Ordnern.
+  - Vor dem Hochladen zeigt der Dialog Anzahl, Gruppen und den erkannten Aufbau. Name und „Herkunft und Lizenz“ sind vorbelegt und änderbar. Das Ergebnis nennt die übernommenen Symbole und jede abgelehnte Datei mit Grund.
+  - Der Server bereinigt jede Datei (`lib/svg-clean.js`): Erlaubt sind nur Formen, Gruppen, Verläufe, Beschneidungen, Masken und Text mit geprüften Werten. Skripte, Ereignisse, Links, Bilder, eingebettetes HTML, Animationen, Filter, externe Verweise und XML-Entitäten fallen weg oder führen zur Ablehnung. Verweise gelten nur innerhalb der Datei, ihre Kennungen bekommen ein Präfix. Gespeichert und ausgeliefert wird nur die bereinigte Baumstruktur, nie die Datei. `npm run test:svg` prüft das mit Angriffsmustern.
+  - Grenzen: 512 KB je Datei, 4000 Elemente je Zeichnung, 3000 Symbole und 24 MB je Paket, 50 Pakete. Hochgeladen wird in Portionen zu höchstens 100 Dateien.
+  - Pakete lassen sich umbenennen, ergänzen und löschen. Anlegen und Ändern ist der Administration vorbehalten und steht im Sicherheitsprotokoll. Lesen dürfen alle Angemeldeten einschließlich Gästen, da Boards die Symbole jedem zeigen, der sie sehen darf.
+  - Eigene Pakete erscheinen im Panel nach den eingebauten, mit Suche, Gruppen und Herkunft. Jede Person kann sie unter „Formen verwalten“ abwählen. Die Symbole behalten ihre Farben.
+  - Ein gelöschtes Paket hinterlässt auf Boards Platzhalter mit „Symbol fehlt“, ohne Fehler. Eine Änderung am Paket gilt nach dem nächsten Laden.
+  - Ein Element trägt nur den Namen `cu-<Paket>-<Nummer>`. Der Server entfernt mitgeschickte Zeichnungen.

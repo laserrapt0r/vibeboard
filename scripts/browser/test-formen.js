@@ -319,7 +319,8 @@ const search = async (p, q) => {
   await ev(A, () => [...document.querySelectorAll('.shape-foot button')].find((x) => /Formen verwalten/.test(x.textContent)).click());
   await wait(100);
   const packs = await ev(A, () => [...document.querySelectorAll('.shape-manage input')].map((i) => i.dataset.pack));
-  ok(packs.length === 11 && packs.includes('icons') && !packs.includes('basic'), 'Verwaltung listet die abwählbaren Pakete', packs);
+  // 15 eingebaute Pakete (seit 4.19.0 mit den Fachsymbolen), eigene Pakete der Administration kommen dazu
+  ok(packs.filter((p) => !p.startsWith('cu-')).length === 15 && ['icons', 'kubernetes', 'carbon', 'electrical', 'process'].every((p) => packs.includes(p)) && !packs.includes('basic'), 'Verwaltung listet die abwählbaren Pakete', packs);
   await ev(A, () => document.querySelector('.shape-manage input[data-pack="vsm"]').click());
   await wait(300);
   await ev(A, () => [...document.querySelectorAll('.shape-foot button')].find((x) => /Zurück/.test(x.textContent)).click());
@@ -347,7 +348,7 @@ const search = async (p, q) => {
   await ev(adminPage, () => [...document.querySelectorAll('button,a')].find((x) => /^Design/.test(x.textContent.trim()))?.click());
   await wait(600);
   const adm = await ev(adminPage, () => [...document.querySelectorAll('input[data-pack]')].map((i) => [i.dataset.pack, i.checked]));
-  ok(adm.length === 11 && adm.every(([, c]) => c), 'Administration: alle Pakete sind standardmäßig an', adm);
+  ok(adm.length === 15 && adm.every(([, c]) => c), 'Administration: alle Pakete sind standardmäßig an', adm);
   adminPage.on('dialog', (d) => d.accept());
   await ev(adminPage, () => document.querySelector('input[data-pack="bpmn"]').click());
   await ev(adminPage, () => document.querySelector('input[data-pack="bpmn"]').closest('form').requestSubmit());

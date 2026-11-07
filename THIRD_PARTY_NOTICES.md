@@ -13,6 +13,27 @@ Die Allgemeinen Symbole in `public/vendor/icons/tabler-outline-3.50.0.json` stam
 das Skript prüft dabei die Lizenz des Pakets. Die Kategorie „Brand“ und weitere Marken und Figuren fehlen mit Absicht (`NAME_OUT` im Skript): Das sind Logos Dritter, an denen die
 MIT-Lizenz keine Markenrechte einräumt. Der Lizenztext liegt in `public/vendor/icons/LICENSE` und wird mit ausgeliefert.
 
+Die Fachsymbole unter `public/vendor/symbols/` erzeugt `scripts/build-symbols.js`. Das Skript prüft dabei die Lizenz der Quellen
+und schickt jede Zeichnung durch dieselbe Bereinigung wie hochgeladene Dateien (`lib/svg-clean.js`). Die Zeichnungen sind
+inhaltlich unverändert, nur als Baumstruktur gespeichert und mit gekürzten Zahlen.
+
+- **Kubernetes** (`kubernetes-….json`): [Kubernetes Icons Set](https://github.com/kubernetes/community/tree/main/icons),
+  Copyright The Kubernetes Authors. Lizenziert wahlweise unter Apache-2.0 oder CC-BY-4.0; vibeboard nutzt sie unter der
+  **Apache License 2.0** (Text: `public/vendor/symbols/LICENSE-APACHE-2.0`). Übernommen sind die unbeschrifteten Fassungen der
+  Ressourcen und der Infrastruktur sowie die Bausteine der Steuerungsebene. Das Kubernetes-Logo ist nicht enthalten: Es ist eine
+  eingetragene Marke der Linux Foundation und nicht Teil des Symbolsatzes.
+- **IT und Technik** (`carbon-….json`): [IBM Carbon Icons](https://github.com/carbon-design-system/carbon/tree/main/packages/icons),
+  npm-Paket `@carbon/icons` 11.91.0, Copyright IBM Corp., **Apache License 2.0** (Text: `public/vendor/symbols/LICENSE-APACHE-2.0`).
+  Nur ausgewählte Kategorien. Logos, Symbole für IBM-Produkte und Symbole mit Namen fremder Marken fehlen mit Absicht
+  (`CARBON_OUT` im Skript): Die Lizenz räumt keine Markenrechte ein.
+- **Elektrotechnik** (`electrical-….json`) und **Verfahrenstechnik** (`process-….json`): für vibeboard selbst gezeichnet nach
+  IEC 60617 und DIN EN ISO 10628-2 (PLT-Stellen nach DIN EN 62424), ohne Vorlagen aus anderen Symbolbibliotheken. Quelle in
+  `scripts/symbols/`, Lizenz wie vibeboard (MIT).
+
+Symbole von Herstellern wie AWS, Microsoft Azure, Google Cloud, Cisco oder VMware liefert vibeboard **nicht** mit. Die
+Administration kann sie als eigene Formenpakete importieren. Für ihre Nutzung gelten dann die Bedingungen des jeweiligen
+Herstellers, die der Betrieb selbst prüft.
+
 ### Tabler Icons – MIT License
 
 ```

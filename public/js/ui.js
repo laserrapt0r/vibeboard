@@ -14,7 +14,7 @@ import { accountMenuItems } from './account.js';
 import { legalLinks } from './footer.js';
 import { openHelp } from './help.js';
 import { SHAPE_PACKS } from './shape-catalog.js';
-import { isIconKey, iconsFor } from './icons.js';
+import { isIconKey, iconsFor, iconMode } from './icons.js';
 import { shapePreview, shapeName, mountShapesPanel, openShapesPanel, availablePacks, shapeUsable } from './shapes-panel.js';
 import { bellButton, refresh as refreshBell } from './notifications.js';
 
@@ -366,8 +366,10 @@ function styleControls(sel) {
     text.push(...textStyleBtns(f), alignBtn(f.align || 'center'), valignBtn(f.valign || 'middle'));
   } else if (only === 'shape' && sel.every((e) => isIconKey(e.shape))) {
     // Symbole sind Linien: Sie haben keine Füllung und keinen Linienstil. 0,5 bis 4 zählen im Raster des Symbols.
-    color.push(colorBtn(f.stroke === 'none' ? '#1a1a1a' : f.stroke, T('Linienfarbe'), PALETTE.slice(1), (c) => applySel({ stroke: c })));
-    color.push(selectBtn(f.strokeWidth ?? 2, ICON_STROKE, T('Linienstärke'), (v) => applySel({ strokeWidth: v }), 60));
+    // Farbige Symbole (Kubernetes, eigene Pakete) behalten ihre Farben, Flächensymbole (Carbon) haben keine Linie
+    const modes = new Set(sel.map((e) => iconMode(e.shape)));
+    if (!modes.has('color')) color.push(colorBtn(f.stroke === 'none' ? '#1a1a1a' : f.stroke, modes.has('fill') && modes.size === 1 ? T('Symbolfarbe') : T('Linienfarbe'), PALETTE.slice(1), (c) => applySel({ stroke: c })));
+    if (!modes.has('color') && !modes.has('fill')) color.push(selectBtn(f.strokeWidth ?? 2, ICON_STROKE, T('Linienstärke'), (v) => applySel({ strokeWidth: v }), 60));
     text.push(colorBtn(f.textColor || '#1a1a1a', T('Textfarbe'), PALETTE.slice(1), (c) => applySel({ textColor: c }), { ring: false }));
     text.push(selectBtn(f.fontSize ?? 14, [['auto', T('Auto')], ...FONT_SIZES], T('Schriftgröße'), (v) => applySel({ fontSize: v })));
     text.push(...textStyleBtns(f), alignBtn(f.align || 'center'));

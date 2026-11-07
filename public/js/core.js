@@ -1,6 +1,6 @@
 // Kern des Board-Editors: Zustand, Ansicht, Rendering, Historie, Interaktion
 import { T } from './i18n.js';
-import { isIconKey, ICON_DEFAULTS, onIconsLoaded } from './icons.js';
+import { isIconKey, iconDefaults, onIconsLoaded, setOf } from './icons.js';
 import {
   SVGNS, uid, clamp, clone, wrap, rectsIntersect, rectContains, unionRect, loadPref, savePref,
   debounce, throttle, toast, contrastText, STICKY_COLORS, api, columnName, fontPx, MAX_FONT_SIZE,
@@ -918,8 +918,8 @@ export function loadElements(obj) {
 }
 
 // Sobald die Symboldatei da ist, ersetzen die Symbole ihre Platzhalter
-onIconsLoaded(() => {
-  for (const el of app.els.values()) if (el.type === 'shape' && isIconKey(el.shape)) markDirty(el.id);
+onIconsLoaded((set) => {
+  for (const el of app.els.values()) if (el.type === 'shape' && isIconKey(el.shape) && setOf(el.shape) === set) markDirty(el.id);
   scheduleRender();
 });
 
@@ -965,7 +965,7 @@ export function makeElement(type, x, y, o = {}) {
       return { ...base, x: x - 100, y: y - 100, w: 200, h: 200, fill: app.toolOpts.stickyColor, text: '', fontSize: 'auto', ...o };
     case 'shape': {
       const kind = o.shape || app.toolOpts.shape;
-      const d = isIconKey(kind) ? ICON_DEFAULTS : SHAPE_DEFAULTS[kind] || {};
+      const d = isIconKey(kind) ? iconDefaults(kind) : SHAPE_DEFAULTS[kind] || {};
       const w = d.w || 200, h = d.h || 140;
       // Beschriftung auf dem Board-Hintergrund: im dunklen Design hell, wie beim Textwerkzeug
       const label = {};

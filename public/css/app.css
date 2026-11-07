@@ -453,6 +453,10 @@ body.dark .tooltip kbd { background: rgba(0, 0, 0, 0.12); }
 .shape-foot { border-top: 1px solid var(--border); padding: 8px 16px; margin: 0; }
 .shape-manage { padding: 4px 4px 8px; display: flex; flex-direction: column; gap: 6px; }
 .shape-manage .check { display: flex; align-items: center; gap: 8px; }
+.shape-pack-row { align-items: flex-start !important; }
+.shape-pack-row input { margin-top: 3px; }
+.shape-pack-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.shape-source { overflow-wrap: anywhere; }
 .shape-ghost { position: fixed; z-index: 9000; pointer-events: none; transform: translate(-50%, -50%) scale(2); color: var(--accent-text); opacity: 0.85; }
 .shape-all { width: 100%; justify-content: center; }
 #sidepanel .seg .btn { padding: 0 8px; }

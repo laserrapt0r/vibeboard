@@ -255,6 +255,7 @@
   - „Formen verwalten“ blendet Pakete je Person aus und speichert das im Konto. Die Grundformen bleiben immer da. Vorhandene Elemente ändern sich dadurch nicht.
   - Wer nur lesen darf und Gäste bekommen das Panel nicht; Gäste legen weiterhin nur Notizen an.
   - Geändert in 4.18.0: Das Panel enthält auch die Allgemeinen Symbole, die Suche findet Formen und Symbole zusammen. Siehe REQ-ELEM-023.
+  - Geändert in 4.19.0: Dazu kommen die Fachsymbole (REQ-ELEM-024) und eigene Pakete der Administration (REQ-ADMIN-014). Symbolpakete außer den Allgemeinen Symbolen starten zugeklappt und laden erst beim Aufklappen oder Suchen. Kleine Sätze zeigen ihre Untergruppen gleich offen. „Formen verwalten“ nennt bei jedem Symbolpaket Herkunft und Lizenz.
 
 ### REQ-ELEM-023 Allgemeine Symbole
 - **Seit:** 4.18.0 · **Priorität:** Soll · **Status:** umgesetzt
@@ -271,3 +272,23 @@
   - Die Suche arbeitet auf Deutsch über eine gepflegte Liste von mindestens 400 Motiven und auf Englisch über die Stichwörter des Satzes. Die Liste gilt in jeder Sprache der Oberfläche, die häufigsten Motive haben auch spanische und französische Wörter. Der Tooltip nennt den Namen.
   - In der Befehlssuche stehen keine einzelnen Symbole. Sie führt über „Alle Formen“ zum Paket.
   - Das Paket lässt sich wie die anderen abwählen, persönlich und in der Administration. Vorhandene Symbole bleiben sichtbar. Gäste der Stufe „Beiträge“ legen keine Symbole an, auch nicht direkt über die Schnittstelle.
+  - Geändert in 4.19.0: Weitere Symbolsätze nutzen dieselbe Technik mit eigenem Kürzel, siehe REQ-ELEM-024. Ein unbekanntes Symbol aus einem gelöschten eigenen Paket erscheint als Rahmen mit „Symbol fehlt“.
+
+### REQ-ELEM-024 Fachsymbole für IT und Technik
+- **Seit:** 4.19.0 · **Priorität:** Soll · **Status:** umgesetzt
+- **Beschreibung:** Für Architektur-, Schalt- und Anlagenbilder stehen vier weitere Symbolpakete bereit. Sie stammen aus frei lizenzierten Quellen oder sind selbst nach Norm gezeichnet. Logos und Marken gehören nicht dazu.
+  - **Kubernetes** (`kc-…`): die 39 Symbole des Kubernetes Icons Set (Apache-2.0), farbig, ohne das Kubernetes-Logo.
+  - **IT und Technik** (`cb-…`): rund 1700 Flächensymbole aus IBM Carbon (Apache-2.0) in elf Gruppen, darunter KI und maschinelles Lernen, Cloud und Infrastruktur, Daten, Sicherheit, Entwicklung und Betrieb, Geräte, Dateien, Finanzen und Bedienelemente. Produkte von IBM und Marken Dritter fehlen mit Absicht.
+  - **Elektrotechnik** (`el-…`): 81 selbst gezeichnete Schaltzeichen nach IEC 60617, europäische Darstellung.
+  - **Verfahrenstechnik** (`pi-…`): 76 selbst gezeichnete Symbole für Fließbilder nach DIN EN ISO 10628-2 mit PLT-Stellen nach DIN EN 62424.
+- **Akzeptanzkriterien:**
+  - Die Sätze liegen als statische Dateien unter `public/vendor/symbols/` im Repo, `scripts/build-symbols.js` erzeugt sie aus den Quellen und prüft dabei deren Lizenz. Im Betrieb gibt es keinen Build-Schritt. Der Dateiname enthält einen Prüfwert, Browser dürfen die Dateien dauerhaft behalten.
+  - Jede Zeichnung läuft beim Erzeugen durch dieselbe Bereinigung wie hochgeladene Dateien (REQ-ADMIN-014). Der Browser baut das SVG aus einer Liste erlaubter Elemente und maskiert jeden Wert.
+  - Ein Satz lädt erst, wenn ein Symbol daraus auf dem Board steht, sein Paket aufgeklappt oder im Panel gesucht wird.
+  - Elektro- und Verfahrenstechnik sind Linien in Linienfarbe und -stärke und werden in ihrer gezeichneten Größe abgelegt, etwa ein Widerstand mit 96 × 32. Anschlüsse liegen auf dem Rand des Rahmens, Verbinder docken dort an.
+  - IT und Technik sind Flächen in der Symbolfarbe, ohne Linienstärke. Kubernetes behält seine Farben und bietet keine Farbwahl.
+  - Die Suche findet die Fachsymbole über deutsche, englische, spanische und französische Namen und Stichwörter, etwa „Widerstand“, „Kreiselpumpe“, „machine learning“ oder „Ingress“.
+  - Die Pakete lassen sich wie die anderen persönlich und in der Administration abwählen. Vorhandene Elemente bleiben sichtbar.
+  - SVG, PNG, PDF, Druck und PPTX zeigen die Fachsymbole wie die Allgemeinen Symbole.
+  - Herkunft und Lizenz stehen in „Formen verwalten“ und in `THIRD_PARTY_NOTICES.md`.
+

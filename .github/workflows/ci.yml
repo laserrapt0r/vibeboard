@@ -52,6 +52,8 @@ jobs:
         run: npm run test:text
       - name: Robustheit bei Verbindungsfehlern prüfen
         run: npm run test:robust
+      - name: Bereinigung hochgeladener Symbole prüfen
+        run: npm run test:svg
       - run: npm run test:upgrade
         env:
           DATABASE_URL: postgres://vb:vb@localhost:5432/vb_test
