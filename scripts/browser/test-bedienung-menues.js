@@ -221,7 +221,7 @@ const palette = async (p, on) => {
 
   console.log('=== Hinweis zur Rolle');
   const vr = await center(V, 'n1');
-  await V.mouse.click(vr.x, vr.y, { clickCount: 2 });
+  await V.mouse.click(vr.x, vr.y, { count: 2 });
   await wait(250);
   ok(/nur ansehen/.test(await toast(V)), 'Doppelklick: Betrachter erfahren, was geht', await toast(V));
   await V.evaluate(() => document.getElementById('toast').classList.remove('show'));

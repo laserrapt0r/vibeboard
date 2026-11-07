@@ -99,7 +99,7 @@ const toastText = (p) =>
   await wait(500);
   // Spalte umbenennen per Doppelklick
   let h = await screenOf(p, 'head', 'In Arbeit');
-  await p.mouse.click(h.x, h.y, { clickCount: 2 });
+  await p.mouse.click(h.x, h.y, { count: 2 });
   await wait(250);
   ok(
     await p.evaluate(async () => {
@@ -420,7 +420,7 @@ const toastText = (p) =>
   await nb('W');
   const btn = await p.$('#tools [data-tool="sticky"]');
   const bb = await btn.boundingBox();
-  await p.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2, { clickCount: 2 });
+  await p.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2, { count: 2 });
   await wait(250);
   await p.keyboard.press('Escape');
   await wait(150);
