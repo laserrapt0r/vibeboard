@@ -29,8 +29,8 @@
     "@node-saml/node-saml": "5.2.0",
     "@xmldom/xmldom": "0.9.12",
     "ldapts": "9.2.0",
-    "nodemailer": "^10.2.1",
-    "pdfjs-dist": "^6.4.299",
+    "nodemailer": "^10.3.1",
+    "pdfjs-dist": "^6.5.438",
     "pg": "^8.23.1",
     "uqr": "^0.1.3"
   },
